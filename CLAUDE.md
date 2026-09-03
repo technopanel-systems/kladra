@@ -1,10 +1,13 @@
 # CLAUDE.md — Kladra
 
 Kladra is the CRM and operations tool for Technopanel (Riyadh, aluminium composite
-panel cladding, fourteen people). It replaces FACET at `C:\dev\facet-crm`, which is a
+panel cladding, fourteen people). It replaces FACET at `C:\Projects\facet-crm`, which is a
 **read-only reference library**: read it for business knowledge and traps; never copy
 screens or design rules forward; never write there; never touch its containers,
-port 3000, port 5432 or its tunnel. Hooks H0/H12 enforce this.
+port 3000, port 5432 or its tunnel. Hooks H0/H12 enforce this. Never run docker
+stop/down/rm against anything not in compose project `kladra`. Docker Desktop is expected
+running; if it is not, wait and retry every minute for up to 30 minutes. If `git push`
+fails, commit locally and continue.
 
 ## Stack
 Next.js (App Router, TypeScript, `src/`) · Tailwind + shadcn/ui · next-intl (en, ar,

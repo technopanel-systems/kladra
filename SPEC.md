@@ -54,6 +54,14 @@ Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a
 - Admin sets all targets, manages users, resets any password, edits lookups and holidays. Admin only can export.
 - No comments feature. No refresh buttons: the screen updates itself.
 - Sidebar collapsible. Searchable dropdowns. Date pickers. Loading states. Transitions. Toasts.
+- Every phone number is stored normalized (E.164, +966…) and displayed local (05x xxx xxxx). Input accepts 05x, +966, 009665. Duplicate warning matches on normalized phone. (P3)
+- Tapping a phone anywhere opens WhatsApp via wa.me; long-press/secondary shows the number. (P3)
+- Ctrl+K / Cmd+K opens global search from any screen. (P2)
+- The app is installable on a phone (PWA manifest, icons, offline splash only — no offline data). (P7)
+- Sessions last 30 days; sign-out is explicit. (P2)
+- Every empty list shows one sentence and its primary action. (all)
+- List filters and the open drawer are reflected in the URL. (P3+)
+- Archive, never delete: companies, contacts, projects get archived_at; archived rows hide from lists and stay in history. Admin can restore. (P3)
 
 ## §4 Defaults Claude chose — founder may change
 

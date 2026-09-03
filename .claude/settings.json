@@ -1,23 +1,17 @@
 {
   "autoMemoryEnabled": false,
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "deny": [
       "Read(./.env)",
-      "Read(./.env.local)",
-      "Read(./.env.development)",
-      "Read(./.env.development.local)",
-      "Read(./.env.production)",
-      "Read(./.env.production.local)",
-      "Read(./.env.test)",
-      "Read(./.env.test.local)",
-      "Write(C:/dev/facet-crm/**)",
-      "Edit(C:/dev/facet-crm/**)",
-      "Write(//c/dev/facet-crm/**)",
-      "Edit(//c/dev/facet-crm/**)",
-      "mcp__claude_ai_Supabase__*",
-      "mcp__claude_ai_Vercel__*"
-    ],
-    "ask": []
+      "Read(./.env.*)",
+      "Edit(C:/Projects/facet-crm/**)",
+      "Write(C:/Projects/facet-crm/**)"
+    ]
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "55",
+    "CLAUDE_CODE_EFFORT_LEVEL": "xhigh"
   },
   "hooks": {
     "PreToolUse": [

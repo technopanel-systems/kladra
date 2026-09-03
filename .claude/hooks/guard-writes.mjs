@@ -38,7 +38,7 @@ function deny(rule, message) {
 }
 
 // H0 — FACET is a read-only reference library. Never write into it.
-if (target.startsWith("c:/dev/facet-crm/") || target.startsWith("/c/dev/facet-crm/")) {
+if (/^(?:[a-z]:|\/[a-z])\/(?:projects|dev)\/facet-crm(?:\/|$)/.test(target)) {
   deny(
     "H0 (CLAUDE.md § FACET)",
     `write into the FACET reference library refused: ${filePath}. FACET is read-only.`,

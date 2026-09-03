@@ -54,3 +54,21 @@ broken at least once in FACET, Kladra's predecessor.
 
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.
+
+## Database rules (founder, Addendum 2)
+
+- Money and m² are `numeric(12,2)`. `quotation_items.sqm` is a GENERATED
+  column (`width * length * qty`), never written by the app.
+- All timestamps are `timestamptz`. Days that are "a Riyadh day" are `date`.
+- An index on every column a list sorts or filters by: `companies.rep_id`,
+  `companies.updated_at`, `activities (company_id, happened_on)`,
+  `quotations.status`, `dispatches.status`, `notifications (user_id, read_at)`.
+- Phone numbers are stored normalized (E.164, `+966…`) in
+  `contacts.phone_normalized`; UNIQUE per company `(company_id,
+  phone_normalized)`. Display is local (`05x xxx xxxx`).
+- Archive, never delete: `companies`, `contacts`, `projects` carry
+  `archived_at`; archived rows hide from lists and stay in history; admin
+  restores.
+- Live updates: every write that others must see calls `pg_notify('kladra',
+  json)` inside its transaction; the SSE route holds one dedicated client on
+  `LISTEN kladra` and fans out to the affected users. No polling.

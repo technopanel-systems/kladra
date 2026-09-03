@@ -41,14 +41,26 @@ if (frameworkInvocation.test(command)) {
   );
 }
 
-// H12 — FACET's containers are not ours. Stopping, removing or restarting
-// anything named facet-crm-* from this repo is refused.
-if (/\bdocker\b[^\n]*\b(?:stop|rm|kill|restart|down|compose\s+down)\b[^\n]*\bfacet/i.test(command)) {
-  deny(
-    "H12 (CLAUDE.md § FACET)",
-    "docker command targets a FACET container. FACET's containers, port 3000, " +
-      "port 5432 and its tunnel are never touched from Kladra.",
-  );
+// H12 — never docker stop/down/rm/kill/restart anything outside the compose
+// project "kladra". A destructive docker verb must name kladra (the project
+// flag, a kladra-* container, or run as `docker compose` from this repo whose
+// compose file is `name: kladra`). Anything naming facet is refused outright.
+// Each docker invocation is judged on its own segment, so an unrelated part of
+// a long command cannot trip or excuse it.
+for (const seg of command.match(/\bdocker\b[^\n|;&]*/gi) ?? []) {
+  if (!/\b(?:stop|rm|rmi|kill|restart|down|prune)\b/i.test(seg)) continue;
+  const namesFacet = /facet/i.test(seg);
+  const namesKladra = /kladra/i.test(seg);
+  const composeLocal = /\bdocker\s+compose\b/i.test(seg) && !/\s-f\s|--project-directory/i.test(seg);
+  if (namesFacet || !(namesKladra || composeLocal)) {
+    deny(
+      "H12 (CLAUDE.md § FACET)",
+      "destructive docker command outside the compose project \"kladra\": `" +
+        seg.trim() +
+        "`. Name the kladra project or container explicitly; FACET's containers, " +
+        "port 3000, port 5432 and its tunnel are never touched from Kladra.",
+    );
+  }
 }
 if (/\b(?:rm|del|rmdir|Remove-Item|mv|move)\b[^\n]*facet-crm/i.test(command)) {
   deny(
