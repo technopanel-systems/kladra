@@ -1,0 +1,67 @@
+# Kladra — runs the app and PostgreSQL on the company Windows PC.
+# restart: always plus "start Docker Desktop on boot" is what makes the machine
+# come back unattended after a power cut.
+#
+# FACET (the previous system) runs on the same PC on 3000 / 5432 under the
+# compose project "facet-crm". Kladra is the project "kladra" on 3100 / 5433.
+# The two never share a port, a volume or a container name.
+
+name: kladra
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      # Bound to loopback on purpose. Postgres is never reachable from the LAN
+      # or through the Cloudflare Tunnel — only the app container and local
+      # tools connect. Host port 5433 because FACET holds 5432.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - kladra-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      # Inside the compose network the database is "db" on 5432, not
+      # localhost:5433. Set here so DATABASE_URL in .env can stay pointed at
+      # localhost:5433 for host-side `npm run dev` and drizzle-kit.
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      NODE_ENV: production
+      # The container is reached through the tunnel, not at localhost. Set
+      # PUBLIC_URL in .env to the https tunnel hostname on the office PC; it
+      # falls back to localhost here. PUBLIC_URL is what makes the session
+      # cookie Secure — forgetting it is silent.
+      AUTH_URL: ${PUBLIC_URL:-http://localhost:3100}
+      AUTH_TRUST_HOST: "true"
+    ports:
+      # Bound to loopback, for the same reason db is. `cloudflared` runs on the
+      # Windows host and reaches the container over localhost. A LAN-published
+      # port would be a SECOND way in that Cloudflare Access does not cover.
+      - "127.0.0.1:3100:3100"
+    healthcheck:
+      test:
+        ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3100/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  kladra-db-data:
