@@ -1,0 +1,56 @@
+---
+paths:
+  - "src/lib/**"
+  - "src/db/**"
+  - "src/actions/**"
+---
+
+# Data-layer rules — SQL, Drizzle, and the derivations
+
+**For:** the failure modes of `src/lib`, `src/actions` and the schema.
+**Prevents:** the silent-wrong-numbers class — every item below shipped
+broken at least once in FACET, Kladra's predecessor.
+
+- **Derived conditions are resolved in SQL, before pagination.** Filtering a
+  fetched page returns silently empty or wrong screens. Follow-up counts,
+  "stuck" flags, achieved m² — all in the query, never in the screen.
+
+- **A Drizzle column in a `sql` template keeps its table qualifier only when
+  the outer query joins something.** In a correlated subquery with no join,
+  both sides render bare and resolve inside the inner table — `where
+  "quotation_id" = "id"` is never true, returns zero, raises nothing. Bitten
+  three times in FACET. **Name both tables outright in any correlated
+  subquery** (`quotations.id`, not `${quotations.id}` alone), and assert a
+  derived figure at every reader.
+
+- **The untyped `sql` parameter, three variants, all silent differently:**
+  a value interpolated into `sql` becomes a bound parameter typed `text` —
+  cast it (`::int`, `::date`) at every site, or the query dies with `42883`;
+  **`sql<T>` is a type ASSERTION, not a decoder** — borrow the column's own
+  mapper with `.mapWith(table.column)`, or a `sql<Date>` arrives as a string
+  and 500s at the first `.getTime()`; **an untyped join column drops rows
+  rather than failing** — a text id INNER-JOINed against a uuid silently
+  returns nothing forever.
+
+- **The app's "today" is Riyadh's, computed in SQL with the timezone.** The
+  two shapes that lose it are hook-blocked (H6/H7): `current_date` is the
+  server's UTC day, one behind Riyadh until 03:00; `AT TIME ZONE` on a bare
+  `date` lifts to midnight-UTC then STRIPS the zone. The safe shapes:
+  `(col at time zone 'Asia/Riyadh')::date` to get a Riyadh day from a
+  `timestamptz`, and `${day}::date::timestamp at time zone 'Asia/Riyadh'`
+  to get the instant a Riyadh day begins. On the TypeScript side, one module
+  (`src/lib/workdays.ts`) owns Riyadh today, the Fri–Sat weekend and the
+  non-working-day table; nothing else does date math.
+
+- **One definition per figure.** Achieved m² (approved dispatch items, month
+  of approval), pace, overdue follow-ups — each has exactly one query
+  function that every screen calls. A second derivation beside it is the
+  drift trap that produced two answers on two screens.
+
+- **One authorization layer, in application code** — `src/lib/authz.ts`.
+  Data-integrity invariants (what a row may contain) belong in the database;
+  who-may-act never does. Reps see only their own companies; the check lives
+  in the query helper, not in the page.
+
+- **Never land a column, flag or table without its writer in the same
+  slice.** An unused column is a lie about what the system does.

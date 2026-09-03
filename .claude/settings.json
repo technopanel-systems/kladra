@@ -1,0 +1,40 @@
+{
+  "autoMemoryEnabled": false,
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Write(C:/dev/facet-crm/**)",
+      "Edit(C:/dev/facet-crm/**)",
+      "Write(//c/dev/facet-crm/**)",
+      "Edit(//c/dev/facet-crm/**)",
+      "mcp__claude_ai_Supabase__*",
+      "mcp__claude_ai_Vercel__*"
+    ],
+    "ask": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guard-writes.mjs",
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/guard-bash.mjs",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}
