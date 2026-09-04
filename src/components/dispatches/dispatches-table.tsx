@@ -6,7 +6,6 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
 import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -23,8 +22,11 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
+import { Sqm } from "@/components/ui-ext/figures";
+import { StateBadge } from "@/components/ui-ext/state-badge";
 import { formatSqm } from "@/lib/money";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
+import { dispatchTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -70,7 +72,7 @@ function listHref(
 
 function StatusBadge({ status }: { status: DispatchStatus }) {
   const t = useTranslations();
-  return <Badge variant="secondary">{t(STATUS_KEYS[status])}</Badge>;
+  return <StateBadge tone={dispatchTone(status)}>{t(STATUS_KEYS[status])}</StateBadge>;
 }
 
 export function DispatchesTable({
@@ -202,8 +204,8 @@ export function DispatchesTable({
                   <span className="text-sm">
                     <span dir="ltr" className="num">
                       {formatSqm(row.totalSqm)}
-                    </span>{" "}
-                    <span className="text-xs text-muted-foreground">{t("common.sqm")}</span>
+                    </span>
+                    <span className="ms-1 text-xs text-muted-foreground">{t("common.sqm")}</span>
                   </span>
                 </Link>
               ))}
@@ -453,12 +455,7 @@ export function DispatchSheet({
                       {item.colourCode}
                     </span>
                   </h4>
-                  <span className="text-sm whitespace-nowrap">
-                    <span dir="ltr" className="num">
-                      {formatSqm(item.sqm)}
-                    </span>{" "}
-                    <span className="text-xs text-muted-foreground">{t("common.sqm")}</span>
-                  </span>
+                  <Sqm value={item.sqm} className="text-sm" />
                 </div>
                 <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
                   <Fact label={t("dispatches.sending")}>
@@ -482,11 +479,21 @@ export function DispatchSheet({
           </ul>
 
           <dl className="card-face flex flex-col gap-2 p-3 text-sm">
-            <Row label={t("common.sqm")}>
-              <span dir="ltr" className="num font-semibold" data-slot="figure-sending">
+            {/* The one figure this request is about: what it puts on the
+                month (S41). Everything under it is how and where. */}
+            <div className="flex items-baseline justify-between gap-4 pb-1">
+              <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                {t("common.sqm")}
+              </dt>
+              <dd
+                data-slot="figure-sending"
+                className="num text-2xl leading-none font-semibold"
+                dir="ltr"
+              >
                 {formatSqm(dispatch.totalSqm)}
-              </span>
-            </Row>
+              </dd>
+            </div>
+            <div className="border-t border-line pt-1" />
             <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
             <Row label={t("common.destination")}>{dispatch.destination}</Row>
             <Row label={t("common.paymentTerms")}>{dispatch.paymentTerms}</Row>

@@ -1,0 +1,165 @@
+/**
+ * How something is standing: the small set of figures that answer "is this
+ * going well?" without opening anything (DESIGN §6, P8.5).
+ *
+ * A drawer used to open on a flat list of fields — city, category, lead source,
+ * rep — none of which a rep reads twice and none of which says whether the
+ * customer is worth today. These are the numbers that do, and each has ONE
+ * definition here that every screen shares (rules/data.md).
+ *
+ * Every figure stays a string all the way to the screen: they are `numeric` in
+ * Postgres and a float would round them on the way past.
+ *
+ * No `import "server-only"`, for the reason in src/lib/live.ts.
+ */
+import { sql, type SQL } from "drizzle-orm";
+import { db } from "@/db";
+import type { Day } from "@/lib/dates";
+
+export type CompanyStanding = {
+  /** SPEC S45: expected m² on live projects — not lost, not archived. */
+  pipelineSqm: string;
+  /** Approved m², all time (S41 counts a month; this counts the relationship). */
+  approvedSqm: string;
+  /** Quotations still moving: requested, sent back or issued, live revision. */
+  openQuotations: number;
+  /** The last day anything was logged against this company or its projects. */
+  lastActivityOn: Day | null;
+};
+
+/**
+ * The pipeline, for whatever `scope` narrows to — one company, one rep, or
+ * everybody (SPEC S45, and the glossary's "Pipeline / إجمالي الفرص").
+ *
+ * Both tables are named outright rather than left to a bare Drizzle column: in
+ * a correlated subquery with no join an unqualified column resolves inside the
+ * INNER table and the condition is silently never true (rules/data.md).
+ */
+export function pipelineSqmSql(scope: SQL): SQL<string> {
+  return sql`(
+    select coalesce(sum(p.expected_sqm), 0)::text
+      from projects p
+      join companies c on c.id = p.company_id
+     where ${scope}
+       and p.archived_at is null
+       and p.lost_at is null
+       and c.archived_at is null
+  )`;
+}
+
+/**
+ * Approved m² for whatever `scope` narrows to, with no month on it.
+ *
+ * The same arithmetic as `achievedByRep` — round the sheet, then multiply, then
+ * round the sum — because a figure computed two ways is two figures (D38).
+ */
+export function approvedSqmSql(scope: SQL): SQL<string> {
+  return sql`(
+    select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text
+      from dispatches d
+      join dispatch_items di on di.dispatch_id = d.id
+      join quotation_items qi on qi.id = di.quotation_item_id
+      join quotations q on q.id = d.quotation_id
+     where d.status = 'approved'
+       and ${scope}
+  )`;
+}
+
+/** Quotations that are still moving: somebody owes an answer or the customer does. */
+export function openQuotationsSql(scope: SQL): SQL<number> {
+  return sql`(
+    select count(*)::int
+      from quotations q
+     where q.status in ('requested', 'returned', 'issued')
+       and not exists (
+         select 1 from quotations later
+          where later.number = q.number and later.revision > q.revision
+       )
+       and ${scope}
+  )`;
+}
+
+/** The four figures at the top of a company drawer. */
+export async function companyStanding(companyId: string): Promise<CompanyStanding> {
+  const id = sql`${companyId}::uuid`;
+  const result = await db.execute<{
+    pipeline_sqm: string;
+    approved_sqm: string;
+    open_quotations: number;
+    last_activity_on: string | null;
+  }>(sql`
+    select
+      ${pipelineSqmSql(sql`p.company_id = ${id}`)} as pipeline_sqm,
+      ${approvedSqmSql(sql`q.company_id = ${id}`)} as approved_sqm,
+      ${openQuotationsSql(sql`q.company_id = ${id}`)} as open_quotations,
+      (
+        select to_char(max(a.happened_on), 'YYYY-MM-DD')
+          from activities a
+         where a.company_id = ${id}
+      ) as last_activity_on
+  `);
+  const row = result.rows[0];
+
+  return {
+    pipelineSqm: String(row?.pipeline_sqm ?? "0"),
+    approvedSqm: String(row?.approved_sqm ?? "0"),
+    openQuotations: Number(row?.open_quotations ?? 0),
+    lastActivityOn: (row?.last_activity_on as Day | null) ?? null,
+  };
+}
+
+export type ProjectStanding = {
+  /** What has actually been put in front of the customer, latest revision only. */
+  quotedSqm: string;
+  approvedSqm: string;
+  openQuotations: number;
+  lastActivityOn: Day | null;
+};
+
+/**
+ * The figures at the top of a project drawer.
+ *
+ * `quotedSqm` counts the LIVE revision of each number and nothing before
+ * `issued`: a project quoted three times at 2,000 m² is 2,000, not 6,000 (S35),
+ * and a request the coordinator has not answered has not been quoted to anybody
+ * yet. A rejected one still counts — it went out, and the customer said no,
+ * which is a different fact from never having asked.
+ */
+export async function projectStanding(projectId: string): Promise<ProjectStanding> {
+  const id = sql`${projectId}::uuid`;
+  const result = await db.execute<{
+    quoted_sqm: string;
+    approved_sqm: string;
+    open_quotations: number;
+    last_activity_on: string | null;
+  }>(sql`
+    select
+      (
+        select coalesce(sum(qi.sqm), 0)::text
+          from quotation_items qi
+          join quotations q on q.id = qi.quotation_id
+         where q.project_id = ${id}
+           and q.status in ('issued', 'accepted', 'rejected')
+           and not exists (
+             select 1 from quotations later
+              where later.number = q.number and later.revision > q.revision
+           )
+      ) as quoted_sqm,
+      ${approvedSqmSql(sql`q.project_id = ${id}`)} as approved_sqm,
+      ${openQuotationsSql(sql`q.project_id = ${id}`)} as open_quotations,
+      (
+        select to_char(max(a.happened_on), 'YYYY-MM-DD')
+          from activities a
+         where a.project_id = ${id}
+      ) as last_activity_on
+  `);
+  const row = result.rows[0];
+
+  return {
+    quotedSqm: String(row?.quoted_sqm ?? "0"),
+    approvedSqm: String(row?.approved_sqm ?? "0"),
+    openQuotations: Number(row?.open_quotations ?? 0),
+    lastActivityOn: (row?.last_activity_on as Day | null) ?? null,
+  };
+}
+

@@ -98,3 +98,10 @@ broken at least once in FACET, Kladra's predecessor.
 - Live updates: every write that others must see calls `pg_notify('kladra',
   json)` inside its transaction; the SSE route holds one dedicated client on
   `LISTEN kladra` and fans out to the affected users. No polling.
+
+## A value crosses to the browser; a type does not
+A client component may `import type` anything. Importing a VALUE from a module in
+`src/lib` that touches `@/db`, `@/auth` or `server-only` drags the whole graph into
+the browser bundle and the build fails naming the Pages Router. Put the shared pure
+helper and its type in their own file (`src/lib/picker-option.ts` is the pattern).
+

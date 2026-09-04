@@ -22,10 +22,10 @@ primary button only. Values carried from FACET's globals.css:
 | brand-glow | `0 0 0 1px rgba(242,86,107,.35), 0 8px 28px -8px rgba(242,86,107,.55)` | `0 0 0 1px rgba(200,16,46,.25), 0 8px 24px -8px rgba(200,16,46,.4)` |
 | mark-grad (the K, both themes) | `linear-gradient(140deg,#e5233c,#7a1020)` | same |
 | avatar-user-grad / avatar-person-grad | `linear-gradient(140deg,#8a3244,#4a1622)` / `(140deg,#31527f,#1b2f4c)` | same |
-| tone red bg / fg | `rgba(242,86,107,.14)` / `#ff8fa0` | `rgba(200,16,46,.09)` / `#c8102e` |
-| tone amber bg / fg | `rgba(227,166,62,.14)` / `#ebb35a` | `rgba(138,90,0,.11)` / `#8a5a00` |
-| tone green bg / fg | `rgba(87,197,126,.14)` / `#6fd08f` | `rgba(21,128,61,.09)` / `#15803d` |
-| tone blue bg / fg | `rgba(127,173,238,.14)` / `#8fb8f0` | `rgba(43,92,168,.09)` / `#2b5ca8` |
+| state-bad (raw red) bg / fg | `rgba(242,86,107,.14)` / `#ff8fa0` | `rgba(200,16,46,.09)` / `#c8102e` |
+| state-wait (raw amber) bg / fg | `rgba(227,166,62,.14)` / `#ebb35a` | `rgba(138,90,0,.11)` / `#8a5a00` |
+| state-good (raw green) bg / fg | `rgba(87,197,126,.14)` / `#6fd08f` | `rgba(21,128,61,.09)` / `#15803d` |
+| state-open (raw blue) bg / fg | `rgba(127,173,238,.14)` / `#8fb8f0` | `rgba(43,92,168,.09)` / `#2b5ca8` |
 | canvas glow | two radials under 14% (red top-start, blue top-end), on body only; mirrored in RTL | same |
 | shadow | `0 1px 0 rgba(255,255,255,.04) inset, 0 12px 40px -18px rgba(0,0,0,.8)` | `0 1px 0 rgba(255,255,255,.8) inset, 0 12px 36px -18px rgba(26,22,20,.42)` |
 
@@ -107,6 +107,12 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   moment after it paints, and a press in between does nothing at all — no error, no dialog.
   The fast screens lose that race, so a suite passes cold and fails warm. `<Hydrated>` marks
   the document when React arrives and every page load in a spec waits for the mark.
+- **A value imported from a server library reaches the browser; a type does not.**
+  `import { splitProjectOption } from "@/lib/pickers"` in a client dialog pulled the
+  module, then `@/db`, then Auth.js, then `server-only`, and the build failed in eleven
+  places at once naming a Pages Router that does not exist here. `import type` is erased
+  and is always safe; a VALUE is not. A pure helper and its type that both sides need
+  live in their own file with no query in it (`src/lib/picker-option.ts`).
 - **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
   three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
   dead controls. Every spec now fails on the exception itself and names it.

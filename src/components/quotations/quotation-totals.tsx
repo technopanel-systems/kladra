@@ -4,8 +4,13 @@ import { useTranslations } from "next-intl";
 import { formatMoney, formatSqm } from "@/lib/money";
 
 /**
- * What a quotation comes to: m², the total before tax, VAT at 15%, and the
- * grand total (SPEC §3, S31).
+ * What a quotation comes to: m² first, then the total before tax, VAT at 15%
+ * and the grand total (SPEC §3, S31, and P8).
+ *
+ * The m² is the headline and the three money figures are the support. That is
+ * Jerom's ruling and it matches what the numbers are for: a rep is measured in
+ * square metres (S43), a month is counted in them (S41), and every SAR figure
+ * here is a copy of something SMAC is the record for.
  *
  * One block, used twice on purpose — under the lines while a rep is still
  * typing, on figures nothing has saved, and in the drawer on the figures the
@@ -38,11 +43,19 @@ export function QuotationTotals({
 
   return (
     <dl data-slot="totals" className="card-face flex flex-col gap-2 p-3 text-sm">
-      <Row name="sqm" label={t("common.sqm")}>
-        <span dir="ltr" className="num">
-          {formatSqm(sqm)}
-        </span>
-      </Row>
+      <div className="flex items-baseline justify-between gap-4 pb-1">
+        <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+          {t("common.sqm")}
+        </dt>
+        <dd data-slot="figure-sqm" className="text-2xl leading-none font-semibold">
+          <span dir="ltr" className="num">
+            {formatSqm(sqm)}
+          </span>
+        </dd>
+      </div>
+
+      <div className="border-t border-line pt-2" />
+
       <Row name="subtotal" label={t("common.totalExclVat")}>
         <span dir="ltr" className="num">
           {formatMoney(subtotal)}

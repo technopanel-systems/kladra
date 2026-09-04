@@ -44,6 +44,13 @@ export type SelectOption = {
   pinned?: boolean;
   /** The other-script spelling, so search works in either language. */
   keywords?: string;
+  /**
+   * A quieter second line under the label: the company a project belongs to,
+   * the project a quotation was raised on. Searched like the label, so typing
+   * a company name finds its projects, and never joined to the label in one
+   * string — two names either side of a separator is the bidi defect D46.
+   */
+  hint?: string;
 };
 
 /** Harakat (U+064B–U+0652), the dagger alef and the tatweel stretch mark. */
@@ -111,6 +118,7 @@ export function SearchableSelect({
       ? options.filter(
           (option) =>
             fold(option.label).includes(needle) ||
+            (option.hint ? fold(option.hint).includes(needle) : false) ||
             (option.keywords ? fold(option.keywords).includes(needle) : false),
         )
       : options;
@@ -153,7 +161,12 @@ export function SearchableSelect({
             className,
           )}
         >
-          <span className="truncate text-start">{shown ?? placeholder}</span>
+          <span className="flex min-w-0 items-baseline gap-1.5 truncate text-start">
+            <bdi className="truncate">{shown ?? placeholder}</bdi>
+            {shown !== null && selected?.hint ? (
+              <bdi className="truncate text-xs text-muted-foreground">{selected.hint}</bdi>
+            ) : null}
+          </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -218,7 +231,12 @@ function Row({
       data-checked={option.value === value}
       onSelect={() => onChoose(option.value)}
     >
-      <span className="truncate">{option.label}</span>
+      <span className="flex min-w-0 flex-col">
+        <bdi className="truncate">{option.label}</bdi>
+        {option.hint ? (
+          <bdi className="truncate text-xs text-muted-foreground">{option.hint}</bdi>
+        ) : null}
+      </span>
     </CommandItem>
   );
 }

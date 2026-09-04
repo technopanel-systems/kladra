@@ -24,8 +24,12 @@ import {
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Sqm } from "@/components/ui-ext/figures";
+import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { formatDay, todayRiyadh } from "@/lib/dates";
+import type { CompanyStanding } from "@/lib/standing";
+import { followUpClass, TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -130,11 +134,14 @@ export function CompanyHeader({
   company,
   contacts,
   projects,
+  standing,
   mine,
 }: {
   company: DrawerCompany;
   contacts: readonly LogContact[];
   projects: readonly LogProject[];
+  /** The four figures under the title (P8.5). */
+  standing: CompanyStanding;
   /**
    * Whether the person reading this owns the floor it is on. A manager reads
    * every company and works none (S8, D42): he gets the same header with the
@@ -155,10 +162,10 @@ export function CompanyHeader({
   const overdue = day !== null && day < today;
   const dueToday = day === today;
 
-  // Row colour is how long something has waited (DESIGN §1): overdue red, due
-  // today amber, otherwise faint. The word beside it carries the same meaning
-  // for anyone who does not see colour.
-  const tone = overdue ? "text-tone-red-fg" : dueToday ? "text-tone-amber-fg" : "text-faint";
+  // Row colour is how long something has waited (DESIGN §1, §6): late is red,
+  // due today is amber, otherwise faint. The word beside it carries the same
+  // meaning for anyone who does not see colour.
+  const tone = followUpClass(day, today);
 
   function save(next: string | null) {
     const previous = day;
@@ -179,11 +186,13 @@ export function CompanyHeader({
     });
   }
 
+  // Context, not news. It stays a quiet line under the name — and the rep's
+  // own name comes off it when he is reading his own company, because he knows.
   const meta: { label: string; value: string | null }[] = [
     { label: t("common.city"), value: company.city },
     { label: t("common.category"), value: company.category },
     { label: t("common.leadSource"), value: company.leadSource },
-    { label: t("common.rep"), value: company.repName },
+    { label: t("common.rep"), value: mine ? null : company.repName },
   ];
 
   return (
@@ -210,6 +219,39 @@ export function CompanyHeader({
         </p>
       </div>
 
+      {/* How this customer is GOING, before anything about what he is
+          (DESIGN §6): what is still open, what has been won, and how long it
+          has been since anybody spoke to him. */}
+      <StandingStrip
+        items={[
+          {
+            label: t("drawer.pipeline"),
+            value: <Sqm value={standing.pipelineSqm} />,
+          },
+          {
+            label: t("drawer.approved"),
+            value: <Sqm value={standing.approvedSqm} />,
+          },
+          {
+            label: t("drawer.openQuotations"),
+            value: (
+              <span dir="ltr" className="num">
+                {standing.openQuotations}
+              </span>
+            ),
+          },
+          {
+            label: t("drawer.lastActivity"),
+            value: standing.lastActivityOn ? (
+              <DayText day={standing.lastActivityOn} locale={locale} />
+            ) : (
+              <span className="text-muted-foreground">{t("common.never")}</span>
+            ),
+            tone: standing.lastActivityOn ? null : "open",
+          },
+        ]}
+      />
+
       {/* The follow-up date, at the top, with its picker (SPEC §3 / D9). */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-line bg-surface-2 px-3 py-2">
         <CalendarClock aria-hidden="true" className="size-4 text-muted-foreground" />
@@ -222,10 +264,10 @@ export function CompanyHeader({
           <span className={cn("text-sm", tone)}>{t("drawer.noFollowUp")}</span>
         )}
         {overdue ? (
-          <span className="text-xs font-medium text-tone-red-fg">{t("common.overdue")}</span>
+          <span className={cn("text-xs font-medium", TONE_TEXT.bad)}>{t("common.overdue")}</span>
         ) : null}
         {dueToday ? (
-          <span className="text-xs font-medium text-tone-amber-fg">{t("common.dueToday")}</span>
+          <span className={cn("text-xs font-medium", TONE_TEXT.wait)}>{t("common.dueToday")}</span>
         ) : null}
         {mine ? (
           <div

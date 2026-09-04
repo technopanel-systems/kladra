@@ -1,6 +1,9 @@
 {
   "request": "Request dispatch",
   "requestFor": "Request dispatch against {label}",
+  "pickQuotation": "Choose a quotation",
+  "pickQuotationFirst": "Choose the quotation this is going against.",
+  "noQuotations": "No issued quotation has anything left to send.",
   "requestHint": "What is going now, how it travels, and on what terms.",
   "editRequest": "Edit request",
   "requested": "Dispatch requested.",
@@ -23,7 +26,7 @@
   "nothingLeft": "Nothing left on this line",
   "destinationPlaceholder": "Where the panels are going",
   "paymentTermsPlaceholder": "As agreed with the customer",
-  "empty": "No dispatches yet — a dispatch is requested from an issued quotation.",
+  "empty": "No dispatches yet. Request one against an issued quotation.",
   "emptySearch": "Nothing matched “{q}”.",
   "emptyStatus": "Nothing is {status} right now.",
   "emptyForQuotation": "Nothing has been sent against this quotation yet.",

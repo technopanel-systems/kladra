@@ -24,8 +24,11 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
-import { formatMoney, formatSqm } from "@/lib/money";
+import { Money, Sqm } from "@/components/ui-ext/figures";
+import { StateBadge } from "@/components/ui-ext/state-badge";
+import { formatMoney } from "@/lib/money";
 import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
+import { quotationTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -75,20 +78,7 @@ function listHref(
 
 function StatusBadge({ status }: { status: QuotationStatus }) {
   const t = useTranslations();
-  return <Badge variant="secondary">{t(STATUS_KEYS[status])}</Badge>;
-}
-
-/** A figure with a unit, in a run of digits that reads left to right either way. */
-function Money({ value }: { value: string }) {
-  const t = useTranslations();
-  return (
-    <span className="whitespace-nowrap">
-      <span dir="ltr" className="num">
-        {formatMoney(value)}
-      </span>{" "}
-      <span className="text-xs text-muted-foreground">{t("common.sar")}</span>
-    </span>
-  );
+  return <StateBadge tone={quotationTone(status)}>{t(STATUS_KEYS[status])}</StateBadge>;
 }
 
 export function QuotationsTable({
@@ -213,8 +203,11 @@ export function QuotationsTable({
                       {row.projectName}
                     </span>
                   ) : null}
-                  <span className="text-sm">
-                    <Money value={row.total} />
+                  {/* m² is the headline and SAR the support (DESIGN §6):
+                      a rep's month is metres, and SMAC owns the money. */}
+                  <span className="flex items-baseline justify-between gap-3 text-sm">
+                    <Sqm value={row.totalSqm} />
+                    <Money value={row.total} className="text-xs" />
                   </span>
                 </Link>
               ))}
@@ -256,12 +249,10 @@ export function QuotationsTable({
                         {row.projectName ?? "—"}
                       </TableCell>
                       <TableCell className="p-3 text-end">
-                        <span dir="ltr" className="num">
-                          {formatSqm(row.totalSqm)}
-                        </span>
+                        <Sqm value={row.totalSqm} unit={false} />
                       </TableCell>
                       <TableCell className="p-3 text-end">
-                        <Money value={row.total} />
+                        <Money value={row.total} currency={false} />
                       </TableCell>
                       <TableCell className="p-3">
                         <span className="flex flex-col gap-1">
@@ -463,7 +454,7 @@ export function QuotationSheet({
                     {t("quotations.itemNumber", { number: item.position })}
                   </h4>
                   <span className="text-sm">
-                    <Money value={item.lineTotal} />
+                    <Money value={item.lineTotal} currency={false} />
                   </span>
                 </div>
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">

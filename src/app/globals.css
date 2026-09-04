@@ -50,14 +50,28 @@
   --color-rail-strong: var(--rail-text-strong);
   --color-rail-active: var(--rail-active);
 
-  --color-tone-red: var(--a-red-bg);
-  --color-tone-red-fg: var(--a-red-fg);
-  --color-tone-blue: var(--a-blue-bg);
-  --color-tone-blue-fg: var(--a-blue-fg);
-  --color-tone-amber: var(--a-amber-bg);
-  --color-tone-amber-fg: var(--a-amber-fg);
-  --color-tone-green: var(--a-green-bg);
-  --color-tone-green-fg: var(--a-green-fg);
+  /*
+   * The five state colours (DESIGN §6), and the only way to reach a hue.
+   *
+   * `bg-tone-amber` used to exist beside them and was deleted with them: a
+   * utility named after a colour is an invitation to spend the loudest one on
+   * a selected chip, which is what had happened. There is no way to write a
+   * hue into a component now without adding it back here, deliberately. Meaning, not hue: a component says
+   * bg-state-wait and never bg-tone-amber, so the day the amber changes it
+   * changes in one place and every "somebody owes an answer" moves with it.
+   * They are aliases rather than values — one hue per tone, defined once
+   * above, and var() resolves them per theme on the element that uses them.
+   */
+  --color-state-wait: var(--a-amber-bg);
+  --color-state-wait-fg: var(--a-amber-fg);
+  --color-state-open: var(--a-blue-bg);
+  --color-state-open-fg: var(--a-blue-fg);
+  --color-state-good: var(--a-green-bg);
+  --color-state-good-fg: var(--a-green-fg);
+  --color-state-bad: var(--a-red-bg);
+  --color-state-bad-fg: var(--a-red-fg);
+  --color-state-over: var(--surface-2);
+  --color-state-over-fg: var(--text-muted);
 
   --color-sidebar: var(--rail);
   --color-sidebar-foreground: var(--rail-text);

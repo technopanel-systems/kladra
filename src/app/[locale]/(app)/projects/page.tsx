@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
+import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { ProjectDrawer } from "@/components/projects/project-drawer";
 import { ProjectSheetSkeleton, ProjectsTable } from "@/components/projects/projects-table";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/authz";
 import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
+import { companyOptions } from "@/lib/pickers";
 import { listProjects } from "@/lib/projects";
 
 /**
@@ -15,12 +17,14 @@ import { listProjects } from "@/lib/projects";
  * come from the one follow-up definition every screen shares, so clicking "2
  * overdue" cannot show a different two.
  *
- * There is no "Add project" button here, on purpose. A project is a job AT a
- * customer (S18), so it is created from inside its company; a dialog that
- * opened by asking which company would only be a dropdown of every company a
- * rep owns, in front of the company list he was going to open anyway. The
- * primary action therefore opens that list, and the empty state says so in a
- * sentence.
+ * The primary action adds a project, and asks which company first (SPEC §3,
+ * P8). It used to send the rep to the companies list instead, on the argument
+ * that a dialog opening with a dropdown of every company was the same thing
+ * slower. Jerom stood on this screen and went hunting, which settled it: a
+ * dropdown he is already looking at beats a list he has to go and find.
+ *
+ * A person with no companies of his own is offered the earlier step instead,
+ * never a button whose dropdown would be empty.
  */
 
 type Search = { q?: string; filter?: string; open?: string };
@@ -36,10 +40,11 @@ export default async function ProjectsPage({
   const filter = parseFollowUpFilter(params.filter);
   const open = params.open?.trim() || null;
 
-  const [t, rows, counts] = await Promise.all([
+  const [t, rows, counts, companies] = await Promise.all([
     getTranslations(),
     listProjects({ user, q: q || undefined, filter, locale }),
     followUpCounts(user),
+    companyOptions(user),
   ]);
 
   return (
@@ -47,9 +52,13 @@ export default async function ProjectsPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.projects")}</h1>
         {/* The brand gradient lives on the primary button and nowhere else. */}
-        <Button asChild className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
-          <Link href="/companies">{t("projects.openCompanies")}</Link>
-        </Button>
+        {companies.length > 0 ? (
+          <NewProjectDialog companies={companies} />
+        ) : (
+          <Button asChild className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+            <Link href="/companies">{t("projects.openCompanies")}</Link>
+          </Button>
+        )}
       </div>
 
       <ProjectsTable rows={rows} counts={counts} q={q} filter={filter ?? null} openId={open} />

@@ -12,6 +12,7 @@ import { MakeMainButton } from "@/components/contacts/make-main-button";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
+import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -26,6 +27,8 @@ import { listQuotationsForCompany } from "@/lib/quotations";
 import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
 import { formatSqm } from "@/lib/money";
+import { TONE_TEXT } from "@/lib/state-tone";
+import { cn } from "@/lib/utils";
 import { formatPhone, whatsappHref } from "@/lib/phone";
 
 /**
@@ -173,6 +176,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         }}
         contacts={logContacts}
         projects={logProjects}
+        standing={company.standing}
         mine={mine}
       />
 
@@ -262,7 +266,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                         href={whatsappHref(row.phoneNormalized)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-tone-green-fg hover:underline"
+                        className="inline-flex items-center gap-1.5 hover:underline"
                       >
                         <MessageCircle aria-hidden="true" className="size-3.5" />
                         <span dir="ltr" className="num">
@@ -307,9 +311,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                         <span className="flex flex-wrap items-center gap-2">
                           <span className="truncate font-medium">{row.name}</span>
                           {row.lostAt ? (
-                            <Badge variant="secondary" className="text-tone-red-fg">
-                              {t("drawer.lost")}
-                            </Badge>
+                            <StateBadge tone="bad">{t("drawer.lost")}</StateBadge>
                           ) : null}
                         </span>
                         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -330,7 +332,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                           </span>
                         </span>
                         {row.lostAt ? (
-                          <span className="text-xs text-tone-red-fg">
+                          <span className={cn("text-xs", TONE_TEXT.bad)}>
                             {t("drawer.lostOn", { date: formatDay(dayOf(row.lostAt), locale) })}
                             {row.lostReason ? ` — ${row.lostReason}` : ""}
                           </span>

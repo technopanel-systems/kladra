@@ -31,6 +31,8 @@ import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { normalizePhone } from "@/lib/phone";
+import { TONE_CLASS } from "@/lib/state-tone";
+import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -169,7 +171,7 @@ function CompanyForm({
     duplicate === null ? null : (
       <p
         role="status"
-        className="flex items-start gap-1.5 rounded-lg bg-tone-amber px-2.5 py-1.5 text-xs text-tone-amber-fg"
+        className={cn("flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs", TONE_CLASS.wait)}
       >
         <Info className="mt-px size-3.5 shrink-0" />
         <span>{t("forms.duplicateCompany", { name: duplicate.name, rep: duplicate.rep })}</span>

@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { FollowUpCounts, FollowUpFilter } from "@/lib/followups";
+import { TONE_CLASS } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -93,10 +94,10 @@ export async function FollowUpStrip({
         <span className="text-xs text-faint">{t("companies.nothingDue")}</span>
       ) : (
         <>
-          {pill("overdue", counts.overdue, "bg-tone-red text-tone-red-fg")}
-          {pill("today", counts.today, "bg-tone-amber text-tone-amber-fg")}
+          {pill("overdue", counts.overdue, TONE_CLASS.bad)}
+          {pill("today", counts.today, TONE_CLASS.wait)}
           {counts.neverContacted > 0
-            ? pill("never", counts.neverContacted, "bg-tone-blue text-tone-blue-fg")
+            ? pill("never", counts.neverContacted, TONE_CLASS.open)
             : null}
         </>
       )}

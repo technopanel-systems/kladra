@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Link } from "@/i18n/navigation";
+import { TONE_TEXT } from "@/lib/state-tone";
 import type { Stuck } from "@/lib/team";
+import { cn } from "@/lib/utils";
 
 /**
  * What is waiting longer than it should be (SPEC D14).
@@ -139,7 +141,7 @@ function Row({
       >
         <span className="min-w-0 flex-1 text-sm">{name}</span>
         <span className="text-xs text-muted-foreground">{who}</span>
-        <span className="text-xs text-tone-amber-fg">{note}</span>
+        <span className={cn("text-xs", TONE_TEXT.wait)}>{note}</span>
       </Link>
     </li>
   );

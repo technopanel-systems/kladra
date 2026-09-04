@@ -18,6 +18,7 @@ import {
 } from "@/components/quotations/quotation-lines";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
+import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -26,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { quotationTotals } from "@/lib/money";
+import { splitProjectOption, type PickerOption } from "@/lib/picker-option";
 
 /**
  * Request a quotation, from inside a company or a project (SPEC §3, S28).
@@ -38,6 +40,11 @@ import { quotationTotals } from "@/lib/money";
  * The totals sit under the lines and move as they are typed. They are the only
  * figures on the screen a rep has to trust, and seeing them add up while he
  * works is what makes him stop checking them on his phone (S31).
+ *
+ * From P8 the project can be the first FIELD instead of the context, so the
+ * Quotations screen has a primary action of its own (SPEC §3, P8). One option
+ * carries both ids, because a quotation belongs to a company whether or not it
+ * names a project, and asking twice would be asking the same question twice.
  */
 
 export type QuotationDraft = {
@@ -66,14 +73,18 @@ export function RequestQuotationDialog({
   companyId,
   projectId,
   projectName,
+  projects,
   mode = "request",
   existing,
   trigger,
 }: {
-  companyId: string;
+  /** Known when the dialog is opened from inside a company or a project. */
+  companyId?: string;
   projectId?: string | null;
   /** Named in the title when the request is being raised on a project. */
   projectName?: string | null;
+  /** Offered as the first field when the project is NOT known. */
+  projects?: PickerOption[];
   mode?: RequestMode;
   /** The lines to open on — required for `edit` and `revise`. */
   existing?: QuotationDraft;
@@ -124,8 +135,9 @@ export function RequestQuotationDialog({
         </p>
       ) : lookups ? (
         <RequestForm
-          companyId={companyId}
+          companyId={companyId ?? null}
           projectId={projectId ?? null}
+          projects={projects}
           mode={mode}
           existing={existing}
           lookups={lookups}
@@ -142,14 +154,16 @@ export function RequestQuotationDialog({
 function RequestForm({
   companyId,
   projectId,
+  projects,
   mode,
   existing,
   lookups,
   onSaved,
   onCancel,
 }: {
-  companyId: string;
+  companyId: string | null;
   projectId: string | null;
+  projects?: PickerOption[];
   mode: RequestMode;
   existing?: QuotationDraft;
   lookups: QuotationLookups;
@@ -159,9 +173,16 @@ function RequestForm({
   const t = useTranslations();
   // Not useActionState: raising a revision removes the button this dialog hangs
   // off, so the answer has to survive the form's own unmount (useSubmitAction).
-  const { submit, pending, error } = useSubmitAction(ACTIONS[mode], (data) =>
+  const { submit, pending, error, fieldErrors } = useSubmitAction(ACTIONS[mode], (data) =>
     onSaved(data?.quotationId),
   );
+
+  // The picker carries both ids in one option, so choosing a project chooses
+  // its company too. When the caller already knew them, it is not rendered.
+  const [chosen, setChosen] = useState("");
+  const picked = splitProjectOption(chosen);
+  const company = companyId ?? picked?.companyId ?? "";
+  const project = projectId ?? picked?.projectId ?? null;
 
   const [lines, setLines] = useState<LineDraft[]>(() =>
     existing
@@ -182,8 +203,8 @@ function RequestForm({
       noValidate
       className="flex min-h-0 flex-1 flex-col"
     >
-      <input type="hidden" name="companyId" value={companyId} />
-      {projectId ? <input type="hidden" name="projectId" value={projectId} /> : null}
+      <input type="hidden" name="companyId" value={company} />
+      {project ? <input type="hidden" name="projectId" value={project} /> : null}
       {mode !== "request" && existing ? (
         <input type="hidden" name="quotationId" value={existing.quotationId} />
       ) : null}
@@ -192,6 +213,29 @@ function RequestForm({
       <input type="hidden" name="items" value={linesPayload(lines)} />
 
       <FormBody>
+        {projects ? (
+          <div className="flex flex-col gap-1.5">
+            <Label id="quotation-project-label">{t("common.project")}</Label>
+            <SearchableSelect
+              aria-labelledby="quotation-project-label"
+              aria-describedby={fieldErrors.companyId ? "quotation-project-error" : undefined}
+              invalid={fieldErrors.companyId ? true : undefined}
+              options={projects}
+              value={chosen}
+              onChange={setChosen}
+              disabled={pending}
+              placeholder={t("quotations.pickProject")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("quotations.noProjects")}
+            />
+            {fieldErrors.companyId ? (
+              <p id="quotation-project-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.companyId}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <QuotationLines
           lookups={lookups}
           lines={lines}

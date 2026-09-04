@@ -44,6 +44,7 @@ import {
   neverContactedCompanySql,
 } from "@/lib/followups";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
+import { companyStanding, type CompanyStanding } from "@/lib/standing";
 import type { SessionUser } from "@/lib/types";
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
@@ -280,6 +281,8 @@ export type CompanyDetail = {
   contacts: CompanyContact[];
   projects: CompanyProject[];
   counts: { contacts: number; projects: number; activities: number; quotations: number };
+  /** How the relationship is going, for the top of the drawer (P8.5). */
+  standing: CompanyStanding;
 };
 
 /**
@@ -332,7 +335,7 @@ export async function getCompany(
   if (!row) return null;
   if (!mayOpen(user, row.repId)) throw new NotAllowed();
 
-  const [contactRows, projectRows, countRow] = await Promise.all([
+  const [contactRows, projectRows, countRow, standing] = await Promise.all([
     db
       .select({
         id: contacts.id,
@@ -372,6 +375,8 @@ export async function getCompany(
       .from(companies)
       .where(eq(companies.id, id))
       .limit(1),
+
+    companyStanding(id),
   ]);
 
   return {
@@ -392,6 +397,7 @@ export async function getCompany(
       activities: Number(countRow[0]?.activities ?? 0),
       quotations: Number(countRow[0]?.quotations ?? 0),
     },
+    standing,
   };
 }
 

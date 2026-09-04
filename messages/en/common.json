@@ -127,5 +127,6 @@
   "status": "Status",
   "date": "Date",
   "by": "by {name}",
-  "readOnly": "Read only"
+  "readOnly": "Read only",
+  "never": "Never"
 }

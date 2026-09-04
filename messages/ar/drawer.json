@@ -35,5 +35,10 @@
   "archiveContactTitle": "أرشفة {name}؟",
   "archiveContactWarning": "تخرج جهة الاتصال من قائمة هذه الشركة، ويبقى اسمها في كل ما سُجّل باسمها.",
   "archiveProjectTitle": "أرشفة {name}؟",
-  "archiveProjectWarning": "يخرج المشروع من قوائمك ويبقى سجله. هذا ليس تسجيله كخاسر — المشروع الخاسر يبقى ظاهرًا مع سببه."
+  "archiveProjectWarning": "يخرج المشروع من قوائمك ويبقى سجله. هذا ليس تسجيله كخاسر — المشروع الخاسر يبقى ظاهرًا مع سببه.",
+  "pipeline": "إجمالي الفرص",
+  "approved": "المعتمد",
+  "openQuotations": "عروض سعر مفتوحة",
+  "lastActivity": "آخر نشاط",
+  "quoted": "المعروض"
 }

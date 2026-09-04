@@ -170,7 +170,7 @@ function riyadhDay(column: SQL): SQL<string | null> {
  * Drizzle column resolves inside the inner table and the condition is silently
  * never true (rules/data.md).
  */
-function isLatestRevisionSql(): SQL<boolean> {
+export function isLatestRevisionSql(): SQL<boolean> {
   return sql`not exists (
     select 1
       from quotations later

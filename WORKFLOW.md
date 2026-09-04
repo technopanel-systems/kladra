@@ -16,9 +16,9 @@
 - [x] P7 Polish, acceptance runs, PWA, handover
 - [ ] P8 Depth — Jerom used it and asked for more (his list, added to SPEC §3 not replacing it)
       - [x] P8.1 Research, the identity decisions, and the view rulings written into DESIGN
-      - [ ] P8.2 Every list creates from itself; the missing-primary-action sweep
-      - [ ] P8.3 Semantic colour: state, overdue, stuck, ahead — one small set, both themes
-      - [ ] P8.4 m² is the headline on quotations and dispatches; price is the quiet one
+      - [x] P8.2 Every list creates from itself; the missing-primary-action sweep
+      - [x] P8.3 Semantic colour: state, overdue, stuck, ahead — one small set, both themes
+      - [x] P8.4 m² is the headline on quotations and dispatches; price is the quiet one
       - [ ] P8.5 The drawers reworked: what a person needs first, at the top
       - [ ] P8.6 A dashboard per role, each answering that person's daily question
       - [ ] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
@@ -224,6 +224,20 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 
 **The floor rule** — `tests/floor.spec.ts`
 One of two specs that are not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42).
+
+**Creating from a list** — `tests/create.spec.ts`
+Faisal adds a project from the Projects screen, requests a quotation from the Quotations
+screen and raises a dispatch from the Dispatches screen, choosing the parent in the dialog
+each time and never leaving the screen he started on. Every one is checked against the
+database: the project against the company picked, the quotation against both ids, the
+dispatch against the quotation and the quantity typed. Rawan is offered none of the three,
+because she owns no companies and a control she cannot use is not drawn (P8.2).
+
+**Colour** — `tests/colour.spec.ts`
+The mapping from a status to one of the five tones is asked directly, and then the
+quotations and dispatches lists are filtered to one status at a time and every badge on
+screen is read back through `data-tone`. Two chains, one meaning: a dispatch waiting on
+Rawan is the same amber as a quotation waiting on her (DESIGN §6).
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

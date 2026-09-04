@@ -15,6 +15,7 @@ import { useArrived } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { formatPhone, whatsappHref, type E164 } from "@/lib/phone";
+import { followUpClass } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -51,14 +52,6 @@ type RowProps = {
   /** True for the row whose drawer is open, so the list says where you are. */
   current: boolean;
 };
-
-/** ISO days compare as strings; both are Riyadh days. */
-function followUpTone(day: string | null, today: string): string {
-  if (!day) return "text-faint";
-  if (day < today) return "text-tone-red-fg";
-  if (day === today) return "text-tone-amber-fg";
-  return "text-faint";
-}
 
 const ROW_LINK =
   "rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -116,7 +109,7 @@ function DeskRow({ row, href, today, current }: RowProps) {
       <TableCell className="text-muted-foreground">
         <DayText day={row.lastActivityOn} locale={locale} />
       </TableCell>
-      <TableCell className={cn("font-medium", followUpTone(row.nextFollowUp, today))}>
+      <TableCell className={cn("font-medium", followUpClass(row.nextFollowUp, today))}>
         <DayText day={row.nextFollowUp} locale={locale} />
       </TableCell>
     </TableRow>
@@ -145,7 +138,7 @@ function CardRow({ row, href, today, current }: RowProps) {
         >
           <span className="block truncate">{row.name}</span>
         </Link>
-        <span className={cn("shrink-0 text-xs", followUpTone(row.nextFollowUp, today))}>
+        <span className={cn("shrink-0 text-xs", followUpClass(row.nextFollowUp, today))}>
           <span className="sr-only">{t("common.nextFollowUp")}</span>
           <DayText day={row.nextFollowUp} locale={locale} />
         </span>

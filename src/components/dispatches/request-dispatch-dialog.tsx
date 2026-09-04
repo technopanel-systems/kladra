@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import type { RemainingItem } from "@/lib/dispatches";
+import type { PickerOption } from "@/lib/picker-option";
 import { formatSqm } from "@/lib/money";
 
 /**
@@ -36,6 +37,11 @@ import { formatSqm } from "@/lib/money";
  *
  * What is left on each line is fetched every time this opens, never cached —
  * another dispatch raised a minute ago has already spent some of it (D12).
+ *
+ * From P8 the quotation can be the first FIELD instead of the context, so the
+ * Dispatches screen has a primary action of its own (SPEC §3, P8). The list it
+ * offers is only quotations with something still on them, so a rep cannot pick
+ * one and then find every line at zero.
  */
 
 export type DispatchDraft = {
@@ -57,13 +63,17 @@ const ACTIONS = {
 export function RequestDispatchDialog({
   quotationId,
   quotationLabel,
+  quotations,
   mode = "request",
   existing,
   trigger,
 }: {
-  quotationId: string;
+  /** Known when the dialog is opened from a quotation's drawer. */
+  quotationId?: string;
   /** Q-12 — named in the title, because a dispatch is always against one. */
-  quotationLabel: string;
+  quotationLabel?: string;
+  /** Offered as the first field when the quotation is NOT known. */
+  quotations?: PickerOption[];
   mode?: DispatchMode;
   existing?: DispatchDraft;
   trigger?: ReactNode;
@@ -74,6 +84,11 @@ export function RequestDispatchDialog({
   const { lookups, failed } = useDispatchLookups(open);
   const [items, setItems] = useState<RemainingItem[] | null>(null);
   const [itemsFailed, setItemsFailed] = useState(false);
+  const [chosen, setChosen] = useState("");
+
+  // The quotation the form is being built for: the caller's, or the one picked
+  // in the field above it.
+  const active = quotationId ?? (chosen || null);
 
   // Closing clears what was fetched; opening fetches it again. Done in the
   // handler rather than in the effect, because "reset on close" as an effect is
@@ -83,13 +98,14 @@ export function RequestDispatchDialog({
     if (!next) {
       setItems(null);
       setItemsFailed(false);
+      setChosen("");
     }
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !active) return;
     let cancelled = false;
-    remainingItemsAction(quotationId, existing?.dispatchId).then((outcome) => {
+    remainingItemsAction(active, existing?.dispatchId).then((outcome) => {
       if (cancelled) return;
       if (outcome.ok && outcome.data) setItems(outcome.data);
       else setItemsFailed(true);
@@ -97,7 +113,7 @@ export function RequestDispatchDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, quotationId, existing?.dispatchId]);
+  }, [open, active, existing?.dispatchId]);
 
   const onSaved = useCallback(
     (dispatchId: string | undefined) => {
@@ -116,7 +132,9 @@ export function RequestDispatchDialog({
       title={
         mode === "edit"
           ? t("dispatches.editRequest")
-          : t("dispatches.requestFor", { label: quotationLabel })
+          : quotationLabel
+            ? t("dispatches.requestFor", { label: quotationLabel })
+            : t("dispatches.request")
       }
       description={t("dispatches.requestHint")}
       trigger={
@@ -128,13 +146,40 @@ export function RequestDispatchDialog({
         )
       }
     >
+      {quotations ? (
+        <div className="flex flex-col gap-1.5 px-4 pt-1 pb-3">
+          <Label id="dispatch-quotation-label">{t("common.quotation")}</Label>
+          <SearchableSelect
+            aria-labelledby="dispatch-quotation-label"
+            options={quotations}
+            value={chosen}
+            // What is left belongs to the quotation, so the previous answer is
+            // about a different one. Cleared here rather than in the effect:
+            // "reset when the input changes" as an effect is a setState that
+            // runs on every other render too (DESIGN §5).
+            onChange={(next) => {
+              setItems(null);
+              setItemsFailed(false);
+              setChosen(next);
+            }}
+            placeholder={t("dispatches.pickQuotation")}
+            searchPlaceholder={t("forms.searchList")}
+            emptyText={t("dispatches.noQuotations")}
+          />
+        </div>
+      ) : null}
+
       {failed || itemsFailed ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
+      ) : active === null ? (
+        <p className="px-4 pb-4 text-sm text-muted-foreground">
+          {t("dispatches.pickQuotationFirst")}
+        </p>
       ) : lookups && items ? (
         <DispatchForm
-          quotationId={quotationId}
+          quotationId={active}
           mode={mode}
           existing={existing}
           lookups={lookups}

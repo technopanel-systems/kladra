@@ -223,8 +223,13 @@ export function LogDialog({
                   className={cn(
                     "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                     "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+                    // Chosen is not a state: the five colours mean what
+                    // happened to a record, and painting the selected chip red
+                    // spends the loudest one on "you pressed this" (DESIGN §6).
+                    // The quiet fill is what the filter chips use, for the same
+                    // reason.
                     channel === value
-                      ? "border-brand/40 bg-tone-red text-tone-red-fg"
+                      ? "border-line-strong bg-secondary font-medium text-foreground"
                       : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
                   )}
                 >

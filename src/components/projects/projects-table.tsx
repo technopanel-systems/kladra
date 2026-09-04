@@ -11,6 +11,9 @@ import { LogDialog } from "@/components/activities/log-dialog";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-lost-dialog";
+import { Sqm } from "@/components/ui-ext/figures";
+import { StandingStrip } from "@/components/ui-ext/standing-strip";
+import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,8 +41,9 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { formatDay } from "@/lib/dates";
 import type { FollowUpFilter, FollowUpState } from "@/lib/followups";
-import { formatSqm } from "@/lib/money";
 import type { ProjectRow } from "@/lib/projects";
+import type { ProjectStanding } from "@/lib/standing";
+import { TONE_CLASS, TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -59,8 +63,8 @@ export type FollowUpStripCounts = { overdue: number; today: number };
 
 /** Colour says how long something has waited, and nothing else (DESIGN §1). */
 const WAITING_TEXT: Record<FollowUpState, string> = {
-  overdue: "text-tone-red-fg",
-  today: "text-tone-amber-fg",
+  overdue: TONE_TEXT.bad,
+  today: TONE_TEXT.wait,
   future: "text-faint",
 };
 
@@ -82,19 +86,6 @@ function useLossReasonLabel(): (stored: string | null) => string | null {
     if (!stored) return null;
     return isLossReasonCode(stored) ? t(`projects.lossReason.${stored}`) : stored;
   };
-}
-
-function Sqm({ value }: { value: string | null }) {
-  const t = useTranslations();
-  if (value === null || value === "") return <span className="text-faint">—</span>;
-  return (
-    <span className="inline-flex items-baseline gap-1 whitespace-nowrap">
-      <span dir="ltr" className="num">
-        {formatSqm(value)}
-      </span>
-      <span className="text-xs text-muted-foreground">{t("common.sqm")}</span>
-    </span>
-  );
 }
 
 function FollowUp({ day, state }: { day: string | null; state: FollowUpState | null }) {
@@ -198,8 +189,8 @@ function FilterChip({
       variant={active ? "secondary" : "ghost"}
       className={cn(
         active && "ring-1 ring-line-strong",
-        tone === "red" && "bg-tone-red text-tone-red-fg hover:bg-tone-red",
-        tone === "amber" && "bg-tone-amber text-tone-amber-fg hover:bg-tone-amber",
+        tone === "red" && cn(TONE_CLASS.bad, "hover:bg-state-bad"),
+        tone === "amber" && cn(TONE_CLASS.wait, "hover:bg-state-wait"),
       )}
     >
       <Link href={href} aria-current={active ? "true" : undefined}>
@@ -426,6 +417,8 @@ export type ProjectSheetProps = {
   companyName: string;
   cityName: string | null;
   expectedSqm: string | null;
+  /** The figures under the title (P8.5). */
+  standing: ProjectStanding;
   nextFollowUp: string | null;
   followUpState: FollowUpState | null;
   lostOn: string | null;
@@ -467,6 +460,7 @@ export function ProjectSheet({
   companyName,
   cityName,
   expectedSqm,
+  standing,
   nextFollowUp,
   followUpState,
   lostOn,
@@ -540,8 +534,27 @@ export function ProjectSheet({
               {companyName}
             </Link>
             {cityName ? <span>{cityName}</span> : null}
-            <Sqm value={expectedSqm} />
           </div>
+
+          {/* How the job is going, before what it is (DESIGN §6): the rep's own
+              estimate, what has actually been quoted on it, what has been
+              approved against it, and when anybody last spoke to anybody. */}
+          <StandingStrip
+            items={[
+              { label: t("common.expectedSqm"), value: <Sqm value={expectedSqm} /> },
+              { label: t("drawer.quoted"), value: <Sqm value={standing.quotedSqm} /> },
+              { label: t("drawer.approved"), value: <Sqm value={standing.approvedSqm} /> },
+              {
+                label: t("drawer.lastActivity"),
+                value: standing.lastActivityOn ? (
+                  <DayText day={standing.lastActivityOn} locale={locale} />
+                ) : (
+                  <span className="text-muted-foreground">{t("common.never")}</span>
+                ),
+                tone: standing.lastActivityOn ? null : "open",
+              },
+            ]}
+          />
 
           {lost ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
@@ -573,10 +586,10 @@ export function ProjectSheet({
               </span>
             )}
             {followUpState === "overdue" ? (
-              <Badge className="bg-tone-red text-tone-red-fg">{t("common.overdue")}</Badge>
+              <StateBadge tone="bad">{t("common.overdue")}</StateBadge>
             ) : null}
             {followUpState === "today" ? (
-              <Badge className="bg-tone-amber text-tone-amber-fg">{t("common.dueToday")}</Badge>
+              <StateBadge tone="wait">{t("common.dueToday")}</StateBadge>
             ) : null}
             {saving ? <span className="text-xs text-faint">{t("common.saving")}</span> : null}
           </div>

@@ -1,21 +1,23 @@
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
+import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import {
   QuotationSheetSkeleton,
   QuotationsTable,
 } from "@/components/quotations/quotations-table";
+import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
+import { projectOptions } from "@/lib/pickers";
 import { listQuotations, type QuotationStatus } from "@/lib/quotations";
 
 /**
  * Every quotation this person may see, newest first (SPEC S28–S36).
  *
- * No "Request quotation" button here, for the same reason there is no "Add
- * project" on the projects screen: a quotation is raised from inside a company
- * or a project (§3), and a dialog that opened by asking which company would be
- * a dropdown of every company in front of the list he was going to open anyway.
- * The empty state says where to go instead.
+ * The primary action requests one, and asks which project first (SPEC §3, P8).
+ * The coordinator sees every quotation on this screen and raises none, so she
+ * is offered no button: she owns no companies, so the list of projects a
+ * request could go on is empty and the control is never drawn.
  *
  * Only the latest revision of a number is listed. Earlier ones stay readable
  * from the drawer, because a project quoted three times at 2,000 m² is 2,000,
@@ -49,14 +51,27 @@ export default async function QuotationsPage({
   const status = parseStatus(params.status);
   const open = params.open?.trim() || null;
 
-  const [t, rows] = await Promise.all([
+  const [t, rows, projects] = await Promise.all([
     getTranslations(),
     listQuotations({ user, q: q || undefined, status: status ?? undefined, locale }),
+    projectOptions(user),
   ]);
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t("common.quotations")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{t("common.quotations")}</h1>
+        {projects.length > 0 ? (
+          <RequestQuotationDialog
+            projects={projects}
+            trigger={
+              <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+                {t("quotations.request")}
+              </Button>
+            }
+          />
+        ) : null}
+      </div>
 
       <QuotationsTable base="/quotations" rows={rows} q={q} status={status} openId={open} />
 

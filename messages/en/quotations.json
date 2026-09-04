@@ -1,6 +1,8 @@
 {
   "request": "Request quotation",
   "requestFor": "Request quotation for {project}",
+  "pickProject": "Choose a project",
+  "noProjects": "No projects to quote on yet.",
   "requestHint": "The lines, and anything the coordinator needs to know.",
   "editRequest": "Edit request",
   "revise": "Revise",
@@ -39,7 +41,7 @@
   "drawerDescription": "{project} at {company}",
   "searchLabel": "Search quotations",
   "searchPlaceholder": "Company, project or number",
-  "empty": "No quotations yet — a quotation is requested from inside a company or a project.",
+  "empty": "No quotations yet. Request the first one with the button above.",
   "emptySearch": "Nothing matched “{q}”.",
   "emptyStatus": "Nothing is {status} right now.",
   "emptyForCompany": "No quotations for this company yet.",

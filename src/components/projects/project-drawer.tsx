@@ -9,6 +9,7 @@ import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
 import { getProject } from "@/lib/projects";
+import { projectStanding } from "@/lib/standing";
 import { listQuotationsForProject } from "@/lib/quotations";
 
 /**
@@ -59,7 +60,10 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   const company = await getCompany(user, project.companyId, locale);
   const contacts = company?.contacts ?? [];
   const projects = company?.projects ?? [];
-  const quotations = await listQuotationsForProject(user, project.id);
+  const [quotations, standing] = await Promise.all([
+    listQuotationsForProject(user, project.id),
+    projectStanding(project.id),
+  ]);
 
   /**
    * Whose floor this project sits on. A manager and an admin open everybody's
@@ -87,6 +91,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       companyName={project.companyName}
       cityName={project.company.cityName}
       expectedSqm={project.expectedSqm}
+      standing={standing}
       nextFollowUp={project.nextFollowUp}
       followUpState={project.followUpState}
       lostOn={toDay(project.lostAt)}
