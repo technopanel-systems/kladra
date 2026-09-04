@@ -47,6 +47,13 @@ Every commit is green on typecheck, lint, build, test.
 (loopback ports, PUBLIC_URL), `auth-bridge.md` (database sessions from credentials).
 Hooks: `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12.
 
+## Permissions
+`permissions.defaultMode` of `bypassPermissions` or `auto` is IGNORED from project settings
+(Claude Code 2.1.257+). It is honoured only from `~/.claude/settings.json`, managed settings,
+or `--permission-mode` / `--dangerously-skip-permissions` at launch. Do not put it in the repo;
+it would be a lie about what the system does. Blanket allow rules live in `settings.local.json`,
+which reloads live — no restart. To stop prompts for good: `/permissions` → Bypass permissions.
+
 ## Never
 No third-party agent frameworks or swarms. No production data — migrations clear.
 No comments feature, refresh buttons, drag-and-drop, bulk edit, saved views, charts
