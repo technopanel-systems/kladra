@@ -106,6 +106,11 @@ curl http://localhost:3100/api/health
 `run-app.cmd` (double-click) does the same and waits for health. `restart: always` plus
 "start Docker Desktop on boot" brings the machine back unattended after a power cut.
 
+The image has been built and started from this repo, not only assumed to work: it serves
+the login screen, the manifest, the icons and the service worker, and with no database
+reachable `/api/health` answers 503 rather than the container dying — the app opens its
+connection when something asks a question, not when a module is imported.
+
 Before real users, on the host machine:
 
 - [ ] BIOS: power on after AC loss · Windows Update: no auto-restart · Docker Desktop on boot · `.wslconfig` memory cap · UPS
