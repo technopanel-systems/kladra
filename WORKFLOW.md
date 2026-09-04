@@ -11,47 +11,39 @@
 - [ ] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, handover
 
-**Where I stopped:** P1 redone — SPEC §2 has 57 sentences from FACET's SPEC and archive; lookups in
-scripts/seed/lookups.ts; real en/ar terms in messages/*/common.json. Next: P2 — the scaffold, schema
-(25 tables) and migration exist uncommitted; wire auth, shell, seed, LISTEN/NOTIFY → SSE, smoke test.
+**Where I stopped:** P2 — scaffold, 25-table schema, migration, i18n, tokens and tests are in;
+auth, shell, seed and live updates are building. Next: integrate them, then P3.
 
-## §1 Toolbox — what is installed and why
+## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
 
-Cap: six skills plus find-skills. A skill unused for two hours after install is removed.
+| Skill (source) | For |
+|---|---|
+| find-skills (vercel-labs/skills) | Searching the registry when a capability is missing. |
+| frontend-design (anthropics/skills) | Aesthetic direction, so screens do not read as shadcn defaults. |
+| vercel-react-best-practices (vercel-labs) | React 19 and Server Component patterns. |
+| web-design-guidelines (vercel-labs) | The review at the end of P3–P6: accessibility, focus, contrast, motion. |
+| next-best-practices (vercel-labs/openreview) | Next 16: caching, server actions, proxy, route handlers. |
+| shadcn (official) | CLI usage and composition for the DESIGN §3 kit. |
+| playwright-testing (alinaqi/maggy) | Locators, fixtures, clock control, flake avoidance. |
 
-| Skill | Source | For |
-|---|---|---|
-| find-skills | vercel-labs/skills | Searching the registry when a capability is missing. |
-| frontend-design | anthropics/skills | Aesthetic direction, so screens do not read as shadcn defaults. |
-| vercel-react-best-practices | vercel-labs/agent-skills | React 19 and Server Component patterns. |
-| web-design-guidelines | vercel-labs/agent-skills | The review at the end of P3–P6: accessibility, focus, contrast, motion. |
-| next-best-practices | vercel-labs/openreview | Next 16 App Router: caching, server actions, proxy, route handlers. |
-| shadcn | shadcn/ui (official) | CLI usage and composition for the DESIGN §3 kit. |
-| playwright-testing | alinaqi/maggy | Locators, fixtures, clock control, flake avoidance. |
-
-Agents in `.claude/agents/`: shot-looker (sonnet) · screen-builder (xhigh) · test-runner
-(sonnet) · arabic-reviewer (opus). Hooks: `guard-writes.mjs` H0–H9, `guard-bash.mjs`
-H11–H12. Rules: `.claude/rules/{data,migrations,deploy,auth-bridge}.md`. Chromium via
-`npx playwright install chromium`; shot-looker reads @playwright/cli's own SKILL.md.
+Agents: shot-looker (sonnet) · screen-builder (xhigh) · test-runner (sonnet) · arabic-reviewer
+(opus). Hooks `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12; rules in `.claude/rules/`.
 
 ## §2 How a session runs
 
-1. Read §0. Continue from the first unchecked box; the note says what is half-done. Never
-   ask Jerom during a build run — pick the obvious default, record it in SPEC §4, continue.
-2. Inside a box: schema → query → server action → screen → both locales → Playwright
-   acceptance → shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix.
-   Subagents run slices in parallel, one writer per file at a time. At the end of P3, P4,
-   P5, P6 run the web-design-guidelines skill as a review step.
+1. Read §0 and continue from the first unchecked box. Never ask Jerom during a build run —
+   pick the obvious default, record it in SPEC §4, continue.
+2. Inside a box: schema → query → server action → screen → both locales → Playwright →
+   shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix. Subagents run slices
+   in parallel, one writer per file. End P3–P6 with the web-design-guidelines review.
 3. Before every commit: `npm run typecheck && npm run lint && npm run build && npm run test`.
-   If a box cannot get green, cut scope inside it, note the cut in §0, commit green. Then tick
-   the box, update "where I stopped", commit. Also commit at natural pauses.
-4. Guards: never `docker stop/down/rm` outside compose project `kladra` (H12). Docker Desktop
-   is expected up; if not, retry every minute for 30 minutes. If `git push` fails, commit
-   locally and continue. FACET is read-only. No agent frameworks. A build run deploys nothing.
+   If a box cannot get green, cut scope inside it and note the cut in §0. Then tick the box,
+   update "where I stopped", and commit; also commit at natural pauses.
+4. Guards: never `docker stop/down/rm` outside compose project `kladra` (H12). If Docker is
+   down, retry every minute for 30 minutes. If `git push` fails, commit locally and continue.
+   FACET is read-only. No agent frameworks. A build run deploys nothing.
 
-## §3 Acceptance scripts per role
-
-The Playwright tests in `tests/` walk exactly these steps, in en and ar.
+## §3 Acceptance scripts — the Playwright tests walk these steps, in en and ar
 
 **Faisal (rep)** — `tests/rep.spec.ts`
 1. Sign in as Faisal. Home is Companies with the follow-up strip at the top.

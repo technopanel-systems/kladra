@@ -45,9 +45,14 @@ if (frameworkInvocation.test(command)) {
 // project "kladra". A destructive docker verb must name kladra (the project
 // flag, a kladra-* container, or run as `docker compose` from this repo whose
 // compose file is `name: kladra`). Anything naming facet is refused outright.
-// Each docker invocation is judged on its own segment, so an unrelated part of
-// a long command cannot trip or excuse it.
-for (const seg of command.match(/\bdocker\b[^\n|;&]*/gi) ?? []) {
+// Each docker INVOCATION is judged on its own segment, so an unrelated part of
+// a long command cannot trip or excuse it. `docker` must sit at a command
+// position — start of the command, or after a separator — because prose that
+// merely mentions it (a commit message, a heredoc, this file's own comments)
+// is not an invocation. The first run of this guard blocked exactly that.
+const dockerAt = /(?:^|[\n;&|]|\$\(|`|\bsudo\s+|\bnpx\s+|\bthen\s+|\bdo\s+|&&\s*|\|\|\s*)\s*(docker\b[^\n|;&]*)/gi;
+for (const m of command.matchAll(dockerAt)) {
+  const seg = m[1];
   if (!/\b(?:stop|rm|rmi|kill|restart|down|prune)\b/i.test(seg)) continue;
   const namesFacet = /facet/i.test(seg);
   const namesKladra = /kladra/i.test(seg);
