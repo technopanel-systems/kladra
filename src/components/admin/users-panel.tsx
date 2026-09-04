@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/actions/admin";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { PromptDialog } from "@/components/ui-ext/prompt-dialog";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -216,7 +217,7 @@ function UserForm({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<string>(user?.role ?? "rep");
 
-  const { submit, pending, error } = useSubmitAction(
+  const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
     mode === "create" ? createUserAction : updateUserAction,
     () => {
       toast.success(
@@ -227,10 +228,15 @@ function UserForm({
     },
   );
 
+  // This dialog is taller than a phone, so a message that only appears beside a
+  // box is one the admin may never scroll to.
+  const form = useRef<HTMLFormElement>(null);
+  useFocusFirstError(form, answer);
+
   const options = ROLES.map((value) => ({ value, label: t(`admin.role.${value}`) }));
 
   return (
-    <form action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+    <form ref={form} action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       {user ? <input type="hidden" name="userId" value={user.id} /> : null}
       <input type="hidden" name="role" value={role} />
 
@@ -243,7 +249,14 @@ function UserForm({
             value={name}
             onChange={(event) => setName(event.target.value)}
             disabled={pending}
+            aria-invalid={fieldErrors.name ? true : undefined}
+            aria-describedby={fieldErrors.name ? "user-name-error" : undefined}
           />
+          {fieldErrors.name ? (
+            <p id="user-name-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.name}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -256,7 +269,14 @@ function UserForm({
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             disabled={pending}
+            aria-invalid={fieldErrors.email ? true : undefined}
+            aria-describedby={fieldErrors.email ? "user-email-error" : undefined}
           />
+          {fieldErrors.email ? (
+            <p id="user-email-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.email}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -286,7 +306,14 @@ function UserForm({
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               disabled={pending}
+              aria-invalid={fieldErrors.password ? true : undefined}
+              aria-describedby={fieldErrors.password ? "user-password-error" : undefined}
             />
+            {fieldErrors.password ? (
+              <p id="user-password-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.password}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </FormBody>

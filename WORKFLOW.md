@@ -176,5 +176,11 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 9. A rep archives a company; Jerom restores it from Archive and it is back on the floor.
 10. Second test: a rep who types any `/admin` URL lands on his own home, and `/api/export/*` answers 404.
 
+**On a phone** — `tests/pwa.spec.ts`
+1. `/manifest.webmanifest` is served, names the app, opens standalone, and every icon in it is a real PNG on disk — including the apple one, which iOS reads from a link tag and not from the manifest.
+2. The offline splash is a plain file and carries both languages, because there is no server to ask which one to use.
+3. Signed in, cut the network: the splash appears instead of the browser's error page.
+4. The cache is listed by name and holds exactly two files. Anything else in it is offline DATA, which SPEC §3 rules out.
+
 **The floor rule** — `tests/floor.spec.ts`
 The only spec that is not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42).

@@ -1,7 +1,7 @@
 "use client";
 
 import { Truck } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { remainingItemsAction, type DispatchLookups } from "@/actions/forms";
@@ -13,6 +13,7 @@ import {
   type SendDraft,
 } from "@/components/dispatches/dispatch-items";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useDispatchLookups } from "@/components/ui-ext/form-lookups";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -166,9 +167,15 @@ function DispatchForm({
   onCancel: () => void;
 }) {
   const t = useTranslations();
-  const { submit, pending, error } = useSubmitAction(ACTIONS[mode], (data) =>
-    onSaved(data?.dispatchId),
+  const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
+    ACTIONS[mode],
+    (data) => onSaved(data?.dispatchId),
   );
+
+  // Three required boxes sit below a scrolling list of lines, so a message only
+  // beside one of them is a message a rep on a phone never reaches.
+  const form = useRef<HTMLFormElement>(null);
+  useFocusFirstError(form, answer);
 
   const [lines, setLines] = useState<SendDraft[]>(() => {
     const already = new Map(existing?.sending.map((row) => [row.quotationItemId, row.qty]) ?? []);
@@ -187,6 +194,7 @@ function DispatchForm({
 
   return (
     <form
+      ref={form}
       action={submit}
       // The browser's own validation is off: it refuses the submit before the
       // action runs and answers in the BROWSER's language (DESIGN §5).
@@ -219,10 +227,17 @@ function DispatchForm({
             value={method}
             onChange={setMethod}
             disabled={pending}
+            invalid={fieldErrors.shipmentMethodId ? true : undefined}
+            aria-describedby={fieldErrors.shipmentMethodId ? "shipment-error" : undefined}
             placeholder={t("forms.choose")}
             searchPlaceholder={t("forms.searchList")}
             emptyText={t("forms.noMatch")}
           />
+          {fieldErrors.shipmentMethodId ? (
+            <p id="shipment-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.shipmentMethodId}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -234,7 +249,14 @@ function DispatchForm({
             onChange={(event) => setDestination(event.target.value)}
             disabled={pending}
             placeholder={t("dispatches.destinationPlaceholder")}
+            aria-invalid={fieldErrors.destination ? true : undefined}
+            aria-describedby={fieldErrors.destination ? "dispatch-destination-error" : undefined}
           />
+          {fieldErrors.destination ? (
+            <p id="dispatch-destination-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.destination}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -247,7 +269,14 @@ function DispatchForm({
             onChange={(event) => setPaymentTerms(event.target.value)}
             disabled={pending}
             placeholder={t("dispatches.paymentTermsPlaceholder")}
+            aria-invalid={fieldErrors.paymentTerms ? true : undefined}
+            aria-describedby={fieldErrors.paymentTerms ? "dispatch-terms-error" : undefined}
           />
+          {fieldErrors.paymentTerms ? (
+            <p id="dispatch-terms-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.paymentTerms}
+            </p>
+          ) : null}
         </div>
       </FormBody>
 

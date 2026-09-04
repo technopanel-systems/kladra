@@ -20,6 +20,8 @@ primary button only. Values carried from FACET's globals.css:
 | brand (primary, ring) | `#f2566b` | `#c8102e` |
 | brand-grad | `linear-gradient(135deg,#f2566b,#ff7a4a)` | `linear-gradient(135deg,#c8102e,#e5502f)` |
 | brand-glow | `0 0 0 1px rgba(242,86,107,.35), 0 8px 28px -8px rgba(242,86,107,.55)` | `0 0 0 1px rgba(200,16,46,.25), 0 8px 24px -8px rgba(200,16,46,.4)` |
+| mark-grad (the K, both themes) | `linear-gradient(140deg,#e5233c,#7a1020)` | same |
+| avatar-user-grad / avatar-person-grad | `linear-gradient(140deg,#8a3244,#4a1622)` / `(140deg,#31527f,#1b2f4c)` | same |
 | tone red bg / fg | `rgba(242,86,107,.14)` / `#ff8fa0` | `rgba(200,16,46,.09)` / `#c8102e` |
 | tone amber bg / fg | `rgba(227,166,62,.14)` / `#ebb35a` | `rgba(138,90,0,.11)` / `#8a5a00` |
 | tone green bg / fg | `rgba(87,197,126,.14)` / `#6fd08f` | `rgba(21,128,61,.09)` / `#15803d` |
@@ -30,6 +32,12 @@ primary button only. Values carried from FACET's globals.css:
 Destructive is a tint (`bg-destructive/10 text-destructive`), never a solid red. Popovers
 and dialogs take the solid surface — never blurred. Row colour means how long something has
 waited: overdue red, due today amber, otherwise faint. Status is a word, not a colour.
+
+The three gradients below brand-grad are marks, not surfaces: the K in the sidebar and on
+the installed app's icon, and the two initials circles. They are the same in both themes
+because a logo does not change colour when somebody turns the lights off, and they are the
+only gradients outside the primary button (§4). `scripts/icons.ts` redraws the icon files
+from mark-grad; the K there is paths, not type, so no machine's font list can change it.
 
 ## §2 Principles
 

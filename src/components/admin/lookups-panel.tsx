@@ -1,12 +1,13 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useCallback, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { saveLookupAction, setLookupActiveAction } from "@/actions/admin";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -186,37 +187,61 @@ function RowForm({
     fields.map((_, index) => row?.values[index] ?? ""),
   );
 
-  const { submit, pending, error } = useSubmitAction(saveLookupAction, () => {
-    toast.success(t("admin.rowSaved"));
-    onClose();
-    router.refresh();
-  });
+  const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
+    saveLookupAction,
+    () => {
+      toast.success(t("admin.rowSaved"));
+      onClose();
+      router.refresh();
+    },
+  );
+
+  // Which box is the whole question here: a category is one row in two
+  // languages, and "Required" at the bottom does not say which language.
+  const form = useRef<HTMLFormElement>(null);
+  useFocusFirstError(form, answer);
 
   return (
-    <form action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+    <form ref={form} action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <input type="hidden" name="kind" value={kind} />
       {row ? <input type="hidden" name="id" value={row.id} /> : null}
 
       <FormBody>
-        {fields.map((spec, index) => (
-          <div key={spec.key} className="flex flex-col gap-1.5">
-            <Label htmlFor={`lookup-${spec.key}`}>{t(spec.labelKey)}</Label>
-            <Input
-              id={`lookup-${spec.key}`}
-              name={`f_${spec.key}`}
-              dir={spec.key === "ar" ? undefined : "auto"}
-              inputMode={spec.numeric ? "decimal" : undefined}
-              className={spec.numeric ? "num" : undefined}
-              value={values[index]}
-              onChange={(event) =>
-                setValues((current) =>
-                  current.map((value, i) => (i === index ? event.target.value : value)),
-                )
-              }
-              disabled={pending}
-            />
-          </div>
-        ))}
+        {fields.map((spec, index) => {
+          // The action keys its answers by the field's own name, so a box and
+          // its message need no second list to stay in step.
+          const refused = fieldErrors[`f_${spec.key}`];
+          return (
+            <div key={spec.key} className="flex flex-col gap-1.5">
+              <Label htmlFor={`lookup-${spec.key}`}>{t(spec.labelKey)}</Label>
+              <Input
+                id={`lookup-${spec.key}`}
+                name={`f_${spec.key}`}
+                dir={spec.key === "ar" ? undefined : "auto"}
+                inputMode={spec.numeric ? "decimal" : undefined}
+                className={spec.numeric ? "num" : undefined}
+                value={values[index]}
+                onChange={(event) =>
+                  setValues((current) =>
+                    current.map((value, i) => (i === index ? event.target.value : value)),
+                  )
+                }
+                disabled={pending}
+                aria-invalid={refused ? true : undefined}
+                aria-describedby={refused ? `lookup-${spec.key}-error` : undefined}
+              />
+              {refused ? (
+                <p
+                  id={`lookup-${spec.key}-error`}
+                  role="alert"
+                  className="text-xs text-destructive"
+                >
+                  {refused}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
       </FormBody>
 
       <FormFooter error={error} pending={pending} onCancel={onClose} />

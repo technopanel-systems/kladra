@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { addNonWorkingAction, removeNonWorkingAction } from "@/actions/admin";
@@ -9,6 +9,7 @@ import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { DayText } from "@/components/ui-ext/day-text";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
@@ -140,11 +141,17 @@ function AddDayForm({
   const [who, setWho] = useState<string>(EVERYONE);
   const [note, setNote] = useState("");
 
-  const { submit, pending, error } = useSubmitAction(addNonWorkingAction, () => {
-    toast.success(t("admin.dayAdded"));
-    onClose();
-    router.refresh();
-  });
+  const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
+    addNonWorkingAction,
+    () => {
+      toast.success(t("admin.dayAdded"));
+      onClose();
+      router.refresh();
+    },
+  );
+
+  const form = useRef<HTMLFormElement>(null);
+  useFocusFirstError(form, answer);
 
   const options = [
     { value: EVERYONE, label: t("admin.everyone") },
@@ -152,14 +159,26 @@ function AddDayForm({
   ];
 
   return (
-    <form action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+    <form ref={form} action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <input type="hidden" name="day" value={day ?? ""} />
       {who ? <input type="hidden" name="userId" value={who} /> : null}
 
       <FormBody>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="day-picker">{t("common.date")}</Label>
-          <DatePicker id="day-picker" value={day} onChange={setDay} disabled={pending} />
+          <DatePicker
+            id="day-picker"
+            value={day}
+            onChange={setDay}
+            disabled={pending}
+            invalid={fieldErrors.day ? true : undefined}
+            aria-describedby={fieldErrors.day ? "day-error" : undefined}
+          />
+          {fieldErrors.day ? (
+            <p id="day-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.day}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -184,7 +203,14 @@ function AddDayForm({
             value={note}
             onChange={(event) => setNote(event.target.value)}
             disabled={pending}
+            aria-invalid={fieldErrors.note ? true : undefined}
+            aria-describedby={fieldErrors.note ? "day-note-error" : undefined}
           />
+          {fieldErrors.note ? (
+            <p id="day-note-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.note}
+            </p>
+          ) : null}
         </div>
       </FormBody>
 

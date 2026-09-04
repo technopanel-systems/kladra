@@ -71,6 +71,13 @@ broken at least once in FACET, Kladra's predecessor.
   for a write gate (`assertCompanyMine`, `assertProjectMine`), and a screen
   never offers work the action behind it would refuse.
 
+- **A `--` comment inside a sql`` template is still template-literal
+  source.** A backtick in it — quoting a function name the way a code comment
+  would — closes the template early and the whole FILE stops parsing. Next
+  dev then answers 500 on every route, not just the one that imports it, and
+  the overlay points at the comment rather than at the backtick. Write names
+  in those comments bare, and run `npx tsc --noEmit` after touching one.
+
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.
 

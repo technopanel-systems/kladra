@@ -33,8 +33,10 @@ Hard-won mechanics — follow them:
 - For a suspected bidi/ordering defect, crop to ≤32px around the run and
   read the crop — union-box DOM probes have passed defects the pixels
   showed.
-- Save shots under the session scratchpad, never in the repo. Never write
-  into C:\Projects\facet-crm.
+- Save shots under the session scratchpad, never in the repo. playwright-cli
+  also drops a page snapshot (`<name>.yml`) beside every capture, in the
+  WORKING directory — give those a scratchpad path too, or the repo root
+  fills up with them. Never write into C:\Projects\facet-crm.
 
 Report per shot: filename · what is visibly true (positions, order,
 truncation, overlap, colour, whether the sidebar/bottom bar is on the right

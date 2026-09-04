@@ -15,6 +15,8 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import { mainContactIdSql } from "@/lib/companies";
+import { dispatchLabel, quotationLabel } from "@/lib/labels";
 
 export const EXPORTS = ["companies", "quotations", "dispatches"] as const;
 export type ExportName = (typeof EXPORTS)[number];
@@ -63,12 +65,10 @@ async function companiesCsv(): Promise<string> {
       join lead_sources ls on ls.id = c.lead_source_id
       join countries co on co.id = c.country_id
       left join cities ci on ci.id = c.city_id
-      left join contacts ct on ct.id = (
-        select ct2.id from contacts ct2
-         where ct2.company_id = c.id and ct2.archived_at is null
-         order by ct2.is_main desc, ct2.created_at asc
-         limit 1
-      )
+      -- Which contact is the main one is decided in ONE place (D18): the flag
+      -- alone says nobody is main once the marked contact has been archived,
+      -- and a copy of that rule here would agree today and drift later.
+      left join contacts ct on ct.id = ${mainContactIdSql(sql`c.id`)}
      order by c.name
   `);
 
@@ -94,8 +94,8 @@ async function companiesCsv(): Promise<string> {
 /** Quotations with their items — one row per item, the quotation repeated. */
 async function quotationsCsv(): Promise<string> {
   const result = await db.execute<Record<string, unknown>>(sql`
-    select case when q.revision > 1 then 'Q-' || q.number || '/' || q.revision
-                else 'Q-' || q.number end as quotation,
+    select q.number as q_number,
+           q.revision as q_revision,
            coalesce(q.smac_number, '') as smac_number,
            q.status as status,
            c.name as company,
@@ -127,6 +127,13 @@ async function quotationsCsv(): Promise<string> {
      order by q.number, q.revision, qi.position
   `);
 
+  // The label is built by the function every screen uses, never spelled out in
+  // SQL beside it: "Q-8" and "Q-8/2" is one rule (src/lib/labels.ts).
+  const rows = result.rows.map((row) => ({
+    ...row,
+    quotation: quotationLabel(Number(row.q_number), Number(row.q_revision)),
+  }));
+
   return csv(
     [
       "quotation",
@@ -150,7 +157,7 @@ async function quotationsCsv(): Promise<string> {
       "price_per_sqm",
       "line_total",
     ],
-    result.rows,
+    rows,
   );
 }
 
@@ -162,11 +169,11 @@ async function quotationsCsv(): Promise<string> {
  */
 async function dispatchesCsv(): Promise<string> {
   const result = await db.execute<Record<string, unknown>>(sql`
-    select 'D-' || d.number as dispatch,
+    select d.number as d_number,
            coalesce(d.smac_dispatch_number, '') as smac_dispatch_number,
            d.status as status,
-           case when q.revision > 1 then 'Q-' || q.number || '/' || q.revision
-                else 'Q-' || q.number end as quotation,
+           q.number as q_number,
+           q.revision as q_revision,
            coalesce(q.smac_number, '') as quotation_smac_number,
            c.name as company,
            coalesce(p.name, '') as project,
@@ -180,6 +187,9 @@ async function dispatchesCsv(): Promise<string> {
            qi.colour_code as colour_code,
            qi.qty as quoted_qty,
            di.qty as sent_qty,
+           -- Rounded ONCE, at the end, exactly as dispatchTotals in
+           -- src/lib/dispatches.ts and lineSqm in src/lib/money.ts do it. The
+           -- three move together or the file disagrees with the screen (D38).
            round(qi.width * qi.length * di.qty, 2) as sqm
       from dispatches d
       join quotations q on q.id = d.quotation_id
@@ -191,6 +201,13 @@ async function dispatchesCsv(): Promise<string> {
       left join projects p on p.id = q.project_id
      order by d.number, qi.position
   `);
+
+  // Both labels from the functions the screens use (src/lib/labels.ts).
+  const rows = result.rows.map((row) => ({
+    ...row,
+    dispatch: dispatchLabel(Number(row.d_number)),
+    quotation: quotationLabel(Number(row.q_number), Number(row.q_revision)),
+  }));
 
   return csv(
     [
@@ -213,7 +230,7 @@ async function dispatchesCsv(): Promise<string> {
       "sent_qty",
       "sqm",
     ],
-    result.rows,
+    rows,
   );
 }
 

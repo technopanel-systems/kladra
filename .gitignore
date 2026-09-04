@@ -29,8 +29,12 @@ shots/
 # what the shot-looker's playwright-cli leaves behind: page snapshots and
 # console logs, one pair per navigation.
 .playwright-cli/
-# playwright-cli writes its latest snapshot to the working directory too
+# playwright-cli writes a page snapshot beside every screenshot, and a named
+# capture lands in the working directory rather than in .playwright-cli. The
+# repo root owns exactly one YAML file, so ignore the rest of them there.
 current.yml
+/*.yml
+!/docker-compose.yml
 
 # backups (dumps hold every row and every password hash)
 backups/

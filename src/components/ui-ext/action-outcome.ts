@@ -59,15 +59,37 @@ export function useActionOutcome<T>(
  *
  * A promise continuation is not an effect. It is a closure, it runs when the
  * action answers, and React unmounting the component around it changes nothing.
- * `setError` afterwards is a no-op, which is correct: there is nothing to show
- * it on. The toast and the navigation are global and still happen.
+ * Storing the refusal afterwards is a no-op, which is correct: there is nothing
+ * to show it on. The toast and the navigation are global and still happen.
+ *
+ * It hands back the WHOLE refusal. It used to keep `result.error` and drop
+ * `result.fieldErrors`, so every form built on it answered a rejected box with
+ * one sentence at the bottom of the dialog and nothing at the box — an admin
+ * filling in a lookup row in two languages was told "Required" with no way to
+ * see which language was missing. One rejected input, one sentence, at the
+ * input (DESIGN §5, D43).
  */
+export type Refusal = {
+  /** The whole-form sentence: shown only when nothing else showed a field's. */
+  error: string | null;
+  /** One sentence per refused field, keyed by the field's `name`. */
+  fieldErrors: Record<string, string>;
+  /**
+   * A fresh object for every refused attempt, and null while nothing is
+   * refused. `useFocusFirstError` watches it, which is what moves the caret
+   * again when the second try is refused the same way as the first.
+   */
+  answer: unknown;
+};
+
 export function useSubmitAction<T>(
   action: (prev: ActionResult<T> | null, form: FormData) => Promise<ActionResult<T>>,
   onSuccess: (data: T | undefined) => void,
-): { submit: (form: FormData) => void; pending: boolean; error: string | null } {
+): { submit: (form: FormData) => void; pending: boolean } & Refusal {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [refused, setRefused] = useState<
+    { error: string; fieldErrors?: Record<string, string> } | null
+  >(null);
 
   // Read through a ref for the same reason as above: next-intl's router makes a
   // new object every render, so anything closing over it changes identity.
@@ -78,18 +100,29 @@ export function useSubmitAction<T>(
 
   const submit = useCallback(
     (form: FormData) => {
-      setError(null);
+      setRefused(null);
       startTransition(async () => {
         const result = await action(null, form);
         if (!result.ok) {
-          setError(result.error);
+          setRefused({ error: result.error, fieldErrors: result.fieldErrors });
           return;
         }
+        setRefused(null);
         run.current(result.data);
       });
     },
     [action],
   );
 
-  return { submit, pending, error };
+  const fieldErrors = refused?.fieldErrors ?? {};
+
+  return {
+    submit,
+    pending,
+    // The footer carries the sentence only when no field is carrying one, so
+    // the same words never appear twice on one dialog.
+    error: refused && Object.keys(fieldErrors).length === 0 ? refused.error : null,
+    fieldErrors,
+    answer: refused,
+  };
 }

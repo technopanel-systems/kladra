@@ -110,7 +110,7 @@ function phoneNeedle(term: string): string | null {
  * `companyId` is passed as SQL because the two readers name it differently: the
  * list correlates against `companies.id`, the drawer against a bound parameter.
  */
-function mainContactIdSql(companyId: SQL): SQL<string | null> {
+export function mainContactIdSql(companyId: SQL): SQL<string | null> {
   return sql`(
     select ct.id
       from contacts ct
