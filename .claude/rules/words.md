@@ -32,6 +32,11 @@ What a component still owns is the text it renders **itself**: a code, a phone,
 a quantity, an email. Those get `<span dir="ltr" className="num">`, as they do
 today in every table and drawer.
 
+And one more thing a component owns: **two values joined by a separator in one
+string**. `` `${company} · ${project}` `` is the same defect the loader fixes for
+messages — the · is neutral and settles against the paragraph, not against the
+name beside it. Render them as `<bdi>{company}</bdi> · <bdi>{project}</bdi>`.
+
 ## Digits are Western, everywhere (D6)
 The locale tag is `"ar"`, never `"ar-SA"` — `ar-SA` gives Arabic-Indic
 numerals and Jerom wants ٠٤ nowhere. When asking `Intl` for something

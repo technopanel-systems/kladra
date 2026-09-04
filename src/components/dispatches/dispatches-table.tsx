@@ -392,9 +392,13 @@ export function DispatchSheet({
               <StatusBadge status={dispatch.status} />
             </div>
             <SheetDescription>
-              {dispatch.projectName
-                ? `${dispatch.companyName} · ${dispatch.projectName}`
-                : dispatch.companyName}
+              {dispatch.projectName ? (
+                <>
+                  <bdi>{dispatch.companyName}</bdi> · <bdi>{dispatch.projectName}</bdi>
+                </>
+              ) : (
+                <bdi>{dispatch.companyName}</bdi>
+              )}
             </SheetDescription>
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">

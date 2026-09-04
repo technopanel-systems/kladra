@@ -47,7 +47,16 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="font-medium">{row.name}</span>
             <span className="text-xs text-muted-foreground">
-              {row.kind === "company" ? row.repName : `${row.companyName} · ${row.repName}`}
+              {/* Two names either side of a neutral separator: <bdi> keeps each
+                  one's direction to itself, so an English project under an
+                  Arabic company does not drag the · across (D46). */}
+              {row.kind === "company" ? (
+                row.repName
+              ) : (
+                <>
+                  <bdi>{row.companyName}</bdi> · <bdi>{row.repName}</bdi>
+                </>
+              )}
             </span>
           </span>
           <span className="flex flex-col text-xs text-muted-foreground">

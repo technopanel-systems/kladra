@@ -57,7 +57,7 @@ never runs it.
 
 ```bash
 npm run typecheck && npm run lint && npm run build
-npm run check:messages        # every key in both messages/en.json and messages/ar.json
+npm run check:messages        # every key in both locales, every key used, no gendered Arabic
 npm run test                  # Playwright: boots dev:test on 3101, reseeds kladra_test, runs tests/ in en and ar
 npm run check:build-env       # builds with no .env, the way the Docker image does
 ```
@@ -70,6 +70,21 @@ the pool used to be created at import, and the very first `docker build` of this
 failed on it.
 
 The acceptance scripts the tests walk are in WORKFLOW.md §3, one per role.
+
+### Changing a word
+
+Every sentence the app says lives in `messages/en/<area>.json` and
+`messages/ar/<area>.json` — one file per area, same keys in both. Edit the value,
+never the key, and edit both languages: a key that exists in one and not the other
+fails the build, and so does an Arabic sentence written to a man or to a woman.
+
+Two things are handled for you and must not be done by hand. A `{name}` or `{label}`
+in a sentence is already isolated from the words around it, so the full stop lands on
+the right side of an English name inside Arabic (`src/i18n/isolate.ts`). And a count
+uses ICU plurals — Arabic has six forms and all six are written out; leave that
+shape alone.
+
+After any change: `npm run check:messages`, then `npm run test`.
 
 **Tests have their own database and their own port.** `npm run test` serves the
 app on **3101** against **`kladra_test`**, created on first run beside the

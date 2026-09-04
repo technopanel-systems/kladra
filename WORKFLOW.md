@@ -13,12 +13,42 @@
 - [x] P4 Quotations: rep request → coordinator issue / send back → customer decision
 - [x] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [x] P6 Manager view, admin, notifications
-- [ ] P7 Polish, acceptance runs, PWA, handover
+- [x] P7 Polish, acceptance runs, PWA, handover
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P6 done and green — manager screen, the six admin screens, the CSV export and the archive restore, all walked by `tests/manager.spec.ts` and `tests/admin.spec.ts` in both locales. Starting P7.
+**Where I stopped:** P7 done and green. Every box is ticked, and what is left is the
+part Claude cannot do: Faisal, Rawan, Abdulrahman and Jerom using it. Seventy-one specs pass
+in both locales, the image builds and boots with no `.env`, and README.md is the handover.
+
+P7's four defects were all one shape: a rule kept in more than one place. A manager and an
+admin could edit, log against and archive any rep's records for three phases because the
+code asked "may he touch this?" and got "yes, he is the manager" — seeing and writing are
+two questions now (D42) and `tests/floor.spec.ts` asks both directly, since the defect had
+no appearance on any screen. Five dialogs threw away the per-field half of a refusal and
+put "Required" at the bottom instead of at the box (D43). Three copies of one filter chip
+disagreed about what "selected" looks like, and the loud one was wrong. And the team table
+and the targets screen disagreed about who carries metres (D44).
+
+Two deploy defects were found by building the image rather than by reading the Dockerfile.
+`next build` imports every route to read its config, so a pool opened at module scope built
+here and died in a container with no `.env`; and `COPY /app/public` had no source, because
+the repo had no `public/` until the PWA icons landed. `npm run check:build-env` now builds
+with the environment blanked, and it was proved to bite before it was believed.
+
+The Arabic was reviewed as prose, not as coverage: 43 strings changed. Three of them were
+sentences addressing Rawan as a man, one was a feminine company restored with a masculine
+verb, and four were a figure called two names on two screens. The review also found the
+targets hint saying metres for a figure set in square metres.
+
+Last came the class the review pointed at: a value dropped into a sentence carries no
+direction, so a full stop, a colon or a «guillemet» beside it settles against the
+paragraph. It is fixed once, where messages load, rather than at forty call sites (D46),
+and two components that joined two names with a `·` got `<bdi>`. Screenshots then said the
+Arabic thickness list read unit-first; a range measurement said it does not, and that
+measurement is now a test — the third time a reviewer has read an RTL line left-to-right
+and called it a defect.
 
 P5's one real defect was found by its own test, which is what the test was for. The browser worked
 out a dispatch's m² as `round(width × length, 2) × qty` and SQL as `round(width × length × qty, 2)`.
@@ -183,4 +213,7 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 4. The cache is listed by name and holds exactly two files. Anything else in it is offline DATA, which SPEC §3 rules out.
 
 **The floor rule** — `tests/floor.spec.ts`
-The only spec that is not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42).
+One of two specs that are not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42).
+
+**Words dropped into sentences** — `tests/isolate.spec.ts`
+The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

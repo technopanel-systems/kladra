@@ -89,7 +89,9 @@ export function LookupsPanel({
             className={cn("card-face flex flex-wrap items-center gap-3 p-3", !row.active && "opacity-70")}
           >
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <span className="font-medium">{named(row)}</span>
+              <span data-slot="lookup-name" className="font-medium">
+                {named(row)}
+              </span>
               {row.active ? null : <Badge variant="outline">{t("admin.hidden")}</Badge>}
             </span>
 

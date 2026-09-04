@@ -192,6 +192,53 @@ test("every date on a screen reads the same way round", async ({ page, locale })
 });
 
 /**
+ * A value and the unit after it read the way the language does.
+ *
+ * The thicknesses list is the one place a number carries a word: "2.0 mm",
+ * "2.0 مم". The two are built as one string, so they are one bidi paragraph
+ * and the DOM says nothing about which way round they came out. Arabic writes
+ * the number first and the unit after it, which on an RTL line means the digits
+ * sit to the RIGHT of the word — the same shape as a date, and the same thing
+ * three reviews in a row have called a defect while reading the pixels
+ * left-to-right.
+ *
+ * Measured, therefore, not looked at.
+ */
+test("a value and the unit after it read the way the language does", async ({ page, locale }) => {
+  await login(page, locale, "jerom");
+  await page.goto(`/${locale}/admin/lookups?list=thicknesses`);
+  await expect(page.getByRole("heading").first()).toBeVisible();
+
+  const seen = await page.locator("[data-slot='lookup-name']").evaluateAll((nodes) =>
+    nodes
+      .map((node) => {
+        const text = (node.textContent ?? "").trimEnd();
+        const first = text.search(/\d/);
+        const last = text.length - 1;
+        if (first < 0 || last <= first || /\d/.test(text[last])) return null; // no unit on it
+
+        const at = (index: number) => {
+          const range = document.createRange();
+          range.setStart(node.firstChild as Node, index);
+          range.setEnd(node.firstChild as Node, index + 1);
+          return range.getBoundingClientRect();
+        };
+        const digit = at(first);
+        const unit = at(last);
+        if (digit.width === 0 || unit.width === 0) return null;
+        return digit.left < unit.left
+          ? "number-first-from-the-left"
+          : ("number-first-from-the-right" as string);
+      })
+      .filter((one): one is string => one !== null),
+  );
+
+  const expected = locale === "ar" ? "number-first-from-the-right" : "number-first-from-the-left";
+  expect(seen.length, "no thickness carries a unit").toBeGreaterThan(0);
+  for (const one of seen) expect(one, `on /${locale}/admin/lookups`).toBe(expected);
+});
+
+/**
  * The app's own labels are never cut off mid-word.
  *
  * A company name that does not fit gets an ellipsis and that is right — the
