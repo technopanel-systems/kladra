@@ -14,6 +14,16 @@
 - [x] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [x] P6 Manager view, admin, notifications
 - [x] P7 Polish, acceptance runs, PWA, handover
+- [ ] P8 Depth — Jerom used it and asked for more (his list, added to SPEC §3 not replacing it)
+      - [x] P8.1 Research, the identity decisions, and the view rulings written into DESIGN
+      - [ ] P8.2 Every list creates from itself; the missing-primary-action sweep
+      - [ ] P8.3 Semantic colour: state, overdue, stuck, ahead — one small set, both themes
+      - [ ] P8.4 m² is the headline on quotations and dispatches; price is the quiet one
+      - [ ] P8.5 The drawers reworked: what a person needs first, at the top
+      - [ ] P8.6 A dashboard per role, each answering that person's daily question
+      - [ ] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
+      - [ ] P8.8 View as: the admin checks the app as any role or any person, marked
+      - [ ] P8.9 Roles beyond the four, if the business needs them — propose, record, build
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.

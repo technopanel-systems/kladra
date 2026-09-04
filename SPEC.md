@@ -120,6 +120,17 @@ Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a
 - List filters and the open drawer are reflected in the URL. (P3+)
 - Archive, never delete: companies, contacts, projects get archived_at; archived rows hide from lists and stay in history. Admin can restore. (P3)
 
+Jerom used the app himself before P8. His verdict was that it beats FACET and is worth deepening. These add to the list above; none of them replaces anything in it. (P8)
+
+- Every list creates from its own screen. Projects, quotations and dispatches had no primary action of their own and he had to go hunting through a company. Where the record needs a parent, the button asks for the parent instead of not existing. (P8)
+- The side panels are reworked: what a person needs first is at the top, and a panel has a hierarchy rather than a flat list of fields. (P8)
+- Square metres are the headline figure on quotations and dispatches. Price is the quiet supporting one, because SMAC owns money. (P8)
+- Colour carries meaning: state, overdue, stuck, ahead of target, from one small set used the same way everywhere. Never colour for decoration, and never colour alone. (P8)
+- A dashboard per role, each answering that person's daily question: the rep's day, the coordinator's queue, the manager's team. Not a generic grid of cards. (P8)
+- The admin can view the app as any role or any person, clearly marked as viewing, to check and test it. (P8)
+- Roles may grow beyond the four if the business needs them. (P8)
+- Where a screen earns more than one view, the default is the one that answers the daily question, and the choice is remembered per person and carried in the URL. Which screens earn which views is decided in DESIGN §6, with the reason. (P8)
+
 ## §4 Defaults Claude chose — founder may change
 
 - D1 Lead sources, in order: Field visit · Direct contact · Referral · Exhibition · Marketing · Online · WhatsApp · Other (FACET's list with "Online or WhatsApp" split and "Consultant or architect" dropped, per §3).

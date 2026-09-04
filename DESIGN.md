@@ -31,7 +31,8 @@ primary button only. Values carried from FACET's globals.css:
 
 Destructive is a tint (`bg-destructive/10 text-destructive`), never a solid red. Popovers
 and dialogs take the solid surface — never blurred. Row colour means how long something has
-waited: overdue red, due today amber, otherwise faint. Status is a word, not a colour.
+waited: overdue red, due today amber, otherwise faint. Status was a word and not a colour
+until P8; it is now a word AND a colour, from the five in §6, and the word never goes away.
 
 The three gradients below brand-grad are marks, not surfaces: the K in the sidebar and on
 the installed app's icon, and the two initials circles. They are the same in both themes
@@ -113,4 +114,71 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,
-refresh buttons, a colour-per-status map, any gradient beyond the primary button.
+refresh buttons, any gradient beyond the primary button.
+
+Two came off this list in P8, and one did not. A colour-per-status map was asked for and is
+built (§6). Remembering which view a person last chose is not a saved view: a saved view is
+a filter somebody names and keeps, and nobody has asked for one. Drag-and-drop stays off the
+list on its own merits, argued in §6.
+
+## §6 Depth (P8) — what was studied, what was taken, what was rejected
+
+**Taken.** Good pipeline boards earn their place by showing three things a list hides: where
+work piles up, what has gone stale, and who is overloaded — so a column carries its count and
+a card carries its age, or the board is decoration. Role dashboards are not one screen with a
+permission filter: an operator's screen answers queue health and next action, a manager's
+answers where the month stands, and neither shows a control that person cannot press. A rep's
+day is one prioritised list, not a wall of cards — Close's inbox and every "win the day" tool
+converge on the same shape. Colour systems that survive both themes are two palettes under one
+set of semantic names, checked against WCAG 2.1 AA and sanity-checked with APCA, and never
+carrying meaning on their own.
+
+**Rejected, with the reason.**
+
+- **Drag-and-drop on the board.** Not because the Never list says so, but because every move
+  this business makes needs data: Issued needs SMAC's number, Rejected and Refused need a
+  written reason, Accepted is the customer's answer. A drag that opens a dialog is a worse
+  button than a button. The card carries its own action.
+- **A board or a card grid for companies.** The question there is "who do I call today", and
+  the answer is a sorted list with dates on it. A card grid shows a third as many rows and
+  hides the column a rep is actually scanning. This is how FACET grew.
+- **A separate timeline view of follow-ups.** A timeline is a horizontal thing on a screen a
+  rep reads on a phone. The same information grouped by day-band — overdue, today, this week,
+  later — reads in one column, sorts by urgency instead of by date, and needs no second view.
+  The rep's day IS the timeline, made readable.
+- **AI summaries and suggested next actions on a record**, which is where every 2026 CRM
+  review pointed. Nothing here has enough history yet for a summary to beat reading the last
+  three log entries, and a wrong suggestion on a customer record costs more than no suggestion.
+
+**Which screens get more than one view.** Quotations and dispatches get a **board of states**
+beside their list: those are the only screens where "what is stuck, and for how long" is the
+daily question, and a column with a count answers it in one look. Everything else is a list.
+Where there are two, the list stays the default because it is the one that answers "mine,
+oldest first"; the choice lives in the URL (`?view=board`) and is remembered per person, so a
+link still opens what the sender saw.
+
+**The five state colours.** One set, two themes, used the same way on every screen. Colour
+never carries meaning alone: every coloured thing also says its word.
+
+| Token | Tone | Means | Worn by |
+|---|---|---|---|
+| `state-wait` | amber | somebody owes an answer, or it is due today | Requested, Sent back, Waiting; a follow-up due today; behind pace |
+| `state-open` | blue | out in the world, nothing owed today | Issued; a company nobody has contacted yet |
+| `state-good` | green | it went the right way | Accepted, Approved; ahead of target |
+| `state-bad` | red | it went the wrong way, or it is late | Rejected, Refused, Lost; an overdue follow-up; a stuck request |
+| `state-over` | neutral | finished, and no longer interesting | Withdrawn, Cancelled, Superseded, Archived |
+
+`src/lib/state-tone.ts` holds the one mapping from a status to a token; no component decides
+its own. A tint is `bg-state-x text-state-x-fg`, never a solid fill — a solid is for the
+primary button and nothing else.
+
+**A drawer has a hierarchy.** Top: who this is and the one number that matters, then the
+actions. Under that, what happened last. Under that, the detail, and the fields nobody reads
+twice go last or behind a tab. A flat list of every column in the table is a form, not a
+panel.
+
+**A dashboard answers one question.** Name the question at the top of the screen in the
+person's own words, put the answer under it, and make every figure on it something that
+person can act on today. A number nobody can act on is a report, and reports live on the
+team screen.
+
