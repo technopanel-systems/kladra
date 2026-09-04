@@ -24,7 +24,7 @@
   "companiesOnFloor": "{count, plural, =0 {no companies} one {# company} other {# companies}}",
   "noTarget": "No target",
   "companyTarget": "Company target",
-  "targetsHint": "Metres per month. A blank box is no target, which is a dash on the team screen, not a zero.",
+  "targetsHint": "Square metres per month. A blank box is no target, which is a dash on the team screen, not a zero.",
   "targetSaved": "Target saved.",
   "addRow": "Add",
   "editRow": "Edit",
@@ -56,7 +56,7 @@
   "restoreHint": "It goes back on its rep's floor with all of its history.",
   "restoreHintInside": "Its company comes back with it — a contact on an archived company would sit on a row that appears on no list.",
   "restored": "{name} is back.",
-  "exportHint": "Three files, UTF-8 with a byte-order mark so Excel opens Arabic names correctly.",
+  "exportHint": "Three files. Excel opens them with the Arabic names intact.",
   "download": "Download",
   "role": {
     "rep": "Rep",

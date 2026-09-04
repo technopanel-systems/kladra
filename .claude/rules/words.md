@@ -1,0 +1,54 @@
+---
+paths:
+  - "messages/**"
+  - "src/i18n/**"
+  - "src/components/**"
+---
+
+# Words rules — two locales, one screen
+
+**For:** anything that puts a string in front of a person.
+**Prevents:** the class where the English is right, the Arabic is present, and
+the screen is still wrong.
+
+## Both locales ship together
+A key in `messages/en/` and not in `messages/ar/` fails the build
+(`npm run check:messages`). Three checks run: every key exists in both, every
+key is rendered somewhere, and no Arabic string addresses a gender. Rawan reads
+the same sentences Faisal does.
+
+## A value dropped into a sentence is isolated — already, everywhere
+`src/i18n/isolate.ts` wraps every simple `{placeholder}` in FSI/PDI as the
+messages load, in both locales. **Do not add isolates by hand, and do not
+"fix" a placeholder in a component.** Two rules follow from that:
+
+- A message may use `{name}` freely, next to a full stop, a colon, a bracket
+  or «guillemets», without thinking about direction.
+- A **plural or select** branch is not a value. `{count, plural, one {day}}`
+  looks exactly like an argument and must stay untouched; the loader knows the
+  difference and `tests/isolate.spec.ts` holds it to that.
+
+What a component still owns is the text it renders **itself**: a code, a phone,
+a quantity, an email. Those get `<span dir="ltr" className="num">`, as they do
+today in every table and drawer.
+
+## Digits are Western, everywhere (D6)
+The locale tag is `"ar"`, never `"ar-SA"` — `ar-SA` gives Arabic-Indic
+numerals and Jerom wants ٠٤ nowhere. When asking `Intl` for something
+in Arabic, force it: `"ar-u-nu-latn"`. `tests/reading.spec.ts` measures this.
+
+## Arabic reads day-first from the RIGHT
+A date in an RTL line looks reversed to a reader scanning pixels
+left-to-right. It is not. Measure with `document.createRange()` before
+believing a screenshot — four reviews have called this a defect and all four
+were wrong.
+
+## A `--` comment inside a SQL template is still template source
+A backtick in it closes the `` sql`` `` template and the whole file stops
+parsing. Same trap in any tagged template. Run `npx tsc --noEmit` after
+editing one, before running anything else.
+
+## Say it in the app's words
+SPEC §5 is the glossary and it wins over a literal translation:
+عرض السعر never اقتباس, التوريد for a dispatch, سحب الطلب for a withdrawal and never
+إلغاء. One figure has one name on every screen that shows it.

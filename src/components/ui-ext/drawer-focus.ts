@@ -18,7 +18,12 @@
  * Only drawers use this. A form dialog keeps the first field.
  */
 export function focusTheDrawerItself(event: Event): void {
+  // `currentTarget` is only set while the event is being dispatched. If it is
+  // ever null, `target` is the same node — and if BOTH are, the default is left
+  // alone rather than preventing it and leaving focus outside a trapped panel,
+  // which is the one outcome worse than focusing the wrong control.
+  const panel = event.currentTarget ?? event.target;
+  if (!(panel instanceof HTMLElement)) return;
   event.preventDefault();
-  const panel = event.currentTarget;
-  if (panel instanceof HTMLElement) panel.focus();
+  panel.focus();
 }

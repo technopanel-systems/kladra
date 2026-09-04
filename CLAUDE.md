@@ -43,7 +43,8 @@ Every commit is green on typecheck, lint, build, test.
 
 ## Rules that load themselves
 `.claude/rules/data.md` (SQL traps, Riyadh today, one definition per figure),
-`migrations.md` (silent no-ops, confirm from information_schema), `deploy.md`
+`migrations.md` (silent no-ops, confirm from information_schema), `words.md`
+(both locales, placeholder isolation, Western digits, the glossary), `deploy.md`
 (loopback ports, PUBLIC_URL), `auth-bridge.md` (database sessions from credentials).
 Hooks: `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12.
 

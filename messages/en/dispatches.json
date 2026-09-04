@@ -35,7 +35,7 @@
   "notWaiting": "This request has already been answered.",
   "quotationNotFound": "That quotation is not there any more.",
   "quotationNotIssued": "A dispatch is raised against an issued quotation.",
-  "tooMuch": "That is more than the quotation has left on one of these lines.",
+  "tooMuch": "That is more than the quotation has left.",
   "notOnQuotation": "One of those lines is not on this quotation.",
   "numberRequired": "The SMAC dispatch number is what approves it.",
   "supersededQuotation": "That quotation has been revised — the dispatch goes against the latest one."

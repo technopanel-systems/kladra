@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test as base, type Page } from "@playwright/test";
 import { createTranslator } from "use-intl/core";
+import { isolateMessages } from "@/i18n/isolate";
 
 /**
  * The two locales this app ships (src/i18n/routing.ts). Playwright's project
@@ -37,6 +38,11 @@ const translatorCache = new Map<Locale, Translate>();
  * its own copy: request.ts is wired into next-intl's per-request server
  * config and isn't meant to run outside a Next.js request. Cached per
  * locale for the run — messages/ never changes mid test-run.
+ *
+ * It shares one thing with request.ts on purpose: `isolateMessages`. A spec's
+ * expected string has to carry the same isolates the screen does, or every
+ * assertion naming a `{placeholder}` message would miss by two invisible
+ * characters.
  */
 export function loadMessages(locale: Locale): Messages {
   const cached = messagesCache.get(locale);
@@ -44,7 +50,9 @@ export function loadMessages(locale: Locale): Messages {
   const dir = join(process.cwd(), "messages", locale);
   const merged: Messages = {};
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".json")).sort()) {
-    merged[file.slice(0, -5)] = JSON.parse(readFileSync(join(dir, file), "utf8"));
+    merged[file.slice(0, -5)] = isolateMessages(
+      JSON.parse(readFileSync(join(dir, file), "utf8")),
+    );
   }
   messagesCache.set(locale, merged);
   return merged;
