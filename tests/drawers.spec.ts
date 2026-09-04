@@ -184,3 +184,39 @@ test("reading through a drawer's tabs throws nothing", async ({ page, locale, t 
     }
   });
 });
+
+/**
+ * A drawer takes focus itself, and arms nothing.
+ *
+ * Radix moves focus to the first tabbable control in the panel. In the company
+ * drawer that was the follow-up date picker: opening a shared `?open=` link put
+ * a focus ring on a date nobody had touched and made Enter open a calendar.
+ * A drawer is a place, not a form — so it focuses the panel, a screen reader
+ * reads the title, and the first Tab goes where the reader chose to go.
+ */
+test("opening a drawer focuses the drawer, not the first thing inside it", async ({
+  page,
+  locale,
+}) => {
+  await login(page, locale, "faisal");
+
+  for (const screen of ["companies", "projects", "quotations"] as const) {
+    await page.goto(`/${locale}/${screen}`);
+    const first = page.getByRole("table").first().getByRole("link").first();
+    await first.click();
+    await expect(page.getByRole("dialog").first()).toBeVisible();
+
+    const focused = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      return {
+        role: el?.getAttribute("role") ?? el?.tagName ?? "",
+        // Nothing is drawn around the panel: an outline on an element a person
+        // cannot act on says nothing (src/components/ui/sheet.tsx).
+        outlined: el ? getComputedStyle(el).outlineStyle !== "none" : false,
+      };
+    });
+
+    expect(focused.role, `/${locale}/${screen} focused a control inside the drawer`).toBe("dialog");
+    expect(focused.outlined, `/${locale}/${screen} drew a ring round the whole panel`).toBe(false);
+  }
+});

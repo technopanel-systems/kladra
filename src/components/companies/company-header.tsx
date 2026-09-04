@@ -24,6 +24,7 @@ import {
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -91,6 +92,7 @@ export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        onOpenAutoFocus={focusTheDrawerItself}
         side={side}
         className={cn(
           "gap-0 p-0",

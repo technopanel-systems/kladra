@@ -1,12 +1,12 @@
 {
-  "quotationRequested": "{rep} طلب {label}.",
-  "quotationIssued": "صدر {label} برقم سماك {smacNumber}.",
-  "quotationReturned": "أُعيد {label} للتعديل: {reason}",
-  "quotationAccepted": "قبل العميل {label}.",
-  "quotationRejected": "رفض العميل {label}: {reason}",
-  "quotationCancelled": "سحب {rep} الطلب {label}.",
-  "dispatchRequested": "{rep} طلب {label}.",
-  "dispatchApproved": "تم اعتماد {label} برقم سماك {smacNumber}.",
-  "dispatchRefused": "رُفض {label}: {reason}",
+  "quotationRequested": "طلب {rep} عرض السعر {label}.",
+  "quotationIssued": "صدر عرض السعر {label} برقم سماك {smacNumber}.",
+  "quotationReturned": "أُعيد عرض السعر {label} للتعديل: {reason}",
+  "quotationAccepted": "قبل العميل عرض السعر {label}.",
+  "quotationRejected": "رفض العميل عرض السعر {label}: {reason}",
+  "quotationCancelled": "سحب {rep} طلب عرض السعر {label}.",
+  "dispatchRequested": "طلب {rep} التوريد {label}.",
+  "dispatchApproved": "تم اعتماد التوريد {label} برقم سماك {smacNumber}.",
+  "dispatchRefused": "رُفض التوريد {label}: {reason}",
   "unreadMark": "غير مقروء"
 }

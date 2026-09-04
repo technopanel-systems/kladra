@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { formatSqm } from "@/lib/money";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
@@ -376,6 +377,7 @@ export function DispatchSheet({
       }}
     >
       <SheetContent
+        onOpenAutoFocus={focusTheDrawerItself}
         // Radix's sides are physical; in Arabic the drawer comes from the other
         // edge so it still slides in from the end of the line.
         side={locale === "ar" ? "left" : "right"}
@@ -523,7 +525,7 @@ export function DispatchSheetSkeleton() {
   const t = useTranslations();
   return (
     <Sheet open>
-      <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-2xl">
+      <SheetContent onOpenAutoFocus={focusTheDrawerItself} side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-2xl">
         <div aria-busy="true" className="flex flex-col gap-4 p-4">
           <SheetTitle className="sr-only">{t("dispatches.loading")}</SheetTitle>
           <SheetDescription className="sr-only">{t("dispatches.requestHint")}</SheetDescription>

@@ -35,6 +35,7 @@ import { DatePicker } from "@/components/ui-ext/date-picker";
 import { useArrived } from "@/hooks/use-arrived";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { formatDay } from "@/lib/dates";
 import type { FollowUpFilter, FollowUpState } from "@/lib/followups";
 import { formatSqm } from "@/lib/money";
@@ -518,6 +519,7 @@ export function ProjectSheet({
       }}
     >
       <SheetContent
+        onOpenAutoFocus={focusTheDrawerItself}
         // Radix's sides are physical; in Arabic the drawer comes from the
         // other edge so it still slides in from the end of the line.
         side={locale === "ar" ? "left" : "right"}
@@ -650,6 +652,7 @@ export function ProjectSheetSkeleton() {
   return (
     <Sheet open>
       <SheetContent
+        onOpenAutoFocus={focusTheDrawerItself}
         side={locale === "ar" ? "left" : "right"}
         showCloseButton={false}
         className="w-full gap-0 p-0 data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl"
