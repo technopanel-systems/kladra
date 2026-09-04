@@ -1,0 +1,19 @@
+{
+  "phoneInvalid": "Not a phone number we recognise. Try 05x xxx xxxx, +966… or 00966….",
+  "phoneTaken": "This company already has a contact with that number.",
+  "emailInvalid": "Not a valid email address.",
+  "companyNotFound": "That company is not there any more.",
+  "companyArchived": "This company is archived. Restore it before adding to it.",
+  "projectNotFound": "That project is not there any more.",
+  "contactNotFound": "That contact is not there any more.",
+  "countryUnknown": "Pick a country from the list.",
+  "cityRequired": "Pick a city.",
+  "cityTextRequired": "Type the city.",
+  "cityNotInCountry": "That city is not in the country you picked.",
+  "sqmInvalid": "Expected m² must be a number.",
+  "textRequired": "Write what happened.",
+  "reasonRequired": "Write the reason — the record has to explain itself later.",
+  "alreadyLost": "This project is already marked lost.",
+  "projectNotAtCompany": "That project belongs to another company.",
+  "contactNotAtCompany": "That contact belongs to another company."
+}

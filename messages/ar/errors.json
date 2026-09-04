@@ -1,0 +1,19 @@
+{
+  "phoneInvalid": "رقم الهاتف غير مفهوم. جرّب 05x xxx xxxx أو +966 أو 00966.",
+  "phoneTaken": "لدى هذه الشركة جهة اتصال بنفس الرقم.",
+  "emailInvalid": "البريد الإلكتروني غير صالح.",
+  "companyNotFound": "هذه الشركة لم تعد موجودة.",
+  "companyArchived": "هذه الشركة مؤرشفة. استعدها قبل الإضافة إليها.",
+  "projectNotFound": "هذا المشروع لم يعد موجودًا.",
+  "contactNotFound": "جهة الاتصال هذه لم تعد موجودة.",
+  "countryUnknown": "اختر الدولة من القائمة.",
+  "cityRequired": "اختر المدينة.",
+  "cityTextRequired": "اكتب اسم المدينة.",
+  "cityNotInCountry": "هذه المدينة ليست ضمن الدولة المختارة.",
+  "sqmInvalid": "المساحة المتوقعة لازم تكون رقمًا.",
+  "textRequired": "اكتب ما حدث.",
+  "reasonRequired": "اكتب السبب — السجل لازم يشرح نفسه لاحقًا.",
+  "alreadyLost": "هذا المشروع مسجَّل كخاسر من قبل.",
+  "projectNotAtCompany": "هذا المشروع يتبع شركة أخرى.",
+  "contactNotAtCompany": "جهة الاتصال هذه تتبع شركة أخرى."
+}

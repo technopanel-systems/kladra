@@ -1,0 +1,17 @@
+{
+  "searchLabel": "Search companies",
+  "searchPlaceholder": "Company, contact or phone",
+  "clearSearch": "Clear search",
+  "listLabel": "Companies, newest activity first",
+  "mainContact": "Main contact",
+  "lastActivity": "Last activity",
+  "noContact": "No contact yet",
+  "openCompany": "Open {name}",
+  "whatsappContact": "WhatsApp {name}",
+  "overdueCount": "{count, plural, one {# overdue} other {# overdue}}",
+  "todayCount": "{count, plural, one {# today} other {# today}}",
+  "neverCount": "{count, plural, one {# never contacted} other {# never contacted}}",
+  "nothingDue": "Nothing due — you are up to date.",
+  "emptyFilter": "Nothing matches this filter.",
+  "clearFilter": "Show all companies"
+}

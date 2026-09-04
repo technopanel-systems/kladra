@@ -1,0 +1,22 @@
+{
+  "addCompany": "إضافة شركة",
+  "addCompanyHint": "الشركة وأول شخص تتعامل معه فيها.",
+  "addContact": "إضافة جهة اتصال",
+  "addContactHint": "شخص في هذه الشركة تتواصل معه.",
+  "companyNamePlaceholder": "كما يكتبه العميل",
+  "contactHeading": "جهة الاتصال",
+  "contactHeadingHint": "أول جهة اتصال تصبح جهة الاتصال الرئيسية.",
+  "choose": "اختر…",
+  "searchList": "اكتب للبحث",
+  "noMatch": "لا يوجد ما يطابق البحث.",
+  "useTyped": "استخدم «{text}»",
+  "cityPlaceholder": "اكتب اسم المدينة",
+  "notesPlaceholder": "أي شيء يستحق التذكر",
+  "phoneHelp": "الأرقام 0551234567 و966551234567 و00966551234567 كلها الرقم نفسه.",
+  "phoneInvalid": "راجع الرقم — مثل 0551234567 أو 00966551234567.",
+  "phoneStoredAs": "يُحفظ كـ",
+  "makeMain": "اجعلها جهة الاتصال الرئيسية",
+  "duplicateCompany": "يبدو أنها شركة مسجّلة: {name} ({rep})",
+  "added": "تمت إضافة {name}",
+  "listsUnavailable": "تعذّر تحميل القوائم. أغلق النافذة وافتحها من جديد."
+}

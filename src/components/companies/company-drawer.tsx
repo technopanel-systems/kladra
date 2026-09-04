@@ -1,0 +1,330 @@
+import { ChevronRight, MessageCircle, NotebookPen, Plus, Star } from "lucide-react";
+import { Suspense } from "react";
+import type { ReactNode } from "react";
+import { getLocale, getTranslations } from "next-intl/server";
+import { ActivityList, type ActivityEntry } from "@/components/activities/activity-list";
+import { LogDialog, type LogContact, type LogProject } from "@/components/activities/log-dialog";
+import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
+import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
+import { MakeMainButton } from "@/components/contacts/make-main-button";
+import { NewProjectDialog } from "@/components/projects/new-project-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "@/i18n/navigation";
+import { listActivitiesForCompany } from "@/lib/activities";
+import { requireUser } from "@/lib/authz";
+import { getCompany } from "@/lib/companies";
+import { dayOf, formatDay } from "@/lib/dates";
+import { formatSqm } from "@/lib/money";
+import { formatPhone, whatsappHref } from "@/lib/phone";
+
+/**
+ * The company drawer (SPEC §3, DESIGN §2 — work happens in a drawer over the
+ * list). This half is the server half: it reads the company and its log and
+ * hands the result to the client chrome in company-header.tsx as children, so
+ * the tabs, the contacts and the projects never reach the browser as code.
+ *
+ * Being server rendered is also what makes `router.refresh()` enough after a
+ * log entry or a new contact: the drawer and the page's follow-up strip come
+ * back together, from one query each, with no second copy of the data.
+ *
+ * `?open=<id>` is read by the page, which passes the id here; null renders
+ * nothing at all.
+ */
+
+/** Whatever the data slice returns, named once so a drift shows up here. */
+type Company = NonNullable<Awaited<ReturnType<typeof getCompany>>>;
+type CompanyContact = Company["contacts"][number];
+type CompanyProject = Company["projects"][number];
+
+export async function CompanyDrawer({ companyId }: { companyId: string | null }) {
+  if (!companyId) return null;
+  const t = await getTranslations("drawer");
+
+  return (
+    // Keyed by the company so switching rows resets the sheet rather than
+    // animating one company's header into another's.
+    <CompanyDrawerFrame key={companyId}>
+      <Suspense
+        fallback={
+          <CompanyDrawerSkeleton title={t("loadingCompany")} description={t("aboutCompany")} />
+        }
+      >
+        <CompanyDrawerBody companyId={companyId} />
+      </Suspense>
+    </CompanyDrawerFrame>
+  );
+}
+
+async function CompanyDrawerBody({ companyId }: { companyId: string }) {
+  const [t, locale, user] = await Promise.all([getTranslations(), getLocale(), requireUser()]);
+
+  // The reader is passed in, not assumed: `getCompany` throws NotAllowed for a
+  // company that is not this rep's, which is the same gate the actions use.
+  const company = await getCompany(user, companyId, locale);
+  if (!company) {
+    return (
+      <div className="flex flex-col gap-2 p-4">
+        <SheetTitle className="text-base">{t("common.nothingYet")}</SheetTitle>
+        <SheetDescription>{t("drawer.companyGone")}</SheetDescription>
+      </div>
+    );
+  }
+
+  const activities = await listActivitiesForCompany(user, companyId);
+  const entries: ActivityEntry[] = activities.map((row) => ({
+    id: row.id,
+    text: row.text,
+    channel: row.channel,
+    happenedOn: row.happenedOn,
+    userName: row.userName,
+    contactName: row.contactName,
+    projectName: row.projectName,
+  }));
+
+  const contacts: readonly CompanyContact[] = company.contacts;
+  const projects: readonly CompanyProject[] = company.projects;
+  const logContacts: LogContact[] = contacts.map((row) => ({ id: row.id, name: row.name }));
+  // A lost project is closed (SPEC S20); nothing new is logged against it.
+  const logProjects: LogProject[] = projects
+    .filter((row) => !row.lostAt)
+    .map((row) => ({ id: row.id, name: row.name }));
+
+  const logTrigger = (
+    <Button variant="outline">
+      <NotebookPen aria-hidden="true" />
+      {t("common.log")}
+    </Button>
+  );
+  const addContactTrigger = (
+    <Button variant="outline">
+      <Plus aria-hidden="true" />
+      {t("drawer.addContact")}
+    </Button>
+  );
+  const newProjectTrigger = (
+    <Button variant="outline">
+      <Plus aria-hidden="true" />
+      {t("drawer.newProject")}
+    </Button>
+  );
+
+  return (
+    <>
+      <CompanyHeader
+        company={{
+          id: company.id,
+          name: company.name,
+          // A picked Saudi city, or the free text a company elsewhere carries
+          // (SPEC §3). The header shows one word either way.
+          city: company.cityName ?? company.cityText,
+          category: company.categoryName,
+          leadSource: company.leadSourceName,
+          repName: company.repName,
+          nextFollowUp: company.nextFollowUp,
+        }}
+        contacts={logContacts}
+        projects={logProjects}
+      />
+
+      <Tabs defaultValue="activity" className="gap-3 px-4 py-3">
+        <TabsList className="w-full">
+          <TabsTrigger value="activity">{t("drawer.activity")}</TabsTrigger>
+          <TabsTrigger value="contacts">{t("common.contacts")}</TabsTrigger>
+          <TabsTrigger value="projects">{t("common.projects")}</TabsTrigger>
+          <TabsTrigger value="quotations">{t("common.quotations")}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="activity">
+          <ActivityList
+            activities={entries}
+            empty={
+              <EmptyPanel
+                sentence={t("drawer.emptyActivity")}
+                action={
+                  <LogDialog
+                    companyId={company.id}
+                    companyName={company.name}
+                    contacts={logContacts}
+                    projects={logProjects}
+                    trigger={logTrigger}
+                  />
+                }
+              />
+            }
+          />
+        </TabsContent>
+
+        <TabsContent value="contacts" className="flex flex-col gap-3">
+          {contacts.length === 0 ? (
+            <EmptyPanel
+              sentence={t("drawer.emptyContacts")}
+              action={<AddContactDialog companyId={company.id} trigger={addContactTrigger} />}
+            />
+          ) : (
+            <>
+              <div className="flex">
+                <AddContactDialog companyId={company.id} trigger={addContactTrigger} />
+              </div>
+              <ul className="flex flex-col gap-2">
+                {contacts.map((row) => (
+                  <li key={row.id} className="card-face flex flex-col gap-1.5 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium">{row.name}</span>
+                      {row.isMain ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Star aria-hidden="true" />
+                          {t("drawer.mainContact")}
+                        </Badge>
+                      ) : (
+                        <MakeMainButton contactId={row.id} name={row.name} />
+                      )}
+                    </div>
+                    {row.position ? (
+                      <span className="text-xs text-muted-foreground">
+                        <span className="sr-only">{t("common.position")}: </span>
+                        {row.position}
+                      </span>
+                    ) : null}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                      {/* A tap opens WhatsApp; the number itself is the link
+                          text, so it is always readable (SPEC §3). */}
+                      <a
+                        href={whatsappHref(row.phone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-tone-green-fg hover:underline"
+                      >
+                        <MessageCircle aria-hidden="true" className="size-3.5" />
+                        <span dir="ltr" className="num">
+                          {formatPhone(row.phone)}
+                        </span>
+                        <span className="sr-only">{t("drawer.openWhatsApp")}</span>
+                      </a>
+                      {row.email ? (
+                        <a
+                          href={`mailto:${row.email}`}
+                          className="truncate text-muted-foreground hover:underline"
+                        >
+                          {row.email}
+                        </a>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="projects" className="flex flex-col gap-3">
+          {projects.length === 0 ? (
+            <EmptyPanel
+              sentence={t("drawer.emptyProjects")}
+              action={<NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />}
+            />
+          ) : (
+            <>
+              <div className="flex">
+                <NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />
+              </div>
+              <ul className="flex flex-col gap-2">
+                {projects.map((row) => (
+                  <li key={row.id}>
+                    <Link
+                      href={`/projects?open=${row.id}`}
+                      className="card-face flex items-center gap-3 p-3 transition-colors hover:bg-surface-2"
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col gap-1">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className="truncate font-medium">{row.name}</span>
+                          {row.lostAt ? (
+                            <Badge variant="secondary" className="text-tone-red-fg">
+                              {t("drawer.lost")}
+                            </Badge>
+                          ) : null}
+                        </span>
+                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span>
+                            <span className="sr-only">{t("common.expectedSqm")}: </span>
+                            {row.expectedSqm ? (
+                              <>
+                                <span className="num">{formatSqm(row.expectedSqm)}</span>{" "}
+                                {t("common.sqm")}
+                              </>
+                            ) : (
+                              "—"
+                            )}
+                          </span>
+                          <span>
+                            <span className="sr-only">{t("common.nextFollowUp")}: </span>
+                            <span className="num">{formatDay(row.nextFollowUp, locale)}</span>
+                          </span>
+                        </span>
+                        {row.lostAt ? (
+                          <span className="text-xs text-tone-red-fg">
+                            {t("drawer.lostOn", { date: formatDay(dayOf(row.lostAt), locale) })}
+                            {row.lostReason ? ` — ${row.lostReason}` : ""}
+                          </span>
+                        ) : null}
+                      </span>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-faint rtl:rotate-180"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </TabsContent>
+
+        <TabsContent value="quotations">
+          <EmptyPanel sentence={t("drawer.quotationsSoon")} />
+        </TabsContent>
+      </Tabs>
+    </>
+  );
+}
+
+/** One sentence and its primary action — every empty list, in every tab. */
+function EmptyPanel({ sentence, action }: { sentence: string; action?: ReactNode }) {
+  return (
+    <div className="card-face flex flex-col items-center gap-3 px-4 py-10 text-center">
+      <p className="max-w-prose text-sm text-muted-foreground">{sentence}</p>
+      {action}
+    </div>
+  );
+}
+
+/**
+ * Never a blank panel (DESIGN §2). The sheet is already open and already has a
+ * name for assistive technology while the query is still running — Radix wants
+ * a title from the first frame, not the second.
+ */
+function CompanyDrawerSkeleton({ title, description }: { title: string; description: string }) {
+  return (
+    <div aria-busy="true" className="flex flex-col gap-4 p-4">
+      <SheetTitle className="sr-only">{title}</SheetTitle>
+      <SheetDescription className="sr-only">{description}</SheetDescription>
+      <Skeleton className="h-6 w-2/3" />
+      <Skeleton className="h-3 w-1/2" />
+      <Skeleton className="h-12 w-full rounded-xl" />
+      <div className="flex gap-2">
+        <Skeleton className="h-8 w-20 rounded-lg" />
+        <Skeleton className="h-8 w-28 rounded-lg" />
+        <Skeleton className="h-8 w-32 rounded-lg" />
+      </div>
+      <Skeleton className="h-8 w-full rounded-lg" />
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2].map((row) => (
+          <Skeleton key={row} className="h-20 w-full rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}

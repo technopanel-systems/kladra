@@ -22,6 +22,9 @@ playwright-report/
 blob-report/
 playwright/.cache/
 shots/
+# what the shot-looker's playwright-cli leaves behind: page snapshots and
+# console logs, one pair per navigation.
+.playwright-cli/
 
 # backups (dumps hold every row and every password hash)
 backups/

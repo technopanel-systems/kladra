@@ -1,0 +1,22 @@
+{
+  "addCompany": "Add company",
+  "addCompanyHint": "The company and the first person you deal with there.",
+  "addContact": "Add contact",
+  "addContactHint": "Someone at this company you talk to.",
+  "companyNamePlaceholder": "As the customer writes it",
+  "contactHeading": "Contact",
+  "contactHeadingHint": "The first contact becomes the main contact.",
+  "choose": "Choose…",
+  "searchList": "Type to search",
+  "noMatch": "Nothing matched.",
+  "useTyped": "Use “{text}”",
+  "cityPlaceholder": "Type the city name",
+  "notesPlaceholder": "Anything worth remembering",
+  "phoneHelp": "0551234567, +966551234567 and 00966551234567 are the same number.",
+  "phoneInvalid": "Check the number — try 0551234567 or +966551234567.",
+  "phoneStoredAs": "Saved as",
+  "makeMain": "Make this the main contact",
+  "duplicateCompany": "Looks like an existing company: {name} ({rep})",
+  "added": "{name} added",
+  "listsUnavailable": "The lists could not be loaded. Close this and open it again."
+}

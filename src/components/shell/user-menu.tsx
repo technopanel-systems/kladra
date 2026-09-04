@@ -3,6 +3,7 @@
 import { ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react";
 import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { signOutAction } from "@/actions/auth";
 import { setLocaleAction, setThemeAction } from "@/actions/prefs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,10 +45,15 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
 
+  // A refused action says so. Both of these can fail for a reason the person
+  // can act on — most often a session that expired while the menu sat open —
+  // and silently doing nothing reads as a broken button (DESIGN §2: the screen
+  // tells you what changed). `error` arrives already translated.
   function chooseTheme(value: string) {
     if (value === theme) return;
     startTransition(async () => {
-      await setThemeAction(value);
+      const result = await setThemeAction(value);
+      if (!result.ok) toast.error(result.error);
     });
   }
 
@@ -55,10 +61,14 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
     if (value === locale) return;
     startTransition(async () => {
       const result = await setLocaleAction(value, pathname);
+      if (!result.ok) {
+        toast.error(result.error);
+        return;
+      }
       // A FULL document load, not router.push: `<html lang dir>` lives in the
       // root layout, which Next does not re-render on a client navigation. A
       // soft one left the page right-to-left while the words turned English.
-      if (result.ok && result.data) window.location.assign(result.data.href);
+      if (result.data) window.location.assign(result.data.href);
     });
   }
 
