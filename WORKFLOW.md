@@ -6,8 +6,8 @@
 - [x] P1 Extract from FACET → the five files (redone from C:\Projects\facet-crm)
 - [x] P2 Scaffold: app, database, login, shell, seed, live updates, tests
 - [x] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
-- [ ] P3.5 Edit company, contact, project; archive contact and project; the SPEC §4 cuts go away
-- [ ] P3.6 Root causes: no primary action disabled while data loads; the four review findings
+- [x] P3.5 Edit company, contact, project; archive contact and project; the SPEC §4 cuts go away
+- [x] P3.6 Root causes: no primary action disabled while data loads; the four review findings
       become DESIGN rules with tests; one word per concept in both languages, glossary in SPEC;
       tests get their own database, `kladra_test`
 - [ ] P4 Quotations: rep request → coordinator issue / send back → customer decision
@@ -18,7 +18,26 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P3 done and green. Starting P3.5.
+**Where I stopped:** P3.6 done and green, `npm run test` 23 passing across both locales. Starting P4.
+
+P3.6 found more than the four review findings. The company drawer's projects tab crashed to
+"This page couldn't load" on a tab click in Arabic: a `<Button>` a server component hands to a
+dialog as its trigger reaches the browser as a lazy wrapper, not an element, and Radix's
+`asChild` throws on it. Six triggers were written that way; every trigger in the kit resolves it
+now (`useSlotChild`). Two guards came out of it — any uncaught browser exception fails the spec
+that provoked it, and `<Hydrated>` marks the document when React takes over so a press cannot
+land before the screen is live.
+
+The tests now own `kladra_test` on port 3101, because a run had been clearing the database a
+screenshot pass was reading. Forms carry `noValidate` so the action's sentence is the only
+sentence. Thirty-nine Arabic strings spoke to a man and now address nobody;
+`npm run check:messages` fails on the marked forms. SPEC §5 is the glossary. D31 records an
+overrule of a §3 line: an empty list shows its primary action where that action exists.
+
+Dead code swept: `companyOwner`, `formatInstant`, `isSaudi`, `defaultLocation`, `isValidPhone`,
+`ROLES`. `defaultLocation` was a second definition of a figure `src/actions/forms.ts` already
+owned — the exact drift trap. `src/lib/money.ts` and `src/lib/workdays.ts` keep their unwired
+arithmetic: it is P4's and P6's, and rewriting it a box later is churn, not a fix.
 
 ## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
 

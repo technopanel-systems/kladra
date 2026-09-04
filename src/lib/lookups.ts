@@ -145,39 +145,3 @@ export async function listCitiesForCountry(
     )
     .orderBy(sql`${cities.pinned} asc nulls last`, asc(name));
 }
-
-/** Does this country pick its city from a list, or type it? */
-export async function isSaudi(countryId: number): Promise<boolean> {
-  if (!Number.isInteger(countryId) || countryId <= 0) return false;
-  const [row] = await db
-    .select({ code: countries.code })
-    .from(countries)
-    .where(eq(countries.id, countryId))
-    .limit(1);
-  return row?.code === SAUDI_CODE;
-}
-
-/**
- * What the Add company dialog opens on: Saudi Arabia and Riyadh, the answer
- * nine times in ten (DESIGN §2). Either may be null on a database whose lookups
- * were edited; the form then opens with nothing selected rather than guessing.
- */
-export async function defaultLocation(): Promise<{
-  countryId: number | null;
-  cityId: number | null;
-}> {
-  const [country] = await db
-    .select({ id: countries.id })
-    .from(countries)
-    .where(and(eq(countries.code, SAUDI_CODE), eq(countries.active, true)))
-    .limit(1);
-  if (!country) return { countryId: null, cityId: null };
-
-  const [city] = await db
-    .select({ id: cities.id })
-    .from(cities)
-    .where(and(eq(cities.countryId, country.id), eq(cities.pinned, 1), eq(cities.active, true)))
-    .limit(1);
-
-  return { countryId: country.id, cityId: city?.id ?? null };
-}

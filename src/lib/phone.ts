@@ -34,7 +34,3 @@ export function formatPhone(e164: string | null | undefined): string {
 export function whatsappHref(e164: string): string {
   return `https://wa.me/${e164.replace(/\D/g, "")}`;
 }
-
-export function isValidPhone(input: string): boolean {
-  return normalizePhone(input) !== null;
-}

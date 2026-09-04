@@ -2,8 +2,6 @@
 
 export type Role = "rep" | "coordinator" | "manager" | "admin";
 
-export const ROLES: readonly Role[] = ["rep", "coordinator", "manager", "admin"] as const;
-
 /** What every server component and action gets from `requireUser()`. */
 export type SessionUser = {
   id: string;

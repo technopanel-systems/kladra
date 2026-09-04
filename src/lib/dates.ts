@@ -102,15 +102,3 @@ export function formatMonth(day: Day, locale: string = "en"): string {
   const mon = locale.startsWith("ar") ? MONTHS_AR[m - 1] : MONTHS_EN[m - 1];
   return `${mon} ${y}`;
 }
-
-/** 04/Aug/2026 14:35 in Riyadh, for log entries and audit rows. */
-export function formatInstant(instant: Date | null | undefined, locale: string = "en"): string {
-  if (!instant) return "—";
-  const time = new Intl.DateTimeFormat("en-GB", {
-    timeZone: RIYADH,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(instant);
-  return `${formatDay(dayOf(instant), locale)} ${time}`;
-}

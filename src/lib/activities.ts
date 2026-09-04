@@ -40,20 +40,6 @@ export function mayTouch(user: SessionUser, repId: string): boolean {
 }
 
 /**
- * The company's owner, or null when there is no such company. Never leaks
- * whether a hidden company exists — the caller turns null into "not found" and
- * a foreign owner into NotAllowed.
- */
-export async function companyOwner(companyId: string): Promise<string | null> {
-  const [row] = await db
-    .select({ repId: companies.repId })
-    .from(companies)
-    .where(eq(companies.id, companyId))
-    .limit(1);
-  return row?.repId ?? null;
-}
-
-/**
  * Who owns the company and whether it is archived, in ONE read. Throws
  * NotAllowed for a company this person may not touch.
  *

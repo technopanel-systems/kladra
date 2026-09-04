@@ -116,7 +116,7 @@ Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a
 - Ctrl+K / Cmd+K opens global search from any screen. (P2)
 - The app is installable on a phone (PWA manifest, icons, offline splash only — no offline data). (P7)
 - Sessions last 30 days; sign-out is explicit. (P2)
-- Every empty list shows one sentence and its primary action. (all)
+- Every empty list shows one sentence and its primary action. (all) — narrowed by D23 and D31, which say what happens when the action does not apply or does not exist yet.
 - List filters and the open drawer are reflected in the URL. (P3+)
 - Archive, never delete: companies, contacts, projects get archived_at; archived rows hide from lists and stay in history. Admin can restore. (P3)
 
@@ -152,6 +152,7 @@ Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a
 - D28 The tests own a second database, `kladra_test`, and a second port, 3101 (`npm run dev:test`). They delete every row and seed fresh ones on every run, so sharing the development database meant a test run wiping the records somebody was looking at — which happened, and half of one review's findings were symptoms of it. The name is derived by appending `_test` rather than configured, so no `.env` can point a run at real data by omission; before deleting anything the suite asks `/api/health` which database is behind the port and stops if the answer is wrong. DEFAULT — founder may change.
 - D29 Development servers listen on 127.0.0.1 only, like the deployed ports. `next dev` and `next start` default to every interface, which puts a signed-in copy of the CRM with the seed accounts on the office Wi-Fi. DEFAULT — founder may change.
 - D30a A screen is marked live once React has taken over its HTML, and the tests wait for that mark after every page load. Without it a press that lands in the gap does nothing and the run fails at random. DEFAULT — founder may change.
+- D31 **Overrules a §3 line** — "Every empty list shows one sentence and its primary action. (all)". An empty list shows one sentence and its primary action *where that action exists*. What was observed: every screen whose slice is not built yet rendered the action its sentence named, disabled, wearing the brand gradient — the one signal reserved for "this is the thing to press". On the empty companies page both Add company buttons came up that way. Pressed, nothing happened, and the screen read as broken rather than as unfinished, which is the exact impression that killed FACET. So where the slice is not built the sentence carries the news alone and, where the work can already be done somewhere else, says where; the action comes back with its slice. Everywhere the action does exist the §3 line stands unchanged, and D23 covers the third case, a list emptied by a search rather than by having nothing in it. DEFAULT — founder may change.
 - D30 Arabic UI text addresses nobody's gender: the verbal noun rather than the imperative, and "الرجاء" where an instruction is unavoidable. Rawan reads this app all day and half of it was written to a man. `npm run check:messages` fails on the marked forms. DEFAULT — founder may change.
 
 ## §5 One word per thing
