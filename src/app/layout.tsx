@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/go
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { DirectionProvider } from "@/components/direction-provider";
+import { Hydrated } from "@/components/shell/hydrated";
 import { Toaster } from "@/components/ui/sonner";
 import { dirOf } from "@/i18n/routing";
 import { getTheme } from "@/lib/theme";
@@ -61,6 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-svh">
         <NextIntlClientProvider>
           <DirectionProvider dir={dir}>
+            <Hydrated />
             {children}
             <Toaster position={dir === "rtl" ? "bottom-left" : "bottom-right"} />
           </DirectionProvider>

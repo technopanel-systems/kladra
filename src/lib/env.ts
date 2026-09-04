@@ -21,4 +21,39 @@ export function loadEnv(): void {
     // that does not exist — trim once, here.
     process.env.DATABASE_URL = process.env.DATABASE_URL.trim();
   }
+  if (process.env.TEST_DATABASE_URL) {
+    process.env.TEST_DATABASE_URL = process.env.TEST_DATABASE_URL.trim();
+  }
+}
+
+/**
+ * The database the test suite owns, on the same server as the app's.
+ *
+ * Tests reseed from scratch — `db:clear` then `seed:demo` — so pointing them at
+ * DATABASE_URL wipes whatever the developer was looking at. That happened: a
+ * screenshot pass and a test run overlapped, and half the review's findings were
+ * records disappearing mid-session and sessions being signed out, not bugs.
+ *
+ * Derived rather than configured, so nobody has to remember a second variable
+ * and no `.env` can point the suite at production by omission. `TEST_DATABASE_URL`
+ * overrides it when the test database lives somewhere else entirely.
+ */
+export function testDatabaseUrl(): string {
+  loadEnv();
+  const explicit = process.env.TEST_DATABASE_URL;
+  if (explicit) return explicit;
+
+  const base = process.env.DATABASE_URL;
+  if (!base) {
+    throw new Error(
+      "DATABASE_URL is not set, so the test database name cannot be derived from it. " +
+        "Copy .env.example to .env (see README.md), or set TEST_DATABASE_URL.",
+    );
+  }
+  const url = new URL(base);
+  const name = url.pathname.replace(/^\//, "");
+  if (!name) throw new Error(`DATABASE_URL names no database: ${base}`);
+  if (name.endsWith("_test")) return base;
+  url.pathname = `/${name}_test`;
+  return url.toString();
 }

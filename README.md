@@ -42,10 +42,20 @@ Password for every demo account: the `SEED_PASSWORD` in `.env` (default `kladra2
 ```bash
 npm run typecheck && npm run lint && npm run build
 npm run check:messages        # every key in both messages/en.json and messages/ar.json
-npm run test                  # Playwright: reseeds the DB, boots dev on 3100, runs tests/ in en and ar
+npm run test                  # Playwright: boots dev:test on 3101, reseeds kladra_test, runs tests/ in en and ar
 ```
 
 The acceptance scripts the tests walk are in WORKFLOW.md §3, one per role.
+
+**Tests have their own database and their own port.** `npm run test` serves the
+app on **3101** against **`kladra_test`**, created on first run beside the
+development database on the same server. The suite deletes every row and seeds
+fresh ones each time it starts, so it must never be able to reach the database
+`npm run dev` is showing — leave 3100 running and keep working while a run goes
+by. `npm run dev:test` starts that server by hand. Before deleting anything the
+suite asks `/api/health` which database it is actually on and stops if the
+answer is not `kladra_test`. Set `TEST_DATABASE_URL` only if the test database
+lives on another server; otherwise the name is derived by appending `_test`.
 
 > **Next 16 differs from 13–15** — `params` is a Promise and `middleware.ts` is
 > `proxy.ts`. Version-correct docs ship at `node_modules/next/dist/docs/`; read

@@ -9,6 +9,6 @@ export default async function AdminTargetsPage() {
   if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
 
   return (
-    <Placeholder titleKey="common.targets" sentenceKey="shell.emptyTargets" actionKey="shell.setTargets" />
+    <Placeholder titleKey="common.targets" sentenceKey="shell.emptyTargets" />
   );
 }

@@ -9,6 +9,6 @@ export default async function AdminExportPage() {
   if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
 
   return (
-    <Placeholder titleKey="common.export" sentenceKey="shell.emptyExport" actionKey="shell.exportCompanies" />
+    <Placeholder titleKey="common.export" sentenceKey="shell.emptyExport" />
   );
 }

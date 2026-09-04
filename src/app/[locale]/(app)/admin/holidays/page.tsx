@@ -9,6 +9,6 @@ export default async function AdminHolidaysPage() {
   if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
 
   return (
-    <Placeholder titleKey="common.holidays" sentenceKey="shell.emptyHolidays" actionKey="shell.addHoliday" />
+    <Placeholder titleKey="common.holidays" sentenceKey="shell.emptyHolidays" />
   );
 }

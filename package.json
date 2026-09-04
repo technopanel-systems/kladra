@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3100",
+    "dev": "next dev -H 127.0.0.1 -p 3100",
+    "dev:test": "tsx scripts/dev-test.ts",
     "build": "next build",
-    "start": "next start -p 3100",
+    "start": "next start -H 127.0.0.1 -p 3100",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "check:messages": "tsx scripts/check-messages.ts && tsx scripts/unused-messages.mts",
@@ -18,7 +19,8 @@
     "test:ui": "playwright test --ui",
     "backup": "tsx scripts/backup.ts",
     "backup:verify": "tsx scripts/backup-verify.ts",
-    "restore": "tsx scripts/restore.ts"
+    "restore": "tsx scripts/restore.ts",
+    "db:create-test": "tsx scripts/db-create-test.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

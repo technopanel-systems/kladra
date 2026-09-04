@@ -9,6 +9,6 @@ export default async function AdminUsersPage() {
   if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
 
   return (
-    <Placeholder titleKey="common.users" sentenceKey="shell.emptyUsers" actionKey="shell.addUser" />
+    <Placeholder titleKey="common.users" sentenceKey="shell.emptyUsers" />
   );
 }

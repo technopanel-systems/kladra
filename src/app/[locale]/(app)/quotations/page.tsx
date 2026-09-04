@@ -4,6 +4,6 @@ import { requireUser } from "@/lib/authz";
 export default async function QuotationsPage() {
   await requireUser();
   return (
-    <Placeholder titleKey="common.quotations" sentenceKey="shell.emptyQuotations" actionKey="shell.requestQuotation" />
+    <Placeholder titleKey="common.quotations" sentenceKey="shell.emptyQuotations" />
   );
 }

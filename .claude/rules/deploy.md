@@ -16,10 +16,19 @@ LAN bypass and the silent insecure cookie.
   the app, `"127.0.0.1:5433:5432"` for Postgres, hook-enforced (H9). A bare
   `"PORT:PORT"` binds `0.0.0.0` and answers on the office Wi-Fi, and
   Cloudflare Access protects the tunnel, NOT the port — measured in FACET,
-  not supposed.
+  not supposed. **The same holds outside compose**: `next dev` and `next start`
+  default to `0.0.0.0`, so `-H 127.0.0.1` is in every one of those scripts.
+  A dev server is a signed-in copy of the CRM with real seed accounts on it.
 
 - **Kladra's ports are 3100 and 5433; compose project name is `kladra`.**
   FACET holds 3000 and 5432 on the same machine and is never touched.
+
+- **3101 is the test port and belongs to nothing else.** `npm run dev:test`
+  serves it against the `kladra_test` database (`scripts/dev-test.ts`), which
+  the suite clears and reseeds on every run. It is never in
+  `docker-compose.yml`, never in the tunnel ingress, and never deployed; the
+  port exists so `npm run dev` on 3100 can keep the developer's data while a
+  test run is deleting everything on 3101.
 
 - **`PUBLIC_URL` decides whether the session cookie is `Secure`, and
   forgetting it is silent**: with `AUTH_URL` resolving http the login works,

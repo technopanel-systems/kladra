@@ -5,6 +5,7 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { useTranslations } from "next-intl"
 
 import { cn } from "@/lib/utils"
+import { useSlotChild } from "@/components/ui/use-slot-child"
 import { Button } from "@/components/ui/button"
 import { XIcon } from "lucide-react"
 
@@ -17,7 +18,8 @@ function Dialog({
 function DialogTrigger({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />
+  const children = useSlotChild(props.children)
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props}>{children}</DialogPrimitive.Trigger>
 }
 
 function DialogPortal({

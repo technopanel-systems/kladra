@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { test as base } from "@playwright/test";
+import { test as base, type Page } from "@playwright/test";
 import { createTranslator } from "use-intl/core";
 
 /**
@@ -89,6 +89,53 @@ type Fixtures = {
 };
 
 /**
+ * An uncaught exception in the browser is a failure of the test that provoked
+ * it, wherever it surfaces.
+ *
+ * It cost an afternoon to learn that: a React error inside the company drawer
+ * put Next's dev overlay on screen, and the overlay's own disabled buttons were
+ * counted by a spec looking for dead controls — which reported three unlabelled
+ * disabled buttons and said nothing about the actual crash. Every spec now fails
+ * on the exception itself, naming it.
+ *
+ * Only `pageerror` — a genuinely uncaught throw. Console noise is not a failure.
+ */
+function watchForRuntimeErrors(page: Page): () => void {
+  const errors: string[] = [];
+  const firstLine = (error: Error): string => error.message.split(/\r?\n/)[0];
+  page.on("pageerror", (error) => errors.push(firstLine(error)));
+  return () => {
+    if (errors.length === 0) return;
+    const many = errors.length === 1 ? "an uncaught error" : `${errors.length} uncaught errors`;
+    throw new Error(
+      [`The browser threw ${many} during this test:`, ...errors.map((e) => `  - ${e}`)].join("\n"),
+    );
+  };
+}
+
+/**
+ * Waits, after every page load, for React to have taken over the HTML.
+ *
+ * A screen is readable before it is live, and a press in between does nothing —
+ * silently. Playwright's actionability checks cannot see it: the button is
+ * there, visible and enabled, and the click lands on markup. It bites the fast
+ * pages hardest, so a suite passes cold and fails warm.
+ *
+ * `<Hydrated>` in the root layout stamps `html[data-hydrated]` on mount
+ * (src/components/shell/hydrated.tsx). Every `goto` waits for it here rather
+ * than at three hundred call sites. A soft navigation keeps the root mounted, so
+ * the mark is still there on the other side and clicking a link needs nothing.
+ */
+function waitForHydrationAfterEveryLoad(page: Page): void {
+  const goto = page.goto.bind(page);
+  page.goto = async (url, options) => {
+    const response = await goto(url, options);
+    await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+    return response;
+  };
+}
+
+/**
  * Extends Playwright's `test` with `locale` (the app's URL-prefix locale,
  * read from the project name) and `t` (the translator above). Every spec
  * imports `test`/`expect` from here, never straight from "@playwright/test"
@@ -113,6 +160,12 @@ export const test = base.extend<Fixtures>({
   },
   t: async ({ locale }, provide) => {
     await provide(getTranslator(locale));
+  },
+  page: async ({ page }, provide) => {
+    const assertNone = watchForRuntimeErrors(page);
+    waitForHydrationAfterEveryLoad(page);
+    await provide(page);
+    assertNone();
   },
 });
 

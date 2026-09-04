@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, NotebookPen, Pencil, Plus, ReceiptText } from "lucide-react";
+import { CalendarClock, NotebookPen, Pencil, Plus } from "lucide-react";
 import { useId, useState, useSyncExternalStore, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -21,12 +21,6 @@ import {
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { formatDay, todayRiyadh } from "@/lib/dates";
@@ -259,23 +253,11 @@ export function CompanyHeader({
           }
         />
 
-        {/* Two actions that do not exist yet. A disabled button with no
-            explanation reads as broken, so each says when it arrives; the
-            wrapper is what makes a disabled control hoverable and focusable. */}
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-flex rounded-lg">
-                <Button variant="outline" disabled>
-                  <ReceiptText aria-hidden="true" />
-                  {t("shell.requestQuotation")}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t("drawer.requestQuotationSoon")}</TooltipContent>
-          </Tooltip>
-
-        </TooltipProvider>
+        {/* Requesting a quotation arrives with P4. Nothing stands in for it
+            here: a disabled button explained only by a tooltip is unreachable
+            on the phone a rep actually holds, and a control that cannot be used
+            is not rendered as a control (DESIGN §5). The Quotations tab below
+            says when it comes. */}
 
         <EditCompanyDialog
           company={company.editable}

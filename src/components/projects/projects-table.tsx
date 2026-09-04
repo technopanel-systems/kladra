@@ -578,11 +578,6 @@ export function ProjectSheet({
                 </Button>
               }
             />
-            <span title={t("projects.notYet")}>
-              <Button variant="outline" disabled>
-                {t("shell.requestQuotation")}
-              </Button>
-            </span>
             <EditProjectDialog
               project={{ id: projectId, name, expectedSqm, nextFollowUp, notes }}
               trigger={
@@ -627,13 +622,10 @@ export function ProjectSheet({
               <p className="max-w-prose text-sm text-muted-foreground">
                 {t("projects.emptyQuotations")}
               </p>
-              {/* P4 wires this; a disabled button cannot carry a tooltip, so
-                  the reason sits on the wrapper. */}
-              <span title={t("projects.notYet")}>
-                <Button variant="outline" disabled>
-                  {t("shell.requestQuotation")}
-                </Button>
-              </span>
+              {/* No button. Requesting a quotation is not built, and a control
+                  that cannot be used is not rendered as one (DESIGN §5); the
+                  sentence below says when it arrives. */}
+              <p className="text-xs text-faint">{t("projects.notYet")}</p>
             </div>
           </TabsContent>
         </Tabs>

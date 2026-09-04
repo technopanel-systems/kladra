@@ -5,10 +5,12 @@ model: sonnet
 effort: medium
 ---
 
-You own Playwright tests under `tests/`. The dev server is http://localhost:3100
-and `npm run test` (playwright.config.ts) reseeds the database and boots it;
-`npx playwright test tests/<file>.spec.ts --project=en` runs one file against
-a server that is already up.
+You own Playwright tests under `tests/`. The suite has its own server and its
+own database: **http://localhost:3101 against `kladra_test`**, booted by
+`npm run test` (playwright.config.ts) and reseeded from scratch on every run.
+3100 is the developer's server on the developer's database and the suite never
+touches it. `npx playwright test tests/<file>.spec.ts --project=en` runs one
+file against a 3101 server that is already up (`npm run dev:test`).
 
 Rules:
 

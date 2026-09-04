@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { loadEnv } from "@/lib/env";
+import { loadEnv, testDatabaseUrl } from "@/lib/env";
 
 /**
  * Direct Postgres access for specs, for state the screen genuinely does not
@@ -24,13 +24,8 @@ let pool: Pool | null = null;
  */
 function getPool(): Pool {
   if (pool) return pool;
-  const connectionString = process.env.DATABASE_URL?.trim();
-  if (!connectionString) {
-    throw new Error(
-      "DATABASE_URL is not set. tests/helpers/db.ts calls loadEnv() (src/lib/env.ts), which " +
-        "reads .env at the repo root — copy .env.example to .env first (see README.md).",
-    );
-  }
+  // The suite's own database, never the developer's (src/lib/env.ts).
+  const connectionString = testDatabaseUrl();
   // workers: 1 in playwright.config.ts, so a small pool is plenty.
   pool = new Pool({ connectionString, max: 4, allowExitOnIdle: true });
   return pool;

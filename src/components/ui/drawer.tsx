@@ -4,6 +4,7 @@ import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
+import { useSlotChild } from "@/components/ui/use-slot-child"
 
 function Drawer({
   ...props
@@ -14,7 +15,12 @@ function Drawer({
 function DrawerTrigger({
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Trigger>) {
-  return <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props} />
+  const children = useSlotChild(props.children)
+  return (
+    <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props}>
+      {children}
+    </DrawerPrimitive.Trigger>
+  )
 }
 
 function DrawerPortal({

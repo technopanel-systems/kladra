@@ -5,6 +5,8 @@ node_modules/
 
 # next.js
 .next/
+# the test server's own build directory (scripts/dev-test.ts)
+.next-test/
 out/
 next-env.d.ts
 

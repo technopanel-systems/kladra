@@ -78,6 +78,19 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   button is pressed; a button that greys itself out on arrival reads as broken.
 - **A check that cries wolf is a check nobody reads.** ESLint's flat config does not read
   `.gitignore`, so build and test artefacts are ignored explicitly.
+- **A server component's `<Button>` is not an element by the time a dialog slots it.** It
+  crosses to the browser as a wrapper around a streamed chunk, and Radix's `asChild` throws
+  on it — "failed to slot onto its children" — so the drawer goes to "This page couldn't
+  load" from a tab click. Every trigger in the kit resolves it first
+  (`useSlotChild`); nothing at a call site has to know. It only shows on a soft
+  navigation, so pressing the button in a test that loaded the URL directly proves nothing.
+- **A screen is readable before it is live.** React takes over the server-rendered HTML a
+  moment after it paints, and a press in between does nothing at all — no error, no dialog.
+  The fast screens lose that race, so a suite passes cold and fails warm. `<Hydrated>` marks
+  the document when React arrives and every page load in a spec waits for the mark.
+- **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
+  three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
+  dead controls. Every spec now fails on the exception itself and names it.
 
 ## §4 Not built until asked
 
