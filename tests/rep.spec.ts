@@ -228,13 +228,37 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
   });
 
   /*
-   * Past the end of WORKFLOW §3's five lines, and deliberately: adding a second
-   * contact, moving who is main (SPEC D18) and archiving (SPEC §3 — archive,
-   * never delete) are the rest of what a rep can do to a company. Archiving
-   * last, because it takes the fixture off the floor and there is nothing to do
-   * with it afterwards.
+   * Past the end of WORKFLOW §3's five lines, and deliberately: the duplicate
+   * warning, adding a second contact, moving who is main (SPEC D18) and
+   * archiving (SPEC §3 — archive, never delete) are the rest of what a rep can
+   * do to a company. Archiving last, because it takes the fixture off the floor
+   * and there is nothing to do with it afterwards.
    */
-  await test.step("6 · A second contact becomes the main one, then the company is archived", async () => {
+  await test.step("6 · Adding the same company again warns, and does not block", async () => {
+    // The company from step 2 is now on file, so it is its own fixture for the
+    // warning (SPEC D8, S15). Asserted here because duplicateCheckAction
+    // swallows a failed lookup on purpose — a warning that cannot be computed
+    // is not an error a rep should see — so a broken query would be silent.
+    await dialogNamed(page, fixture.company)
+      .getByRole("button", { name: t("common.close") })
+      .click();
+
+    await page.getByRole("button", { name: t("forms.addCompany") }).first().click();
+    const form = dialogNamed(page, t("forms.addCompany"));
+    await form.getByLabel(t("common.company")).fill(fixture.company);
+
+    const warning = form.getByRole("status");
+    await expect(warning).toContainText(fixture.company);
+
+    // It is advice, not a gate: Save is still there to press.
+    await expect(form.getByRole("button", { name: t("common.save") })).toBeEnabled();
+    await form.getByRole("button", { name: t("common.cancel") }).click();
+  });
+
+  await test.step("7 · A second contact becomes the main one, then the company is archived", async () => {
+    await page
+      .getByRole("link", { name: t("companies.openCompany", { name: fixture.company }) })
+      .click();
     const drawer = dialogNamed(page, fixture.company);
     await drawer.getByRole("tab", { name: t("common.contacts") }).click();
     await drawer.getByRole("button", { name: t("drawer.addContact") }).first().click();
@@ -266,4 +290,22 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
       page.getByRole("link", { name: t("companies.openCompany", { name: fixture.company }) }),
     ).toHaveCount(0);
   });
+});
+
+/**
+ * WORKFLOW §3's Abdulrahman script, line 4, brought forward: the manager reads
+ * the same companies screen and there is no Add company button on it. His own
+ * spec belongs to P6, but the screen is P3's and the rule is enforced here —
+ * a company's rep is whoever pressed Save, so a manager adding one would
+ * quietly become its rep (SPEC S8).
+ */
+test("a manager reads the rep floor and cannot add to it", async ({ page, locale, t }) => {
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/companies`);
+
+  await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible();
+  // He sees everyone's companies, so the list is not empty...
+  await expect(page.getByRole("table").first()).toBeVisible();
+  // ...and there is nothing on it offering to add one.
+  await expect(page.getByRole("button", { name: t("forms.addCompany") })).toHaveCount(0);
 });

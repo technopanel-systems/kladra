@@ -7,7 +7,7 @@ import { FollowUpStrip } from "@/components/companies/follow-up-strip";
 import { ListSearch } from "@/components/companies/list-search";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { requireUser } from "@/lib/authz";
+import { can, requireUser } from "@/lib/authz";
 import { listCompanies } from "@/lib/companies";
 import { todayRiyadh } from "@/lib/dates";
 import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
@@ -44,6 +44,15 @@ export default async function CompaniesPage({
   const filter = parseFollowUpFilter(params.filter);
   const open = params.open?.trim() || null;
 
+  /**
+   * Only a rep adds a company. The new row's `rep_id` is whoever pressed Save,
+   * and there is no field for "whose company is this" — so a manager or admin
+   * adding one would quietly become its rep. They read this screen instead
+   * (WORKFLOW §3, Abdulrahman: no Add company button). The action refuses them
+   * as well; this only keeps a button they cannot use off the screen.
+   */
+  const mayAdd = can(user, "rep");
+
   const [t, rows, counts] = await Promise.all([
     getTranslations(),
     listCompanies({ user, q: q || undefined, filter, locale }),
@@ -66,7 +75,7 @@ export default async function CompaniesPage({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.companies")}</h1>
-        <AddCompanyDialog />
+        {mayAdd ? <AddCompanyDialog /> : null}
       </div>
 
       <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} />
@@ -74,7 +83,7 @@ export default async function CompaniesPage({
       <ListSearch q={q} filter={filter ?? null} open={open} />
 
       {tableRows.length === 0 ? (
-        <EmptyList q={q} filtered={filter !== undefined} />
+        <EmptyList q={q} filtered={filter !== undefined} mayAdd={mayAdd} />
       ) : (
         <CompaniesTable
           rows={tableRows}
@@ -101,7 +110,15 @@ export default async function CompaniesPage({
  * someone whose search simply missed would be answering a question he did not
  * ask.
  */
-async function EmptyList({ q, filtered }: { q: string; filtered: boolean }) {
+async function EmptyList({
+  q,
+  filtered,
+  mayAdd,
+}: {
+  q: string;
+  filtered: boolean;
+  mayAdd: boolean;
+}) {
   const t = await getTranslations();
 
   if (q) {
@@ -122,10 +139,14 @@ async function EmptyList({ q, filtered }: { q: string; filtered: boolean }) {
       />
     );
   }
+  // A manager reading an empty floor is told it is empty; he is not handed a
+  // button that would make the company his.
   return (
     <div className="card-face flex flex-col items-center gap-3 px-4 py-12 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">{t("shell.emptyCompanies")}</p>
-      <AddCompanyDialog />
+      <p className="max-w-prose text-sm text-muted-foreground">
+        {mayAdd ? t("shell.emptyCompanies") : t("common.nothingYet")}
+      </p>
+      {mayAdd ? <AddCompanyDialog /> : null}
     </div>
   );
 }

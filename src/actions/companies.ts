@@ -31,7 +31,7 @@ import { parseDay } from "@/lib/dates";
 import { notifyLive } from "@/lib/live";
 import { SAUDI_CODE } from "@/lib/lookups";
 import { normalizePhone } from "@/lib/phone";
-import type { ActionResult, SessionUser } from "@/lib/types";
+import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
 type Fields = Record<string, string>;
 
@@ -55,13 +55,23 @@ function fieldErrorsOf(error: z.ZodError, required: string, invalid: string): Fi
   return out;
 }
 
-/** The one place `requireActor` and NotAllowed become an ActionResult. */
+/**
+ * The one place `requireActor` and NotAllowed become an ActionResult.
+ *
+ * `roles` narrows who may run the action at all. Creating a company takes it,
+ * because the new row's `rep_id` is the actor's own id — there is no "whose
+ * company is this" field in the dialog, and there should not be one: a company
+ * belongs to the rep who found it (SPEC S8). A manager or admin pressing Save
+ * would quietly become its rep, so they are refused instead, and the button is
+ * not offered to them either (WORKFLOW §3, Abdulrahman: no Add company button).
+ */
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
+  ...roles: Role[]
 ): Promise<ActionResult<T>> {
   const t = await getTranslations("common");
   try {
-    return await run(await requireActor());
+    return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
     console.error("companies action failed", error);
@@ -238,7 +248,7 @@ export async function createCompanyAction(
 
     revalidateFloor();
     return { ok: true, data: { companyId } };
-  });
+  }, "rep");
 }
 
 /** Edit — the same fields, minus the contact, which has its own dialog. */
