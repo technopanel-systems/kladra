@@ -12,6 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Test artefacts. `playwright-report/` carries the trace viewer's own
+    // minified bundle, and a failing run therefore turned `npm run lint` into
+    // three thousand problems in somebody else's code — with our own hidden
+    // among them. ESLint's flat config does not read .gitignore, so being
+    // gitignored is not enough (rules/data.md: a check that cries wolf is a
+    // check nobody reads).
+    "playwright-report/**",
+    "test-results/**",
+    "blob-report/**",
+    "shots/**",
+    ".playwright-cli/**",
   ]),
 ]);
 

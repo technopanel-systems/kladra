@@ -6,7 +6,6 @@
   "activity": "Activity",
   "newProject": "New project",
   "addContact": "Add contact",
-  "editSoon": "Editing a company arrives in the next update.",
   "requestQuotationSoon": "Requesting a quotation arrives with quotations.",
   "quotationsSoon": "Quotations arrive in the next phase — this company's quotations will be listed here.",
   "emptyActivity": "Nothing logged yet — log the first visit or call.",
@@ -34,5 +33,9 @@
   "archive": "Archive",
   "archiveTitle": "Archive {name}?",
   "archiveWarning": "The company leaves your lists but keeps its history. An admin can restore it.",
-  "archived": "{name} archived"
+  "archived": "{name} archived",
+  "archiveContactTitle": "Archive {name}?",
+  "archiveContactWarning": "The contact leaves this company's list. Everything they were named in keeps their name.",
+  "archiveProjectTitle": "Archive {name}?",
+  "archiveProjectWarning": "The project leaves your lists and keeps its history. This is not the same as marking it lost — a lost project stays, with its reason."
 }

@@ -1,4 +1,4 @@
-import { ChevronRight, MessageCircle, NotebookPen, Plus, Star } from "lucide-react";
+import { ChevronRight, MessageCircle, NotebookPen, Pencil, Plus, Star } from "lucide-react";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -6,6 +6,8 @@ import { ActivityList, type ActivityEntry } from "@/components/activities/activi
 import { LogDialog, type LogContact, type LogProject } from "@/components/activities/log-dialog";
 import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
+import { ArchiveContactDialog } from "@/components/contacts/archive-contact-dialog";
+import { EditContactDialog } from "@/components/contacts/edit-contact-dialog";
 import { MakeMainButton } from "@/components/contacts/make-main-button";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +145,18 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           leadSource: company.leadSourceName,
           repName: company.repName,
           nextFollowUp: company.nextFollowUp,
+          // The ids, not the words: Edit opens on the rows the lookups hold,
+          // so renaming a category in Lookups cannot move this company.
+          editable: {
+            id: company.id,
+            name: company.name,
+            categoryId: company.categoryId,
+            leadSourceId: company.leadSourceId,
+            countryId: company.countryId,
+            cityId: company.cityId,
+            cityText: company.cityText,
+            notes: company.notes,
+          },
         }}
         contacts={logContacts}
         projects={logProjects}
@@ -200,6 +214,32 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                       ) : (
                         <MakeMainButton contactId={row.id} name={row.name} />
                       )}
+                      {/* Pushed to the far edge: a rep reads the name and the
+                          number, and only occasionally comes here to change
+                          one. */}
+                      <span className="ms-auto flex items-center gap-1">
+                        <EditContactDialog
+                          contact={{
+                            id: row.id,
+                            name: row.name,
+                            phone: row.phone,
+                            position: row.position,
+                            email: row.email,
+                            notes: row.notes,
+                          }}
+                          trigger={
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                              <Pencil aria-hidden="true" className="size-3.5" />
+                              {t("common.edit")}
+                            </Button>
+                          }
+                        />
+                        <ArchiveContactDialog contactId={row.id} contactName={row.name} />
+                      </span>
                     </div>
                     {row.position ? (
                       <span className="text-xs text-muted-foreground">

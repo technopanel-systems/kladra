@@ -1,14 +1,12 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useActionState, useCallback, useRef, useState, type ReactNode } from "react";
+import { useActionState, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { FormLookups } from "@/actions/forms";
-import { createContactAction } from "@/actions/contacts";
+import { updateContactAction } from "@/actions/contacts";
 import {
   ContactFields,
-  EMPTY_CONTACT,
   type ContactDraft,
 } from "@/components/contacts/contact-fields";
 import { useActionOutcome } from "@/components/ui-ext/action-outcome";
@@ -16,72 +14,65 @@ import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/types";
 
 /**
- * Add contact, from the company drawer's Contacts tab.
+ * Edit contact — the same five fields as adding one, opened on what is there.
  *
- * The same five fields as the first contact in Add company, so a rep learns one
- * form: name, the mandatory phone, position, email, notes. The one extra is
- * "make this the main contact" — the first contact is main automatically
- * (SPEC D18), and this is how a rep moves it when the person he actually deals
- * with changes.
- *
- * A phone already on this company is refused by the database (one number per
- * company); the action answers with a sentence on the phone field rather than a
- * constraint name, and the rest of the form is still there to fix.
+ * The company is not among them. A contact belongs to ONE company; a person who
+ * moves is a new contact at the new company, and the old row stays so that a
+ * visit logged two years ago still says who the rep met (SPEC S11).
  */
 
-export function AddContactDialog({
-  companyId,
+export type ContactEditable = {
+  id: string;
+  name: string;
+  phone: string;
+  position: string | null;
+  email: string | null;
+  notes: string | null;
+};
+
+function draftOf(contact: ContactEditable): ContactDraft {
+  return {
+    name: contact.name,
+    phone: contact.phone,
+    position: contact.position ?? "",
+    email: contact.email ?? "",
+    notes: contact.notes ?? "",
+  };
+}
+
+export function EditContactDialog({
+  contact,
   trigger,
 }: {
-  companyId: string;
+  contact: ContactEditable;
   trigger?: ReactNode;
 }) {
   const t = useTranslations();
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const { lookups, failed } = useFormLookups(open);
-
-  const onCreated = useCallback(
-    (name: string) => {
-      toast.success(t("forms.added", { name }));
-      setOpen(false);
-      // No navigation: the drawer is already where the new contact belongs, so
-      // the screen re-reads itself rather than asking anyone to refresh.
-      router.refresh();
-    },
-    [router, t],
-  );
 
   return (
     <ResponsiveDialog
       open={open}
       onOpenChange={setOpen}
-      title={t("forms.addContact")}
-      description={t("forms.addContactHint")}
-      trigger={
-        trigger ?? (
-          <Button variant="outline">
-            <Plus />
-            {t("forms.addContact")}
-          </Button>
-        )
-      }
+      title={t("forms.editContact")}
+      description={t("forms.editContactHint")}
+      trigger={trigger ?? <Button variant="outline">{t("common.edit")}</Button>}
     >
       {failed ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
       ) : lookups ? (
-        <ContactForm
-          companyId={companyId}
+        <EditForm
+          key={contact.id}
+          contact={contact}
           lookups={lookups}
-          onCreated={onCreated}
+          onSaved={() => setOpen(false)}
           onCancel={() => setOpen(false)}
         />
       ) : (
@@ -91,51 +82,54 @@ export function AddContactDialog({
   );
 }
 
-function ContactForm({
-  companyId,
+function EditForm({
+  contact,
   lookups,
-  onCreated,
+  onSaved,
   onCancel,
 }: {
-  companyId: string;
+  contact: ContactEditable;
   lookups: FormLookups;
-  onCreated: (name: string) => void;
+  onSaved: () => void;
   onCancel: () => void;
 }) {
   const t = useTranslations();
+  const router = useRouter();
   const [state, formAction, pending] = useActionState<
     ActionResult<{ contactId: string }> | null,
     FormData
-  >(createContactAction, null);
+  >(updateContactAction, null);
 
-  const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
-  const [isMain, setIsMain] = useState(false);
-  const submitted = useRef("");
+  const [draft, setDraft] = useState<ContactDraft>(() => draftOf(contact));
   const form = useRef<HTMLFormElement>(null);
+  const saved = useRef("");
 
   useFocusFirstError(form, state);
 
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
-  useActionOutcome(state, () => onCreated(submitted.current));
+  useActionOutcome(state, () => {
+    toast.success(t("forms.saved", { name: saved.current }));
+    onSaved();
+    // The drawer, the row and the follow-up strip are all server rendered from
+    // the same query; one refresh brings them back together.
+    router.refresh();
+  });
 
   return (
     <form
       ref={form}
       action={formAction}
       onSubmit={() => {
-        submitted.current = contact.name.trim() || contact.phone.trim();
+        saved.current = draft.name.trim() || draft.phone.trim();
       }}
       className="flex min-h-0 flex-1 flex-col"
     >
-      <input type="hidden" name="companyId" value={companyId} />
+      <input type="hidden" name="contactId" value={contact.id} />
 
-      {/* min-h-0 and flex-1: without them this scroller sizes to its
-          content instead of to the space left over, so it ran under the
-          footer below and the footer covered the last field. */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">
         <ContactFields
-          idPrefix="contact"
+          idPrefix="edit-contact"
           names={{
             name: "name",
             phone: "phone",
@@ -144,22 +138,11 @@ function ContactForm({
             notes: "notes",
           }}
           positions={lookups.positions}
-          value={contact}
-          onChange={(patch) => setContact((current) => ({ ...current, ...patch }))}
+          value={draft}
+          onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           errors={errors}
+          disabled={pending}
         />
-
-        <div className="flex items-center gap-2.5">
-          <Checkbox
-            id="contact-is-main"
-            checked={isMain}
-            onCheckedChange={(checked) => setIsMain(checked === true)}
-          />
-          <Label htmlFor="contact-is-main" className="font-normal">
-            {t("forms.makeMain")}
-          </Label>
-          <input type="hidden" name="isMain" value={isMain ? "true" : "false"} />
-        </div>
       </div>
 
       <div className="border-t border-line bg-surface-2 p-4">

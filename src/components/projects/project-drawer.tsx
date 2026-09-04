@@ -70,6 +70,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       followUpState={project.followUpState}
       lostOn={toDay(project.lostAt)}
       lostReason={project.lostReason}
+      notes={project.notes}
       contacts={contacts}
       projects={projects}
       activity={

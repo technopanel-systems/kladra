@@ -9,6 +9,10 @@ import { useSearchParams } from "next/navigation";
 import { setCompanyFollowUpAction } from "@/actions/companies";
 import { LogDialog, type LogContact, type LogProject } from "@/components/activities/log-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
+import {
+  EditCompanyDialog,
+  type CompanyEditable,
+} from "@/components/companies/edit-company-dialog";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -119,6 +123,8 @@ export type DrawerCompany = {
   category: string;
   leadSource: string;
   repName: string;
+  /** The same company as form values, so Edit opens on what is already there. */
+  editable: CompanyEditable;
   /** A Riyadh day, "YYYY-MM-DD". */
   nextFollowUp: string | null;
 };
@@ -269,18 +275,17 @@ export function CompanyHeader({
             <TooltipContent>{t("drawer.requestQuotationSoon")}</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0} className="inline-flex rounded-lg">
-                <Button variant="ghost" disabled>
-                  <Pencil aria-hidden="true" />
-                  {t("common.edit")}
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{t("drawer.editSoon")}</TooltipContent>
-          </Tooltip>
         </TooltipProvider>
+
+        <EditCompanyDialog
+          company={company.editable}
+          trigger={
+            <Button variant="ghost">
+              <Pencil aria-hidden="true" />
+              {t("common.edit")}
+            </Button>
+          }
+        />
 
         {/* Last, and quiet: archiving is rare, and it is the one action here
             that takes the company off the floor (SPEC §3 — archive, never

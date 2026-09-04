@@ -17,7 +17,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
-import { assertCompanyVisible } from "@/lib/activities";
+import { assertCompanyOpen, assertCompanyVisible } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { liveAudienceFor } from "@/lib/companies";
 import { notifyLive } from "@/lib/live";
@@ -111,7 +111,11 @@ export async function createContactAction(
     }
     const input = parsed.data;
 
-    const repId = await assertCompanyVisible(actor, input.companyId);
+    const { repId, archived } = await assertCompanyOpen(actor, input.companyId);
+    // Archived is off the floor (S16): nothing new is added to a company that
+    // is not on anybody's list. Editing what is already there still works, so a
+    // name can be fixed before it is restored.
+    if (archived) return { ok: false, error: t("companyArchived") };
 
     const phoneNormalized = normalizePhone(input.phone);
     if (!phoneNormalized) {
@@ -272,6 +276,57 @@ export async function setMainContactAction(contactId: unknown): Promise<ActionRe
       await tx.insert(auditLog).values({
         userId: actor.id,
         action: "contact.setMain",
+        recordType: "contact",
+        recordId: id.data,
+        details: { companyId: row.companyId },
+      });
+      await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+        type: "company",
+        id: row.companyId,
+      });
+    });
+
+    revalidateFloor();
+    return { ok: true };
+  });
+}
+
+/**
+ * Archive, never delete (SPEC §3, S16). The contact leaves the drawer and the
+ * duplicate check and stays on every activity it was named in, so a log entry
+ * from two years ago still says who the rep met.
+ *
+ * A main contact can be archived. The list falls back to the oldest remaining
+ * one (D18) rather than refusing — the person who left is exactly the one a rep
+ * wants gone, and making him demote someone first would be a puzzle, not a
+ * safeguard. The flag is cleared in the same transaction so no archived row is
+ * left holding it.
+ */
+export async function archiveContactAction(contactId: unknown): Promise<ActionResult> {
+  return guard(async (actor) => {
+    const tc = await getTranslations("common");
+    const t = await getTranslations("errors");
+    const id = z.uuid().safeParse(contactId);
+    if (!id.success) return { ok: false, error: tc("invalid") };
+
+    const [row] = await db
+      .select({ companyId: contacts.companyId, archivedAt: contacts.archivedAt })
+      .from(contacts)
+      .where(eq(contacts.id, id.data))
+      .limit(1);
+    if (!row || row.archivedAt) return { ok: false, error: t("contactNotFound") };
+
+    const repId = await assertCompanyVisible(actor, row.companyId);
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(contacts)
+        .set({ archivedAt: new Date(), isMain: false })
+        .where(and(eq(contacts.id, id.data), isNull(contacts.archivedAt)));
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "contact.archive",
         recordType: "contact",
         recordId: id.data,
         details: { companyId: row.companyId },

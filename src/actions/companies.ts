@@ -24,7 +24,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, cities, companies, contacts, countries } from "@/db/schema";
-import { assertCompanyVisible } from "@/lib/activities";
+import { assertCompanyOpen, assertCompanyVisible } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { liveAudienceFor } from "@/lib/companies";
 import { parseDay } from "@/lib/dates";
@@ -325,6 +325,7 @@ export async function setCompanyFollowUpAction(
   day: unknown,
 ): Promise<ActionResult> {
   return guard(async (actor) => {
+    const t = await getTranslations("errors");
     const tc = await getTranslations("common");
     const id = z.uuid().safeParse(companyId);
     const parsedDay = z.union([dayString, z.null()]).safeParse(day ?? null);
@@ -333,7 +334,9 @@ export async function setCompanyFollowUpAction(
       return { ok: false, error: tc("notADate"), fieldErrors: { nextFollowUp: tc("notADate") } };
     }
 
-    const repId = await assertCompanyVisible(actor, id.data);
+    const { repId, archived } = await assertCompanyOpen(actor, id.data);
+    // A date on an archived company would chase a row that appears on no list.
+    if (archived) return { ok: false, error: t("companyArchived") };
 
     await db.transaction(async (tx) => {
       await tx

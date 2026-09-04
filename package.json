@@ -8,7 +8,7 @@
     "start": "next start -p 3100",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check:messages": "tsx scripts/check-messages.ts",
+    "check:messages": "tsx scripts/check-messages.ts && tsx scripts/unused-messages.mts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:clear": "tsx scripts/db-clear.ts",

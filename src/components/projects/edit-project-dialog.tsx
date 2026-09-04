@@ -1,15 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import type { ReactNode } from "react";
+import { Pencil } from "lucide-react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { createProjectAction } from "@/actions/projects";
-import {
-  BLANK_PROJECT,
-  ProjectFields,
-  type ProjectDraft,
-} from "@/components/projects/project-fields";
+import { updateProjectAction } from "@/actions/projects";
+import { ProjectFields, type ProjectDraft } from "@/components/projects/project-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,35 +19,53 @@ import {
 import { useRouter } from "@/i18n/navigation";
 
 /**
- * A project is born inside its company, in a popup (SPEC §3) — name, the
- * expected m² that anchors it (S19), a next follow-up and notes. The fields
- * live in ProjectFields, shared with Edit project.
+ * Edit project — the same four fields as creating one, opened on what is there.
  *
- * Saving opens the new project's drawer, so the rep lands where the next thing
- * he does — log a visit, set a follow-up — already is.
+ * The company is not among them. A project is a job AT a customer (S18); moving
+ * one to a different company would take its whole log with it and leave the
+ * first customer's history missing a visit that happened.
  */
 
-export function NewProjectDialog({
-  companyId,
-  companyName,
+export type ProjectEditable = {
+  id: string;
+  name: string;
+  expectedSqm: string | null;
+  nextFollowUp: string | null;
+  notes: string | null;
+};
+
+function draftOf(project: ProjectEditable): ProjectDraft {
+  return {
+    name: project.name,
+    // Stored as numeric(12,2), so it arrives as "1200.00". A rep who opens the
+    // dialog to fix the name should not find his 1,200 turned into 1200.00 and
+    // have to decide whether that matters.
+    expectedSqm: project.expectedSqm === null ? "" : String(Number(project.expectedSqm)),
+    nextFollowUp: project.nextFollowUp,
+    notes: project.notes ?? "",
+  };
+}
+
+export function EditProjectDialog({
+  project,
   trigger,
 }: {
-  companyId: string;
-  /** Named in the dialog title when the caller knows it. */
-  companyName?: string;
+  project: ProjectEditable;
   trigger?: ReactNode;
 }) {
   const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<ProjectDraft>(BLANK_PROJECT);
+  const [form, setForm] = useState<ProjectDraft>(() => draftOf(project));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   function onOpenChange(next: boolean) {
     setOpen(next);
-    if (!next) {
-      setForm(BLANK_PROJECT);
+    // Re-opening starts from what the project holds now, not from an abandoned
+    // edit — the drawer behind may have been refreshed since.
+    if (next) {
+      setForm(draftOf(project));
       setErrors({});
     }
   }
@@ -75,31 +89,23 @@ export function NewProjectDialog({
     }
 
     startTransition(async () => {
-      // The action takes the `(previous, FormData)` shape every write in
-      // src/actions uses, so the same function serves a plain <form action>
-      // and this one, which is driven from a transition because the dialog
-      // decides where to navigate afterwards. An empty string reads as absent
-      // on the other side.
       const fields = new FormData();
-      fields.set("companyId", companyId);
+      fields.set("projectId", project.id);
       fields.set("name", name);
       fields.set("expectedSqm", form.expectedSqm.trim());
       fields.set("nextFollowUp", form.nextFollowUp ?? "");
       fields.set("notes", form.notes.trim());
 
-      const outcome = await createProjectAction(null, fields);
-
+      const outcome = await updateProjectAction(null, fields);
       if (!outcome.ok) {
         setErrors(outcome.fieldErrors ?? {});
         toast.error(outcome.error);
         return;
       }
 
-      toast.success(t("projects.created"));
-      onOpenChange(false);
-      // The drawer lives in the URL, so the new project opens by navigating.
-      if (outcome.data?.projectId) router.push(`/projects?open=${outcome.data.projectId}`);
-      else router.refresh();
+      toast.success(t("forms.saved", { name }));
+      setOpen(false);
+      router.refresh();
     });
   }
 
@@ -107,23 +113,20 @@ export function NewProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
-            {t("projects.newProject")}
+          <Button variant="outline">
+            <Pencil aria-hidden="true" />
+            {t("common.edit")}
           </Button>
         )}
       </DialogTrigger>
 
       <DialogContent className="max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {companyName
-              ? t("projects.newProjectIn", { company: companyName })
-              : t("projects.newProject")}
-          </DialogTitle>
+          <DialogTitle>{t("projects.editProject")}</DialogTitle>
         </DialogHeader>
 
         <ProjectFields
-          idPrefix="project"
+          idPrefix="edit-project"
           value={form}
           onChange={change}
           errors={errors}

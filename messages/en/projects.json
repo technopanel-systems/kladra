@@ -47,5 +47,6 @@
   "activity": "Activity",
   "emptyActivity": "Nothing logged on this project yet — log the first visit or call.",
   "emptyQuotations": "No quotations on this project yet.",
-  "notYet": "Not available yet."
+  "notYet": "Not available yet.",
+  "editProject": "Edit project"
 }

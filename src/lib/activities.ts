@@ -53,10 +53,32 @@ export async function companyOwner(companyId: string): Promise<string | null> {
   return row?.repId ?? null;
 }
 
+/**
+ * Who owns the company and whether it is archived, in ONE read. Throws
+ * NotAllowed for a company this person may not touch.
+ *
+ * The two questions travel together because every write that ADDS to a company
+ * has to ask both, and asking them separately is two round trips and two
+ * chances for them to disagree. An archived company still OPENS — the record
+ * survives so a customer who resurfaces in two years shows what happened (S16)
+ * — so the flag is returned rather than thrown on, and each caller decides.
+ */
+export async function assertCompanyOpen(
+  user: SessionUser,
+  companyId: string,
+): Promise<{ repId: string; archived: boolean }> {
+  const [row] = await db
+    .select({ repId: companies.repId, archivedAt: companies.archivedAt })
+    .from(companies)
+    .where(eq(companies.id, companyId))
+    .limit(1);
+  if (!row || !mayTouch(user, row.repId)) throw new NotAllowed();
+  return { repId: row.repId, archived: row.archivedAt !== null };
+}
+
 /** Throws NotAllowed for a company that is not this person's. */
 export async function assertCompanyVisible(user: SessionUser, companyId: string): Promise<string> {
-  const repId = await companyOwner(companyId);
-  if (!repId || !mayTouch(user, repId)) throw new NotAllowed();
+  const { repId } = await assertCompanyOpen(user, companyId);
   return repId;
 }
 

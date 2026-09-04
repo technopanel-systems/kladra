@@ -18,7 +18,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, projects } from "@/db/schema";
-import { assertCompanyVisible, assertProjectVisible } from "@/lib/activities";
+import { assertCompanyOpen, assertProjectVisible } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { liveAudienceFor } from "@/lib/companies";
 import { parseDay } from "@/lib/dates";
@@ -122,7 +122,11 @@ export async function createProjectAction(
     }
     const input = parsed.data;
 
-    const repId = await assertCompanyVisible(actor, input.companyId);
+    const { repId, archived } = await assertCompanyOpen(actor, input.companyId);
+    // Archived is off the floor (S16): nothing new is added to a company that
+    // is not on anybody's list. Editing what is already there still works, so a
+    // name can be fixed before it is restored.
+    if (archived) return { ok: false, error: t("companyArchived") };
 
     const sqm = parseSqm(input.expectedSqm);
     if (sqm === "invalid") {
@@ -300,6 +304,51 @@ export async function markProjectLostAction(
     });
 
     if (!marked) return { ok: false, error: t("alreadyLost") };
+    revalidateFloor();
+    return { ok: true };
+  });
+}
+
+/**
+ * Archive, never delete (SPEC §3, S16). The project leaves the lists and keeps
+ * its history, and the activities filed against it keep reading correctly.
+ *
+ * Distinct from "lost", and the two are not interchangeable: lost is a
+ * judgement about the customer that carries a reason and belongs in the record
+ * (S20), while archiving is tidying — a duplicate, a typo, a job that was never
+ * real. A lost project stays visible; an archived one does not.
+ */
+export async function archiveProjectAction(projectId: unknown): Promise<ActionResult> {
+  return guard(async (actor) => {
+    const tc = await getTranslations("common");
+    const t = await getTranslations("errors");
+    const id = z.uuid().safeParse(projectId);
+    if (!id.success) return { ok: false, error: tc("invalid") };
+
+    const owner = await assertProjectVisible(actor, id.data);
+
+    const archived = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(projects)
+        .set({ archivedAt: new Date() })
+        .where(and(eq(projects.id, id.data), isNull(projects.archivedAt)))
+        .returning({ id: projects.id });
+      if (rows.length === 0) return false;
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "project.archive",
+        recordType: "project",
+        recordId: id.data,
+        details: { companyId: owner.companyId },
+      });
+      const audience = await liveAudienceFor(owner.repId, actor.id);
+      await notifyLive(tx, audience, { type: "project", id: id.data });
+      await notifyLive(tx, audience, { type: "company", id: owner.companyId });
+      return true;
+    });
+
+    if (!archived) return { ok: false, error: t("projectNotFound") };
     revalidateFloor();
     return { ok: true };
   });

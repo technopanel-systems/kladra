@@ -54,6 +54,31 @@ Dropdown-menu, Switch, Checkbox, Scroll-area, Avatar. Logical utilities only (`m
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
+## §5 Rules earned the hard way
+
+Each of these was a defect first. They are here so the fix is the rule, not the patch.
+
+- **Direction follows the first strong character, never a forced `ltr`.** A formatted date
+  carries a month NAME, so `dir="ltr"` around `04/سبتمبر/2026` puts the month in its own
+  right-to-left run and reclassifies the year after it as an Arabic number; the two swap and
+  the control reads `04/2026/سبتمبر` while the label beside it is correct. Use `dir="auto"`.
+  `dir="ltr"` is for runs with no letters in them at all — a phone number, a quantity, a
+  keycap.
+- **An effect that reacts to a server action's answer must fire once per answer.**
+  next-intl's `useRouter()` returns a new object every render, so anything closing over it
+  changes identity every render and the effect runs again. Use `useActionOutcome`, which keys
+  on the answer's own identity.
+- **A dialog's scrolling body needs `min-h-0 flex-1`.** Without them it sizes to its content
+  rather than to the space left over, and the sticky footer lands on top of the last field.
+- **One definition per figure, including the ones that look like a column.** "The main
+  contact" is not `contacts.is_main`: archiving the marked contact clears the flag, and a
+  reader that trusts the column then disagrees with one that falls back to the oldest (D18).
+  Both readers call the same SQL.
+- **A primary action is never disabled while data loads.** Nothing is fetched until the
+  button is pressed; a button that greys itself out on arrival reads as broken.
+- **A check that cries wolf is a check nobody reads.** ESLint's flat config does not read
+  `.gitignore`, so build and test artefacts are ignored explicitly.
+
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,

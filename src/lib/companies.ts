@@ -91,15 +91,36 @@ function phoneNeedle(term: string): string | null {
   return digits.replace(/^0+/, "");
 }
 
-/** The main contact, or the oldest one when nobody was ever marked main (D18). */
+/**
+ * WHICH contact is the main one — the ONE definition of it (SPEC D18): the one
+ * marked, or the oldest still on file when nobody is.
+ *
+ * The fallback is not decoration. Archiving a contact clears the flag with it,
+ * so a company whose main contact has left has nobody marked at all, and a
+ * reader that trusted the raw column would show the list a main contact and the
+ * drawer none. That is exactly the drift rules/data.md forbids, and it shipped
+ * here until an acceptance test archived the marked one.
+ *
+ * `companyId` is passed as SQL because the two readers name it differently: the
+ * list correlates against `companies.id`, the drawer against a bound parameter.
+ */
+function mainContactIdSql(companyId: SQL): SQL<string | null> {
+  return sql`(
+    select ct.id
+      from contacts ct
+     where ct.company_id = ${companyId}
+       and ct.archived_at is null
+     order by ct.is_main desc, ct.created_at asc
+     limit 1
+  )`;
+}
+
+/** That contact's name or number, for the list (D18). */
 function mainContact(column: "name" | "phone_normalized"): SQL<string | null> {
   return sql`(
     select ct.${sql.raw(column)}
       from contacts ct
-     where ct.company_id = companies.id
-       and ct.archived_at is null
-     order by ct.is_main desc, ct.created_at asc
-     limit 1
+     where ct.id = ${mainContactIdSql(sql`companies.id`)}
   )`;
 }
 
@@ -311,7 +332,9 @@ export async function getCompany(
         position: contacts.position,
         email: contacts.email,
         notes: contacts.notes,
-        isMain: contacts.isMain,
+        // Derived, never the raw column: the flag alone says nobody is main
+        // once the marked contact has been archived (D18, mainContactIdSql).
+        isMain: sql<boolean>`contacts.id = ${mainContactIdSql(sql`${id}::uuid`)}`,
       })
       .from(contacts)
       .where(and(eq(contacts.companyId, id), isNull(contacts.archivedAt)))

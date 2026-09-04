@@ -2,12 +2,14 @@
 
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
 import type { ComponentProps, ReactNode } from "react";
-import { SearchIcon, XIcon } from "lucide-react";
+import { Pencil, SearchIcon, XIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { setProjectFollowUpAction } from "@/actions/projects";
 import { LogDialog } from "@/components/activities/log-dialog";
+import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
+import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-lost-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -433,6 +435,8 @@ export type ProjectSheetProps = {
   followUpState: FollowUpState | null;
   lostOn: string | null;
   lostReason: string | null;
+  /** As stored, so Edit opens on the project's own notes rather than a summary. */
+  notes: string | null;
   contacts: LogDialogProps["contacts"];
   projects: LogDialogProps["projects"];
   /** The rendered activity list, empty state and all. */
@@ -463,6 +467,7 @@ export function ProjectSheet({
   followUpState,
   lostOn,
   lostReason,
+  notes,
   contacts,
   projects,
   activity,
@@ -522,6 +527,7 @@ export function ProjectSheet({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground">
             <Link
               href={`/companies?open=${companyId}`}
+              aria-label={t("projects.openCompany", { name: companyName })}
               className="font-medium text-foreground hover:underline"
             >
               {companyName}
@@ -544,6 +550,7 @@ export function ProjectSheet({
             <span className="text-xs text-muted-foreground">{t("common.nextFollowUp")}</span>
             <DatePicker
               id="project-drawer-follow-up"
+              placeholder={t("projects.noFollowUp")}
               value={day}
               onChange={(next: string | null) => pick(next)}
               disabled={saving}
@@ -576,6 +583,15 @@ export function ProjectSheet({
                 {t("shell.requestQuotation")}
               </Button>
             </span>
+            <EditProjectDialog
+              project={{ id: projectId, name, expectedSqm, nextFollowUp, notes }}
+              trigger={
+                <Button variant="outline">
+                  <Pencil aria-hidden="true" />
+                  {t("common.edit")}
+                </Button>
+              }
+            />
             {lost ? null : (
               <MarkLostDialog
                 projectId={projectId}
@@ -586,6 +602,13 @@ export function ProjectSheet({
                 }
               />
             )}
+            {/* Last, and not the same act as Mark lost: this one tidies a job
+                that was never real, and says so in its own warning. */}
+            <ArchiveProjectDialog
+              projectId={projectId}
+              projectName={name}
+              onArchived={close}
+            />
           </div>
         </SheetHeader>
 

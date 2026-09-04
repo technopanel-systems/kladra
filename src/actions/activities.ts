@@ -22,7 +22,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { activities, auditLog, companies, contacts, projects } from "@/db/schema";
-import { assertCompanyVisible } from "@/lib/activities";
+import { assertCompanyOpen } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { liveAudienceFor } from "@/lib/companies";
 import { parseDay, todayRiyadh } from "@/lib/dates";
@@ -115,7 +115,11 @@ export async function logActivityAction(
     }
     const input = parsed.data;
 
-    const repId = await assertCompanyVisible(actor, input.companyId);
+    const { repId, archived } = await assertCompanyOpen(actor, input.companyId);
+    // Archived is off the floor (S16): nothing new is added to a company that
+    // is not on anybody's list. Editing what is already there still works, so a
+    // name can be fixed before it is restored.
+    if (archived) return { ok: false, error: t("companyArchived") };
 
     // A named project and a named contact must belong to the company the entry
     // is filed under, or the log would claim something that never happened.

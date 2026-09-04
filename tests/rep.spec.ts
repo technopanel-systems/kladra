@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { addDays, todayRiyadh } from "@/lib/dates";
 import { login } from "./helpers/auth";
-import { test, expect, type Locale } from "./helpers/i18n";
+import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 
 /**
  * Faisal's day, exactly as WORKFLOW.md §3 writes it: sign in, add a company
@@ -40,6 +40,7 @@ function fixtures(locale: Locale) {
     secondContact: `Sara ${locale.toUpperCase()}`,
     // A different number: one number per company is a database constraint.
     secondPhone: locale === "en" ? "0559876543" : "0559876544",
+    renamed: `Al Noor Towers ${locale.toUpperCase()} (renamed)`,
     project: `Tower A ${locale.toUpperCase()}`,
     expectedSqm: "1200",
     visit: "Showed catalogue, wants 4 mm samples",
@@ -66,6 +67,14 @@ function dialogNamed(page: Page, name: string): Locator {
   return page.getByRole("dialog", { name });
 }
 
+/** Every archive asks first; the question names the thing (SPEC §3, D24). */
+async function confirmArchive(page: Page, t: Translate, name: string): Promise<void> {
+  const confirm = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name }) }).or(
+    page.getByRole("dialog", { name: t("drawer.archiveContactTitle", { name }) }),
+  );
+  await confirm.getByRole("button", { name: t("drawer.archive") }).click();
+}
+
 test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a project, and archiving", async ({
   page,
   locale,
@@ -81,6 +90,8 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
    * when the date is finally moved.
    */
   let stripBefore = "";
+  /** From `?open=` after the save — the only place the test learns an id. */
+  let companyId = "";
 
   await test.step("1 · Faisal signs in and Companies is home, follow-up strip on top", async () => {
     await login(page, locale, "faisal");
@@ -125,6 +136,8 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     // The open record lives in the URL (SPEC §3), and the drawer that opened is
     // this company's.
     await expect(page).toHaveURL(/[?&]open=/);
+    companyId = new URL(page.url()).searchParams.get("open") ?? "";
+    expect(companyId).not.toBe("");
     await expect(dialogNamed(page, fixture.company)).toBeVisible();
 
     // The row the drawer belongs to says so. A CSS locator on purpose: the
@@ -255,11 +268,57 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     await form.getByRole("button", { name: t("common.cancel") }).click();
   });
 
-  await test.step("7 · A second contact becomes the main one, then the company is archived", async () => {
+  await test.step("7 · Edit the company, the contact and the project", async () => {
     await page
       .getByRole("link", { name: t("companies.openCompany", { name: fixture.company }) })
       .click();
     const drawer = dialogNamed(page, fixture.company);
+
+    // The company: the same fields as adding one, opened on what is there.
+    await drawer.getByRole("button", { name: t("common.edit"), exact: true }).click();
+    const companyForm = dialogNamed(page, t("forms.editCompany"));
+    await expect(companyForm.getByLabel(t("common.company"))).toHaveValue(fixture.company);
+    await companyForm.getByLabel(t("common.company")).fill(fixture.renamed);
+    await companyForm.getByRole("button", { name: t("common.save") }).click();
+    await expect(page.getByText(t("forms.saved", { name: fixture.renamed }))).toBeVisible();
+    await expect(dialogNamed(page, fixture.renamed)).toBeVisible();
+
+    // The contact.
+    const renamed = dialogNamed(page, fixture.renamed);
+    await renamed.getByRole("tab", { name: t("common.contacts") }).click();
+    const khalid = renamed.getByRole("listitem").filter({ hasText: fixture.contact });
+    await khalid.getByRole("button", { name: t("common.edit"), exact: true }).click();
+    const contactForm = dialogNamed(page, t("forms.editContact"));
+    await expect(contactForm.getByLabel(t("common.phone"))).toHaveValue(fixture.phone);
+    await contactForm.getByLabel(t("common.position")).click();
+    await page.getByRole("option").first().click();
+    await contactForm.getByRole("button", { name: t("common.save") }).click();
+    await expect(page.getByText(t("forms.saved", { name: fixture.contact }))).toBeVisible();
+
+    // The project, from its own drawer.
+    await page.goto(`/${locale}/projects`);
+    await page
+      .getByRole("link", { name: t("projects.openProject", { name: fixture.project }) })
+      .click();
+    const sheet = dialogNamed(page, fixture.project);
+    await sheet.getByRole("button", { name: t("common.edit"), exact: true }).click();
+    const projectForm = dialogNamed(page, t("projects.editProject"));
+    // numeric(12,2) comes back "1200.00"; the rep typed 1200 and should see it.
+    await expect(projectForm.getByLabel(t("common.expectedSqm"))).toHaveValue(
+      fixture.expectedSqm,
+    );
+    await projectForm.getByLabel(t("common.expectedSqm")).fill("1500");
+    await projectForm.getByRole("button", { name: t("common.save") }).click();
+    await expect(page.getByText(t("forms.saved", { name: fixture.project }))).toBeVisible();
+
+    await page.goto(`/${locale}/companies`);
+  });
+
+  await test.step("8 · A second contact becomes the main one, then the company is archived", async () => {
+    await page
+      .getByRole("link", { name: t("companies.openCompany", { name: fixture.renamed }) })
+      .click();
+    const drawer = dialogNamed(page, fixture.renamed);
     await drawer.getByRole("tab", { name: t("common.contacts") }).click();
     await drawer.getByRole("button", { name: t("drawer.addContact") }).first().click();
 
@@ -278,17 +337,70 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     ).toBeVisible();
     await expect(second.getByText(t("drawer.mainContact"))).toBeVisible();
 
-    // Archive asks first, and the company then leaves the list — the row is
-    // gone, the record is not.
-    await drawer.getByRole("button", { name: t("drawer.archive") }).click();
-    const confirm = dialogNamed(page, t("drawer.archiveTitle", { name: fixture.company }));
-    await confirm.getByRole("button", { name: t("drawer.archive") }).click();
+    // Archiving the main contact hands the badge back to the oldest remaining
+    // one (D18) rather than refusing — the person who left is exactly the one a
+    // rep wants gone.
+    await second.getByRole("button", { name: t("drawer.archive") }).click();
+    await confirmArchive(page, t, fixture.secondContact);
+    await expect(page.getByText(t("drawer.archived", { name: fixture.secondContact }))).toBeVisible();
 
-    await expect(page.getByText(t("drawer.archived", { name: fixture.company }))).toBeVisible();
+    const reopened = dialogNamed(page, fixture.renamed);
+    await expect(reopened.getByText(fixture.secondContact)).toHaveCount(0);
+    await expect(
+      reopened.getByRole("listitem").filter({ hasText: fixture.contact }).getByText(t("drawer.mainContact")),
+    ).toBeVisible();
+  });
+
+  await test.step("9 · The project is archived, and it is not the same act as marking it lost", async () => {
+    await page.goto(`/${locale}/projects`);
+    await page
+      .getByRole("link", { name: t("projects.openProject", { name: fixture.project }) })
+      .click();
+    const sheet = dialogNamed(page, fixture.project);
+
+    // Both are offered, and they say different things.
+    await expect(sheet.getByRole("button", { name: t("common.markLost") })).toBeVisible();
+    await sheet.getByRole("button", { name: t("drawer.archive") }).click();
+    await confirmArchive(page, t, fixture.project);
+    await expect(page.getByText(t("drawer.archived", { name: fixture.project }))).toBeVisible();
+
+    await page.goto(`/${locale}/projects`);
+    await expect(
+      page.getByRole("link", { name: t("projects.openProject", { name: fixture.project }) }),
+    ).toHaveCount(0);
+  });
+
+  await test.step("10 · The company is archived: off the list, still on file, and closed to new work", async () => {
+    await page.goto(`/${locale}/companies?open=${companyId}`);
+    const drawer = dialogNamed(page, fixture.renamed);
+    await drawer
+      .getByRole("group", { name: t("drawer.companyActions") })
+      .getByRole("button", { name: t("drawer.archive") })
+      .click();
+    await confirmArchive(page, t, fixture.renamed);
+    await expect(page.getByText(t("drawer.archived", { name: fixture.renamed }))).toBeVisible();
+
     await page.goto(`/${locale}/companies`);
     await expect(
-      page.getByRole("link", { name: t("companies.openCompany", { name: fixture.company }) }),
+      page.getByRole("link", { name: t("companies.openCompany", { name: fixture.renamed }) }),
     ).toHaveCount(0);
+
+    // Archive is not delete (S16): the record still opens by link, so a company
+    // that resurfaces in two years still shows what happened.
+    await page.goto(`/${locale}/companies?open=${companyId}`);
+    const archived = dialogNamed(page, fixture.renamed);
+    await expect(archived).toBeVisible();
+
+    // But it takes nothing new (D24): a log entry would hang off a row that
+    // appears on no list.
+    await archived
+      .getByRole("group", { name: t("drawer.companyActions") })
+      .getByRole("button", { name: t("common.log"), exact: true })
+      .click();
+    const log = dialogNamed(page, t("drawer.logTitle"));
+    await log.getByLabel(t("drawer.whatHappened")).fill("after archiving");
+    await log.getByRole("button", { name: t("common.save") }).click();
+    await expect(page.getByText(t("errors.companyArchived"))).toBeVisible();
   });
 });
 

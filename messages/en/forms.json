@@ -18,5 +18,10 @@
   "makeMain": "Make this the main contact",
   "duplicateCompany": "Looks like an existing company: {name} ({rep})",
   "added": "{name} added",
-  "listsUnavailable": "The lists could not be loaded. Close this and open it again."
+  "listsUnavailable": "The lists could not be loaded. Close this and open it again.",
+  "editCompany": "Edit company",
+  "editCompanyHint": "The company's own details. Contacts have their own list.",
+  "editContact": "Edit contact",
+  "editContactHint": "A person who moves to another company is a new contact there.",
+  "saved": "{name} saved"
 }
