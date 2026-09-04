@@ -1,6 +1,6 @@
 {
   "searchLabel": "Search projects",
-  "searchPlaceholder": "Search projects — name or company",
+  "searchPlaceholder": "Project or company name",
   "openCompanies": "Choose a company",
   "empty": "A project is added inside its company — open the company and add it there.",
   "emptySearch": "Nothing matched “{q}”. Try part of the project or company name.",

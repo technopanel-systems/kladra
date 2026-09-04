@@ -96,8 +96,11 @@ function Sqm({ value }: { value: string | null }) {
 function FollowUp({ day, state }: { day: string | null; state: FollowUpState | null }) {
   const locale = useLocale();
   if (!day || !state) return <span className="text-faint">—</span>;
+  // `auto`, not `ltr`: a forced LTR run reorders 04/سبتمبر/2026 into
+  // 04/2026/سبتمبر, because the year after an Arabic letter is read as an
+  // Arabic number and joins the month's right-to-left run.
   return (
-    <span dir="ltr" className={cn("num whitespace-nowrap", WAITING_TEXT[state])}>
+    <span dir="auto" className={cn("num whitespace-nowrap", WAITING_TEXT[state])}>
       {formatDay(day, locale)}
     </span>
   );

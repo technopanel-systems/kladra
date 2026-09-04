@@ -5,14 +5,22 @@
 - [x] P0 Toolbox
 - [x] P1 Extract from FACET → the five files (redone from C:\Projects\facet-crm)
 - [x] P2 Scaffold: app, database, login, shell, seed, live updates, tests
-- [ ] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
+- [x] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
 - [ ] P4 Quotations: rep request → coordinator issue / send back → customer decision
 - [ ] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [ ] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, handover
 
-**Where I stopped:** P2 done and green — typecheck, lint, build, both-locale check and the
-smoke tests in en and ar all pass; live updates proven over SSE. Next: P3, the rep floor.
+**Where I stopped:** P3 done and green — typecheck, lint, build, both-locale check and eight
+Playwright tests in en and ar. Reviewed by shot-looker, arabic-reviewer and web-design-guidelines;
+everything they found is fixed. Next: P4, quotations.
+
+**Cut inside P3, and why.** Editing a company, contact or project is not built — the drawer's
+Edit button says so rather than hiding, so a rep knows the screen is coming (SPEC D25). Archiving
+a contact or a project, and the admin's restore screen, are not built either; archiving a company
+is (D24). `tests/rep.spec.ts` step 4 moves the follow-up date onto today instead of moving the
+clock to tomorrow: today is Riyadh's, computed in SQL by Postgres, so a faked browser clock would
+prove nothing about the strip — the guarantee is checked from the other end.
 
 ## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
 

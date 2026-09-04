@@ -131,7 +131,10 @@ function ContactForm({
     >
       <input type="hidden" name="companyId" value={companyId} />
 
-      <div className="flex flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">
+      {/* min-h-0 and flex-1: without them this scroller sizes to its
+          content instead of to the space left over, so it ran under the
+          footer below and the footer covered the last field. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">
         <ContactFields
           idPrefix="contact"
           names={{

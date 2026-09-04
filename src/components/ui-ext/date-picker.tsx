@@ -118,9 +118,16 @@ export function DatePicker({
           )}
         >
           <CalendarDays className="size-4 shrink-0 opacity-70" />
-          {/* 04/أغسطس/2026 keeps its order only when the run is isolated; the
-              placeholder is a sentence and takes the page's direction. */}
-          <span dir={value ? "ltr" : undefined} className="truncate">
+          {/*
+            `auto`, never `ltr`. Forcing LTR around 04/سبتمبر/2026 puts the
+            month name in its own right-to-left run and the year, following an
+            Arabic letter, becomes an Arabic number — so the two swap and the
+            button reads 04/2026/سبتمبر while the label beside it reads
+            correctly. `auto` takes the direction from the first strong
+            character, which is the month name in Arabic and "Sep" in English,
+            so each renders the way its own reader expects.
+          */}
+          <span dir="auto" className="truncate">
             {value ? formatDay(value, locale) : (placeholder ?? t("common.pickDate"))}
           </span>
         </Button>
