@@ -128,10 +128,18 @@ export function CompanyHeader({
   company,
   contacts,
   projects,
+  mine,
 }: {
   company: DrawerCompany;
   contacts: readonly LogContact[];
   projects: readonly LogProject[];
+  /**
+   * Whether the person reading this owns the floor it is on. A manager reads
+   * every company and works none (S8, D42): he gets the same header with the
+   * date as a sentence instead of a picker and no action row under it, rather
+   * than a row of buttons that answer "Not allowed" (DESIGN §5).
+   */
+  mine: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -217,16 +225,19 @@ export function CompanyHeader({
         {dueToday ? (
           <span className="text-xs font-medium text-tone-amber-fg">{t("common.dueToday")}</span>
         ) : null}
-        <div
-          role="group"
-          aria-labelledby={followUpLabelId}
-          aria-busy={pending || undefined}
-          className="ms-auto"
-        >
-          <DatePicker value={day} onChange={save} />
-        </div>
+        {mine ? (
+          <div
+            role="group"
+            aria-labelledby={followUpLabelId}
+            aria-busy={pending || undefined}
+            className="ms-auto"
+          >
+            <DatePicker value={day} onChange={save} />
+          </div>
+        ) : null}
       </div>
 
+      {mine ? (
       <div
         role="group"
         aria-label={t("drawer.companyActions")}
@@ -256,11 +267,10 @@ export function CompanyHeader({
           }
         />
 
-        {/* Requesting a quotation arrives with P4. Nothing stands in for it
-            here: a disabled button explained only by a tooltip is unreachable
-            on the phone a rep actually holds, and a control that cannot be used
-            is not rendered as a control (DESIGN §5). The Quotations tab below
-            says when it comes. */}
+        {/* Requesting a quotation is NOT here. It needs a project and a set of
+            lines, so it belongs beside the quotations it makes — the Quotations
+            tab below, and the project drawer. Four buttons is already the most
+            this row can carry on a phone. */}
 
         <EditCompanyDialog
           company={company.editable}
@@ -277,6 +287,7 @@ export function CompanyHeader({
             delete). */}
         <ArchiveCompanyDialog companyId={company.id} companyName={company.name} />
       </div>
+      ) : null}
     </div>
   );
 }

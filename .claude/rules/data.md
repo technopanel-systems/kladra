@@ -60,6 +60,17 @@ broken at least once in FACET, Kladra's predecessor.
   who-may-act never does. Reps see only their own companies; the check lives
   in the query helper, not in the page.
 
+- **"May he see it" and "may he change it" are two questions, and every
+  write asks the second one.** They were one function called `mayTouch`, and
+  the name was the whole bug: a manager sees every rep's companies, so every
+  write action that asked it let him edit, log against and archive any rep's
+  records, and the drawer rendered the buttons to do it with. They are
+  `mayOpen` and `mayWrite` in `src/lib/floor.ts` now — no database, no
+  `server-only`, so `tests/floor.spec.ts` asks them directly for every role.
+  A read gate (`assertCompanyOpen`, `assertProjectVisible`) never stands in
+  for a write gate (`assertCompanyMine`, `assertProjectMine`), and a screen
+  never offers work the action behind it would refuse.
+
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.
 

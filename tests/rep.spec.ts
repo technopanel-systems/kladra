@@ -405,13 +405,19 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
 });
 
 /**
- * WORKFLOW §3's Abdulrahman script, line 4, brought forward: the manager reads
- * the same companies screen and there is no Add company button on it. His own
- * spec belongs to P6, but the screen is P3's and the rule is enforced here —
- * a company's rep is whoever pressed Save, so a manager adding one would
- * quietly become its rep (SPEC S8).
+ * WORKFLOW §3's Abdulrahman script, line 4: the manager reads the rep floor and
+ * works none of it (SPEC S8, D42). His own spec belongs to P6, but the screens
+ * are P3's and the rule is enforced here.
+ *
+ * It failed on everything below the list for three phases. A company's rep is
+ * whoever pressed Save, so the Add company button was kept off the screen from
+ * the start — but the drawer under it offered Log, New contact, New project,
+ * Edit and Archive to anyone who could open it, and the actions behind them
+ * asked "may he SEE this?" and let him through. The read gate and the write
+ * gate are two questions now (`mayOpen` and `mayWrite`), and this walks the
+ * screens that were wrong.
  */
-test("a manager reads the rep floor and cannot add to it", async ({ page, locale, t }) => {
+test("a manager reads the rep floor and works none of it", async ({ page, locale, t }) => {
   await login(page, locale, "abdulrahman");
   await page.goto(`/${locale}/companies`);
 
@@ -420,6 +426,78 @@ test("a manager reads the rep floor and cannot add to it", async ({ page, locale
   await expect(page.getByRole("table").first()).toBeVisible();
   // ...and there is nothing on it offering to add one.
   await expect(page.getByRole("button", { name: t("forms.addCompany") })).toHaveCount(0);
+
+  await test.step("the company drawer opens, and hands him nothing to press", async () => {
+    await page.getByRole("table").first().getByRole("link").first().click();
+    const drawer = page.getByRole("dialog").first();
+    await expect(drawer).toBeVisible();
+
+    // He reads it: the history is the report (S27), so the log has to be there.
+    await expect(drawer.getByRole("tab", { name: t("drawer.activity") })).toBeVisible();
+    // And the date is a sentence rather than a picker.
+    await expect(drawer.getByRole("group", { name: t("drawer.companyActions") })).toHaveCount(0);
+    await expect(drawer.getByRole("button", { name: t("common.pickDate") })).toHaveCount(0);
+
+    for (const label of [
+      t("common.log"),
+      t("drawer.newProject"),
+      t("common.edit"),
+      t("drawer.archive"),
+    ]) {
+      await expect(
+        drawer.getByRole("button", { name: label, exact: true }),
+        `${label} is on a floor that is not his`,
+      ).toHaveCount(0);
+    }
+
+    await drawer.getByRole("tab", { name: t("common.contacts") }).click();
+    for (const label of [
+      t("drawer.addContact"),
+      t("drawer.makeMain"),
+      t("common.edit"),
+      t("drawer.archive"),
+    ]) {
+      await expect(
+        drawer.getByRole("button", { name: label, exact: true }),
+        `${label} is offered on somebody else's contact`,
+      ).toHaveCount(0);
+    }
+    // He still reads the contact — the name and the number are the point.
+    await expect(drawer.getByRole("link", { name: /\d/ }).first()).toBeVisible();
+
+    await drawer.getByRole("tab", { name: t("common.projects") }).click();
+    await expect(
+      drawer.getByRole("button", { name: t("drawer.newProject"), exact: true }),
+    ).toHaveCount(0);
+
+    await drawer.getByRole("tab", { name: t("common.quotations") }).click();
+    await expect(
+      drawer.getByRole("button", { name: t("quotations.request"), exact: true }),
+    ).toHaveCount(0);
+  });
+
+  await test.step("and neither does the project drawer", async () => {
+    await page.goto(`/${locale}/projects`);
+    await page.getByRole("table").first().getByRole("link").first().click();
+    const sheet = page.getByRole("dialog").first();
+    await expect(sheet).toBeVisible();
+
+    await expect(sheet.getByRole("tab", { name: t("projects.activity") })).toBeVisible();
+    await expect(sheet.getByRole("button", { name: t("common.pickDate") })).toHaveCount(0);
+
+    for (const label of [
+      t("common.log"),
+      t("common.edit"),
+      t("common.markLost"),
+      t("drawer.archive"),
+      t("quotations.request"),
+    ]) {
+      await expect(
+        sheet.getByRole("button", { name: label, exact: true }),
+        `${label} is on a project that is not his`,
+      ).toHaveCount(0);
+    }
+  });
 });
 
 /**

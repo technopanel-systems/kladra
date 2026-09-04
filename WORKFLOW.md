@@ -161,7 +161,7 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
 2. Each rep row shows target, achieved, pace, open quotations, overdue follow-ups.
 3. The Stuck list names the waiting request, the overdue follow-up and the never-contacted company.
-4. Open Faisal's companies read-only; no Add company button.
+4. Open Faisal's companies read-only; no Add company button, and — `tests/rep.spec.ts` — no Log, New contact, New project, Edit, Archive, Mark lost or Request quotation in either drawer, and the follow-up dates read as sentences rather than pickers (D42).
 5. The bell lists his notifications; mark one read and the count drops.
 
 **Jerom (admin)** — `tests/admin.spec.ts`
@@ -175,3 +175,6 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 8. Download all three exports: CSV, byte-order mark, CRLF, and an Arabic company name intact.
 9. A rep archives a company; Jerom restores it from Archive and it is back on the floor.
 10. Second test: a rep who types any `/admin` URL lands on his own home, and `/api/export/*` answers 404.
+
+**The floor rule** — `tests/floor.spec.ts`
+The only spec that is not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42).

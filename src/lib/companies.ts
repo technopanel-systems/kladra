@@ -33,7 +33,7 @@ import {
   projects,
   users,
 } from "@/db/schema";
-import { assertCompanyVisible, mayTouch } from "@/lib/activities";
+import { assertCompanyVisible, mayOpen } from "@/lib/activities";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import type { Day } from "@/lib/dates";
 import {
@@ -330,7 +330,7 @@ export async function getCompany(
     .limit(1);
 
   if (!row) return null;
-  if (!mayTouch(user, row.repId)) throw new NotAllowed();
+  if (!mayOpen(user, row.repId)) throw new NotAllowed();
 
   const [contactRows, projectRows, countRow] = await Promise.all([
     db
@@ -484,4 +484,4 @@ export async function findPossibleDuplicates(input: {
 // ---- shared with the actions --------------------------------------------------
 
 /** Re-exported so an action never re-invents the gate (src/lib/activities.ts). */
-export { assertCompanyVisible, mayTouch };
+export { assertCompanyVisible, mayOpen };

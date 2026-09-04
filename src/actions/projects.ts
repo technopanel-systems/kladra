@@ -18,7 +18,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, projects } from "@/db/schema";
-import { assertCompanyOpen, assertProjectVisible } from "@/lib/activities";
+import { assertCompanyMine, assertProjectMine } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
@@ -102,7 +102,7 @@ export async function createProjectAction(
     }
     const input = parsed.data;
 
-    const { repId, archived } = await assertCompanyOpen(actor, input.companyId);
+    const { repId, archived } = await assertCompanyMine(actor, input.companyId);
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.
@@ -161,7 +161,7 @@ export async function updateProjectAction(
     }
     const input = parsed.data;
 
-    const owner = await assertProjectVisible(actor, input.projectId);
+    const owner = await assertProjectMine(actor, input.projectId);
 
     const sqm = parseSqm(input.expectedSqm);
     if (sqm === "invalid") {
@@ -210,7 +210,7 @@ export async function setProjectFollowUpAction(
       return { ok: false, error: tc("notADate"), fieldErrors: { nextFollowUp: tc("notADate") } };
     }
 
-    const owner = await assertProjectVisible(actor, id.data);
+    const owner = await assertProjectMine(actor, id.data);
 
     await db.transaction(async (tx) => {
       await tx
@@ -260,7 +260,7 @@ export async function markProjectLostAction(
       return { ok: false, error: t("reasonRequired"), fieldErrors: { reason: t("reasonRequired") } };
     }
 
-    const owner = await assertProjectVisible(actor, id.data);
+    const owner = await assertProjectMine(actor, id.data);
 
     const marked = await db.transaction(async (tx) => {
       const rows = await tx
@@ -305,7 +305,7 @@ export async function archiveProjectAction(projectId: unknown): Promise<ActionRe
     const id = z.uuid().safeParse(projectId);
     if (!id.success) return { ok: false, error: tc("invalid") };
 
-    const owner = await assertProjectVisible(actor, id.data);
+    const owner = await assertProjectMine(actor, id.data);
 
     const archived = await db.transaction(async (tx) => {
       const rows = await tx

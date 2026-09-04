@@ -24,7 +24,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, cities, companies, contacts, countries } from "@/db/schema";
-import { assertCompanyOpen, assertCompanyVisible } from "@/lib/activities";
+import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
@@ -257,7 +257,7 @@ export async function updateCompanyAction(
     }
     const input = parsed.data;
 
-    const repId = await assertCompanyVisible(actor, input.companyId);
+    const { repId } = await assertCompanyMine(actor, input.companyId);
     const place = await resolvePlace(input.countryId, input.cityId, input.cityText, t);
     if (!place.ok) return { ok: false, error: tc("invalid"), fieldErrors: place.fieldErrors };
 
@@ -312,7 +312,7 @@ export async function setCompanyFollowUpAction(
       return { ok: false, error: tc("notADate"), fieldErrors: { nextFollowUp: tc("notADate") } };
     }
 
-    const { repId, archived } = await assertCompanyOpen(actor, id.data);
+    const { repId, archived } = await assertCompanyMine(actor, id.data);
     // A date on an archived company would chase a row that appears on no list.
     if (archived) return { ok: false, error: t("companyArchived") };
 
@@ -350,7 +350,7 @@ export async function archiveCompanyAction(companyId: unknown): Promise<ActionRe
     const id = z.uuid().safeParse(companyId);
     if (!id.success) return { ok: false, error: tc("invalid") };
 
-    const repId = await assertCompanyVisible(actor, id.data);
+    const { repId } = await assertCompanyMine(actor, id.data);
 
     const archived = await db.transaction(async (tx) => {
       const rows = await tx

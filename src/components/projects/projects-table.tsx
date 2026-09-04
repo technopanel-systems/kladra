@@ -433,6 +433,13 @@ export type ProjectSheetProps = {
   notes: string | null;
   contacts: LogDialogProps["contacts"];
   projects: LogDialogProps["projects"];
+  /**
+   * Whether the person reading this owns the company the project hangs off. A
+   * manager reads every project and works none (S8, D42), so he gets the dates
+   * and the history and no controls at all — rather than four buttons that
+   * would answer "Not allowed" (DESIGN §5).
+   */
+  mine: boolean;
   /** The rendered activity list, empty state and all. */
   activity: ReactNode;
   /** The rendered quotations panel, empty state and all. */
@@ -466,6 +473,7 @@ export function ProjectSheet({
   notes,
   contacts,
   projects,
+  mine,
   activity,
   quotations,
 }: ProjectSheetProps) {
@@ -545,13 +553,23 @@ export function ProjectSheet({
           {/* The next-follow-up date sits at the top (SPEC §3). */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted-foreground">{t("common.nextFollowUp")}</span>
-            <DatePicker
-              id="project-drawer-follow-up"
-              placeholder={t("projects.noFollowUp")}
-              value={day}
-              onChange={(next: string | null) => pick(next)}
-              disabled={saving}
-            />
+            {mine ? (
+              <DatePicker
+                id="project-drawer-follow-up"
+                placeholder={t("projects.noFollowUp")}
+                value={day}
+                onChange={(next: string | null) => pick(next)}
+                disabled={saving}
+              />
+            ) : (
+              <span className="text-sm">
+                {day ? (
+                  <DayText day={day} locale={locale} />
+                ) : (
+                  <span className="text-muted-foreground">{t("projects.noFollowUp")}</span>
+                )}
+              </span>
+            )}
             {followUpState === "overdue" ? (
               <Badge className="bg-tone-red text-tone-red-fg">{t("common.overdue")}</Badge>
             ) : null}
@@ -562,6 +580,7 @@ export function ProjectSheet({
           </div>
 
           {/* One primary action, at the top (DESIGN §2). */}
+          {mine ? (
           <div className="flex flex-wrap items-center gap-2">
             <LogDialog
               companyId={companyId}
@@ -602,6 +621,7 @@ export function ProjectSheet({
               onArchived={close}
             />
           </div>
+          ) : null}
         </SheetHeader>
 
         <Tabs defaultValue="activity" className="p-4">

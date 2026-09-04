@@ -19,7 +19,7 @@
 import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { cities, companies, projects, users } from "@/db/schema";
-import { type ActivityRow, listActivitiesForProject, mayTouch } from "@/lib/activities";
+import { type ActivityRow, listActivitiesForProject, mayOpen } from "@/lib/activities";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import type { Day } from "@/lib/dates";
 import {
@@ -188,7 +188,7 @@ export async function getProject(
     .limit(1);
 
   if (!row) return null;
-  if (!mayTouch(user, row.companyRepId)) throw new NotAllowed();
+  if (!mayOpen(user, row.companyRepId)) throw new NotAllowed();
 
   return {
     id: row.id,

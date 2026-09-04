@@ -109,6 +109,14 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
     projectName: row.projectName,
   }));
 
+  /**
+   * Whose floor this is. A manager and an admin open every company and write on
+   * none (S8, D42) — the same answer the actions give, so nothing on screen
+   * offers work the server would refuse (DESIGN §5). A manager who sells passes
+   * this on his own companies, because his id is the one on them.
+   */
+  const mine = company.repId === user.id;
+
   const contacts: readonly CompanyContact[] = company.contacts;
   const projects: readonly CompanyProject[] = company.projects;
   const logContacts: LogContact[] = contacts.map((row) => ({ id: row.id, name: row.name }));
@@ -165,6 +173,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         }}
         contacts={logContacts}
         projects={logProjects}
+        mine={mine}
       />
 
       <Tabs defaultValue="activity" className="gap-3 px-4 py-3">
@@ -188,9 +197,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="contacts" className="flex flex-col gap-3">
-          <div className="flex">
-            <AddContactDialog companyId={company.id} trigger={addContactTrigger} />
-          </div>
+          {mine ? (
+            <div className="flex">
+              <AddContactDialog companyId={company.id} trigger={addContactTrigger} />
+            </div>
+          ) : null}
           {contacts.length === 0 ? (
             <EmptyPanel sentence={t("drawer.emptyContacts")} />
           ) : (
@@ -205,12 +216,14 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                           <Star aria-hidden="true" />
                           {t("drawer.mainContact")}
                         </Badge>
-                      ) : (
+                      ) : mine ? (
                         <MakeMainButton contactId={row.id} name={row.name} />
-                      )}
+                      ) : null}
                       {/* Pushed to the far edge: a rep reads the name and the
                           number, and only occasionally comes here to change
-                          one. */}
+                          one. A manager reading the floor gets the name and the
+                          number and nothing to press (D42). */}
+                      {mine ? (
                       <span className="ms-auto flex items-center gap-1">
                         <EditContactDialog
                           contact={{
@@ -234,6 +247,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                         />
                         <ArchiveContactDialog contactId={row.id} contactName={row.name} />
                       </span>
+                      ) : null}
                     </div>
                     {row.position ? (
                       <span className="text-xs text-muted-foreground">
@@ -273,9 +287,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="projects" className="flex flex-col gap-3">
-          <div className="flex">
-            <NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />
-          </div>
+          {mine ? (
+            <div className="flex">
+              <NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />
+            </div>
+          ) : null}
           {projects.length === 0 ? (
             <EmptyPanel sentence={t("drawer.emptyProjects")} />
           ) : (
@@ -333,9 +349,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="quotations" className="flex flex-col gap-3">
-          <div className="flex">
-            <RequestQuotationDialog companyId={company.id} trigger={requestQuotationTrigger} />
-          </div>
+          {mine ? (
+            <div className="flex">
+              <RequestQuotationDialog companyId={company.id} trigger={requestQuotationTrigger} />
+            </div>
+          ) : null}
           {quotations.length === 0 ? (
             <EmptyPanel sentence={t("quotations.emptyForCompany")} />
           ) : (

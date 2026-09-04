@@ -17,7 +17,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
-import { assertCompanyOpen, assertCompanyVisible } from "@/lib/activities";
+import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
@@ -91,7 +91,7 @@ export async function createContactAction(
     }
     const input = parsed.data;
 
-    const { repId, archived } = await assertCompanyOpen(actor, input.companyId);
+    const { repId, archived } = await assertCompanyMine(actor, input.companyId);
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.
@@ -179,7 +179,7 @@ export async function updateContactAction(
       .limit(1);
     if (!row) return { ok: false, error: t("contactNotFound") };
 
-    const repId = await assertCompanyVisible(actor, row.companyId);
+    const { repId } = await assertCompanyMine(actor, row.companyId);
 
     const phoneNormalized = normalizePhone(input.phone);
     if (!phoneNormalized) {
@@ -245,7 +245,7 @@ export async function setMainContactAction(contactId: unknown): Promise<ActionRe
       .limit(1);
     if (!row || row.archivedAt) return { ok: false, error: t("contactNotFound") };
 
-    const repId = await assertCompanyVisible(actor, row.companyId);
+    const { repId } = await assertCompanyMine(actor, row.companyId);
 
     await db.transaction(async (tx) => {
       await tx
@@ -296,7 +296,7 @@ export async function archiveContactAction(contactId: unknown): Promise<ActionRe
       .limit(1);
     if (!row || row.archivedAt) return { ok: false, error: t("contactNotFound") };
 
-    const repId = await assertCompanyVisible(actor, row.companyId);
+    const { repId } = await assertCompanyMine(actor, row.companyId);
 
     await db.transaction(async (tx) => {
       await tx

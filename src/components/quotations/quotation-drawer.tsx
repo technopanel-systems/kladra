@@ -5,6 +5,7 @@ import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
+import { mayWrite } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { getQuotation } from "@/lib/quotations";
 
@@ -42,7 +43,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   }
   if (!quotation) return null;
 
-  const owner = quotation.companyRepId === user.id;
+  const owner = mayWrite(user, quotation.companyRepId);
   const dispatches = await listDispatchesForQuotation(user, quotation.id, locale);
 
   // S38: goods move against paper that exists. Before it is issued there is

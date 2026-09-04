@@ -2,6 +2,7 @@ import "server-only";
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { auth } from "@/auth";
+import { seesAllRoles } from "./floor";
 import type { Role, SessionUser } from "./types";
 
 /**
@@ -46,9 +47,13 @@ export function can(user: SessionUser, ...roles: Role[]): boolean {
   return roles.includes(user.role);
 }
 
-/** Manager and admin see every rep's records; a rep sees only his own. */
+/**
+ * Manager and admin see every rep's records; a rep sees only his own. Seeing,
+ * not working: writing on a floor is `mayWrite` in src/lib/floor.ts, and it
+ * answers no to both of them (D42).
+ */
 export function seesAll(user: SessionUser): boolean {
-  return user.role === "manager" || user.role === "admin";
+  return seesAllRoles(user.role);
 }
 
 /** Where each role lands after sign-in. */

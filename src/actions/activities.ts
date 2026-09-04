@@ -22,7 +22,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { activities, auditLog, companies, contacts, projects } from "@/db/schema";
-import { assertCompanyOpen } from "@/lib/activities";
+import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { parseDay, todayRiyadh } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
@@ -95,7 +95,7 @@ export async function logActivityAction(
     }
     const input = parsed.data;
 
-    const { repId, archived } = await assertCompanyOpen(actor, input.companyId);
+    const { repId, archived } = await assertCompanyMine(actor, input.companyId);
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.

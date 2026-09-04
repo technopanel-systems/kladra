@@ -32,6 +32,7 @@ const ADMIN_SCREENS = [
   "admin/targets",
   "admin/lookups",
   "admin/holidays",
+  "admin/archive",
   "admin/export",
 ];
 

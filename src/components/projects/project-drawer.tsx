@@ -61,9 +61,16 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   const projects = company?.projects ?? [];
   const quotations = await listQuotationsForProject(user, project.id);
 
+  /**
+   * Whose floor this project sits on. A manager and an admin open everybody's
+   * and work none (S8, D42), which is the same answer the actions give — so the
+   * drawer offers no work the server would refuse (DESIGN §5).
+   */
+  const mine = project.company.repId === user.id;
+
   // A lost project is finished work (S20): nothing new is raised against it,
   // so the button is not there rather than there and refusing (DESIGN §5).
-  const requestTrigger = project.lostAt ? null : (
+  const requestTrigger = project.lostAt || !mine ? null : (
     <RequestQuotationDialog
       companyId={project.companyId}
       projectId={project.id}
@@ -87,6 +94,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       notes={project.notes}
       contacts={contacts}
       projects={projects}
+      mine={mine}
       // The request button is in ONE position, whatever the list under it says.
       // Rendered inside the empty branch it was destroyed by the save that
       // filled the list, and the dialog's success handler — the toast, and the
