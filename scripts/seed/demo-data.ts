@@ -132,7 +132,7 @@ export const COMPANIES: CompanySeed[] = [
     category: "Contractor",
     source: "Exhibition",
     city: "Riyadh",
-    notes: "Met at the exhibition; Tower A is the live one",
+    notes: "Met at the exhibition; the HQ job is the live one",
     contacts: [
       { name: "Ziad Nassar", phone: "0566712093", position: "General manager", email: "ziad@example.com" },
       { name: "Hassan Odeh", phone: "0561120934", position: "Procurement" },
@@ -390,7 +390,7 @@ export const PROJECTS: ProjectSeed[] = [
     notes: "توريد وتركيب، اللون نحاسي",
   },
   { key: "p3", company: "f3", name: "فيلا خاصة - الدرعية", expectedSqm: "620.00" },
-  { key: "p4", company: "f5", name: "Tower A", expectedSqm: "3200.00", notes: "Consultant approved A2 only" },
+  { key: "p4", company: "f5", name: "Delta Rock HQ", expectedSqm: "3200.00", notes: "Consultant approved A2 only" },
   { key: "p5", company: "f6", name: "مجمع سكني - حي الياسمين", expectedSqm: "1850.00" },
   {
     key: "p6",
@@ -443,8 +443,8 @@ export const ACTIVITIES: ActivitySeed[] = [
   { company: "f4", contact: 0, channel: "whatsapp", back: 12, text: "طلب لوحات إعلانية 3 مم، ما عندنا، عرضت عليه 4 مم" },
   { company: "f4", contact: 0, channel: "call", back: 6, text: "ما رد، أعيد الاتصال الأسبوع الجاي" },
 
-  { company: "f5", project: "p4", channel: "other", back: 8, text: "Met them at the exhibition stand, they build Tower A in Riyadh" },
-  { company: "f5", project: "p4", contact: 0, channel: "call", back: 3, text: "Called Ziad, walked him through the Tower A quotation" },
+  { company: "f5", project: "p4", channel: "other", back: 8, text: "Met them at the exhibition stand, they are building their HQ in Riyadh" },
+  { company: "f5", project: "p4", contact: 0, channel: "call", back: 3, text: "Called Ziad, walked him through the HQ quotation" },
   { company: "f5", contact: 0, channel: "whatsapp", back: 1, followUpDays: 3, text: "Sent catalogue, waiting for the consultant" },
 
   { company: "f6", project: "p5", contact: 0, channel: "visit", back: 10, text: "زيارة الخرج، مجمع سكني حي الياسمين، 1,850 متر" },
