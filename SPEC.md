@@ -144,3 +144,7 @@ Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a
 - D20 Target card pace compares achieved ÷ target with working days elapsed ÷ working days in the month.
 - D21 Contact positions: FACET had no list (free text). Kladra seeds a searchable list the rep can also type over: Owner · General manager · Project manager · Procurement · Engineer · Site engineer · Architect · Consultant · Accountant · Other.
 - D22 The log's channels are visit · call · WhatsApp · other (FACET's list without email and meeting, per the brief).
+- D23 A company list that comes back empty says why: nothing matched the search, nothing matched the filter, or there are no companies yet — and only the last of the three offers Add company. Offering it to a rep whose search simply missed answers a question he did not ask.
+- D24 Archiving a company asks first. It is not destructive, but it takes a company off the rep's floor, and a row that vanishes with no warning reads as a bug. Archiving a contact or a project, and the admin's restore screen, are not built yet.
+- D25 Editing a company, a contact or a project is not built. The drawer's Edit button says so rather than being hidden, so a rep knows the screen is coming and not that he has missed it.
+- D26 Lists are not virtualized. Fourteen people, and a rep sees only his own companies; the day a manager's list passes a few hundred rows is the day to revisit it.

@@ -37,6 +37,9 @@ function fixtures(locale: Locale) {
     company: `Al Noor Towers ${locale.toUpperCase()}`,
     contact: `Khalid ${locale.toUpperCase()}`,
     phone: "0551234567",
+    secondContact: `Sara ${locale.toUpperCase()}`,
+    // A different number: one number per company is a database constraint.
+    secondPhone: locale === "en" ? "0559876543" : "0559876544",
     project: `Tower A ${locale.toUpperCase()}`,
     expectedSqm: "1200",
     visit: "Showed catalogue, wants 4 mm samples",
@@ -63,7 +66,7 @@ function dialogNamed(page: Page, name: string): Locator {
   return page.getByRole("dialog", { name });
 }
 
-test("Faisal's floor: add a company, log a visit, watch the follow-up arrive, add a project", async ({
+test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a project, and archiving", async ({
   page,
   locale,
   t,
@@ -222,5 +225,45 @@ test("Faisal's floor: add a company, log a visit, watch the follow-up arrive, ad
     const company = dialogNamed(page, fixture.company);
     await company.getByRole("tab", { name: t("common.projects") }).click();
     await expect(company.getByText(fixture.project)).toBeVisible();
+  });
+
+  /*
+   * Past the end of WORKFLOW §3's five lines, and deliberately: adding a second
+   * contact, moving who is main (SPEC D18) and archiving (SPEC §3 — archive,
+   * never delete) are the rest of what a rep can do to a company. Archiving
+   * last, because it takes the fixture off the floor and there is nothing to do
+   * with it afterwards.
+   */
+  await test.step("6 · A second contact becomes the main one, then the company is archived", async () => {
+    const drawer = dialogNamed(page, fixture.company);
+    await drawer.getByRole("tab", { name: t("common.contacts") }).click();
+    await drawer.getByRole("button", { name: t("drawer.addContact") }).first().click();
+
+    const dialog = dialogNamed(page, t("forms.addContact"));
+    await dialog.getByLabel(t("common.name")).fill(fixture.secondContact);
+    await dialog.getByLabel(t("common.phone")).fill(fixture.secondPhone);
+    await dialog.getByRole("button", { name: t("common.save") }).click();
+    await expect(page.getByText(t("forms.added", { name: fixture.secondContact }))).toBeVisible();
+
+    // The first contact added is main on its own (D18), so the new one is the
+    // only row offering to take over.
+    const second = drawer.getByRole("listitem").filter({ hasText: fixture.secondContact });
+    await second.getByRole("button", { name: t("drawer.makeMain") }).click();
+    await expect(
+      page.getByText(t("drawer.mainSet", { name: fixture.secondContact })),
+    ).toBeVisible();
+    await expect(second.getByText(t("drawer.mainContact"))).toBeVisible();
+
+    // Archive asks first, and the company then leaves the list — the row is
+    // gone, the record is not.
+    await drawer.getByRole("button", { name: t("drawer.archive") }).click();
+    const confirm = dialogNamed(page, t("drawer.archiveTitle", { name: fixture.company }));
+    await confirm.getByRole("button", { name: t("drawer.archive") }).click();
+
+    await expect(page.getByText(t("drawer.archived", { name: fixture.company }))).toBeVisible();
+    await page.goto(`/${locale}/companies`);
+    await expect(
+      page.getByRole("link", { name: t("companies.openCompany", { name: fixture.company }) }),
+    ).toHaveCount(0);
   });
 });
