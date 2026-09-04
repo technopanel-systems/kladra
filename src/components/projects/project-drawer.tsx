@@ -3,7 +3,8 @@ import { ActivityList } from "@/components/activities/activity-list";
 import { LogDialog } from "@/components/activities/log-dialog";
 import { ProjectSheet } from "@/components/projects/projects-table";
 import { Button } from "@/components/ui/button";
-import { requireUser } from "@/lib/authz";
+import { z } from "zod";
+import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
 import { getProject } from "@/lib/projects";
@@ -35,8 +36,22 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   if (!projectId) return null;
 
   const [user, locale, t] = await Promise.all([requireUser(), getLocale(), getTranslations()]);
-  const project = await getProject(user, projectId, locale);
-  // No such project — no drawer, and no error page over a stale link.
+
+  /*
+   * No drawer, and no error page, over a link that no longer works — whichever
+   * way it fails. An id that is not a uuid would take the cast down in
+   * Postgres; a project on somebody else's company throws NotAllowed, and a rep
+   * following a colleague's link is told there is nothing here rather than
+   * shown that a project he cannot open exists.
+   */
+  if (!z.uuid().safeParse(projectId).success) return null;
+
+  let project: Awaited<ReturnType<typeof getProject>> = null;
+  try {
+    project = await getProject(user, projectId, locale);
+  } catch (error) {
+    if (!(error instanceof NotAllowed)) throw error;
+  }
   if (!project) return null;
 
   const company = await getCompany(user, project.companyId, locale);

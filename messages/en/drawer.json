@@ -33,6 +33,6 @@
   "mainSet": "{name} is now the main contact",
   "archive": "Archive",
   "archiveTitle": "Archive {name}?",
-  "archiveWarning": "It leaves your lists and keeps its history. An admin can put it back.",
+  "archiveWarning": "The company leaves your lists but keeps its history. An admin can restore it.",
   "archived": "{name} archived"
 }

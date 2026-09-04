@@ -8,9 +8,9 @@
   "noContact": "No contact yet",
   "openCompany": "Open {name}",
   "whatsappContact": "WhatsApp {name}",
-  "overdueCount": "{count, plural, one {# overdue} other {# overdue}}",
-  "todayCount": "{count, plural, one {# today} other {# today}}",
-  "neverCount": "{count, plural, one {# never contacted} other {# never contacted}}",
+  "overdueCount": "{count} overdue",
+  "todayCount": "{count} today",
+  "neverCount": "{count} never contacted",
   "nothingDue": "Nothing due — you are up to date.",
   "emptyFilter": "Nothing matches this filter.",
   "clearFilter": "Show all companies"

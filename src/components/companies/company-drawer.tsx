@@ -13,10 +13,11 @@ import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { listActivitiesForCompany } from "@/lib/activities";
-import { requireUser } from "@/lib/authz";
-import { getCompany } from "@/lib/companies";
+import { NotAllowed, requireUser } from "@/lib/authz";
+import { getCompany, type CompanyDetail } from "@/lib/companies";
 import { dayOf, formatDay } from "@/lib/dates";
 import { formatSqm } from "@/lib/money";
 import { formatPhone, whatsappHref } from "@/lib/phone";
@@ -62,9 +63,26 @@ export async function CompanyDrawer({ companyId }: { companyId: string | null })
 async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   const [t, locale, user] = await Promise.all([getTranslations(), getLocale(), requireUser()]);
 
-  // The reader is passed in, not assumed: `getCompany` throws NotAllowed for a
-  // company that is not this rep's, which is the same gate the actions use.
-  const company = await getCompany(user, companyId, locale);
+  /*
+   * `?open=` is whatever is in the address bar, so all three answers below end
+   * at the same panel:
+   *
+   * - Not a uuid at all. Postgres refuses the cast, and an edited URL would
+   *   otherwise take down the whole companies screen rather than the drawer.
+   * - No such company.
+   * - Somebody else's company. `getCompany` throws NotAllowed — the same gate
+   *   the actions use — and a rep who follows a colleague's link should be told
+   *   there is nothing here, not shown that a company he cannot open exists.
+   */
+  let company: CompanyDetail | null = null;
+  if (z.uuid().safeParse(companyId).success) {
+    try {
+      company = await getCompany(user, companyId, locale);
+    } catch (error) {
+      if (!(error instanceof NotAllowed)) throw error;
+    }
+  }
+
   if (!company) {
     return (
       <div className="flex flex-col gap-2 p-4">

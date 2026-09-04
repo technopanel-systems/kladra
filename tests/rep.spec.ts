@@ -309,3 +309,40 @@ test("a manager reads the rep floor and cannot add to it", async ({ page, locale
   // ...and there is nothing on it offering to add one.
   await expect(page.getByRole("button", { name: t("forms.addCompany") })).toHaveCount(0);
 });
+
+/**
+ * `?open=` is whatever is in the address bar. A rep gets links from colleagues,
+ * keeps tabs open for days, and edits URLs. None of the three ways that id can
+ * be wrong may take the screen down with it.
+ */
+test("a stale or foreign ?open= leaves the list standing", async ({ page, locale, t }) => {
+  await login(page, locale, "faisal");
+
+  // Saad's company: real, and not Faisal's. Found through Saad's own list so
+  // the spec never has to hard-code an id.
+  await login(page, locale, "saad");
+  await page.goto(`/${locale}/companies`);
+  const first = page.getByRole("table").first().getByRole("link").first();
+  const foreign = new URL(await first.getAttribute("href") ?? "", page.url()).searchParams.get(
+    "open",
+  );
+  expect(foreign).toBeTruthy();
+
+  await login(page, locale, "faisal");
+
+  for (const [what, open] of [
+    ["not a uuid", "not-a-uuid"],
+    ["no such company", "00000000-0000-4000-8000-000000000000"],
+    ["another rep's company", foreign as string],
+  ] as const) {
+    await test.step(what, async () => {
+      const response = await page.goto(`/${locale}/companies?open=${open}`);
+      // The route answered rather than throwing. Asserted on the status, not on
+      // the page heading: the drawer opens either way, and Radix marks the rest
+      // of the page aria-hidden behind it.
+      expect(response?.status()).toBe(200);
+      await expect(page.getByText(t("drawer.companyGone"))).toBeVisible();
+    });
+  }
+});
+
