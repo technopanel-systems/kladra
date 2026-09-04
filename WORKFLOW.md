@@ -21,18 +21,18 @@ Cap: six skills plus find-skills. A skill unused for two hours after install is 
 
 | Skill | Source | For |
 |---|---|---|
-| find-skills | vercel-labs/skills | Searching the skills.sh registry when a capability is missing. |
-| frontend-design | anthropics/skills (copied from the marketplace clone) | Aesthetic direction so screens do not read as shadcn defaults. |
-| vercel-react-best-practices | vercel-labs/agent-skills | React 19 / Server Components patterns, data fetching, waterfalls. |
-| web-design-guidelines | vercel-labs/agent-skills | Review step at the end of P3, P4, P5, P6: accessibility, focus, contrast, motion. |
-| next-best-practices | vercel-labs/openreview (Vercel) | Next 16 App Router: caching, server actions, proxy, route handlers. |
-| shadcn | shadcn/ui (official) | CLI usage, component docs, composition for the DESIGN §3 kit. |
-| playwright-testing | alinaqi/maggy | Locators, fixtures, clock control, flake avoidance for the acceptance runs. |
+| find-skills | vercel-labs/skills | Searching the registry when a capability is missing. |
+| frontend-design | anthropics/skills | Aesthetic direction, so screens do not read as shadcn defaults. |
+| vercel-react-best-practices | vercel-labs/agent-skills | React 19 and Server Component patterns. |
+| web-design-guidelines | vercel-labs/agent-skills | The review at the end of P3–P6: accessibility, focus, contrast, motion. |
+| next-best-practices | vercel-labs/openreview | Next 16 App Router: caching, server actions, proxy, route handlers. |
+| shadcn | shadcn/ui (official) | CLI usage and composition for the DESIGN §3 kit. |
+| playwright-testing | alinaqi/maggy | Locators, fixtures, clock control, flake avoidance. |
 
-Agents in `.claude/agents/`: shot-looker (sonnet, medium) · screen-builder (inherit, xhigh) ·
-test-runner (sonnet, medium) · arabic-reviewer (opus, high). Hooks: `guard-writes.mjs`
-H0–H9, `guard-bash.mjs` H11–H12. Rules: `.claude/rules/{data,migrations,deploy,auth-bridge}.md`.
-Chromium via `npx playwright install chromium`; the shot-looker reads @playwright/cli's own SKILL.md.
+Agents in `.claude/agents/`: shot-looker (sonnet) · screen-builder (xhigh) · test-runner
+(sonnet) · arabic-reviewer (opus). Hooks: `guard-writes.mjs` H0–H9, `guard-bash.mjs`
+H11–H12. Rules: `.claude/rules/{data,migrations,deploy,auth-bridge}.md`. Chromium via
+`npx playwright install chromium`; shot-looker reads @playwright/cli's own SKILL.md.
 
 ## §2 How a session runs
 
@@ -42,17 +42,16 @@ Chromium via `npx playwright install chromium`; the shot-looker reads @playwrigh
    acceptance → shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix.
    Subagents run slices in parallel, one writer per file at a time. At the end of P3, P4,
    P5, P6 run the web-design-guidelines skill as a review step.
-3. Before every commit: `npm run typecheck && npm run lint && npm run build && npm run
-   test`. If a box cannot get green, cut scope inside the box, note the cut in §0, commit green.
-4. Tick the box, update "where I stopped", commit. Also commit at natural pauses.
-5. Guards: never `docker stop/down/rm` against anything not in compose project `kladra`
-   (hook H12). Docker Desktop is expected running; if not, wait and retry every minute for
-   up to 30 minutes. If `git push` fails, commit locally and continue. FACET is read-only.
-   No agent frameworks. Nothing is deployed by a build run.
+3. Before every commit: `npm run typecheck && npm run lint && npm run build && npm run test`.
+   If a box cannot get green, cut scope inside it, note the cut in §0, commit green. Then tick
+   the box, update "where I stopped", commit. Also commit at natural pauses.
+4. Guards: never `docker stop/down/rm` outside compose project `kladra` (H12). Docker Desktop
+   is expected up; if not, retry every minute for 30 minutes. If `git push` fails, commit
+   locally and continue. FACET is read-only. No agent frameworks. A build run deploys nothing.
 
 ## §3 Acceptance scripts per role
 
-Human-readable; the Playwright tests in `tests/` walk exactly these steps, in en and ar.
+The Playwright tests in `tests/` walk exactly these steps, in en and ar.
 
 **Faisal (rep)** — `tests/rep.spec.ts`
 1. Sign in as Faisal. Home is Companies with the follow-up strip at the top.
