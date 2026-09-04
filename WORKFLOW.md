@@ -3,7 +3,7 @@
 ## §0 Checklist and where I stopped
 
 - [x] P0 Toolbox
-- [ ] P1 Extract from FACET → the five files (redo from C:\Projects\facet-crm)
+- [x] P1 Extract from FACET → the five files (redone from C:\Projects\facet-crm)
 - [ ] P2 Scaffold: app, database, login, shell, seed, live updates, tests
 - [ ] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
 - [ ] P4 Quotations: rep request → coordinator issue / send back → customer decision
@@ -11,8 +11,9 @@
 - [ ] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, handover
 
-**Where I stopped:** P1 redo in progress — readers over SPEC + every docs/archive file, lookups, en/ar terms.
-Next: write SPEC §2 (30–60 sentences), scripts/seed/lookups.ts, messages/*/common.json; commit "P1 redo".
+**Where I stopped:** P1 redone — SPEC §2 has 57 sentences from FACET's SPEC and archive; lookups in
+scripts/seed/lookups.ts; real en/ar terms in messages/*/common.json. Next: P2 — the scaffold, schema
+(25 tables) and migration exist uncommitted; wire auth, shell, seed, LISTEN/NOTIFY → SSE, smoke test.
 
 ## §1 Toolbox — what is installed and why
 
