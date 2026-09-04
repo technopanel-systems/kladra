@@ -6,21 +6,19 @@
 - [x] P1 Extract from FACET → the five files (redone from C:\Projects\facet-crm)
 - [x] P2 Scaffold: app, database, login, shell, seed, live updates, tests
 - [x] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
+- [ ] P3.5 Edit company, contact, project; archive contact and project; the SPEC §4 cuts go away
+- [ ] P3.6 Root causes: no primary action disabled while data loads; the four review findings
+      become DESIGN rules with tests; one word per concept in both languages, glossary in SPEC;
+      tests get their own database, `kladra_test`
 - [ ] P4 Quotations: rep request → coordinator issue / send back → customer decision
 - [ ] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [ ] P6 Manager view, admin, notifications
-- [ ] P7 Polish, acceptance runs, handover
+- [ ] P7 Polish, acceptance runs, PWA, handover
 
-**Where I stopped:** P3 done and green — typecheck, lint, build, both-locale check and eight
-Playwright tests in en and ar. Reviewed by shot-looker, arabic-reviewer and web-design-guidelines;
-everything they found is fixed. Next: P4, quotations.
+P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
+rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Cut inside P3, and why.** Editing a company, contact or project is not built — the drawer's
-Edit button says so rather than hiding, so a rep knows the screen is coming (SPEC D25). Archiving
-a contact or a project, and the admin's restore screen, are not built either; archiving a company
-is (D24). `tests/rep.spec.ts` step 4 moves the follow-up date onto today instead of moving the
-clock to tomorrow: today is Riyadh's, computed in SQL by Postgres, so a faked browser clock would
-prove nothing about the strip — the guarantee is checked from the other end.
+**Where I stopped:** P3 done and green. Starting P3.5.
 
 ## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
 
@@ -37,19 +35,50 @@ prove nothing about the strip — the guarantee is checked from the other end.
 Agents: shot-looker (sonnet) · screen-builder (xhigh) · test-runner (sonnet) · arabic-reviewer
 (opus). Hooks `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12; rules in `.claude/rules/`.
 
-## §2 How a session runs
+## §2 The charter — how this gets built
 
-1. Read §0 and continue from the first unchecked box. Never ask Jerom during a build run —
-   pick the obvious default, record it in SPEC §4, continue.
-2. Inside a box: schema → query → server action → screen → both locales → Playwright →
-   shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix. Subagents run slices
-   in parallel, one writer per file. End P3–P6 with the web-design-guidelines review.
-3. Before every commit: `npm run typecheck && npm run lint && npm run build && npm run test`.
-   If a box cannot get green, cut scope inside it and note the cut in §0. Then tick the box,
-   update "where I stopped", and commit; also commit at natural pauses.
-4. Guards: never `docker stop/down/rm` outside compose project `kladra` (H12). If Docker is
-   down, retry every minute for 30 minutes. If `git push` fails, commit locally and continue.
-   FACET is read-only. No agent frameworks. A build run deploys nothing.
+**I own this system.** Not a task list being executed. FACET failed because its interface was
+record-first, still, and built to be verified rather than used, and fourteen people went back to
+a Google Sheet. I know that business, and I know Faisal, Rawan, Abdulrahman and Jerom by name.
+From here I decide how Kladra gets built, and I do not stop until it is finished.
+
+**Authority.** Change, delete or rewrite anything already built — whole phases, the schema, the
+shell, my own earlier decisions, DESIGN.md, this file. Search the web whenever unsure: Next.js,
+Drizzle, shadcn, Playwright, Arabic RTL, CRM conventions, accessibility. Never guess an API that
+can be checked. Add, remove or replace skills whenever they help; no cap. Spawn subagents freely
+for parallel work, one writer per file, no third-party frameworks or swarms ever. Pick defaults
+without asking and record each in SPEC §4 as "DEFAULT — founder may change".
+
+**The one limit.** SPEC §3 is what real users asked for after testing FACET. An item there may be
+overruled only by writing in SPEC §4 what was observed and why the users' version does not work.
+Never delete one silently.
+
+**Fix causes, not symptoms.** Every defect gets two questions: where did this originate, and where
+else does it live? The bidi date bug was in two places and would have come back in every quotation
+date. Fixing one site is not finished. Sweep the whole system for the same cause, fix all of it,
+write the rule in DESIGN.md, and add the Playwright test that makes reintroducing it impossible.
+
+**Never stop.** No pause between boxes, no permission, no report until the end. Commit at the end
+of every box, update §0, start the next immediately. Only a usage limit or a model change ends a
+session; on restart, read §0 and carry on.
+
+**Checkpoint audits.** At the end of every box, and on `/audit`, read the code as a critic rather
+than its author. Does this screen make a rep's day faster than the Google Sheet did? Is any of it
+record-first? Is a rule now wrong? Fix what is found in the same session. After a model change the
+audit is broader: treat the previous model's work as another developer's and check it properly.
+
+**Inside a box:** schema → query → server action → screen → both locales → Playwright →
+shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix → web-design-guidelines.
+
+**Before every commit:** `npm run typecheck && npm run lint && npm run build && npm run test`.
+If a box cannot get green, cut scope inside it, note the cut in §0, commit green.
+
+**Guards.** Never `docker stop/down/rm` outside compose project `kladra` (H12). If Docker is down,
+retry every minute for 30 minutes. If `git push` fails, commit locally and continue. FACET at
+`C:\Projects\facet-crm` is read-only. A build run deploys nothing.
+
+**Commands** in `.claude/commands/`: `/go` continue from the first unchecked box · `/audit` audit
+everything built, fix, then continue · `/state` ten lines on where things stand.
 
 ## §3 Acceptance scripts — the Playwright tests walk these steps, in en and ar
 
