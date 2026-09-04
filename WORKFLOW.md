@@ -4,15 +4,15 @@
 
 - [x] P0 Toolbox
 - [x] P1 Extract from FACET → the five files (redone from C:\Projects\facet-crm)
-- [ ] P2 Scaffold: app, database, login, shell, seed, live updates, tests
+- [x] P2 Scaffold: app, database, login, shell, seed, live updates, tests
 - [ ] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
 - [ ] P4 Quotations: rep request → coordinator issue / send back → customer decision
 - [ ] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [ ] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, handover
 
-**Where I stopped:** P2 — scaffold, 25-table schema, migration, i18n, tokens and tests are in;
-auth, shell, seed and live updates are building. Next: integrate them, then P3.
+**Where I stopped:** P2 done and green — typecheck, lint, build, both-locale check and the
+smoke tests in en and ar all pass; live updates proven over SSE. Next: P3, the rep floor.
 
 ## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
 
