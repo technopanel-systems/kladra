@@ -5,5 +5,8 @@
   "quotationAccepted": "The customer accepted {label}.",
   "quotationRejected": "The customer rejected {label}: {reason}",
   "quotationCancelled": "{rep} withdrew {label}.",
+  "dispatchRequested": "{rep} raised {label}.",
+  "dispatchApproved": "{label} is approved — SMAC {smacNumber}.",
+  "dispatchRefused": "{label} was refused: {reason}",
   "unreadMark": "Unread"
 }

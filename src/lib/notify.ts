@@ -27,9 +27,9 @@ import { notifyLive } from "@/lib/live";
  * `quotation_requested` while the actions wrote `quotationRequested`, and
  * neither side would have noticed until a rep saw a raw key on a screen.
  *
- * The params are a fixed vocabulary too: `label` is always the quotation's own
- * name (Q-12), `smacNumber` is always SMAC's, `rep` is a person, `reason` is
- * what somebody wrote.
+ * The params are a fixed vocabulary too: `label` is always the record's own
+ * name (Q-12, D-3), `smacNumber` is always SMAC's, `rep` is a person, `reason`
+ * is what somebody wrote.
  */
 export const NOTIFICATION_KINDS = [
   "quotationRequested",
@@ -38,6 +38,9 @@ export const NOTIFICATION_KINDS = [
   "quotationAccepted",
   "quotationRejected",
   "quotationCancelled",
+  "dispatchRequested",
+  "dispatchApproved",
+  "dispatchRefused",
 ] as const;
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

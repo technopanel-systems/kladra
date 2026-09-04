@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formLookupsAction, quotationLookupsAction } from "@/actions/forms";
-import type { FormLookups, QuotationLookups } from "@/actions/forms";
+import { dispatchLookupsAction, formLookupsAction, quotationLookupsAction } from "@/actions/forms";
+import type { DispatchLookups, FormLookups, QuotationLookups } from "@/actions/forms";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -53,6 +53,7 @@ function loaderFor<T>(action: () => Promise<ActionResult<T>>): Loader<T> {
 
 const formLoader = loaderFor(formLookupsAction);
 const quotationLoader = loaderFor(quotationLookupsAction);
+const dispatchLoader = loaderFor(dispatchLookupsAction);
 
 function useLookups<T>(loader: Loader<T>, enabled: boolean): { lookups: T | null; failed: boolean } {
   const [lookups, setLookups] = useState<T | null>(null);
@@ -91,4 +92,18 @@ export function useQuotationLookups(enabled: boolean): {
   failed: boolean;
 } {
   return useLookups(quotationLoader, enabled);
+}
+
+/**
+ * How the panels travel — the one list a dispatch dialog can cache.
+ *
+ * What is left on each quotation line is deliberately not here: it moves every
+ * time anybody raises a dispatch, so the dialog asks for it per open
+ * (`remainingItemsAction`).
+ */
+export function useDispatchLookups(enabled: boolean): {
+  lookups: DispatchLookups | null;
+  failed: boolean;
+} {
+  return useLookups(dispatchLoader, enabled);
 }

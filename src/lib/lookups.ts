@@ -29,6 +29,7 @@ import {
   fireRatings,
   leadSources,
   positions,
+  shipmentMethods,
   suppliers,
   thicknesses,
 } from "@/db/schema";
@@ -91,6 +92,26 @@ export async function listLeadSources(locale?: string): Promise<LookupOption[]> 
     .from(leadSources)
     .where(eq(leadSources.active, true))
     .orderBy(asc(leadSources.sortOrder), asc(leadSources.nameEn));
+}
+
+/**
+ * CT · TT · Cargo — how the panels travel (S40, D12).
+ *
+ * Translated, unlike a quotation line's lists: the code is in the label already
+ * ("TT — a Technopanel truck"), and the sentence after it is what tells a new
+ * rep which one he means.
+ */
+export async function listShipmentMethods(locale?: string): Promise<LookupOption[]> {
+  const l = await labelLocale(locale);
+  return db
+    .select({
+      id: shipmentMethods.id,
+      name: isArabic(l) ? shipmentMethods.nameAr : shipmentMethods.nameEn,
+      alt: isArabic(l) ? shipmentMethods.nameEn : shipmentMethods.nameAr,
+    })
+    .from(shipmentMethods)
+    .where(eq(shipmentMethods.active, true))
+    .orderBy(asc(shipmentMethods.sortOrder), asc(shipmentMethods.code));
 }
 
 /**

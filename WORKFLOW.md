@@ -11,14 +11,29 @@
       become DESIGN rules with tests; one word per concept in both languages, glossary in SPEC;
       tests get their own database, `kladra_test`
 - [x] P4 Quotations: rep request → coordinator issue / send back → customer decision
-- [ ] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
+- [x] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [ ] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, PWA, handover
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P4 done and green, `npm run test` 33 passing across both locales. Starting P5.
+**Where I stopped:** P5 done and green, `npm run test` 37 passing across both locales. Starting P6.
+
+P5's one real defect was found by its own test, which is what the test was for. The browser worked
+out a dispatch's m² as `round(width × length, 2) × qty` and SQL as `round(width × length × qty, 2)`.
+Thirty sheets of 1.24 × 5.8 came to 215.70 on screen and 215.76 in the database. Nobody would ever
+report six halalas; they would stop trusting the figure. One function now does it on both sides
+(D38, and a new rule in .claude/rules/data.md).
+
+Two decisions beyond §3, both written down: a dispatch goes against the live revision of a
+quotation and not a superseded one (D36), and there is no withdraw for a dispatch even though
+there is one for a quotation request — the coordinator refuses it with a reason, which is the
+conversation that was going to happen anyway (D37).
+
+The seed gained one quotation: issued, latest revision, nothing sent against it. Every other issued
+quotation in the demo had either been revised or already partly dispatched, so the ordinary state
+a rep starts a dispatch from was the one state the demo did not show.
 
 P4's two real defects were both about a component disappearing at the moment it worked. A dialog
 rendered inside an empty state is destroyed by the save that fills the list, and a destroyed
@@ -131,12 +146,16 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2 and the first is Superseded.
 6. Second test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
 
-**Rawan-2 (coordinator, dispatches)** — `tests/dispatch.spec.ts`
-1. Faisal opens the issued quotation and raises a dispatch for half of item 1, TT, Riyadh, "50% advance".
-2. Rawan's Queue shows the dispatch request; she opens it and sees remaining quantity per item.
-3. Rawan approves it with SMAC dispatch number 8810.
-4. Faisal's Home target card rises by the approved m².
-5. Faisal's Dispatches page shows it as Approved with the number.
+**Rawan-2 (coordinator, dispatches)** — `tests/dispatches.spec.ts`
+1. Faisal opens an issued quotation and sends part of item 1, with a shipment method, a destination and payment terms. The m² adds up as he types.
+2. The drawer that opens shows the same m², worked out again in SQL.
+3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
+4. She opens it, reads how many are going against how many were quoted, and approves it with SMAC dispatch number 8810.
+5. Faisal is told; it reads Approved with the number; the approved m² is on this Riyadh month, by the approval's own date (S41, S43).
+6. The quotation now has that much less left to send.
+7. Second test: a request for more than a line has left is refused at the field as it is typed, and refused again by the action — the second one is the enforcement that counts.
+
+Faisal's Home target card (the old step 4) lands with P6, which is where the card exists.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.

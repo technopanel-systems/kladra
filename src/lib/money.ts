@@ -34,7 +34,16 @@ export const formatSqmWhole = (v: string | number | null | undefined) => formatN
 
 export type LineInput = { width: string | number; length: string | number; qty: string | number; pricePerSqm: string | number };
 
-export function lineSqm(l: LineInput): number {
+/**
+ * The m² of a quantity on one line, rounded ONCE at the end.
+ *
+ * Not width × length rounded and then multiplied: 1.24 × 5.8 is 7.192, which
+ * rounds to 7.19, and thirty of those is 215.70 where the real answer is
+ * 215.76. SQL rounds once (`round(width * length * qty, 2)`), so this rounds
+ * once, and tests/dispatches.spec.ts checks the two against each other rather
+ * than trusting them — it caught exactly that six-halala gap.
+ */
+export function lineSqm(l: Pick<LineInput, "width" | "length" | "qty">): number {
   return round2(toNumber(l.width) * toNumber(l.length) * toNumber(l.qty));
 }
 

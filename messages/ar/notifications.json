@@ -5,5 +5,8 @@
   "quotationAccepted": "قبل العميل {label}.",
   "quotationRejected": "رفض العميل {label}: {reason}",
   "quotationCancelled": "سحب {rep} الطلب {label}.",
+  "dispatchRequested": "{rep} طلب {label}.",
+  "dispatchApproved": "تم اعتماد {label} برقم سماك {smacNumber}.",
+  "dispatchRefused": "رُفض {label}: {reason}",
   "unreadMark": "غير مقروء"
 }

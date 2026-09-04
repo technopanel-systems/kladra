@@ -42,6 +42,14 @@ broken at least once in FACET, Kladra's predecessor.
   (`src/lib/workdays.ts`) owns Riyadh today, the Fri–Sat weekend and the
   non-working-day table; nothing else does date math.
 
+- **A figure the browser shows while somebody types is computed by the
+  function the database uses.** Round once, at the end, on both sides:
+  `round(width * length * qty, 2)`, never `round(width * length, 2) * qty`.
+  Thirty sheets of 1.24 × 5.8 are 215.76 m² one way and 215.70 the other, and
+  nobody reports a six-halala gap — they stop trusting the screen. Every such
+  pair has a test that compares them on real rows (tests/dispatches.spec.ts,
+  tests/quotations.spec.ts).
+
 - **One definition per figure.** Achieved m² (approved dispatch items, month
   of approval), pace, overdue follow-ups — each has exactly one query
   function that every screen calls. A second derivation beside it is the

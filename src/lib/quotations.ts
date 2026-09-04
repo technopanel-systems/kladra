@@ -44,7 +44,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { VAT_RATE } from "@/lib/money";
-import { quotationLabel } from "@/lib/quotation-label";
+import { quotationLabel } from "@/lib/labels";
 import type { SessionUser } from "@/lib/types";
 
 export type QuotationStatus =
@@ -58,7 +58,7 @@ export type QuotationStatus =
 /** What every quotation screen shows about a quotation. */
 export type QuotationRow = {
   id: string;
-  /** Q-12, or Q-12/2 for a revision (src/lib/quotation-label.ts). */
+  /** Q-12, or Q-12/2 for a revision (src/lib/labels.ts). */
   label: string;
   number: number;
   revision: number;

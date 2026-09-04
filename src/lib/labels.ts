@@ -1,5 +1,6 @@
 /**
- * What a quotation is called before SMAC has given it a number.
+ * What a quotation and a dispatch are called before SMAC has given either one a
+ * number.
  *
  * A request has no SMAC number until the coordinator issues it (SPEC S28), and
  * two people still have to be able to name the same one out loud. `Q-12` is
@@ -15,4 +16,13 @@
  */
 export function quotationLabel(number: number, revision: number): string {
   return revision > 1 ? `Q-${number}/${revision}` : `Q-${number}`;
+}
+
+/**
+ * The same idea for a dispatch, which has no revisions: one quotation produces
+ * several partial dispatches and each is its own request, so D-3 is a whole
+ * name (SPEC S37, D12).
+ */
+export function dispatchLabel(number: number): string {
+  return `D-${number}`;
 }

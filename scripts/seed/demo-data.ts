@@ -668,6 +668,24 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "1020", supplier: "N", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 45, width: "1.5", length: "5.8", pricePerSqm: "131.00" },
     ],
   },
+  {
+    // Issued, latest revision, nothing sent against it yet — the ordinary state
+    // of a quotation the customer has just been given, and where the dispatch
+    // chain starts (S38). Every other issued quotation in here has either been
+    // revised or already partly dispatched.
+    key: "q7",
+    company: "f3",
+    project: "p3",
+    rep: "faisal",
+    status: "issued",
+    createdBack: 5,
+    issuedBack: 3,
+    smacNumber: "4531",
+    items: [
+      { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 100, width: "1.24", length: "5.8", pricePerSqm: "121.00" },
+      { colourCode: "RAL 9016", supplier: "K", fireRating: "Normal", className: "B", thickness: "4.0", qty: 40, width: "1.5", length: "3.2", pricePerSqm: "104.00" },
+    ],
+  },
 ];
 
 // ---- dispatches ---------------------------------------------------------------

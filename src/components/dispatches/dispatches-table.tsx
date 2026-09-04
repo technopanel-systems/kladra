@@ -4,9 +4,8 @@ import { SearchIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
-import { QuotationTotals } from "@/components/quotations/quotation-totals";
-import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
+import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
+import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,88 +21,77 @@ import {
 } from "@/components/ui/table";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
-import { formatMoney, formatSqm } from "@/lib/money";
-import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
+import { formatSqm } from "@/lib/money";
+import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
 import { cn } from "@/lib/utils";
 
 /**
- * The quotations screen and the drawer it opens (DESIGN §2: work happens in a
- * drawer over the list, and the list stays where it was).
+ * The dispatches screen and the drawer it opens, built the same way as
+ * quotations (DESIGN §2: work happens in a drawer over the list).
  *
- * A status is a word, never a colour. DESIGN §4 keeps a colour-per-status map
- * out of this app on purpose: five statuses in five colours is a legend to
- * learn, and the word is already the answer.
+ * A status is a word, never a colour (DESIGN §4). There are only three of them
+ * here and one of them, Approved, is the whole month — so it says Approved.
  *
- * Search, status and the open drawer all live in the URL, so a link somebody
- * sends reopens exactly what they were looking at (SPEC §3).
+ * Money is not on this screen at all. A dispatch is goods, and what it is worth
+ * is on the quotation it came from; showing a figure here would be a second
+ * definition of a number finance already owns (S31).
  */
 
 const DEBOUNCE_MS = 200;
 
-const STATUS_KEYS: Record<QuotationStatus, string> = {
-  requested: "quotations.statusRequested",
-  returned: "quotations.statusReturned",
-  issued: "quotations.statusIssued",
-  accepted: "quotations.statusAccepted",
-  rejected: "quotations.statusRejected",
-  cancelled: "quotations.statusCancelled",
+const STATUS_KEYS: Record<DispatchStatus, string> = {
+  submitted: "dispatches.statusSubmitted",
+  approved: "dispatches.statusApproved",
+  refused: "dispatches.statusRefused",
 };
 
-/** The filters the list offers, in the order the work moves through them. */
-const FILTERS: QuotationStatus[] = ["requested", "returned", "issued", "accepted", "rejected"];
+const FILTERS: DispatchStatus[] = ["submitted", "approved", "refused"];
 
 /**
- * The same list is two screens: the rep's quotations and the coordinator's
- * queue. Every link it builds stays on the screen it was built from, so
- * pressing a row in the queue does not quietly move her to somebody's list.
+ * The same list is two screens: the rep's dispatches and the coordinator's
+ * queue. Every link it builds stays on the screen it was built from.
  */
 function listHref(
   base: string,
+  param: string,
   q: string,
-  status: QuotationStatus | null,
+  status: DispatchStatus | null,
   open?: string | null,
 ): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (status) params.set("status", status);
-  if (open) params.set("open", open);
+  if (open) params.set(param, open);
   const query = params.toString();
   return query ? `${base}?${query}` : base;
 }
 
-function StatusBadge({ status }: { status: QuotationStatus }) {
+function StatusBadge({ status }: { status: DispatchStatus }) {
   const t = useTranslations();
   return <Badge variant="secondary">{t(STATUS_KEYS[status])}</Badge>;
 }
 
-/** A figure with a unit, in a run of digits that reads left to right either way. */
-function Money({ value }: { value: string }) {
-  const t = useTranslations();
-  return (
-    <span className="whitespace-nowrap">
-      <span dir="ltr" className="num">
-        {formatMoney(value)}
-      </span>{" "}
-      <span className="text-xs text-muted-foreground">{t("common.sar")}</span>
-    </span>
-  );
-}
-
-export function QuotationsTable({
+export function DispatchesTable({
   base,
+  param = "open",
   rows,
   q,
   status,
   openId,
   showFilters = true,
 }: {
-  /** "/quotations" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
+  /** "/dispatches" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
   base: string;
-  rows: QuotationRow[];
+  /**
+   * Which query parameter carries the open row. "open" everywhere except the
+   * coordinator's queue, which shows both chains at once and would otherwise
+   * open a quotation and a dispatch on the same word.
+   */
+  param?: string;
+  rows: DispatchRow[];
   q: string;
-  status: QuotationStatus | null;
+  status: DispatchStatus | null;
   openId: string | null;
-  /** The coordinator's queue is one status by definition; it needs no chips. */
   showFilters?: boolean;
 }) {
   const t = useTranslations();
@@ -128,14 +116,13 @@ export function QuotationsTable({
   function onTerm(value: string) {
     setTerm(value);
     if (timer.current) clearTimeout(timer.current);
-    // A new search drops whatever the URL had open — that row may be gone.
-    timer.current = setTimeout(() => go(listHref(base, value.trim(), status)), DEBOUNCE_MS);
+    timer.current = setTimeout(() => go(listHref(base, param, value.trim(), status)), DEBOUNCE_MS);
   }
 
   function clearTerm() {
     setTerm("");
     if (timer.current) clearTimeout(timer.current);
-    go(listHref(base, "", status));
+    go(listHref(base, param, "", status));
   }
 
   return (
@@ -145,15 +132,14 @@ export function QuotationsTable({
           {FILTERS.map((value) => (
             <FilterChip
               key={value}
-              // Pressing the chip you are on takes the filter off again.
-              href={listHref(base, term.trim(), status === value ? null : value)}
+              href={listHref(base, param, term.trim(), status === value ? null : value)}
               active={status === value}
             >
               {t(STATUS_KEYS[value])}
             </FilterChip>
           ))}
           <span aria-hidden="true" className="h-4 w-px bg-line" />
-          <FilterChip href={listHref(base, term.trim(), null)} active={status === null}>
+          <FilterChip href={listHref(base, param, term.trim(), null)} active={status === null}>
             {t("common.all")}
           </FilterChip>
         </div>
@@ -168,8 +154,8 @@ export function QuotationsTable({
           type="search"
           value={term}
           onChange={(event) => onTerm(event.target.value)}
-          aria-label={t("quotations.searchLabel")}
-          placeholder={t("quotations.searchPlaceholder")}
+          aria-label={t("dispatches.searchLabel")}
+          placeholder={t("dispatches.searchPlaceholder")}
           className="h-10 px-10"
         />
         {term ? (
@@ -188,7 +174,7 @@ export function QuotationsTable({
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
         {rows.length === 0 ? (
-          <EmptyQuotations base={base} q={q} status={status} onClear={clearTerm} />
+          <EmptyDispatches base={base} q={q} status={status} onClear={clearTerm} />
         ) : (
           <>
             {/* 375: cards. Six columns on a phone is a horizontal scroll. */}
@@ -196,7 +182,7 @@ export function QuotationsTable({
               {rows.map((row) => (
                 <Link
                   key={row.id}
-                  href={listHref(base, q, status, row.id)}
+                  href={listHref(base, param, q, status, row.id)}
                   className="card-face flex flex-col gap-1.5 p-3"
                 >
                   <span className="flex items-center justify-between gap-2">
@@ -212,7 +198,10 @@ export function QuotationsTable({
                     </span>
                   ) : null}
                   <span className="text-sm">
-                    <Money value={row.total} />
+                    <span dir="ltr" className="num">
+                      {formatSqm(row.totalSqm)}
+                    </span>{" "}
+                    <span className="text-xs text-muted-foreground">{t("common.sqm")}</span>
                   </span>
                 </Link>
               ))}
@@ -222,11 +211,11 @@ export function QuotationsTable({
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="p-3">{t("common.quotation")}</TableHead>
+                    <TableHead className="p-3">{t("common.dispatch")}</TableHead>
                     <TableHead className="p-3">{t("common.company")}</TableHead>
                     <TableHead className="p-3">{t("common.project")}</TableHead>
+                    <TableHead className="p-3">{t("common.quotation")}</TableHead>
                     <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
-                    <TableHead className="p-3 text-end">{t("common.grandTotal")}</TableHead>
                     <TableHead className="p-3">{t("common.status")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -235,16 +224,16 @@ export function QuotationsTable({
                     <TableRow key={row.id} data-state={openId === row.id ? "selected" : undefined}>
                       <TableCell className="p-0">
                         <Link
-                          href={listHref(base, q, status, row.id)}
+                          href={listHref(base, param, q, status, row.id)}
                           aria-current={openId === row.id ? "true" : undefined}
                           className="block p-3"
                         >
                           <span dir="ltr" className="num font-medium">
                             {row.label}
                           </span>
-                          {row.smacNumber ? (
+                          {row.smacDispatchNumber ? (
                             <span dir="ltr" className="num block text-xs text-muted-foreground">
-                              {row.smacNumber}
+                              {row.smacDispatchNumber}
                             </span>
                           ) : null}
                         </Link>
@@ -253,19 +242,21 @@ export function QuotationsTable({
                       <TableCell className="p-3 text-muted-foreground">
                         {row.projectName ?? "—"}
                       </TableCell>
+                      <TableCell className="p-3">
+                        <span dir="ltr" className="num text-sm">
+                          {row.quotationLabel}
+                        </span>
+                      </TableCell>
                       <TableCell className="p-3 text-end">
                         <span dir="ltr" className="num">
                           {formatSqm(row.totalSqm)}
                         </span>
                       </TableCell>
-                      <TableCell className="p-3 text-end">
-                        <Money value={row.total} />
-                      </TableCell>
                       <TableCell className="p-3">
                         <span className="flex flex-col gap-1">
                           <StatusBadge status={row.status} />
                           <DayText
-                            day={row.issuedOn ?? row.createdOn}
+                            day={row.approvedOn ?? row.createdOn}
                             locale={locale}
                             className="text-xs text-muted-foreground"
                           />
@@ -295,8 +286,8 @@ function FilterChip({
   return (
     <Button
       asChild
+      variant={active ? "secondary" : "ghost"}
       size="sm"
-      variant={active ? "default" : "outline"}
       className="h-8 rounded-full px-3 text-xs"
     >
       <Link href={href} aria-current={active ? "true" : undefined}>
@@ -307,7 +298,7 @@ function FilterChip({
 }
 
 /** One sentence, and the action it names — where there is one (SPEC §3, D31). */
-function EmptyQuotations({
+function EmptyDispatches({
   base,
   q,
   status,
@@ -315,14 +306,14 @@ function EmptyQuotations({
 }: {
   base: string;
   q: string;
-  status: QuotationStatus | null;
+  status: DispatchStatus | null;
   onClear: () => void;
 }) {
   const t = useTranslations();
 
   if (q) {
     return (
-      <EmptyCard sentence={t("quotations.emptySearch", { q })}>
+      <EmptyCard sentence={t("dispatches.emptySearch", { q })}>
         <Button type="button" variant="outline" onClick={onClear}>
           {t("common.clear")}
         </Button>
@@ -332,7 +323,7 @@ function EmptyQuotations({
 
   if (status) {
     return (
-      <EmptyCard sentence={t("quotations.emptyStatus", { status: t(STATUS_KEYS[status]) })}>
+      <EmptyCard sentence={t("dispatches.emptyStatus", { status: t(STATUS_KEYS[status]) })}>
         <Button asChild variant="outline">
           <Link href={base}>{t("common.all")}</Link>
         </Button>
@@ -340,12 +331,12 @@ function EmptyQuotations({
     );
   }
 
-  // A quotation is raised from inside a company or a project (§3), so that is
-  // where the sentence sends the rep.
+  // A dispatch is raised from an issued quotation (S38), so that is where the
+  // sentence sends the rep.
   return (
-    <EmptyCard sentence={t("quotations.empty")}>
+    <EmptyCard sentence={t("dispatches.empty")}>
       <Button asChild variant="outline">
-        <Link href="/companies">{t("projects.openCompanies")}</Link>
+        <Link href="/quotations">{t("common.quotations")}</Link>
       </Button>
     </EmptyCard>
   );
@@ -362,46 +353,41 @@ function EmptyCard({ sentence, children }: { sentence: string; children: ReactNo
 
 /* -------------------------------------------------------------------------- */
 /* The drawer the URL opens. Its data is read by the server component in       */
-/* quotation-drawer.tsx; everything interactive lives here.                    */
+/* dispatch-drawer.tsx; everything interactive lives here.                     */
 /* -------------------------------------------------------------------------- */
 
 /** Closing the drawer drops `?open=` and leaves the search and status alone. */
-function useCloseDrawer(): () => void {
+function useCloseDrawer(param: string): () => void {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   return () => {
     const next = new URLSearchParams(params.toString());
-    next.delete("open");
+    next.delete(param);
     const query = next.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
 }
 
-export type QuotationSheetProps = {
-  quotation: QuotationRow & { notes: string | null; isLatest: boolean };
-  items: QuotationItemRow[];
-  revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
-  draft: QuotationDraft;
-  scope: ActionScope;
-  /**
-   * What has gone out against this quotation, and the button that sends more —
-   * built on the server, because both need the reader's own scope (S38).
-   */
-  dispatches: ReactNode;
+export type DispatchSheetProps = {
+  dispatch: DispatchRow;
+  items: DispatchItemRow[];
+  draft: DispatchDraft;
+  scope: DispatchScope;
+  /** The parameter that opened it, so closing drops the right one. */
+  param?: string;
 };
 
-export function QuotationSheet({
-  quotation,
+export function DispatchSheet({
+  dispatch,
   items,
-  revisions,
   draft,
   scope,
-  dispatches,
-}: QuotationSheetProps) {
+  param = "open",
+}: DispatchSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const close = useCloseDrawer();
+  const close = useCloseDrawer(param);
 
   return (
     <Sheet
@@ -420,55 +406,52 @@ export function QuotationSheet({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <SheetTitle dir="ltr" className="num text-lg">
-                {quotation.label}
+                {dispatch.label}
               </SheetTitle>
-              <StatusBadge status={quotation.status} />
-              {!quotation.isLatest ? (
-                <Badge variant="outline">{t("quotations.supersededBadge")}</Badge>
-              ) : null}
+              <StatusBadge status={dispatch.status} />
             </div>
             <SheetDescription>
-              {quotation.projectName
-                ? t("quotations.drawerDescription", {
-                    company: quotation.companyName,
-                    project: quotation.projectName,
-                  })
-                : quotation.companyName}
+              {dispatch.projectName
+                ? `${dispatch.companyName} · ${dispatch.projectName}`
+                : dispatch.companyName}
             </SheetDescription>
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              <Fact label={t("common.rep")}>{quotation.repName}</Fact>
-              <Fact label={t("common.date")}>
-                <DayText day={quotation.createdOn} locale={locale} />
-              </Fact>
-              {quotation.smacNumber ? (
-                <Fact label={t("common.smacNumber")}>
+              <Fact label={t("common.quotation")}>
+                <Link
+                  href={`/quotations?open=${dispatch.quotationId}`}
+                  className="hover:underline"
+                >
                   <span dir="ltr" className="num">
-                    {quotation.smacNumber}
+                    {dispatch.quotationLabel}
+                  </span>
+                </Link>
+              </Fact>
+              <Fact label={t("common.rep")}>{dispatch.repName}</Fact>
+              <Fact label={t("common.date")}>
+                <DayText day={dispatch.createdOn} locale={locale} />
+              </Fact>
+              {dispatch.smacDispatchNumber ? (
+                <Fact label={t("common.smacDispatchNumber")}>
+                  <span dir="ltr" className="num">
+                    {dispatch.smacDispatchNumber}
                   </span>
                 </Fact>
               ) : null}
             </dl>
           </div>
 
-          {quotation.status === "returned" && quotation.returnReason ? (
-            <Reason title={t("quotations.sentBackReason")} text={quotation.returnReason} />
-          ) : null}
-          {quotation.status === "rejected" && quotation.decisionReason ? (
-            <Reason title={t("quotations.rejectedReason")} text={quotation.decisionReason} />
-          ) : null}
-          {quotation.notes ? (
-            <Reason title={t("quotations.notesToCoordinator")} text={quotation.notes} />
+          {dispatch.status === "refused" && dispatch.refuseReason ? (
+            <Reason title={t("dispatches.refusedReason")} text={dispatch.refuseReason} />
           ) : null}
 
-          <QuotationActions
-            quotation={{
-              id: quotation.id,
-              label: quotation.label,
-              status: quotation.status,
-              companyId: quotation.companyId,
-              projectId: quotation.projectId,
-              isLatest: quotation.isLatest,
+          <DispatchActions
+            dispatch={{
+              id: dispatch.id,
+              label: dispatch.label,
+              status: dispatch.status,
+              quotationId: dispatch.quotationId,
+              quotationLabel: dispatch.quotationLabel,
               draft,
             }}
             scope={scope}
@@ -480,23 +463,27 @@ export function QuotationSheet({
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="text-sm font-medium">
                     {t("quotations.itemNumber", { number: item.position })}
-                  </h4>
-                  <span className="text-sm">
-                    <Money value={item.lineTotal} />
-                  </span>
-                </div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
-                  <Fact label={t("common.colourCode")}>
+                    {" · "}
                     <span dir="ltr" className="num">
                       {item.colourCode}
                     </span>
-                  </Fact>
-                  <Fact label={t("common.supplier")}>{item.supplier}</Fact>
-                  <Fact label={t("common.fireRating")}>{item.fireRating}</Fact>
-                  <Fact label={t("common.class")}>{item.className}</Fact>
-                  <Fact label={t("common.thickness")}>
+                  </h4>
+                  <span className="text-sm whitespace-nowrap">
                     <span dir="ltr" className="num">
-                      {item.thickness}
+                      {formatSqm(item.sqm)}
+                    </span>{" "}
+                    <span className="text-xs text-muted-foreground">{t("common.sqm")}</span>
+                  </span>
+                </div>
+                <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                  <Fact label={t("dispatches.sending")}>
+                    <span dir="ltr" className="num">
+                      {item.qty}
+                    </span>
+                  </Fact>
+                  <Fact label={t("dispatches.quoted")}>
+                    <span dir="ltr" className="num">
+                      {item.quotedQty}
                     </span>
                   </Fact>
                   <Fact label={t("quotations.sheet")}>
@@ -504,51 +491,33 @@ export function QuotationSheet({
                       {item.width} × {item.length}
                     </span>
                   </Fact>
-                  <Fact label={t("common.qty")}>
-                    <span dir="ltr" className="num">
-                      {item.qty}
-                    </span>
-                  </Fact>
-                  <Fact label={t("common.pricePerSqm")}>
-                    <span dir="ltr" className="num">
-                      {formatMoney(item.pricePerSqm)}
-                    </span>
-                  </Fact>
                 </dl>
               </li>
             ))}
           </ul>
 
-          <QuotationTotals
-            sqm={quotation.totalSqm}
-            subtotal={quotation.subtotal}
-            vat={quotation.vat}
-            total={quotation.total}
-          />
-
-          {dispatches}
-
-          {revisions.length > 1 ? (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">{t("quotations.revisions")}</h3>
-              <ul className="flex flex-wrap gap-2">
-                {revisions.map((revision) => (
-                  <li key={revision.id}>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/quotations?open=${revision.id}`}>
-                        <span dir="ltr" className="num">
-                          {revision.label}
-                        </span>
-                      </Link>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+          <dl className="card-face flex flex-col gap-2 p-3 text-sm">
+            <Row label={t("common.sqm")}>
+              <span dir="ltr" className="num font-semibold" data-slot="figure-sending">
+                {formatSqm(dispatch.totalSqm)}
+              </span>
+            </Row>
+            <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
+            <Row label={t("common.destination")}>{dispatch.destination}</Row>
+            <Row label={t("common.paymentTerms")}>{dispatch.paymentTerms}</Row>
+          </dl>
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function Row({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-end">{children}</dd>
+    </div>
   );
 }
 
@@ -571,14 +540,14 @@ function Reason({ title, text }: { title: string; text: string }) {
 }
 
 /** Never a blank panel while the query runs (DESIGN §2). */
-export function QuotationSheetSkeleton() {
+export function DispatchSheetSkeleton() {
   const t = useTranslations();
   return (
     <Sheet open>
       <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-2xl">
         <div aria-busy="true" className="flex flex-col gap-4 p-4">
-          <SheetTitle className="sr-only">{t("quotations.loading")}</SheetTitle>
-          <SheetDescription className="sr-only">{t("quotations.requestHint")}</SheetDescription>
+          <SheetTitle className="sr-only">{t("dispatches.loading")}</SheetTitle>
+          <SheetDescription className="sr-only">{t("dispatches.requestHint")}</SheetDescription>
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-2/3" />
           <Skeleton className="h-24 w-full rounded-xl" />

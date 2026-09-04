@@ -19,6 +19,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { requireActor } from "@/lib/authz";
 import { findPossibleDuplicates } from "@/lib/companies";
+import { remainingOnQuotation, type RemainingItem } from "@/lib/dispatches";
 import {
   type CityOption,
   type CountryOption,
@@ -31,9 +32,11 @@ import {
   listFireRatings,
   listLeadSources,
   listPositions,
+  listShipmentMethods,
   listSuppliers,
   listThicknesses,
 } from "@/lib/lookups";
+import { getQuotation } from "@/lib/quotations";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -179,6 +182,81 @@ export async function quotationLookupsAction(): Promise<ActionResult<QuotationLo
     };
   } catch {
     return { ok: false, error: t("somethingWrong") };
+  }
+}
+
+/**
+ * What the dispatch dialog needs that does not change while it is open: how the
+ * panels may travel (S40, D12).
+ *
+ * The quantities are NOT here. What is left on a quotation line changes every
+ * time anybody raises a dispatch anywhere, so it is fetched per quotation, per
+ * open — `remainingItemsAction` below — and never cached.
+ */
+export type DispatchLookups = {
+  shipmentMethods: Option[];
+  /** The first one, so the dialog opens on something rather than on nothing. */
+  defaultMethod: string | null;
+};
+
+export async function dispatchLookupsAction(): Promise<ActionResult<DispatchLookups>> {
+  const t = await getTranslations("common");
+  try {
+    await requireActor();
+  } catch {
+    return { ok: false, error: t("notAllowed") };
+  }
+
+  try {
+    const rows = await listShipmentMethods();
+    return {
+      ok: true,
+      data: {
+        shipmentMethods: rows.map(toOption),
+        defaultMethod: rows[0] ? String(rows[0].id) : null,
+      },
+    };
+  } catch {
+    return { ok: false, error: t("somethingWrong") };
+  }
+}
+
+/**
+ * What is left to send on each line of one quotation (D12).
+ *
+ * Read fresh every time the dialog opens, because it moves: another dispatch
+ * raised a minute ago has already spent some of it. The action re-checks the
+ * same rule inside its transaction, so this is the courtesy and that is the
+ * law.
+ */
+export async function remainingItemsAction(
+  quotationId: unknown,
+  dispatchId?: unknown,
+): Promise<ActionResult<RemainingItem[]>> {
+  const t = await getTranslations("common");
+  let actor;
+  try {
+    actor = await requireActor();
+  } catch {
+    return { ok: false, error: t("notAllowed") };
+  }
+
+  const parsed = z
+    .object({ quotationId: z.uuid(), dispatchId: z.uuid().optional() })
+    .safeParse({ quotationId, dispatchId: dispatchId ?? undefined });
+  if (!parsed.success) return { ok: false, error: t("invalid") };
+
+  try {
+    // Asked through getQuotation so the same authorization decides it: a rep
+    // who may not read the quotation may not read what is left on it either.
+    const quotation = await getQuotation(actor, parsed.data.quotationId);
+    if (!quotation) return { ok: false, error: t("somethingWrong") };
+    return {
+      ok: true,
+      data: await remainingOnQuotation(parsed.data.quotationId, parsed.data.dispatchId),
+    };
+  } catch {
+    return { ok: false, error: t("notAllowed") };
   }
 }
 

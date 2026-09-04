@@ -27,7 +27,7 @@ import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { createNotification } from "@/lib/notify";
-import { quotationLabel } from "@/lib/quotation-label";
+import { quotationLabel } from "@/lib/labels";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 

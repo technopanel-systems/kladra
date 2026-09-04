@@ -1,6 +1,11 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { DispatchMiniList } from "@/components/dispatches/dispatch-mini-list";
+import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
+import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
+import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { getQuotation } from "@/lib/quotations";
 
 /**
@@ -18,7 +23,7 @@ import { getQuotation } from "@/lib/quotations";
 export async function QuotationDrawer({ quotationId }: { quotationId: string | null }) {
   if (!quotationId) return null;
 
-  const user = await requireUser();
+  const [user, locale, t] = await Promise.all([requireUser(), getLocale(), getTranslations()]);
 
   /*
    * No drawer, and no error page, over a link that no longer works — whichever
@@ -37,8 +42,46 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   }
   if (!quotation) return null;
 
+  const owner = quotation.companyRepId === user.id;
+  const dispatches = await listDispatchesForQuotation(user, quotation.id, locale);
+
+  // S38: goods move against paper that exists. Before it is issued there is
+  // nothing to send against, so the button is absent rather than present and
+  // refusing (DESIGN §5). It sits in one position whether or not anything has
+  // gone out yet, because a trigger inside an empty state is destroyed by the
+  // save that fills it (D35).
+  //
+  // And only against the revision that is live: once a quotation has been
+  // revised the customer holds the new paper, and sending against the old one
+  // would move goods on a price nobody agreed (S34, S35).
+  const canSend =
+    owner &&
+    quotation.isLatest &&
+    (quotation.status === "issued" || quotation.status === "accepted");
+
   return (
     <QuotationSheet
+      dispatches={
+        canSend || dispatches.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            <h3 className="text-sm font-medium">{t("common.dispatches")}</h3>
+            {canSend ? (
+              <div className="flex">
+                <RequestDispatchDialog
+                  quotationId={quotation.id}
+                  quotationLabel={quotation.label}
+                  trigger={<Button variant="outline">{t("dispatches.request")}</Button>}
+                />
+              </div>
+            ) : null}
+            {dispatches.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("dispatches.emptyForQuotation")}</p>
+            ) : (
+              <DispatchMiniList rows={dispatches} />
+            )}
+          </div>
+        ) : null
+      }
       quotation={quotation}
       items={quotation.items}
       revisions={quotation.revisions}
@@ -64,7 +107,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         // The rep whose COMPANY it is — not whoever raised it, and not a
         // manager, who sees everything and owns none of it (S8). The same fact
         // the actions check, so nothing is offered that would then be refused.
-        owner: quotation.companyRepId === user.id,
+        owner,
       }}
     />
   );
