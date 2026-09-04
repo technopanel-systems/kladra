@@ -12,13 +12,13 @@
       tests get their own database, `kladra_test`
 - [x] P4 Quotations: rep request → coordinator issue / send back → customer decision
 - [x] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
-- [ ] P6 Manager view, admin, notifications
+- [x] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, PWA, handover
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P5 done and green, `npm run test` 37 passing across both locales. Starting P6.
+**Where I stopped:** P6 done and green — manager screen, the six admin screens, the CSV export and the archive restore, all walked by `tests/manager.spec.ts` and `tests/admin.spec.ts` in both locales. Starting P7.
 
 P5's one real defect was found by its own test, which is what the test was for. The browser worked
 out a dispatch's m² as `round(width × length, 2) × qty` and SQL as `round(width × length × qty, 2)`.
@@ -165,8 +165,13 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 5. The bell lists his notifications; mark one read and the count drops.
 
 **Jerom (admin)** — `tests/admin.spec.ts`
-1. Sign in as Jerom. Admin menu shows Users, Targets, Lookups, Holidays, Export.
-2. Create user "Majed" as rep, then reset his password.
-3. Set Faisal's target for this month; his Home card shows it.
-4. Add a holiday next week; the pace denominator drops by one.
-5. Export companies; the CSV opens with Arabic names intact.
+1. Sign in as Jerom. Home is the team screen, and the Admin section lists Users, Targets, Lookups, Holidays and leave, Archive, Export.
+2. Create user "Majed" as rep; he signs in with the password Jerom read out.
+3. Reset his password: the old one is refused, the new one works, and his open session is gone.
+4. Deactivate him: he stays on the list marked Inactive, and cannot sign in.
+5. Set Faisal's target for this month; the team table shows it.
+6. Add a company category, take it out of use, put it back — and a rep is offered it in Add company.
+7. Add a holiday later this month; Faisal's pace denominator drops by one and his elapsed days do not move.
+8. Download all three exports: CSV, byte-order mark, CRLF, and an Arabic company name intact.
+9. A rep archives a company; Jerom restores it from Archive and it is back on the floor.
+10. Second test: a rep who types any `/admin` URL lands on his own home, and `/api/export/*` answers 404.

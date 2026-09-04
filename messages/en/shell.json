@@ -14,8 +14,5 @@
   "emptyTeam": "No reps yet — the admin adds people under Users.",
   "emptyNotifications": "Nothing to read — you are up to date.",
   "emptyUsers": "No users yet — add the first one.",
-  "emptyTargets": "No targets set — set this month's targets.",
-  "emptyLookups": "No lists yet — categories, lead sources and cities land here.",
-  "emptyHolidays": "No holidays or leave yet — add the first one.",
-  "emptyExport": "Nothing exported yet — companies, quotations and dispatches as CSV."
+  "emptyHolidays": "No holidays or leave yet — add the first one."
 }

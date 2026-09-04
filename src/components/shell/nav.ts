@@ -1,4 +1,5 @@
 import {
+  Archive,
   Building2,
   CalendarDays,
   Download,
@@ -84,6 +85,7 @@ const adminItems: NavItem[] = [
   { href: "/admin/targets", labelKey: "common.targets", icon: Target },
   { href: "/admin/lookups", labelKey: "common.lookups", icon: ListTree },
   { href: "/admin/holidays", labelKey: "common.holidays", icon: CalendarDays },
+  { href: "/admin/archive", labelKey: "admin.archive", icon: Archive },
   { href: "/admin/export", labelKey: "common.export", icon: Download },
 ];
 
