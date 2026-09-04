@@ -20,10 +20,9 @@ import { db } from "@/db";
 import { auditLog, projects } from "@/db/schema";
 import { assertCompanyOpen, assertProjectVisible } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
-import { liveAudienceFor } from "@/lib/companies";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { notifyLive } from "@/lib/live";
+import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import type { ActionResult, SessionUser } from "@/lib/types";
 

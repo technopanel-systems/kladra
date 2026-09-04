@@ -26,9 +26,13 @@ import {
   SAUDI_CODE,
   listCategories,
   listCitiesForCountry,
+  listClasses,
   listCountries,
+  listFireRatings,
   listLeadSources,
   listPositions,
+  listSuppliers,
+  listThicknesses,
 } from "@/lib/lookups";
 import type { ActionResult } from "@/lib/types";
 
@@ -118,6 +122,59 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
         cities: cityRows.map(toOption),
         saudiCountry: saudi ? String(saudi.id) : null,
         defaultCity: riyadh ? String(riyadh.id) : null,
+      },
+    };
+  } catch {
+    return { ok: false, error: t("somethingWrong") };
+  }
+}
+
+/**
+ * Every list a quotation line offers (SPEC §3, S32).
+ *
+ * None of them is translated — a supplier is N, K, C or D in both languages —
+ * so unlike the company lists these come back the same whoever is reading.
+ * Standard values are marked so the dialog can open on them: 4 mm is the
+ * standard thickness and 1.24 × 5.8 m is the standard sheet (S32), which is
+ * most lines most days.
+ */
+export type QuotationLookups = {
+  suppliers: Option[];
+  fireRatings: Option[];
+  classes: Option[];
+  thicknesses: Option[];
+  /** 4 mm, the thickness on most lines (S32); null on a database that dropped it. */
+  standardThickness: string | null;
+};
+
+export async function quotationLookupsAction(): Promise<ActionResult<QuotationLookups>> {
+  const t = await getTranslations("common");
+  try {
+    await requireActor();
+  } catch {
+    return { ok: false, error: t("notAllowed") };
+  }
+
+  try {
+    const [supplierRows, fireRatingRows, classRows, thicknessRows] = await Promise.all([
+      listSuppliers(),
+      listFireRatings(),
+      listClasses(),
+      listThicknesses(),
+    ]);
+
+    // Matched on the number, not on the row's position: an admin adding 3 mm
+    // above it must not move what the dialog opens on.
+    const standard = thicknessRows.find((row) => Number(row.name) === 4) ?? null;
+
+    return {
+      ok: true,
+      data: {
+        suppliers: supplierRows.map(toOption),
+        fireRatings: fireRatingRows.map(toOption),
+        classes: classRows.map(toOption),
+        thicknesses: thicknessRows.map(toOption),
+        standardThickness: standard ? String(standard.id) : null,
       },
     };
   } catch {

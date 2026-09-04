@@ -124,3 +124,131 @@ test("a dialog's footer never covers its last field", async ({ page, locale, t }
     });
   }
 });
+
+/**
+ * Every date on a screen reads the same way round.
+ *
+ * `formatDay` builds one string, `04/Sep/2026` or `04/سبتمبر/2026`, and then
+ * thirteen call sites each decided separately how to lay it out — two set
+ * `dir="auto"`, two put it in the mono figure face, nine did nothing. A
+ * screenshot pass found the follow-up date in a company drawer apparently
+ * reading day-first while the picker under it read year-first, which is the
+ * shape that mistake takes when it is real.
+ *
+ * A date is a bidi paragraph of its own, so the test cannot read the DOM for
+ * this: the text is identical either way round. It measures instead — a range
+ * over the first digit and a range over the last, and which one is further
+ * left. English reads day-first; Arabic takes the month name's direction and
+ * reads day-first from the right, which is how an Arabic date is written.
+ */
+async function dateDirections(page: Page): Promise<string[]> {
+  return page.locator("[data-slot='day']").evaluateAll((nodes) =>
+    nodes
+      .map((node) => {
+        const text = node.textContent ?? "";
+        const first = text.search(/\d/);
+        const last = text.length - 1 - [...text].reverse().findIndex((c) => /\d/.test(c));
+        if (first < 0 || last <= first) return null; // "—", or a one-digit date
+
+        const at = (index: number) => {
+          const range = document.createRange();
+          range.setStart(node.firstChild as Node, index);
+          range.setEnd(node.firstChild as Node, index + 1);
+          return range.getBoundingClientRect();
+        };
+        const a = at(first);
+        const b = at(last);
+        if (a.width === 0 || b.width === 0) return null; // not rendered
+        return a.left < b.left
+          ? "day-first-from-the-left"
+          : ("day-first-from-the-right" as string);
+      })
+      .filter((seen): seen is string => seen !== null),
+  );
+}
+
+test("every date on a screen reads the same way round", async ({ page, locale }) => {
+  await login(page, locale, "faisal");
+  const expected = locale === "ar" ? "day-first-from-the-right" : "day-first-from-the-left";
+
+  for (const screen of SCREENS) {
+    await page.goto(`/${locale}/${screen}`);
+    await expect(page.getByRole("heading").first()).toBeVisible();
+    const seen = await dateDirections(page);
+    expect(new Set(seen).size, `/${locale}/${screen} shows ${seen.length} dates: ${seen}`)
+      .toBeLessThanOrEqual(1);
+    for (const one of seen) expect(one, `on /${locale}/${screen}`).toBe(expected);
+  }
+
+  await test.step("and in a drawer, where a date sits beside its picker", async () => {
+    await page.goto(`/${locale}/companies`);
+    await page.getByRole("table").first().getByRole("link").first().click();
+    await expect(page.getByRole("dialog").first()).toBeVisible();
+
+    const seen = await dateDirections(page);
+    expect(seen.length, "the drawer shows no dates at all").toBeGreaterThan(0);
+    for (const one of seen) expect(one, "in the company drawer").toBe(expected);
+  });
+});
+
+/**
+ * The app's own labels are never cut off mid-word.
+ *
+ * A company name that does not fit gets an ellipsis and that is right — the
+ * rep knows his own customers. A label Kladra wrote is different: "Search
+ * companies, contacts, proje…" reads as a fault. The top bar's search button
+ * carried the full sentence from 640px up while it only had room for it from
+ * 1024, so at a tablet width it was cut in both languages.
+ */
+test("no label the app wrote is cut off mid-word", async ({ page, locale }) => {
+  await login(page, locale, "faisal");
+
+  for (const width of [1366, 1024, 768, 375]) {
+    await page.setViewportSize({ width, height: 768 });
+    await page.goto(`/${locale}/companies`);
+
+    const cut = await page.locator("[data-slot='search-label']").evaluateAll((nodes) =>
+      nodes
+        .filter((node) => (node as HTMLElement).offsetParent !== null)
+        .filter((node) => node.scrollWidth > node.clientWidth + 1)
+        .map((node) => (node.textContent ?? "").trim()),
+    );
+    expect(cut, `cut off at ${width}px`).toEqual([]);
+  }
+});
+
+/**
+ * Figures are Western digits, everywhere, in both languages (SPEC D6).
+ *
+ * Saudi business writes 1,234.50 and 480.00 m², not ١٢٣٤٫٥٠ — and every number
+ * in this app comes from `Intl`, which decides by locale tag. It gives Western
+ * digits for "ar" and Arabic-Indic for "ar-SA", so the whole rule rests on one
+ * two-letter string in the routing config and would break silently the day
+ * somebody made the tag more specific. Nothing on the screen would throw; the
+ * money would simply stop being readable to the accounts department.
+ *
+ * The check is on the rendered page rather than on the config, because it also
+ * catches the other way in: a digit typed into a message file by hand.
+ */
+const ARABIC_INDIC_DIGITS = /[٠-٩۰-۹]/;
+
+test("every figure is in Western digits", async ({ page, locale }) => {
+  await login(page, locale, "faisal");
+
+  for (const screen of [...SCREENS, "quotations"]) {
+    await page.goto(`/${locale}/${screen}`);
+    await expect(page.getByRole("heading").first()).toBeVisible();
+
+    const wrong = await page.locator("body").evaluate((body) => {
+      const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+      const found: string[] = [];
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const text = node.textContent ?? "";
+        if (/[٠-٩۰-۹]/.test(text)) found.push(text.trim());
+      }
+      return found;
+    });
+    expect(wrong, `Arabic-Indic digits on /${locale}/${screen}`).toEqual([]);
+    expect(ARABIC_INDIC_DIGITS.test(wrong.join(""))).toBe(false);
+  }
+});

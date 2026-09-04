@@ -76,7 +76,10 @@ export function ContactFields({
   const normalized = normalizePhone(value.phone);
   const typedSomething = value.phone.trim() !== "";
   const badPhone = phoneTouched && typedSomething && normalized === null;
-  const phoneError = errors?.[names.phone] ?? (badPhone ? t("forms.phoneInvalid") : undefined);
+  // The SAME key the action answers with, not a second copy of the sentence:
+  // one rejected input, one sentence (DESIGN §5). It was written out twice and
+  // the two would have drifted the first time either was reworded.
+  const phoneError = errors?.[names.phone] ?? (badPhone ? t("errors.phoneInvalid") : undefined);
 
   // The seeded list is a suggestion, not a constraint: a contact stores the
   // words, so the value IS the label and the rep may type his own (SPEC D21).

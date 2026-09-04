@@ -25,7 +25,10 @@ loadEnv();
 const { db, pool } = await import("../src/db/index");
 const { users } = await import("../src/db/schema");
 const { notifyLive } = await import("../src/lib/live");
-const { createNotification, unreadCount } = await import("../src/lib/notify");
+const { createNotification, unreadCount, NOTIFICATION_KINDS } = await import(
+  "../src/lib/notify"
+);
+type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 const { eq, or } = await import("drizzle-orm");
 type LiveEvent = import("../src/lib/types").LiveEvent;
 
@@ -58,6 +61,13 @@ if (!EVENTS.includes(type)) fail(`unknown event "${type}"`);
 
 const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(who);
 
+/** `--kind=` must name one of the real ones, or the default is used. */
+function asKind(value: string | undefined): NotificationKind {
+  const found = NOTIFICATION_KINDS.find((kind) => kind === value);
+  if (value && !found) fail(`--kind must be one of: ${NOTIFICATION_KINDS.join(", ")}`);
+  return found ?? "quotationRequested";
+}
+
 try {
   const [user] = await db
     .select({ id: users.id, name: users.name, email: users.email })
@@ -70,7 +80,9 @@ try {
   if (type === "notification" && flags.get("store") !== "false" && !flags.has("no-store")) {
     const id = await db.transaction((tx) =>
       createNotification(tx, {
-        kind: flags.get("kind") ?? "ping",
+        // The vocabulary is fixed (src/lib/notify.ts): a made-up kind would
+        // render as a raw key on the notifications screen.
+        kind: asKind(flags.get("kind")),
         link: flags.get("link") ?? "/",
         params: { from: "live-ping" },
         userId: user.id,

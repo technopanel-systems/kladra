@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/table";
 import { useArrived } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
-import { formatDay } from "@/lib/dates";
-import { formatPhone, whatsappHref } from "@/lib/phone";
+import { DayText } from "@/components/ui-ext/day-text";
+import { formatPhone, whatsappHref, type E164 } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -39,7 +39,7 @@ export type CompanyRow = {
   city: string | null;
   contactName: string | null;
   /** E.164, as stored. Displayed local, tapped to open WhatsApp. */
-  contactPhone: string | null;
+  contactPhone: E164 | null;
   lastActivityOn: string | null;
   nextFollowUp: string | null;
 };
@@ -63,7 +63,7 @@ function followUpTone(day: string | null, today: string): string {
 const ROW_LINK =
   "rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50";
 
-function Phone({ name, phone }: { name: string; phone: string }) {
+function Phone({ name, phone }: { name: string; phone: E164 }) {
   const t = useTranslations();
   return (
     <a
@@ -113,11 +113,11 @@ function DeskRow({ row, href, today, current }: RowProps) {
           <span className="text-faint">{t("companies.noContact")}</span>
         )}
       </TableCell>
-      <TableCell className="num text-muted-foreground">
-        {formatDay(row.lastActivityOn, locale)}
+      <TableCell className="text-muted-foreground">
+        <DayText day={row.lastActivityOn} locale={locale} />
       </TableCell>
-      <TableCell className={cn("num font-medium", followUpTone(row.nextFollowUp, today))}>
-        {formatDay(row.nextFollowUp, locale)}
+      <TableCell className={cn("font-medium", followUpTone(row.nextFollowUp, today))}>
+        <DayText day={row.nextFollowUp} locale={locale} />
       </TableCell>
     </TableRow>
   );
@@ -145,17 +145,17 @@ function CardRow({ row, href, today, current }: RowProps) {
         >
           <span className="block truncate">{row.name}</span>
         </Link>
-        <span className={cn("num shrink-0 text-xs", followUpTone(row.nextFollowUp, today))}>
+        <span className={cn("shrink-0 text-xs", followUpTone(row.nextFollowUp, today))}>
           <span className="sr-only">{t("common.nextFollowUp")}</span>
-          {formatDay(row.nextFollowUp, locale)}
+          <DayText day={row.nextFollowUp} locale={locale} />
         </span>
       </div>
 
       <div className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
         <span className="truncate">{row.city ?? "—"}</span>
-        <span className="num shrink-0 text-faint">
+        <span className="shrink-0 text-faint">
           <span className="sr-only">{t("companies.lastActivity")}</span>
-          {formatDay(row.lastActivityOn, locale)}
+          <DayText day={row.lastActivityOn} locale={locale} />
         </span>
       </div>
 

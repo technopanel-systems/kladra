@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/sheet";
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { usePathname, useRouter } from "@/i18n/navigation";
+import { DayText } from "@/components/ui-ext/day-text";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -205,9 +206,11 @@ export function CompanyHeader({
         <span id={followUpLabelId} className="text-sm font-medium">
           {t("common.nextFollowUp")}
         </span>
-        <span className={cn("num text-sm", tone)}>
-          {day ? formatDay(day, locale) : t("drawer.noFollowUp")}
-        </span>
+        {day ? (
+          <DayText day={day} locale={locale} className={cn("text-sm", tone)} />
+        ) : (
+          <span className={cn("text-sm", tone)}>{t("drawer.noFollowUp")}</span>
+        )}
         {overdue ? (
           <span className="text-xs font-medium text-tone-red-fg">{t("common.overdue")}</span>
         ) : null}

@@ -21,7 +21,17 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { cities, companyCategories, countries, leadSources, positions } from "@/db/schema";
+import {
+  cities,
+  classes,
+  companyCategories,
+  countries,
+  fireRatings,
+  leadSources,
+  positions,
+  suppliers,
+  thicknesses,
+} from "@/db/schema";
 
 /** The one country whose cities are a picked list rather than free text. */
 export const SAUDI_CODE = "SA";
@@ -144,4 +154,47 @@ export async function listCitiesForCountry(
       ),
     )
     .orderBy(sql`${cities.pinned} asc nulls last`, asc(name));
+}
+
+/**
+ * The four lists a quotation line is built from (SPEC S32, §3).
+ *
+ * None of them is translated, and none of them should be: a supplier is the
+ * letter N, K, C or D, a class is A or A2G1, a fire rating is B1, A2 or Normal,
+ * and a thickness is a number of millimetres. Faisal and Rawan say the same
+ * syllables in either language, and SMAC prints the same characters on the
+ * paper. `alt` is the same string as `name` so a searchable dropdown behaves
+ * the way it does everywhere else rather than having a second shape here.
+ */
+export async function listSuppliers(): Promise<LookupOption[]> {
+  return db
+    .select({ id: suppliers.id, name: suppliers.code, alt: suppliers.name })
+    .from(suppliers)
+    .where(eq(suppliers.active, true))
+    .orderBy(asc(suppliers.sortOrder), asc(suppliers.code));
+}
+
+export async function listFireRatings(): Promise<LookupOption[]> {
+  return db
+    .select({ id: fireRatings.id, name: fireRatings.name, alt: fireRatings.name })
+    .from(fireRatings)
+    .where(eq(fireRatings.active, true))
+    .orderBy(asc(fireRatings.sortOrder), asc(fireRatings.name));
+}
+
+export async function listClasses(): Promise<LookupOption[]> {
+  return db
+    .select({ id: classes.id, name: classes.name, alt: classes.name })
+    .from(classes)
+    .where(eq(classes.active, true))
+    .orderBy(asc(classes.sortOrder), asc(classes.name));
+}
+
+/** Millimetres, as `numeric(4,1)` — "4.0". The screen adds the unit. */
+export async function listThicknesses(): Promise<LookupOption[]> {
+  return db
+    .select({ id: thicknesses.id, name: thicknesses.mm, alt: thicknesses.mm })
+    .from(thicknesses)
+    .where(eq(thicknesses.active, true))
+    .orderBy(asc(thicknesses.sortOrder), asc(thicknesses.mm));
 }

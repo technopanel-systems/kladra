@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { cities, companies, contacts, projects, quotations } from "@/db/schema";
 import { requireActor, seesAll } from "@/lib/authz";
-import { normalizePhone } from "@/lib/phone";
+import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
 /**
@@ -24,7 +24,7 @@ import type { ActionResult, SessionUser } from "@/lib/types";
 
 export type SearchResults = {
   companies: { id: string; name: string; city: string }[];
-  contacts: { id: string; name: string; phone: string; companyId: string; companyName: string }[];
+  contacts: { id: string; name: string; phone: E164; companyId: string; companyName: string }[];
   projects: { id: string; name: string; companyName: string }[];
   quotations: { id: string; number: string; companyName: string }[];
 };
@@ -199,7 +199,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
     contacts: foundContacts.map((row) => ({
       id: row.id,
       name: row.name,
-      phone: row.phone,
+      phone: storedE164(row.phone),
       companyId: row.companyId,
       companyName: row.companyName,
     })),

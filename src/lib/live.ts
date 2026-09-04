@@ -16,9 +16,10 @@
  * checks) cannot resolve it. Nothing here belongs in a client component — it
  * reaches for `pg` through Drizzle, which a browser bundle cannot carry.
  */
-import { sql } from "drizzle-orm";
-import type { Db, Tx } from "@/db";
-import type { LiveEvent } from "@/lib/types";
+import { and, eq, inArray, sql } from "drizzle-orm";
+import { db, type Db, type Tx } from "@/db";
+import { users } from "@/db/schema";
+import type { LiveEvent, Role } from "@/lib/types";
 
 /** The one LISTEN/NOTIFY channel. Both sides name it from here. */
 export const LIVE_CHANNEL = "kladra";
@@ -64,4 +65,25 @@ export function parseLivePayload(raw: string): LivePayload | null {
   if (typeof event !== "object" || event === null) return null;
   if (typeof (event as { type?: unknown }).type !== "string") return null;
   return { userIds: userIds as string[], event: event as LiveEvent };
+}
+
+/**
+ * Everyone who must see a change land live: the rep whose row it is, whoever is
+ * acting, and every active manager and admin, who see all of it (S8).
+ *
+ * `alsoRoles` adds the people a particular chain runs through — the coordinator
+ * for a quotation or a dispatch, whose queue has to move without a refresh
+ * (S9). One list, so a new screen cannot quietly tell a different set of people.
+ */
+export async function liveAudienceFor(
+  repId: string,
+  actorId: string,
+  alsoRoles: Role[] = [],
+): Promise<string[]> {
+  const roles: Role[] = [...new Set<Role>(["manager", "admin", ...alsoRoles])];
+  const watchers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.active, true), inArray(users.role, roles)));
+  return [...new Set([repId, actorId, ...watchers.map((watcher) => watcher.id)])];
 }

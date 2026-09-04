@@ -128,10 +128,17 @@ export function SearchCommand() {
         className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground sm:max-w-md md:h-9 lg:max-w-lg"
       >
         <Search className="size-4 shrink-0" />
-        <span className="flex-1 truncate text-start text-[13px] sm:hidden">
+        {/* The long sentence is what the input under it is for; on the button
+            it only appears where the button is wide enough to hold it whole.
+            At 768 it used to be cut off mid-word in both languages — a label
+            that stops in the middle reads as a fault, not as an abbreviation. */}
+        <span data-slot="search-label" className="flex-1 truncate text-start text-[13px] lg:hidden">
           {t("common.search")}
         </span>
-        <span className="hidden flex-1 truncate text-start text-[13px] sm:inline">
+        <span
+          data-slot="search-label"
+          className="hidden flex-1 truncate text-start text-[13px] lg:inline"
+        >
           {t("common.searchPlaceholder")}
         </span>
         {/* The keycap is decoration; without this it joins the button's name.

@@ -2,7 +2,7 @@ import { Ellipsis, MapPin, MessageCircle, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
-import { formatDay } from "@/lib/dates";
+import { DayText } from "@/components/ui-ext/day-text";
 
 /**
  * The log, newest first (SPEC S24/S27 — a company's history is the manager's
@@ -63,9 +63,11 @@ export function ActivityList({
                 <Icon aria-hidden="true" />
                 {t(`common.${entry.channel}`)}
               </Badge>
-              <span className="num text-xs text-muted-foreground">
-                {formatDay(entry.happenedOn, locale)}
-              </span>
+              <DayText
+                day={entry.happenedOn}
+                locale={locale}
+                className="text-xs text-muted-foreground"
+              />
               <span className="text-xs text-faint">
                 {t("common.by", { name: entry.userName })}
               </span>

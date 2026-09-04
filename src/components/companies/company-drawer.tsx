@@ -1,15 +1,17 @@
-import { ChevronRight, MessageCircle, NotebookPen, Pencil, Plus, Star } from "lucide-react";
+import { ChevronRight, FileText, MessageCircle, Pencil, Plus, Star } from "lucide-react";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList, type ActivityEntry } from "@/components/activities/activity-list";
-import { LogDialog, type LogContact, type LogProject } from "@/components/activities/log-dialog";
+import type { LogContact, LogProject } from "@/components/activities/log-dialog";
 import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import { ArchiveContactDialog } from "@/components/contacts/archive-contact-dialog";
 import { EditContactDialog } from "@/components/contacts/edit-contact-dialog";
 import { MakeMainButton } from "@/components/contacts/make-main-button";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
+import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
+import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -20,6 +22,8 @@ import { Link } from "@/i18n/navigation";
 import { listActivitiesForCompany } from "@/lib/activities";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany, type CompanyDetail } from "@/lib/companies";
+import { listQuotationsForCompany } from "@/lib/quotations";
+import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
 import { formatSqm } from "@/lib/money";
 import { formatPhone, whatsappHref } from "@/lib/phone";
@@ -108,17 +112,12 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   const contacts: readonly CompanyContact[] = company.contacts;
   const projects: readonly CompanyProject[] = company.projects;
   const logContacts: LogContact[] = contacts.map((row) => ({ id: row.id, name: row.name }));
+  const quotations = await listQuotationsForCompany(user, company.id);
   // A lost project is closed (SPEC S20); nothing new is logged against it.
   const logProjects: LogProject[] = projects
     .filter((row) => !row.lostAt)
     .map((row) => ({ id: row.id, name: row.name }));
 
-  const logTrigger = (
-    <Button variant="outline">
-      <NotebookPen aria-hidden="true" />
-      {t("common.log")}
-    </Button>
-  );
   const addContactTrigger = (
     <Button variant="outline">
       <Plus aria-hidden="true" />
@@ -129,6 +128,12 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
     <Button variant="outline">
       <Plus aria-hidden="true" />
       {t("drawer.newProject")}
+    </Button>
+  );
+  const requestQuotationTrigger = (
+    <Button variant="outline">
+      <FileText aria-hidden="true" />
+      {t("quotations.request")}
     </Button>
   );
 
@@ -173,34 +178,23 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         <TabsContent value="activity">
           <ActivityList
             activities={entries}
-            empty={
-              <EmptyPanel
-                sentence={t("drawer.emptyActivity")}
-                action={
-                  <LogDialog
-                    companyId={company.id}
-                    companyName={company.name}
-                    contacts={logContacts}
-                    projects={logProjects}
-                    trigger={logTrigger}
-                  />
-                }
-              />
-            }
+            // No action in the panel: Log is in the drawer's action row a
+            // centimetre above and never moves. A second copy of it inside the
+            // empty state would be the same button twice — and, being inside a
+            // branch that vanishes the moment it works, the copy that loses its
+            // own confirmation (see the note on EmptyPanel).
+            empty={<EmptyPanel sentence={t("drawer.emptyActivity")} />}
           />
         </TabsContent>
 
         <TabsContent value="contacts" className="flex flex-col gap-3">
+          <div className="flex">
+            <AddContactDialog companyId={company.id} trigger={addContactTrigger} />
+          </div>
           {contacts.length === 0 ? (
-            <EmptyPanel
-              sentence={t("drawer.emptyContacts")}
-              action={<AddContactDialog companyId={company.id} trigger={addContactTrigger} />}
-            />
+            <EmptyPanel sentence={t("drawer.emptyContacts")} />
           ) : (
             <>
-              <div className="flex">
-                <AddContactDialog companyId={company.id} trigger={addContactTrigger} />
-              </div>
               <ul className="flex flex-col gap-2">
                 {contacts.map((row) => (
                   <li key={row.id} className="card-face flex flex-col gap-1.5 p-3">
@@ -251,14 +245,14 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                       {/* A tap opens WhatsApp; the number itself is the link
                           text, so it is always readable (SPEC §3). */}
                       <a
-                        href={whatsappHref(row.phone)}
+                        href={whatsappHref(row.phoneNormalized)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 text-tone-green-fg hover:underline"
                       >
                         <MessageCircle aria-hidden="true" className="size-3.5" />
                         <span dir="ltr" className="num">
-                          {formatPhone(row.phone)}
+                          {formatPhone(row.phoneNormalized)}
                         </span>
                         <span className="sr-only">{t("drawer.openWhatsApp")}</span>
                       </a>
@@ -279,16 +273,13 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="projects" className="flex flex-col gap-3">
+          <div className="flex">
+            <NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />
+          </div>
           {projects.length === 0 ? (
-            <EmptyPanel
-              sentence={t("drawer.emptyProjects")}
-              action={<NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />}
-            />
+            <EmptyPanel sentence={t("drawer.emptyProjects")} />
           ) : (
             <>
-              <div className="flex">
-                <NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />
-              </div>
               <ul className="flex flex-col gap-2">
                 {projects.map((row) => (
                   <li key={row.id}>
@@ -319,7 +310,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                           </span>
                           <span>
                             <span className="sr-only">{t("common.nextFollowUp")}: </span>
-                            <span className="num">{formatDay(row.nextFollowUp, locale)}</span>
+                            <DayText day={row.nextFollowUp} locale={locale} />
                           </span>
                         </span>
                         {row.lostAt ? (
@@ -341,15 +332,33 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           )}
         </TabsContent>
 
-        <TabsContent value="quotations">
-          <EmptyPanel sentence={t("drawer.quotationsSoon")} />
+        <TabsContent value="quotations" className="flex flex-col gap-3">
+          <div className="flex">
+            <RequestQuotationDialog companyId={company.id} trigger={requestQuotationTrigger} />
+          </div>
+          {quotations.length === 0 ? (
+            <EmptyPanel sentence={t("quotations.emptyForCompany")} />
+          ) : (
+            <QuotationMiniList rows={quotations} />
+          )}
         </TabsContent>
       </Tabs>
     </>
   );
 }
 
-/** One sentence and its primary action — every empty list, in every tab. */
+/**
+ * One sentence for an empty list, in every tab.
+ *
+ * The action that fills the list is NOT in here. It sits above the panel and
+ * stays there once the list has something in it, which is a rule about React as
+ * much as about layout: a dialog rendered inside the empty branch is torn down
+ * by the very save that empties that branch, and an unmounted dialog never runs
+ * the effect that raises its "Saved" toast or opens the record it just made.
+ * The first quotation a rep ever raised on a project saved silently and left
+ * him where he started; the second worked. Anything that opens a dialog is
+ * rendered in one position, whatever the list underneath it says (D35).
+ */
 function EmptyPanel({ sentence, action }: { sentence: string; action?: ReactNode }) {
   return (
     <div className="card-face flex flex-col items-center gap-3 px-4 py-10 text-center">

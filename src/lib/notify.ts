@@ -17,11 +17,36 @@ import type { Db, Tx } from "@/db";
 import { notifications } from "@/db/schema";
 import { notifyLive } from "@/lib/live";
 
+/**
+ * Everything Kladra tells anybody, by name.
+ *
+ * A kind IS the message key: the notifications screen renders
+ * `notifications.<kind>` in the reader's language, with the params below (D13).
+ * Listing them here rather than typing a string at each call site is what keeps
+ * the writer and the reader from drifting — the seed wrote
+ * `quotation_requested` while the actions wrote `quotationRequested`, and
+ * neither side would have noticed until a rep saw a raw key on a screen.
+ *
+ * The params are a fixed vocabulary too: `label` is always the quotation's own
+ * name (Q-12), `smacNumber` is always SMAC's, `rep` is a person, `reason` is
+ * what somebody wrote.
+ */
+export const NOTIFICATION_KINDS = [
+  "quotationRequested",
+  "quotationIssued",
+  "quotationReturned",
+  "quotationAccepted",
+  "quotationRejected",
+  "quotationCancelled",
+] as const;
+
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
 export type NewNotification = {
   /** Who is being told. */
   userId: string;
   /** What happened, as a key rendered in the reader's language (D13). */
-  kind: string;
+  kind: NotificationKind;
   /** The words that key needs — a quotation number, a rep's name, a reason. */
   params?: Record<string, string | number>;
   /** Where clicking it goes, locale-free (e.g. "/quotations/…"). */

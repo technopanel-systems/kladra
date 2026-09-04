@@ -1,0 +1,9 @@
+{
+  "quotationRequested": "{rep} طلب {label}.",
+  "quotationIssued": "صدر {label} برقم سماك {smacNumber}.",
+  "quotationReturned": "أُعيد {label} للتعديل: {reason}",
+  "quotationAccepted": "قبل العميل {label}.",
+  "quotationRejected": "رفض العميل {label}: {reason}",
+  "quotationCancelled": "سحب {rep} الطلب {label}.",
+  "unreadMark": "غير مقروء"
+}

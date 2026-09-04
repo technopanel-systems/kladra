@@ -10,7 +10,7 @@
 - [x] P3.6 Root causes: no primary action disabled while data loads; the four review findings
       become DESIGN rules with tests; one word per concept in both languages, glossary in SPEC;
       tests get their own database, `kladra_test`
-- [ ] P4 Quotations: rep request → coordinator issue / send back → customer decision
+- [x] P4 Quotations: rep request → coordinator issue / send back → customer decision
 - [ ] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [ ] P6 Manager view, admin, notifications
 - [ ] P7 Polish, acceptance runs, PWA, handover
@@ -18,7 +18,22 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P3.6 done and green, `npm run test` 23 passing across both locales. Starting P4.
+**Where I stopped:** P4 done and green, `npm run test` 33 passing across both locales. Starting P5.
+
+P4's two real defects were both about a component disappearing at the moment it worked. A dialog
+rendered inside an empty state is destroyed by the save that fills the list, and a destroyed
+component's success effect never runs — so the first quotation a rep raised on a project saved in
+silence and left him where he started, while the second one worked. Five triggers were written
+that way and now sit above their list instead of inside it. Where the button genuinely has to go
+— raising a revision removes the button it was raised from — the answer is awaited rather than
+watched for (`useSubmitAction`). Recorded as D35.
+
+Three things came out of the screenshot pass rather than the box. The number in the company
+drawer was the one the rep typed, not the stored one, so it showed ungrouped and its WhatsApp link
+had no country code; the storage form is now its own TypeScript type and the substitution cannot
+compile (D34). A date had thirteen call sites each deciding its own layout, and now has one
+component and a test that measures which way round it renders (D33). The top bar's search button
+carried a sentence it only had room for at 1024px and was cut mid-word at 768.
 
 P3.6 found more than the four review findings. The company drawer's projects tab crashed to
 "This page couldn't load" on a tab click in Arabic: a `<Button>` a server component hands to a
@@ -108,12 +123,13 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 4. Move the clock to tomorrow; the strip says 1 today and the company is listed under it.
 5. Open the company, add project "Tower A" with 1,200 m² expected. It appears under Projects.
 
-**Rawan-1 (coordinator, quotations)** — `tests/quotation.spec.ts`
-1. Faisal opens a company and requests a quotation with two items; totals update live; he saves.
-2. Rawan's Queue shows the request arrive without reloading, highlighted, bell count 1.
-3. Rawan sends it back: "Add the colour code for item 2". Faisal sees "Sent back" and the reason.
-4. Faisal fixes item 2 and resubmits. Rawan issues it with SMAC number 4521.
-5. Faisal sees "Issued — SMAC 4521" and marks it Customer accepted.
+**Rawan-1 (coordinator, quotations)** — `tests/quotations.spec.ts`
+1. Faisal opens a project and requests a quotation with two items; the totals add up as he types; he saves.
+2. The drawer that opens shows the same four figures, worked out again in SQL.
+3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
+4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again.
+5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2 and the first is Superseded.
+6. Second test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
 
 **Rawan-2 (coordinator, dispatches)** — `tests/dispatch.spec.ts`
 1. Faisal opens the issued quotation and raises a dispatch for half of item 1, TT, Riyadh, "50% advance".

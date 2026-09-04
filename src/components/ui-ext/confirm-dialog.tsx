@@ -47,7 +47,7 @@ export function ConfirmDialog({
   description: string;
   confirmLabel: string;
   successMessage: string;
-  onConfirm: () => Promise<ActionResult>;
+  onConfirm: () => Promise<ActionResult<unknown>>;
   /** Runs after a confirmed action succeeds — refresh, or navigate away. */
   onDone?: () => void;
 }) {

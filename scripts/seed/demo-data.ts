@@ -1,3 +1,5 @@
+import type { NotificationKind } from "../../src/lib/notify";
+
 /**
  * The demo customer base — **invented lookalikes, never Technopanel's real sheet.**
  *
@@ -745,7 +747,8 @@ export const COMPANY_TARGET_LAST_MONTH = "4500.00";
 
 export type NotificationSeed = {
   user: string;
-  kind: string;
+  /** One of the real kinds — the vocabulary is src/lib/notify.ts, not a string. */
+  kind: NotificationKind;
   /** The quotation whose id goes into the link and whose label goes into params. */
   quotation: string;
   params: Record<string, string | number>;
@@ -759,36 +762,36 @@ export type NotificationSeed = {
 export const NOTIFICATIONS: NotificationSeed[] = [
   {
     user: "rawan",
-    kind: "quotation_requested",
+    kind: "quotationRequested",
     quotation: "q1",
-    params: { number: "Q-1", rep: "Faisal Al-Harbi" },
+    params: { label: "Q-1", rep: "Faisal Al-Harbi" },
     linkBase: "/queue",
     read: false,
     back: 1,
   },
   {
     user: "rawan",
-    kind: "quotation_requested",
+    kind: "quotationRequested",
     quotation: "q3r2",
-    params: { number: "Q-3/2", rep: "Faisal Al-Harbi" },
+    params: { label: "Q-3/2", rep: "Faisal Al-Harbi" },
     linkBase: "/queue",
     read: false,
     back: 0,
   },
   {
     user: "faisal",
-    kind: "quotation_issued",
+    kind: "quotationIssued",
     quotation: "q3",
-    params: { number: "Q-3", smac: "4512" },
+    params: { label: "Q-3", smacNumber: "4512" },
     linkBase: "/quotations",
     read: true,
     back: 6,
   },
   {
     user: "faisal",
-    kind: "quotation_issued",
+    kind: "quotationIssued",
     quotation: "q4",
-    params: { number: "Q-4", smac: "4519" },
+    params: { label: "Q-4", smacNumber: "4519" },
     linkBase: "/quotations",
     read: false,
     back: 8,

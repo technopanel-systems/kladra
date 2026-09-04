@@ -7,7 +7,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatDay, formatMonth, parseDay, todayRiyadh, type Day } from "@/lib/dates";
+import { DayText } from "@/components/ui-ext/day-text";
+import { formatMonth, parseDay, todayRiyadh, type Day } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
 /**
@@ -118,18 +119,11 @@ export function DatePicker({
           )}
         >
           <CalendarDays className="size-4 shrink-0 opacity-70" />
-          {/*
-            `auto`, never `ltr`. Forcing LTR around 04/سبتمبر/2026 puts the
-            month name in its own right-to-left run and the year, following an
-            Arabic letter, becomes an Arabic number — so the two swap and the
-            button reads 04/2026/سبتمبر while the label beside it reads
-            correctly. `auto` takes the direction from the first strong
-            character, which is the month name in Arabic and "Sep" in English,
-            so each renders the way its own reader expects.
-          */}
-          <span dir="auto" className="truncate">
-            {value ? formatDay(value, locale) : (placeholder ?? t("common.pickDate"))}
-          </span>
+          {value ? (
+            <DayText day={value} locale={locale} className="truncate" />
+          ) : (
+            <span className="truncate">{placeholder ?? t("common.pickDate")}</span>
+          )}
         </Button>
       </PopoverTrigger>
 

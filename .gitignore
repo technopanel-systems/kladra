@@ -27,6 +27,8 @@ shots/
 # what the shot-looker's playwright-cli leaves behind: page snapshots and
 # console logs, one pair per navigation.
 .playwright-cli/
+# playwright-cli writes its latest snapshot to the working directory too
+current.yml
 
 # backups (dumps hold every row and every password hash)
 backups/

@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { useArrived } from "@/hooks/use-arrived";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { DayText } from "@/components/ui-ext/day-text";
 import { formatDay } from "@/lib/dates";
 import type { FollowUpFilter, FollowUpState } from "@/lib/followups";
 import { formatSqm } from "@/lib/money";
@@ -98,14 +99,7 @@ function Sqm({ value }: { value: string | null }) {
 function FollowUp({ day, state }: { day: string | null; state: FollowUpState | null }) {
   const locale = useLocale();
   if (!day || !state) return <span className="text-faint">—</span>;
-  // `auto`, not `ltr`: a forced LTR run reorders 04/سبتمبر/2026 into
-  // 04/2026/سبتمبر, because the year after an Arabic letter is read as an
-  // Arabic number and joins the month's right-to-left run.
-  return (
-    <span dir="auto" className={cn("num whitespace-nowrap", WAITING_TEXT[state])}>
-      {formatDay(day, locale)}
-    </span>
-  );
+  return <DayText day={day} locale={locale} className={WAITING_TEXT[state]} />;
 }
 
 /** A word, never a colour alone (DESIGN §1) — and the reason travels with it. */
@@ -441,6 +435,8 @@ export type ProjectSheetProps = {
   projects: LogDialogProps["projects"];
   /** The rendered activity list, empty state and all. */
   activity: ReactNode;
+  /** The rendered quotations panel, empty state and all. */
+  quotations: ReactNode;
 };
 
 /** Closing the drawer drops `?open=` and leaves `?q=` and `?filter=` alone. */
@@ -471,6 +467,7 @@ export function ProjectSheet({
   contacts,
   projects,
   activity,
+  quotations,
 }: ProjectSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -618,15 +615,7 @@ export function ProjectSheet({
           </TabsContent>
 
           <TabsContent value="quotations" className="pt-3">
-            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-              <p className="max-w-prose text-sm text-muted-foreground">
-                {t("projects.emptyQuotations")}
-              </p>
-              {/* No button. Requesting a quotation is not built, and a control
-                  that cannot be used is not rendered as one (DESIGN §5); the
-                  sentence below says when it arrives. */}
-              <p className="text-xs text-faint">{t("projects.notYet")}</p>
-            </div>
+            {quotations}
           </TabsContent>
         </Tabs>
       </SheetContent>

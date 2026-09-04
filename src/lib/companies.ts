@@ -21,7 +21,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import {
   cities,
@@ -43,7 +43,7 @@ import {
   followUpStateSql,
   neverContactedCompanySql,
 } from "@/lib/followups";
-import { normalizePhone } from "@/lib/phone";
+import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import type { SessionUser } from "@/lib/types";
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
@@ -57,7 +57,7 @@ export type CompanyRow = {
   name: string;
   cityName: string | null;
   mainContactName: string | null;
-  mainContactPhone: string | null;
+  mainContactPhone: E164 | null;
   lastActivityOn: Day | null;
   /** The soonest date waiting on this customer — its own or an open project's. */
   nextFollowUp: Day | null;
@@ -214,7 +214,7 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
     name: row.name,
     cityName: row.cityName ?? null,
     mainContactName: row.mainContactName ?? null,
-    mainContactPhone: row.mainContactPhone ?? null,
+    mainContactPhone: row.mainContactPhone ? storedE164(row.mainContactPhone) : null,
     lastActivityOn: row.lastActivityOn ?? null,
     nextFollowUp: row.nextFollowUp ?? null,
     followUpState: row.followUpState ?? null,
@@ -226,10 +226,10 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
 export type CompanyContact = {
   id: string;
   name: string;
-  /** As the rep typed it. */
+  /** As the rep typed it. Fills the edit form back in; never displayed. */
   phone: string;
-  /** E.164 — what wa.me and the duplicate warning use. */
-  phoneNormalized: string;
+  /** The number itself — what the screen shows and what wa.me is given. */
+  phoneNormalized: E164;
   position: string | null;
   email: string | null;
   notes: string | null;
@@ -370,6 +370,7 @@ export async function getCompany(
     followUpState: row.followUpState ?? null,
     contacts: contactRows.map((c) => ({
       ...c,
+      phoneNormalized: storedE164(c.phoneNormalized),
       position: c.position ?? null,
       email: c.email ?? null,
       notes: c.notes ?? null,
@@ -474,15 +475,3 @@ export async function findPossibleDuplicates(input: {
 
 /** Re-exported so an action never re-invents the gate (src/lib/activities.ts). */
 export { assertCompanyVisible, mayTouch };
-
-/**
- * Everyone who must see a company change land live: its rep, whoever is acting,
- * and every active manager and admin (they see all companies, S8).
- */
-export async function liveAudienceFor(repId: string, actorId: string): Promise<string[]> {
-  const watchers = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(and(eq(users.active, true), inArray(users.role, ["manager", "admin"])));
-  return [...new Set([repId, actorId, ...watchers.map((w) => w.id)])];
-}

@@ -1,0 +1,9 @@
+{
+  "quotationRequested": "{rep} asked for {label}.",
+  "quotationIssued": "{label} is issued — SMAC {smacNumber}.",
+  "quotationReturned": "{label} came back for edits: {reason}",
+  "quotationAccepted": "The customer accepted {label}.",
+  "quotationRejected": "The customer rejected {label}: {reason}",
+  "quotationCancelled": "{rep} withdrew {label}.",
+  "unreadMark": "Unread"
+}

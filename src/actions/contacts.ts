@@ -19,9 +19,8 @@ import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
 import { assertCompanyOpen, assertCompanyVisible } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
-import { liveAudienceFor } from "@/lib/companies";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { notifyLive } from "@/lib/live";
+import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { normalizePhone } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
 

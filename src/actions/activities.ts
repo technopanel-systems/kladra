@@ -24,10 +24,9 @@ import { db } from "@/db";
 import { activities, auditLog, companies, contacts, projects } from "@/db/schema";
 import { assertCompanyOpen } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
-import { liveAudienceFor } from "@/lib/companies";
 import { parseDay, todayRiyadh } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { notifyLive } from "@/lib/live";
+import { liveAudienceFor, notifyLive } from "@/lib/live";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
 async function guard<T>(

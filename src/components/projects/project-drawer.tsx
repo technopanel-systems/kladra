@@ -1,13 +1,15 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList } from "@/components/activities/activity-list";
-import { LogDialog } from "@/components/activities/log-dialog";
 import { ProjectSheet } from "@/components/projects/projects-table";
+import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
+import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
 import { getProject } from "@/lib/projects";
+import { listQuotationsForProject } from "@/lib/quotations";
 
 /**
  * The project drawer (DESIGN §2: work happens in drawers over a list). It is a
@@ -57,6 +59,18 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   const company = await getCompany(user, project.companyId, locale);
   const contacts = company?.contacts ?? [];
   const projects = company?.projects ?? [];
+  const quotations = await listQuotationsForProject(user, project.id);
+
+  // A lost project is finished work (S20): nothing new is raised against it,
+  // so the button is not there rather than there and refusing (DESIGN §5).
+  const requestTrigger = project.lostAt ? null : (
+    <RequestQuotationDialog
+      companyId={project.companyId}
+      projectId={project.id}
+      projectName={project.name}
+      trigger={<Button variant="outline">{t("quotations.request")}</Button>}
+    />
+  );
 
   return (
     <ProjectSheet
@@ -73,23 +87,34 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       notes={project.notes}
       contacts={contacts}
       projects={projects}
+      // The request button is in ONE position, whatever the list under it says.
+      // Rendered inside the empty branch it was destroyed by the save that
+      // filled the list, and the dialog's success handler — the toast, and the
+      // jump to the quotation just raised — went with it (D35).
+      quotations={
+        <div className="flex flex-col gap-3">
+          {requestTrigger ? <div className="flex">{requestTrigger}</div> : null}
+          {quotations.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+              <p className="max-w-prose text-sm text-muted-foreground">
+                {t("quotations.emptyForProject")}
+              </p>
+            </div>
+          ) : (
+            <QuotationMiniList rows={quotations} />
+          )}
+        </div>
+      }
+      // Log is in the drawer's action row above and never moves, so the empty
+      // panel carries the sentence alone (D31, D35).
       activity={
         <ActivityList
           activities={project.activities}
-          // One sentence and its primary action, and the action works (SPEC §3).
           empty={
             <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
               <p className="max-w-prose text-sm text-muted-foreground">
                 {t("projects.emptyActivity")}
               </p>
-              <LogDialog
-                companyId={project.companyId}
-                companyName={project.companyName}
-                projectId={project.id}
-                contacts={contacts}
-                projects={projects}
-                trigger={<Button variant="outline">{t("common.log")}</Button>}
-              />
             </div>
           }
         />

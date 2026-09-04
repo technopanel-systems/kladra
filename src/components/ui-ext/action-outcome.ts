@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -21,6 +21,11 @@ import type { ActionResult } from "@/lib/types";
  *
  * Keying on the answer's own identity fixes it for good, and does not care what
  * else is in the dependency array.
+ *
+ * It cannot help with the other failure, though, and that one is why
+ * `useSubmitAction` below exists: an effect never runs at all if the save takes
+ * its own component off the screen. Use this only where the thing that opened
+ * the dialog is still there afterwards.
  */
 export function useActionOutcome<T>(
   state: ActionResult<T> | null,
@@ -38,4 +43,53 @@ export function useActionOutcome<T>(
     handled.current = state;
     run.current(state.data);
   }, [state]);
+}
+
+/**
+ * Runs a server action and answers on its result even if the save has taken the
+ * form off the screen in the meantime.
+ *
+ * `useActionState` plus an effect cannot do that. Raising a revision is the
+ * case: the moment it lands, the quotation it was raised from stops being the
+ * latest one, so its Revise button — and the dialog hanging off it — is gone
+ * from the next render. The effect that was going to say "Revision raised" and
+ * open the new quotation belongs to a component that no longer exists, so it
+ * never runs, and the rep is left looking at the old paper wondering whether
+ * the press worked.
+ *
+ * A promise continuation is not an effect. It is a closure, it runs when the
+ * action answers, and React unmounting the component around it changes nothing.
+ * `setError` afterwards is a no-op, which is correct: there is nothing to show
+ * it on. The toast and the navigation are global and still happen.
+ */
+export function useSubmitAction<T>(
+  action: (prev: ActionResult<T> | null, form: FormData) => Promise<ActionResult<T>>,
+  onSuccess: (data: T | undefined) => void,
+): { submit: (form: FormData) => void; pending: boolean; error: string | null } {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  // Read through a ref for the same reason as above: next-intl's router makes a
+  // new object every render, so anything closing over it changes identity.
+  const run = useRef(onSuccess);
+  useEffect(() => {
+    run.current = onSuccess;
+  });
+
+  const submit = useCallback(
+    (form: FormData) => {
+      setError(null);
+      startTransition(async () => {
+        const result = await action(null, form);
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        run.current(result.data);
+      });
+    },
+    [action],
+  );
+
+  return { submit, pending, error };
 }
