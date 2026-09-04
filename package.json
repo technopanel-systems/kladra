@@ -9,7 +9,7 @@
     "start": "next start -H 127.0.0.1 -p 3100",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check:messages": "tsx scripts/check-messages.ts && tsx scripts/unused-messages.mts",
+    "check:messages": "tsx scripts/check-messages.ts && tsx scripts/unused-messages.mts && tsx scripts/gendered-arabic.mts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:clear": "tsx scripts/db-clear.ts",

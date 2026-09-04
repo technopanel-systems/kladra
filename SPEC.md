@@ -150,5 +150,33 @@ Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a
 - D26 Lists are not virtualized. Fourteen people, and a rep sees only his own companies; the day a manager's list passes a few hundred rows is the day to revisit it.
 - D27 An unused message key is a lie about what the app says, so `npm run check:messages` now fails on one. A key built at runtime marks its whole prefix reachable — the alternative is deleting a string a screen shows.
 - D28 The tests own a second database, `kladra_test`, and a second port, 3101 (`npm run dev:test`). They delete every row and seed fresh ones on every run, so sharing the development database meant a test run wiping the records somebody was looking at — which happened, and half of one review's findings were symptoms of it. The name is derived by appending `_test` rather than configured, so no `.env` can point a run at real data by omission; before deleting anything the suite asks `/api/health` which database is behind the port and stops if the answer is wrong. DEFAULT — founder may change.
-- D29a A screen is marked live once React has taken over its HTML, and the tests wait for that mark after every page load. Without it a press that lands in the gap does nothing and the run fails at random. DEFAULT — founder may change.
 - D29 Development servers listen on 127.0.0.1 only, like the deployed ports. `next dev` and `next start` default to every interface, which puts a signed-in copy of the CRM with the seed accounts on the office Wi-Fi. DEFAULT — founder may change.
+- D30a A screen is marked live once React has taken over its HTML, and the tests wait for that mark after every page load. Without it a press that lands in the gap does nothing and the run fails at random. DEFAULT — founder may change.
+- D30 Arabic UI text addresses nobody's gender: the verbal noun rather than the imperative, and "الرجاء" where an instruction is unavoidable. Rawan reads this app all day and half of it was written to a man. `npm run check:messages` fails on the marked forms. DEFAULT — founder may change.
+
+## §5 One word per thing
+
+The word on the left is the only one the screens use, in both languages. A
+second word for the same thing is how two people end up describing the same
+screen differently, and how a rep learns one name and reads another.
+
+| On screen | بالعربية | What it is |
+| --- | --- | --- |
+| Company | الشركة | The organisation that buys. §2 S11 calls it the customer; the screens never do. |
+| Contact | جهة الاتصال | A person at a company. Belongs to one company (S11). |
+| Main contact | جهة الاتصال الرئيسية | The one contact a rep reaches first. One per company (D18). |
+| Project | المشروع | A job at a company — a tower, a villa, a mall (S18). Never a "job". |
+| Quotation | عرض السعر | Never a "quote". The phone's bottom bar shows **Quotes / العروض**, the only short form in the app, because five tabs do not fit across 375px. |
+| Dispatch | التوريد | Goods moving against a quotation (S37). Not the same as **Shipment method / طريقة الشحن**, which is how they travel (S40). |
+| Request | الطلب | What a rep raises and the coordinator answers, for both chains (S28, S39). The screens say request, never "raise". |
+| Log entry | تسجيل النشاط | One thing that happened, in the rep's own words (S24). The word "record" is kept for the system of record (S3). |
+| Follow-up | المتابعة | The next date something is owed on a company or a project (D9). |
+| Lead source | مصدر العميل | How this company first reached Technopanel. |
+| Archive | أرشفة | Takes a row off the floor and keeps its history (S16, D24). Nothing is deleted. |
+| Mark lost | تسجيل كخاسر | Closes a project with a written reason (S20). Not archiving, and not a rejected quotation (D11). |
+| Add | إضافة | The word for creating any record: Add company, Add contact, Add project. Never "New". |
+| Choose | اختيار | The word for taking a value from a list. Never "pick" or "select". |
+| Rep | المندوب | §1. |
+| Coordinator | منسقة المبيعات | §1 — Rawan. |
+| Sales manager | مدير المبيعات | §1 — Abdulrahman. |
+| Admin | مدير النظام | §1 — Jerom. |

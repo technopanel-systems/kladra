@@ -1,9 +1,9 @@
 {
   "addCompany": "Add company",
-  "addCompanyHint": "The company and the first person you deal with there.",
+  "addCompanyHint": "The company and its first contact.",
   "addContact": "Add contact",
-  "addContactHint": "Someone at this company you talk to.",
-  "companyNamePlaceholder": "As the customer writes it",
+  "addContactHint": "A contact at this company.",
+  "companyNamePlaceholder": "As the company writes it",
   "contactHeading": "Contact",
   "contactHeadingHint": "The first contact becomes the main contact.",
   "choose": "Choose…",

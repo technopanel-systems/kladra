@@ -12,7 +12,7 @@
   "unreadCount": "{count, plural, one {# unread notification} other {# unread notifications}}",
   "emptyCompanies": "No companies yet — add the first one.",
   "emptyQuotations": "No quotations yet — request one from a company or project page.",
-  "emptyDispatches": "No dispatches yet — raise one against an issued quotation.",
+  "emptyDispatches": "No dispatches yet — request one against an issued quotation.",
   "emptyQueue": "Nothing waiting — quotation and dispatch requests land here.",
   "emptyTeam": "No reps yet — the admin adds people under Users.",
   "emptyNotifications": "Nothing to read — you are up to date.",

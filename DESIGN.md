@@ -84,6 +84,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   load" from a tab click. Every trigger in the kit resolves it first
   (`useSlotChild`); nothing at a call site has to know. It only shows on a soft
   navigation, so pressing the button in a test that loaded the URL directly proves nothing.
+- **Arabic addresses nobody's gender.** `اكتب` is "write" said to a man, and the coordinator
+  who reads this app all day is a woman. Every one of those strings was correct Arabic, which
+  is why reading them found nothing. Say the action instead of ordering it — the verbal noun,
+  or `الرجاء` plus the verbal noun — and it reads as an office notice, which is the register
+  a Riyadh office writes in anyway. `npm run check:messages` fails on the marked forms.
 - **One rejected input, one sentence, and it is the app's.** `required` on an input makes
   the browser refuse the submit and show its own bubble, in the BROWSER's language and
   direction — an Arabic screen in an English Chrome answered "Please fill out this field",
