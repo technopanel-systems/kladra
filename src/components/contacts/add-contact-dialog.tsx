@@ -11,6 +11,7 @@ import {
   EMPTY_CONTACT,
   type ContactDraft,
 } from "@/components/contacts/contact-fields";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,9 @@ function ContactForm({
   const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
   const [isMain, setIsMain] = useState(false);
   const submitted = useRef("");
+  const form = useRef<HTMLFormElement>(null);
+
+  useFocusFirstError(form, state);
 
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
@@ -118,6 +122,7 @@ function ContactForm({
 
   return (
     <form
+      ref={form}
       action={formAction}
       onSubmit={() => {
         submitted.current = contact.name.trim() || contact.phone.trim();
@@ -126,7 +131,7 @@ function ContactForm({
     >
       <input type="hidden" name="companyId" value={companyId} />
 
-      <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4">
+      <div className="flex flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">
         <ContactFields
           idPrefix="contact"
           names={{

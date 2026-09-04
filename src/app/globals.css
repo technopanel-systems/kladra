@@ -86,6 +86,13 @@
 
 /* ---- light ------------------------------------------------------------- */
 :root {
+  /* What the BROWSER paints for us: scrollbars, the calendar and clock popups
+     inside native inputs, the caret, form control chrome. Without it those stay
+     light on a dark screen, because the theme here is a class rather than the
+     OS preference. Stated on both, so a light theme on a dark desktop is right
+     too. */
+  color-scheme: light;
+
   --radius: 0.625rem;
 
   --red-600: #c8102e;
@@ -161,6 +168,8 @@
 
 /* ---- dark (the default) -------------------------------------------------- */
 .dark {
+  color-scheme: dark;
+
   --canvas: #0f0d0c;
   --canvas-glow:
     radial-gradient(1200px 600px at var(--glow-x-red) -10%, rgba(229, 35, 60, 0.13), transparent 60%),
@@ -268,6 +277,33 @@
   100% { background-color: transparent; }
 }
 
+/*
+ * Motion is a preference the operating system already knows. Sheets slide in
+ * from an edge and dialogs zoom; that movement is what triggers vestibular
+ * symptoms, and a rep who has asked for less of it should not have to ask us
+ * too. Everything still appears and disappears — only the travel goes.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /*
+   * Except this one, which is information rather than decoration: the amber
+   * fade is the only thing telling a rep that somebody else just changed the
+   * row under his cursor (DESIGN §2). It is a colour change with no movement
+   * in it, so it is put back at full length.
+   */
+  .row-arrived {
+    animation: row-arrived 2s ease-out 1 !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -281,5 +317,16 @@
     line-height: 1.5;
     background-image: var(--canvas-glow);
     background-attachment: fixed;
+  }
+  /* A rep uses this standing up, on a phone, one-handed. Without this every
+     tap waits ~300ms for a double-tap that is never coming, and the whole app
+     feels a beat behind the thumb. Zoom itself is untouched — pinch still
+     works, which is the accessibility line that matters. */
+  button,
+  a,
+  [role="button"],
+  label,
+  summary {
+    touch-action: manipulation;
   }
 }

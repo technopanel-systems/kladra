@@ -64,7 +64,7 @@ export function BottomBar({ role }: { role: Role }) {
       </nav>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="max-h-[80svh] overflow-y-auto rounded-t-xl pb-6">
+        <SheetContent side="bottom" className="max-h-[80svh] overflow-y-auto overscroll-contain rounded-t-xl pb-6">
           <SheetHeader>
             <SheetTitle>{t("common.menu")}</SheetTitle>
           </SheetHeader>

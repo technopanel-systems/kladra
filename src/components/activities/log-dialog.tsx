@@ -168,7 +168,7 @@ export function LogDialog({
       </DialogTrigger>
 
       <DialogContent
-        className={cn("max-h-[88svh] overflow-y-auto sm:max-w-md", BOTTOM_SHEET_AT_375)}
+        className={cn("max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md", BOTTOM_SHEET_AT_375)}
       >
         <DialogHeader>
           <DialogTitle>{t("drawer.logTitle")}</DialogTitle>

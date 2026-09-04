@@ -508,7 +508,7 @@ export function ProjectSheet({
         // Radix's sides are physical; in Arabic the drawer comes from the
         // other edge so it still slides in from the end of the line.
         side={locale === "ar" ? "left" : "right"}
-        className="w-full gap-0 overflow-y-auto p-0 data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl"
+        className="w-full gap-0 overflow-y-auto overscroll-contain p-0 data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl"
       >
         <SheetHeader className="gap-3 border-b border-line p-4">
           <SheetTitle className="pe-10 text-base">{name}</SheetTitle>

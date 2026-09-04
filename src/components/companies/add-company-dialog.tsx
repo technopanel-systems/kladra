@@ -18,6 +18,7 @@ import {
   EMPTY_CONTACT,
   type ContactDraft,
 } from "@/components/contacts/contact-fields";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
@@ -128,6 +129,9 @@ function CompanyForm({
   // Named at submit time so the toast can say what was added without the
   // effect having to depend on every keystroke.
   const submitted = useRef("");
+  const form = useRef<HTMLFormElement>(null);
+
+  useFocusFirstError(form, state);
 
   const inSaudi = lookups.saudiCountry !== null && countryId === lookups.saudiCountry;
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
@@ -187,13 +191,14 @@ function CompanyForm({
 
   return (
     <form
+      ref={form}
       action={formAction}
       onSubmit={() => {
         submitted.current = name.trim();
       }}
       className="flex min-h-0 flex-1 flex-col"
     >
-      <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4">
+      <div className="flex flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="company-name">
             {t("common.company")}
