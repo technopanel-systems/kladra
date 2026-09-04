@@ -7,10 +7,15 @@ import { FollowUpStrip } from "@/components/companies/follow-up-strip";
 import { ListSearch } from "@/components/companies/list-search";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { can, requireUser } from "@/lib/authz";
+import { MonthCard } from "@/components/team/month-card";
+import { can, requireUser, seesAll } from "@/lib/authz";
 import { listCompanies } from "@/lib/companies";
 import { todayRiyadh } from "@/lib/dates";
-import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
+import { followUpCounts, followUpCountsForRep, parseFollowUpFilter } from "@/lib/followups";
+import { repMonth } from "@/lib/team";
+import { db } from "@/db";
+import { users } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * The rep's home (SPEC §3): the follow-up strip first, because it is the
@@ -31,7 +36,7 @@ import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
  * hydration on a laptop set to another timezone.
  */
 
-type Search = { q?: string; filter?: string; open?: string };
+type Search = { q?: string; filter?: string; open?: string; rep?: string };
 
 export default async function CompaniesPage({
   searchParams,
@@ -45,6 +50,14 @@ export default async function CompaniesPage({
   const open = params.open?.trim() || null;
 
   /**
+   * Whose floor this is. A manager drills in from the team table (S8); a rep
+   * asking for somebody else's id gets his own list either way, because
+   * `listCompanies` still scopes him underneath.
+   */
+  const repId = seesAll(user) ? (params.rep?.trim() || null) : null;
+  const viewing = repId ?? (can(user, "rep") ? user.id : null);
+
+  /**
    * Only a rep adds a company. The new row's `rep_id` is whoever pressed Save,
    * and there is no field for "whose company is this" — so a manager or admin
    * adding one would quietly become its rep. They read this screen instead
@@ -53,10 +66,17 @@ export default async function CompaniesPage({
    */
   const mayAdd = can(user, "rep");
 
-  const [t, rows, counts] = await Promise.all([
+  const [t, rows, counts, viewedName, month] = await Promise.all([
     getTranslations(),
-    listCompanies({ user, q: q || undefined, filter, locale }),
-    followUpCounts(user),
+    listCompanies({ user, q: q || undefined, filter, repId: repId ?? undefined, locale }),
+    // The strip counts what the list shows: drilling into one rep's floor and
+    // reading the whole team's overdue count above it would be two answers to
+    // one question (rules/data.md).
+    repId ? followUpCountsForRep(repId) : followUpCounts(user),
+    repId ? repName(repId) : Promise.resolve(null),
+    // The month card, for whoever's floor this is. A manager reading his own
+    // screen has no personal target and no card (§3); he has the team screen.
+    viewing ? repMonth(viewing) : Promise.resolve(null),
   ]);
 
   // The table shows words, so it is given words: the picked city or the free
@@ -74,9 +94,28 @@ export default async function CompaniesPage({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t("common.companies")}</h1>
+        <h1 className="text-xl font-semibold">
+          {viewedName ? t("team.companiesOf", { name: viewedName }) : t("common.companies")}
+        </h1>
         {mayAdd ? <AddCompanyDialog /> : null}
       </div>
+
+      {viewedName ? (
+        <div className="flex">
+          <Button asChild variant="outline" size="sm">
+            <Link href="/team">{t("team.backToTeam")}</Link>
+          </Button>
+        </div>
+      ) : null}
+
+      {month ? (
+        <MonthCard
+          title={viewedName ?? t("team.myMonth")}
+          target={month.target}
+          achieved={month.achieved}
+          pace={month.pace}
+        />
+      ) : null}
 
       <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} />
 
@@ -160,4 +199,10 @@ function Panel({ sentence, action, href }: { sentence: string; action: string; h
       </Button>
     </div>
   );
+}
+
+/** The name behind `?rep=` — a heading says who, never an id (DESIGN §2). */
+async function repName(repId: string): Promise<string | null> {
+  const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, repId)).limit(1);
+  return row?.name ?? null;
 }

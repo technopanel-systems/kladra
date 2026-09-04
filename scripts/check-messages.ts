@@ -38,7 +38,17 @@ function load(locale: string): Map<string, string> {
 
 const en = load("en");
 const ar = load("ar");
-const placeholders = (s: string) => [...s.matchAll(/\{(\w+)/g)].map((m) => m[1]).sort().join(",");
+/**
+ * The named arguments a message takes — `{name}` and `{name, plural, …}`.
+ *
+ * NOT every `{word` in the string: a plural branch whose text happens to start
+ * with a Latin word ("one {added # days ago}") would be read as an argument
+ * called `added`, and the English and Arabic of the same message would then
+ * "differ" because Arabic starts that branch with an Arabic word. A real
+ * argument is a name followed by `}` or `,`.
+ */
+const placeholders = (s: string) =>
+  [...s.matchAll(/\{(\w+)\s*[},]/g)].map((m) => m[1]).sort().join(",");
 
 const problems: string[] = [];
 for (const k of en.keys()) if (!ar.has(k)) problems.push(`missing in ar: ${k}`);

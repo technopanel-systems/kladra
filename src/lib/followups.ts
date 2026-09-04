@@ -127,8 +127,19 @@ export type FollowUpCounts = {
  * archived company or project never appears anywhere.
  */
 export async function followUpCounts(user: SessionUser): Promise<FollowUpCounts> {
-  const mine: SQL = seesAll(user) ? sql`true` : sql`companies.rep_id = ${user.id}::uuid`;
+  return countsWhere(seesAll(user) ? sql`true` : sql`companies.rep_id = ${user.id}::uuid`);
+}
 
+/**
+ * The same three numbers for ONE rep, whoever is asking — the manager's team
+ * table (S8, D14). Same statement, so his row and the rep's own strip cannot
+ * disagree; only the WHERE differs.
+ */
+export async function followUpCountsForRep(repId: string): Promise<FollowUpCounts> {
+  return countsWhere(sql`companies.rep_id = ${repId}::uuid`);
+}
+
+async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
   const result = await db.execute<{
     overdue: number;
     due_today: number;

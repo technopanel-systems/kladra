@@ -467,17 +467,30 @@ export async function remainingOnQuotation(
 }
 
 /**
- * Achieved m² for one rep in one Riyadh month — the ONE definition (S43).
+ * The m² an approved dispatch moved. THE definition of achieved (S43).
+ *
+ * Rounded per line before summing, and computed from the quantity SENT — not
+ * from the quotation line's own `sqm`, which is the whole quoted amount. The
+ * browser computes the same thing with `lineSqm` in src/lib/money.ts and
+ * tests/dispatches.spec.ts checks the two against each other (D38).
+ */
+const approvedSqm = sql<string>`round(coalesce(sum(round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)), 0), 2)`;
+
+/**
+ * Achieved m² per rep for one Riyadh month — the ONE definition (S43).
  *
  * `month` is any day in it. Approval is the event, so the month is the month
  * `approved_at` fell in, in Riyadh, and neither the request nor the SMAC number
- * moves it (S41). The manager's screens call this; they do not add it up again.
+ * moves it (S41). Counted against the rep who owns the COMPANY, not whoever
+ * pressed the button, so moving a company to another rep moves its metres with
+ * it (S8).
+ *
+ * One statement for the whole team: the manager's table and a rep's own card
+ * read the same row, so they cannot disagree.
  */
-export async function achievedSqm(userId: string, month: string): Promise<string> {
-  const [row] = await db
-    .select({
-      sqm: sql<string>`round(coalesce(sum(round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)), 0), 2)`,
-    })
+export async function achievedByRep(month: string): Promise<Map<string, string>> {
+  const rows = await db
+    .select({ repId: companies.repId, sqm: approvedSqm })
     .from(dispatches)
     .innerJoin(dispatchItems, eq(dispatchItems.dispatchId, dispatches.id))
     .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
@@ -486,11 +499,38 @@ export async function achievedSqm(userId: string, month: string): Promise<string
     .where(
       and(
         eq(dispatches.status, "approved"),
-        eq(companies.repId, userId),
+        sql`date_trunc('month', (dispatches.approved_at at time zone 'Asia/Riyadh')::date)
+              = date_trunc('month', ${month}::date)`,
+      ),
+    )
+    .groupBy(companies.repId);
+
+  return new Map(rows.map((row) => [row.repId, String(row.sqm ?? "0")]));
+}
+
+/** One rep's achieved m², from the same statement (S43). */
+export async function achievedSqm(userId: string, month: string): Promise<string> {
+  return (await achievedByRep(month)).get(userId) ?? "0";
+}
+
+/**
+ * The whole company's achieved m² for a month — the sum of the same rows.
+ *
+ * Not the sum of the reps' targets and not derived from them (S44); this is
+ * what actually went out, counted once.
+ */
+export async function companyAchievedSqm(month: string): Promise<string> {
+  const [row] = await db
+    .select({ sqm: approvedSqm })
+    .from(dispatches)
+    .innerJoin(dispatchItems, eq(dispatchItems.dispatchId, dispatches.id))
+    .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
+    .where(
+      and(
+        eq(dispatches.status, "approved"),
         sql`date_trunc('month', (dispatches.approved_at at time zone 'Asia/Riyadh')::date)
               = date_trunc('month', ${month}::date)`,
       ),
     );
-
   return String(row?.sqm ?? "0");
 }

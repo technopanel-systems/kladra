@@ -68,6 +68,12 @@ export type ListCompaniesInput = {
   user: SessionUser;
   q?: string;
   filter?: FollowUpFilter;
+  /**
+   * One rep's floor, for the manager's drill-down (S8). Ignored for a rep,
+   * whose own scope is narrower already — `ownedBy` still applies underneath,
+   * so passing somebody else's id changes nothing for him.
+   */
+  repId?: string;
   /** Defaults to the reader's saved language; scripts and tests pass one. */
   locale?: string;
 };
@@ -169,7 +175,11 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
   const lastActivity = lastActivitySql();
   const effective = effectiveFollowUpSql();
 
-  const conditions: (SQL | undefined)[] = [isNull(companies.archivedAt), ownedBy(user)];
+  const conditions: (SQL | undefined)[] = [
+    isNull(companies.archivedAt),
+    ownedBy(user),
+    input.repId ? eq(companies.repId, input.repId) : undefined,
+  ];
 
   if (term) {
     const anywhere = `%${escapeLike(term)}%`;
