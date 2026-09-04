@@ -20,8 +20,9 @@ import { loadEnv } from "../src/lib/env";
 
 loadEnv();
 
-// Imported after loadEnv(): src/db reads DATABASE_URL as it is evaluated, and a
-// static import would be evaluated before the body of this file runs.
+// Imported after loadEnv(). A static import is hoisted above the body of this
+// file, so it would run before loadEnv() had put DATABASE_URL in the
+// environment for the first query to read.
 const { db, pool } = await import("../src/db/index");
 const { users } = await import("../src/db/schema");
 const { notifyLive } = await import("../src/lib/live");

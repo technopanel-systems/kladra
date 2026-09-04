@@ -44,3 +44,19 @@ LAN bypass and the silent insecure cookie.
 
 - The tunnel ingress must name `http://localhost:3100` — the loopback
   binding breaks an ingress that names the machine's IP.
+
+- **The image builds with no `.env`, and `npm run check:build-env` is what
+  proves it.** The container gets its database and its secret from compose at
+  RUN time, so `next build` runs with neither — and `next build` imports every
+  route module to read its config. Anything that opens a connection or reads a
+  secret while a module is being EVALUATED therefore builds on a developer's
+  machine and dies in the image. It shipped: the pool was created at import,
+  `docker compose up --build -d` was in the README for five phases, and the
+  first `docker build` anybody ran failed on "Failed to collect page data".
+  Subqueries use drizzle's client-free `QueryBuilder`, `src/db` opens on first
+  use, and the check builds the whole app with every `.env` name blanked.
+
+- **`COPY --from=builder /app/public ./public` needs `public/` to exist.**
+  `output: "standalone"` does not carry it, and the repo had no `public/` at
+  all until the icons landed — so that line could not have succeeded either.
+  Nothing in the app referenced a file there, which is why nobody noticed.

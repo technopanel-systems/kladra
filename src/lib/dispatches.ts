@@ -34,6 +34,7 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { QueryBuilder } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
   companies,
@@ -116,7 +117,16 @@ function escapeLike(value: string): string {
  * would make every partial dispatch count as the whole line. Rounded per line
  * before summing, like the quotation's own totals (D6).
  */
-const dispatchTotals = db
+/**
+ * Subqueries are built with drizzle's own client-free QueryBuilder, never with
+ * `db`. A subquery is a shape, not a question, and it is defined once when this
+ * module is first imported — which happens inside `next build`, in a container
+ * with no DATABASE_URL. Touching `db` here opened the connection at import time
+ * and killed the Docker build with "Failed to collect page data".
+ */
+const qb = new QueryBuilder();
+
+const dispatchTotals = qb
   .select({
     dispatchId: dispatchItems.dispatchId,
     sqm: sql<string>`round(coalesce(sum(round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)), 0), 2)`.as(

@@ -7,6 +7,8 @@ node_modules/
 .next/
 # the test server's own build directory (scripts/dev-test.ts)
 .next-test/
+# the throwaway tree npm run check:build-env builds into and then deletes
+.next-build-check/
 out/
 next-env.d.ts
 

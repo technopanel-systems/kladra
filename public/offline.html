@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f0d0c" />
+    <title>Kladra</title>
+    <!--
+      The offline splash, and the only thing Kladra keeps for a phone with no
+      signal (SPEC §3: offline splash only, no offline data). Nothing about a
+      customer is cached — a rep reading a stale follow-up date and acting on it
+      is worse than a rep who can see he is offline.
+
+      One file for both languages rather than a locale guess: this page is shown
+      when there is no server to ask which language this person uses, and two
+      short lines cost less than getting it wrong. Styles are inline because
+      there is no network to fetch a stylesheet from.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #0f0d0c;
+        color: #f0ebe7;
+        font-family: "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+        line-height: 1.5;
+        text-align: center;
+      }
+      .card {
+        display: flex;
+        max-width: 34ch;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+      }
+      .mark {
+        display: grid;
+        width: 56px;
+        height: 56px;
+        place-items: center;
+        border-radius: 16px;
+        background: linear-gradient(140deg, #e5233c, #7a1020);
+        color: #fff;
+        font-size: 26px;
+        font-weight: 700;
+      }
+      p {
+        margin: 0;
+        font-size: 15px;
+      }
+      .ar {
+        direction: rtl;
+        font-family: "IBM Plex Sans Arabic", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+      }
+      .quiet {
+        color: #a49a94;
+        font-size: 13px;
+      }
+      .rule {
+        width: 40px;
+        height: 1px;
+        background: #332c28;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <span class="mark" aria-hidden="true">K</span>
+      <p lang="en">No connection. Kladra will come back on its own.</p>
+      <span class="rule"></span>
+      <p lang="ar" class="ar">لا يوجد اتصال. سيعود كلادرا من تلقاء نفسه.</p>
+      <p class="quiet" lang="en">Nothing you typed has been lost.</p>
+    </div>
+  </body>
+</html>

@@ -30,6 +30,7 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
+import { QueryBuilder } from "drizzle-orm/pg-core";
 import { db } from "@/db";
 import {
   classes,
@@ -122,7 +123,16 @@ function escapeLike(value: string): string {
  * different halala on a long quotation, and the difference is exactly the kind
  * that makes somebody stop trusting the screen.
  */
-const lineTotals = db
+/**
+ * Subqueries are built with drizzle's own client-free QueryBuilder, never with
+ * `db`. A subquery is a shape, not a question, and it is defined once when this
+ * module is first imported — which happens inside `next build`, in a container
+ * with no DATABASE_URL. Touching `db` here opened the connection at import time
+ * and killed the Docker build with "Failed to collect page data".
+ */
+const qb = new QueryBuilder();
+
+const lineTotals = qb
   .select({
     quotationId: quotationItems.quotationId,
     sqm: sql<string>`round(coalesce(sum(${quotationItems.sqm}), 0), 2)`.as("total_sqm"),

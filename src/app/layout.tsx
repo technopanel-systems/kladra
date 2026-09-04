@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { DirectionProvider } from "@/components/direction-provider";
 import { Hydrated } from "@/components/shell/hydrated";
+import { ServiceWorker } from "@/components/shell/service-worker";
 import { Toaster } from "@/components/ui/sonner";
 import { dirOf } from "@/i18n/routing";
 import { getTheme } from "@/lib/theme";
@@ -35,6 +36,11 @@ export const metadata: Metadata = {
   description: "Technopanel CRM",
   applicationName: "Kladra",
   manifest: "/manifest.webmanifest",
+  // iOS reads none of the manifest's icons; it wants this link tag, and it
+  // paints black behind anything transparent — so that file is full bleed
+  // (scripts/icons.ts).
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Kladra", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
@@ -63,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <NextIntlClientProvider>
           <DirectionProvider dir={dir}>
             <Hydrated />
+            <ServiceWorker />
             {children}
             <Toaster position={dir === "rtl" ? "bottom-left" : "bottom-right"} />
           </DirectionProvider>

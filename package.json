@@ -20,7 +20,9 @@
     "backup": "tsx scripts/backup.ts",
     "backup:verify": "tsx scripts/backup-verify.ts",
     "restore": "tsx scripts/restore.ts",
-    "db:create-test": "tsx scripts/db-create-test.ts"
+    "db:create-test": "tsx scripts/db-create-test.ts",
+    "icons": "tsx scripts/icons.ts",
+    "check:build-env": "tsx scripts/build-env-check.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -58,6 +60,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

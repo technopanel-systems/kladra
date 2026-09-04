@@ -76,8 +76,9 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-// The pool reads DATABASE_URL when the module is first evaluated, so it is
-// imported after loadEnv() has run.
+// Imported after loadEnv(), and still dynamically: src/db opens on first use
+// rather than on import now, but this file's first use is a few lines below and
+// a static import would hoist above the loadEnv() call regardless.
 const { db, pool } = await import("../src/db/index");
 const {
   activities,

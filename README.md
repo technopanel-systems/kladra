@@ -37,13 +37,37 @@ Password for every demo account: the `SEED_PASSWORD` in `.env` (default `kladra2
 | Saad Al-Qahtani | rep | saad@technopanel.com.sa |
 | Turki Al-Shammari | rep | turki@technopanel.com.sa |
 
+## On a phone
+
+Kladra installs. Open the tunnel address in Chrome (Android) or Safari (iOS) and choose
+**Add to Home screen**: it opens full screen with its own icon, and the sidebar becomes a
+bottom bar with dialogs as bottom sheets.
+
+**It does not work offline, on purpose.** A rep with no signal gets a splash saying so, in
+both languages, and nothing else is kept on the phone — no companies, no follow-up dates,
+no quotations. A stale follow-up date a rep acts on is worse than no date at all, so the
+service worker (`public/sw.js`) caches exactly two files: that splash and the mark on it.
+Every screen is fetched from the network, every time.
+
+The icons are committed under `public/icons`. `npm run icons` redraws them from
+`scripts/icons.ts` — run it only if the mark changes, and commit what it writes; a deploy
+never runs it.
+
 ## Tests and checks
 
 ```bash
 npm run typecheck && npm run lint && npm run build
 npm run check:messages        # every key in both messages/en.json and messages/ar.json
 npm run test                  # Playwright: boots dev:test on 3101, reseeds kladra_test, runs tests/ in en and ar
+npm run check:build-env       # builds with no .env, the way the Docker image does
 ```
+
+`check:build-env` is the one to run before a deploy. The container gets its database and
+its secret from compose when it STARTS, so its build has neither — and `next build`
+imports every route to read its config. Anything that opens a connection or reads a secret
+while a module is being imported builds here and dies there. That is not hypothetical:
+the pool used to be created at import, and the very first `docker build` of this repo
+failed on it.
 
 The acceptance scripts the tests walk are in WORKFLOW.md §3, one per role.
 
