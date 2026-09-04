@@ -1,0 +1,23 @@
+- generic [active] [ref=f4e1]:
+  - main [ref=f4e2]:
+    - generic [ref=f4e3]:
+      - generic [ref=f4e4]:
+        - generic [aria-hidden] [ref=f4e5]: K
+        - generic [ref=f4e6]: كلادرا
+      - generic [ref=f4e7]:
+        - generic [ref=f4e8]:
+          - generic [ref=f4e9]: تسجيل الدخول
+          - generic [ref=f4e10]: الرجاء إدخال البريد الإلكتروني وكلمة المرور.
+        - generic [ref=f4e12]:
+          - generic [ref=f4e13]:
+            - generic [ref=f4e14]: البريد الإلكتروني
+            - textbox "البريد الإلكتروني" [ref=f4e15]
+          - generic [ref=f4e16]:
+            - generic [ref=f4e17]: كلمة المرور
+            - textbox "كلمة المرور" [ref=f4e18]
+          - button "تسجيل الدخول" [ref=f4e19]
+      - generic [ref=f4e20]:
+        - paragraph [ref=f4e21]: الحسابات يُنشئها مدير النظام.
+        - link "English" [ref=f4e22] [cursor=pointer]:
+          - /url: /en/login
+  - region "Notifications alt+T"

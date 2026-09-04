@@ -1,0 +1,285 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Kladra tokens (DESIGN.md §1). Warm black with a red undertone. Dark is the
+ * default; light is designed, not inverted. The palette is mapped onto shadcn's
+ * semantic names so components say bg-card / text-muted-foreground and never a
+ * raw colour. Red is --brand, not --accent (shadcn owns --accent for hover).
+ */
+
+@theme inline {
+  --font-sans: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-app), ui-monospace, monospace;
+  --font-heading: var(--font-sans);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-faint: var(--text-faint);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+
+  --color-rail: var(--rail);
+  --color-rail-text: var(--rail-text);
+  --color-rail-strong: var(--rail-text-strong);
+  --color-rail-active: var(--rail-active);
+
+  --color-tone-red: var(--a-red-bg);
+  --color-tone-red-fg: var(--a-red-fg);
+  --color-tone-blue: var(--a-blue-bg);
+  --color-tone-blue-fg: var(--a-blue-fg);
+  --color-tone-amber: var(--a-amber-bg);
+  --color-tone-amber-fg: var(--a-amber-fg);
+  --color-tone-green: var(--a-green-bg);
+  --color-tone-green-fg: var(--a-green-fg);
+
+  --color-sidebar: var(--rail);
+  --color-sidebar-foreground: var(--rail-text);
+  --color-sidebar-primary: var(--brand);
+  --color-sidebar-primary-foreground: var(--brand-ink);
+  --color-sidebar-accent: var(--rail-active);
+  --color-sidebar-accent-foreground: var(--rail-text-strong);
+  --color-sidebar-border: var(--line);
+  --color-sidebar-ring: var(--brand);
+
+  --color-chart-1: var(--a-red-fg);
+  --color-chart-2: var(--a-blue-fg);
+  --color-chart-3: var(--a-amber-fg);
+  --color-chart-4: var(--a-green-fg);
+  --color-chart-5: var(--text-muted);
+
+  /* --radius 10px: controls 8–10px, cards 14px (rounded-xl), badges full pills. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+/* ---- light ------------------------------------------------------------- */
+:root {
+  --radius: 0.625rem;
+
+  --red-600: #c8102e;
+  --red-500: #e5233c;
+
+  --canvas: #f5f2ef;
+  --glow-x-red: 8%;
+  --glow-x-blue: 100%;
+  --canvas-glow:
+    radial-gradient(1200px 600px at var(--glow-x-red) -10%, rgba(200, 16, 46, 0.1), transparent 60%),
+    radial-gradient(900px 500px at var(--glow-x-blue) 0%, rgba(43, 92, 168, 0.08), transparent 55%);
+
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-2: rgba(26, 22, 20, 0.05);
+  --surface-solid: #ffffff;
+  --surface-2-solid: #f3efeb;
+  --line: rgba(26, 22, 20, 0.13);
+  --line-strong: rgba(26, 22, 20, 0.24);
+  --line-hi: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+
+  --text: #1a1614;
+  --text-muted: #6b615c;
+  --text-faint: #736c67;
+
+  --rail: rgba(23, 19, 17, 0.94);
+  --rail-solid: #171311;
+  --rail-text: #b5aba6;
+  --rail-text-strong: #ffffff;
+  --rail-active: rgba(255, 255, 255, 0.07);
+
+  --brand: #c8102e;
+  --brand-ink: #ffffff;
+  --brand-grad: linear-gradient(135deg, #c8102e, #e5502f);
+  --brand-glow: 0 0 0 1px rgba(200, 16, 46, 0.25), 0 8px 24px -8px rgba(200, 16, 46, 0.4);
+  --mark-grad: linear-gradient(140deg, var(--red-500), #7a1020);
+  --avatar-user-grad: linear-gradient(140deg, #8a3244, #4a1622);
+  --avatar-person-grad: linear-gradient(140deg, #31527f, #1b2f4c);
+
+  --a-red-bg: rgba(200, 16, 46, 0.09);
+  --a-red-fg: #c8102e;
+  --a-blue-bg: rgba(43, 92, 168, 0.09);
+  --a-blue-fg: #2b5ca8;
+  --a-amber-bg: rgba(138, 90, 0, 0.11);
+  --a-amber-fg: #8a5a00;
+  --a-green-bg: rgba(21, 128, 61, 0.09);
+  --a-green-fg: #15803d;
+
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 12px 36px -18px rgba(26, 22, 20, 0.42);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 20px 50px -20px rgba(26, 22, 20, 0.48);
+  --blur: blur(18px) saturate(1.1);
+
+  /* shadcn semantic aliases */
+  --background: var(--canvas);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-solid); /* popovers and dialogs are solid, never blurred */
+  --popover-foreground: var(--text);
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-ink);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--text);
+  --destructive: var(--a-red-fg); /* rendered as a tint: bg-destructive/10 text-destructive */
+  --destructive-foreground: var(--brand-ink);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--brand);
+}
+
+/* ---- dark (the default) -------------------------------------------------- */
+.dark {
+  --canvas: #0f0d0c;
+  --canvas-glow:
+    radial-gradient(1200px 600px at var(--glow-x-red) -10%, rgba(229, 35, 60, 0.13), transparent 60%),
+    radial-gradient(900px 500px at var(--glow-x-blue) 0%, rgba(43, 92, 168, 0.09), transparent 55%);
+
+  --surface: rgba(30, 26, 24, 0.72);
+  --surface-2: rgba(40, 35, 32, 0.6);
+  --surface-solid: #1b1816;
+  --surface-2-solid: #232120;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.12);
+  --line-hi: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+
+  --text: #f3eeeb;
+  --text-muted: #a69d99;
+  --text-faint: #8f8480;
+
+  --rail: rgba(9, 8, 7, 0.85);
+  --rail-solid: #0e0c0b;
+  --rail-text: #8f8683;
+  --rail-text-strong: #fff8f5;
+  --rail-active: rgba(255, 255, 255, 0.05);
+
+  --brand: #f2566b; /* #c8102e is too dark on a dark canvas */
+  --brand-ink: #ffffff;
+  --brand-grad: linear-gradient(135deg, #f2566b, #ff7a4a);
+  --brand-glow: 0 0 0 1px rgba(242, 86, 107, 0.35), 0 8px 28px -8px rgba(242, 86, 107, 0.55);
+
+  --a-red-bg: rgba(242, 86, 107, 0.14);
+  --a-red-fg: #ff8fa0;
+  --a-blue-bg: rgba(127, 173, 238, 0.14);
+  --a-blue-fg: #8fb8f0;
+  --a-amber-bg: rgba(227, 166, 62, 0.14);
+  --a-amber-fg: #ebb35a;
+  --a-green-bg: rgba(87, 197, 126, 0.14);
+  --a-green-fg: #6fd08f;
+
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 40px -18px rgba(0, 0, 0, 0.8);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 20px 50px -20px rgba(0, 0, 0, 0.9);
+  --blur: blur(18px) saturate(1.2);
+}
+
+/* The glow's positions are physical percentages; mirror them in Arabic. 108%
+ * rather than 92%, so the red ellipse's fade lands off-frame at 1366px. Must
+ * stay after both theme blocks. */
+[dir="rtl"] {
+  --glow-x-red: 108%;
+  --glow-x-blue: 0%;
+}
+
+@media (max-width: 980px) {
+  :root { --blur: blur(8px) saturate(1.1); }
+  .dark { --blur: blur(8px) saturate(1.2); }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root, .dark {
+    --surface: var(--surface-solid);
+    --surface-2: var(--surface-2-solid);
+    --rail: var(--rail-solid);
+    --blur: none;
+  }
+}
+
+/* ---- utilities ----------------------------------------------------------- */
+
+/* Every money and m² figure: mono, tabular. */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Frosted surface — cards, the rail, the top bar. Nothing else. */
+@utility glass {
+  backdrop-filter: var(--blur);
+}
+
+/* Card texture: 1px line, hairline highlight on top, shadow lift on hover. */
+@utility card-face {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) + 4px);
+  background-color: var(--surface);
+  box-shadow: var(--shadow);
+  &::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background-image: var(--line-hi);
+  }
+  &:hover {
+    box-shadow: var(--shadow-lift);
+  }
+}
+
+/* A row that just arrived or changed because of someone else (DESIGN §2). */
+@utility row-arrived {
+  animation: row-arrived 2s ease-out 1;
+}
+@keyframes row-arrived {
+  0% { background-color: var(--a-amber-bg); }
+  100% { background-color: transparent; }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    background-image: var(--canvas-glow);
+    background-attachment: fixed;
+  }
+}
