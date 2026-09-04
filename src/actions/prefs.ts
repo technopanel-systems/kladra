@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, users } from "@/db/schema";
-import { redirect } from "@/i18n/navigation";
+import { getPathname } from "@/i18n/navigation";
 import { requireActor } from "@/lib/authz";
 import { THEME_COOKIE } from "@/lib/theme";
 import type { ActionResult, SessionUser } from "@/lib/types";
@@ -65,11 +65,24 @@ export async function setThemeAction(theme: unknown): Promise<ActionResult> {
 }
 
 /**
- * English or Arabic, for this person, then the same screen under the other
- * locale. The audit row is written with the update, in one transaction, so the
- * log never claims a change the database did not take (SPEC S55).
+ * English or Arabic, for this person. The audit row is written with the update,
+ * in one transaction, so the log never claims a change the database did not
+ * take (SPEC S55).
+ *
+ * It returns the target href instead of redirecting, and the caller performs a
+ * FULL document navigation. `redirect()` here would be a soft navigation, and
+ * the root layout — the only place that can render `<html lang dir>` — is
+ * never re-rendered on one. The URL and the content changed while `dir` kept
+ * the old value, so English sentences rendered inside a right-to-left
+ * container and bidi moved the full stop to the front of the line. A real page
+ * load also delivers the correct direction in the first byte, with no flash.
+ * (The theme toggle above does not have this problem: `revalidatePath("/",
+ * "layout")` re-renders the root layout in place.)
  */
-export async function setLocaleAction(locale: unknown, pathname: unknown): Promise<ActionResult> {
+export async function setLocaleAction(
+  locale: unknown,
+  pathname: unknown,
+): Promise<ActionResult<{ href: string }>> {
   const t = await getTranslations("common");
   const actor = await actorOrNull();
   if (!actor) return { ok: false, error: t("notAllowed") };
@@ -91,6 +104,5 @@ export async function setLocaleAction(locale: unknown, pathname: unknown): Promi
     });
   }
 
-  // `return` only so TypeScript sees the function end; redirect() throws.
-  return redirect({ href: target.data, locale: wanted.data });
+  return { ok: true, data: { href: getPathname({ href: target.data, locale: wanted.data }) } };
 }

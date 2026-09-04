@@ -54,7 +54,11 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
   function chooseLocale(value: string) {
     if (value === locale) return;
     startTransition(async () => {
-      await setLocaleAction(value, pathname);
+      const result = await setLocaleAction(value, pathname);
+      // A FULL document load, not router.push: `<html lang dir>` lives in the
+      // root layout, which Next does not re-render on a client navigation. A
+      // soft one left the page right-to-left while the words turned English.
+      if (result.ok && result.data) window.location.assign(result.data.href);
     });
   }
 
