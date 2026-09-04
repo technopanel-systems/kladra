@@ -55,6 +55,12 @@ export type LookupField = {
   labelKey: string;
   /** A number, so the box is validated as one (thickness in mm). */
   numeric?: boolean;
+  /**
+   * The unit this value is in, when the number alone does not say. A thickness
+   * row read "4.0" and nothing else — true under a heading that says
+   * Thicknesses, and one word short of certain for the person changing it.
+   */
+  unitKey?: string;
 };
 
 export const LOOKUP_FIELDS: Record<LookupKind, LookupField[]> = {
@@ -84,7 +90,7 @@ export const LOOKUP_FIELDS: Record<LookupKind, LookupField[]> = {
   fireRatings: [{ key: "value", column: "name", labelKey: "common.fireRating" }],
   classes: [{ key: "value", column: "name", labelKey: "common.class" }],
   thicknesses: [
-    { key: "value", column: "mm", labelKey: "common.thickness", numeric: true },
+    { key: "value", column: "mm", labelKey: "common.thickness", numeric: true, unitKey: "common.mm" },
   ],
 };
 

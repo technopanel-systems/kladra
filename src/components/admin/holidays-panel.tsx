@@ -61,14 +61,24 @@ export function HolidaysPanel({
       ) : (
         <ul className="flex flex-col gap-2">
           {rows.map((row) => (
-            <li key={row.id} className="card-face flex flex-wrap items-center gap-3 p-3">
-              <DayText day={row.day} locale={locale} className="min-w-32 text-sm font-medium" />
-              <Badge variant="secondary">
-                {row.kind === "leave" ? t("admin.kind.leave") : t("admin.kind.holiday")}
-              </Badge>
-              <span className="min-w-0 flex-1 text-sm text-muted-foreground">
-                {row.userName ?? t("admin.everyone")}
-                {row.note ? ` · ${row.note}` : ""}
+            /*
+             * Two lines on a phone, one from `sm` up. Four things on one line
+             * squeezed the name-and-note column to 34px at 375: every word
+             * landed on its own line and Remove, centred in the row, sat in the
+             * middle of them — it read as part of the sentence.
+             */
+            <li key={row.id} className="card-face flex flex-wrap items-center gap-x-3 gap-y-2 p-3">
+              <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                <span className="flex flex-wrap items-center gap-2">
+                  <DayText day={row.day} locale={locale} className="text-sm font-medium" />
+                  <Badge variant="secondary">
+                    {row.kind === "leave" ? t("admin.kind.leave") : t("admin.kind.holiday")}
+                  </Badge>
+                </span>
+                <span className="min-w-0 text-sm text-muted-foreground">
+                  {row.userName ?? t("admin.everyone")}
+                  {row.note ? ` · ${row.note}` : ""}
+                </span>
               </span>
               <ConfirmDialog
                 trigger={

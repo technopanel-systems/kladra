@@ -2,7 +2,8 @@
 
 import { CalendarDays } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { Matcher } from "react-day-picker";
+import type { Locale, Matcher } from "react-day-picker";
+import { ar as arabicCalendar } from "react-day-picker/locale";
 import { useLocale, useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -24,6 +25,14 @@ import { cn } from "@/lib/utils";
  *
  * "Today" is Riyadh's today (`src/lib/dates.ts`), not the browser's — a rep
  * abroad, or a laptop with the wrong clock, still sees the company's day ringed.
+ *
+ * The calendar's own locale is passed in Arabic. Every visible string was
+ * already Arabic — the month, the weekday strip, Today and Clear — but the
+ * ARIA names underneath were not: a screen reader on an all-Arabic screen
+ * announced "Sunday, August 30th, 2026" and "Go to the Previous Month".
+ * react-day-picker ships those translations with its locales; nothing here has
+ * to write them, and the app's own `formatters` still win for the two strings
+ * it renders itself.
  */
 
 /** Noon, so a daylight-saving jump at midnight cannot move the date. */
@@ -82,6 +91,10 @@ export function DatePicker({
     };
   }, [locale]);
 
+  // English needs none: an omitted locale is react-day-picker's own default,
+  // and adding one would put a second opinion beside `formatters` above.
+  const calendarLocale: Locale | undefined = locale === "ar" ? arabicCalendar : undefined;
+
   const today = todayRiyadh();
   const selected = toDate(value);
   const before = toDate(min);
@@ -131,6 +144,7 @@ export function DatePicker({
         <Calendar
           mode="single"
           autoFocus
+          locale={calendarLocale}
           selected={selected}
           onSelect={(date) => pick(date ? toDay(date) : null)}
           defaultMonth={selected ?? toDate(today)}

@@ -409,7 +409,7 @@ async function seedCompanies(
         name: p.name,
         phone: p.phone,
         phoneNormalized: phone(p.phone),
-        position: p.position,
+        position: positionAsTyped(p.position, p.name),
         email: p.email ?? null,
         notes: p.notes ?? null,
         // The first contact added is the main contact (SPEC D18).
@@ -733,6 +733,23 @@ async function seedNotifications(
 // ============================================================================
 // Phase 11 — holidays and leave
 // ============================================================================
+
+/**
+ * A contact's position, in the language the rep who entered it would have used.
+ *
+ * `contacts.position` is free text: the list is offered and the rep may type
+ * over it (D21), so what is stored is a string somebody chose, and the app
+ * shows it as written rather than translating it — the same as a company's name
+ * or a log entry. The demo therefore has to choose too, and the honest rule is
+ * the one the data already follows: a contact with an Arabic name was entered
+ * by somebody working in Arabic, so his position reads Arabic. Seeding English
+ * for everybody made every Arabic screenshot look like a missing translation.
+ */
+function positionAsTyped(position: string | undefined, contactName: string): string | null {
+  if (!position) return null;
+  if (!/[؀-ۿ]/.test(contactName)) return position;
+  return POSITIONS.find((row) => row.en === position)?.ar ?? position;
+}
 
 async function seedNonWorkingDays(userIds: Map<string, string>): Promise<void> {
   const nextMonth = addMonths(TODAY, 1);

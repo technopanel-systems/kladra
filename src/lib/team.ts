@@ -19,7 +19,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, companyTargets, quotations, targets, users } from "@/db/schema";
 import { listNonWorkingDays } from "@/lib/calendar";
@@ -89,12 +89,23 @@ function paceFor(today: Day, nonWorking: NonWorking[], userId?: string): Pace {
 }
 
 /**
- * Everybody who carries metres, with their month beside them.
+ * Who carries metres, and therefore who has a month at all.
  *
- * The coordinator is not in the table: she has no companies of her own and no
- * target, so every figure on the row would be a dash (D15, S9). The manager IS,
- * because §3 says he sees "everyone's achieved, his own included as team" — he
- * simply has no personal target, which is exactly what a null renders as.
+ * Reps, and the manager — §3 says he sees "everyone's achieved, his own
+ * included as team", and S8 says a manager who sells carries no personal
+ * target, which is exactly what a null renders as.
+ *
+ * Not the coordinator: she has no companies of her own, so every figure on her
+ * row would be a dash (D15, S9). Not the admin either, for the same reason —
+ * Jerom runs the app and sells nothing, and a permanent row of dashes on the
+ * manager's main screen is one more thing to read past every morning. The
+ * targets screen already refused to give him a box; this is the same sentence,
+ * said once, so the two screens cannot disagree about who has a month (D44).
+ */
+export const CARRIES_METRES = sql`users.role in ('rep', 'manager')`;
+
+/**
+ * Everybody who carries metres, with their month beside them.
  */
 export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
   const month = monthOf(day);
@@ -104,7 +115,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
       db
         .select({ id: users.id, name: users.name, role: users.role })
         .from(users)
-        .where(and(eq(users.active, true), ne(users.role, "coordinator")))
+        .where(and(eq(users.active, true), CARRIES_METRES))
         .orderBy(asc(users.name)),
       db
         .select({ userId: targets.userId, sqm: targets.sqm })

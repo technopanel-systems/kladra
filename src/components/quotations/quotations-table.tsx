@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { formatMoney, formatSqm } from "@/lib/money";
 import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
 import { cn } from "@/lib/utils";
@@ -283,28 +284,6 @@ export function QuotationsTable({
   );
 }
 
-function FilterChip({
-  href,
-  active,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <Button
-      asChild
-      size="sm"
-      variant={active ? "default" : "outline"}
-      className="h-8 rounded-full px-3 text-xs"
-    >
-      <Link href={href} aria-current={active ? "true" : undefined}>
-        {children}
-      </Link>
-    </Button>
-  );
-}
 
 /** One sentence, and the action it names — where there is one (SPEC §3, D31). */
 function EmptyQuotations({

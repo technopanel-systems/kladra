@@ -818,8 +818,15 @@ export const NOTIFICATIONS: NotificationSeed[] = [
 
 // ---- non-working days ---------------------------------------------------------
 
-export const HOLIDAY_NOTE = "National Day";
-export const LEAVE_NOTE = "Annual leave";
+/*
+ * A note on a day off is free text, typed by whoever entered it — the app shows
+ * it as written and never translates it, the same as a company's name or a
+ * rep's log entry. So the demo writes what a Riyadh admin would actually type,
+ * which is Arabic. Seeding English made every Arabic screenshot of the holidays
+ * screen look like a missing translation when nothing was missing.
+ */
+export const HOLIDAY_NOTE = "اليوم الوطني";
+export const LEAVE_NOTE = "إجازة سنوية";
 /** Day of next month the company holiday falls on. */
 export const HOLIDAY_DAY_OF_MONTH = 23;
 /** Calendar days from today for Turki's leave. */

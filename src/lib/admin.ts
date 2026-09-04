@@ -21,6 +21,7 @@ import {
 } from "@/db/schema";
 import type { Day } from "@/lib/dates";
 import { LOOKUP_FIELDS, tableName, type LookupKind, type LookupRow } from "@/lib/lookup-kinds";
+import { CARRIES_METRES } from "@/lib/team";
 import type { Role } from "@/lib/types";
 
 export * from "@/lib/lookup-kinds";
@@ -97,7 +98,8 @@ export async function targetsForMonth(month: Day): Promise<TargetsForMonth> {
     db
       .select({ id: users.id, name: users.name, role: users.role })
       .from(users)
-      .where(and(eq(users.active, true), sql`users.role in ('rep', 'manager')`))
+      // The same rule the team screen uses, said once (D44).
+      .where(and(eq(users.active, true), CARRIES_METRES))
       .orderBy(asc(users.name)),
     db
       .select({ userId: targets.userId, sqm: targets.sqm })

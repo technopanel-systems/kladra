@@ -55,6 +55,7 @@
   "class": "Class",
   "qty": "Qty",
   "thickness": "Thickness",
+  "mm": "mm",
   "width": "Width (m)",
   "length": "Length (m)",
   "pricePerSqm": "Price / m²",

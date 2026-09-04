@@ -8,13 +8,14 @@ import { saveLookupAction, setLookupActiveAction } from "@/actions/admin";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
+import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import {
   LOOKUP_FIELDS,
   LOOKUP_KINDS,
@@ -50,24 +51,22 @@ export function LookupsPanel({
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
 
+  // A value that needs its unit gets it once, here, so the row and the two
+  // dialogs that name it back cannot say the thickness differently.
+  const unitKey = LOOKUP_FIELDS[kind].find((field) => field.unitKey)?.unitKey;
+  const named = (row: LookupRow) => (unitKey ? `${row.label} ${t(unitKey)}` : row.label);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         {LOOKUP_KINDS.map((value) => (
-          <Button
+          <FilterChip
             key={value}
-            asChild
-            variant={value === kind ? "secondary" : "ghost"}
-            size="sm"
-            className="h-8 rounded-full px-3 text-xs"
+            href={`/admin/lookups?list=${value}`}
+            active={value === kind}
           >
-            <Link
-              href={`/admin/lookups?list=${value}`}
-              aria-current={value === kind ? "true" : undefined}
-            >
-              {t(`admin.lookup.${value}`)}
-            </Link>
-          </Button>
+            {t(`admin.lookup.${value}`)}
+          </FilterChip>
         ))}
       </div>
 
@@ -90,7 +89,7 @@ export function LookupsPanel({
             className={cn("card-face flex flex-wrap items-center gap-3 p-3", !row.active && "opacity-70")}
           >
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-              <span className="font-medium">{row.label}</span>
+              <span className="font-medium">{named(row)}</span>
               {row.active ? null : <Badge variant="outline">{t("admin.hidden")}</Badge>}
             </span>
 
@@ -112,8 +111,8 @@ export function LookupsPanel({
               }
               title={
                 row.active
-                  ? t("admin.hideTitle", { name: row.label })
-                  : t("admin.showTitle", { name: row.label })
+                  ? t("admin.hideTitle", { name: named(row) })
+                  : t("admin.showTitle", { name: named(row) })
               }
               description={row.active ? t("admin.hideHint") : t("admin.showHint")}
               confirmLabel={row.active ? t("admin.hide") : t("admin.show")}

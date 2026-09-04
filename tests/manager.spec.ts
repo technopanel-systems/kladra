@@ -67,6 +67,9 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     const rawan = await one<{ name: string }>(
       "select name from users where email = 'rawan@technopanel.com.sa'",
     );
+    const jerom = await one<{ name: string }>(
+      "select name from users where email = 'jerom@technopanel.com.sa'",
+    );
 
     // Every column §3 asks for, by its own heading.
     for (const key of [
@@ -85,8 +88,11 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     // one being asked about is the row whose whole label is his name.
     await expect(page.getByRole("link", { name: faisal.name, exact: true })).toBeVisible();
     // The coordinator carries no metres and no companies, so she is not a row
-    // of dashes on a screen about metres (D15, S9).
+    // of dashes on a screen about metres (D15, S9). Nor is the admin: he runs
+    // the app and sells nothing, and the targets screen already refuses to give
+    // him a box — one rule, two screens (D44).
     await expect(page.getByRole("link", { name: rawan.name, exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: jerom.name, exact: true })).toHaveCount(0);
   });
 
   await test.step("3 · the Stuck list names what has stopped moving", async () => {

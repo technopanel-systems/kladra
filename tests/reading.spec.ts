@@ -232,7 +232,7 @@ test("no label the app wrote is cut off mid-word", async ({ page, locale }) => {
  */
 const ARABIC_INDIC_DIGITS = /[٠-٩۰-۹]/;
 
-test("every figure is in Western digits", async ({ page, locale }) => {
+test("every figure is in Western digits", async ({ page, locale, t }) => {
   await login(page, locale, "faisal");
 
   for (const screen of [...SCREENS, "quotations"]) {
@@ -251,4 +251,44 @@ test("every figure is in Western digits", async ({ page, locale }) => {
     expect(wrong, `Arabic-Indic digits on /${locale}/${screen}`).toEqual([]);
     expect(ARABIC_INDIC_DIGITS.test(wrong.join(""))).toBe(false);
   }
+
+  await test.step("including the calendar, which brings its own locale with it", async () => {
+    // The picker is handed react-day-picker's Arabic locale so a screen reader
+    // hears Arabic instead of "Go to the Previous Month" — and a locale is
+    // exactly the thing that could put ٠٤ in the day grid. Thirty-odd numbered
+    // buttons, checked as rendered.
+    await page.goto(`/${locale}/companies`);
+    await page.getByRole("table").first().getByRole("link").first().click();
+    await expect(page.getByRole("dialog").first()).toBeVisible();
+    // The picker is the one control in the group the follow-up label names.
+    await page
+      .getByRole("group", { name: t("common.nextFollowUp") })
+      .getByRole("button")
+      .first()
+      .click();
+
+    const grid = page.getByRole("grid").first();
+    await expect(grid).toBeVisible();
+    const days = (await grid.getByRole("gridcell").allInnerTexts()).join("");
+    expect(days.length, "the calendar rendered no days at all").toBeGreaterThan(0);
+    expect(ARABIC_INDIC_DIGITS.test(days), `calendar days: ${days}`).toBe(false);
+
+    // And what a screen reader hears. Every visible string in the calendar was
+    // already Arabic while its accessible names said "Go to the Previous Month"
+    // and "Sunday, August 30th, 2026" — a leak with no pixels to give it away.
+    const names = await grid
+      .page()
+      .locator("[aria-label]")
+      .filter({ visible: true })
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label") ?? ""));
+    const calendarNames = names.filter((name) => /2026/.test(name) || /month/i.test(name));
+    expect(calendarNames.length, "the calendar has no accessible names at all").toBeGreaterThan(0);
+    if (locale === "ar") {
+      for (const name of calendarNames) {
+        expect(name, "an English accessible name on the Arabic calendar").toMatch(
+          /[؀-ۿ]/,
+        );
+      }
+    }
+  });
 });

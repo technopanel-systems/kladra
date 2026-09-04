@@ -44,6 +44,11 @@ import type { ActionResult, Role } from "@/lib/types";
  * The role is what somebody may do, so it is the third column and not buried in
  * a dialog. Inactive accounts stay on the list, greyed by a word rather than by
  * a colour (DESIGN §4).
+ *
+ * Below `md` it is a card per person, like every other list in the app. It was
+ * a bare table, and at 375 that table was 797px wide inside a 341px screen: the
+ * email clipped mid-address, the three buttons were off the edge, and nothing
+ * on screen said there was anything to scroll to.
  */
 
 const ROLES: Role[] = ["rep", "coordinator", "manager", "admin"];
@@ -67,7 +72,31 @@ export function UsersPanel({ users }: { users: AdminUser[] }) {
         />
       </div>
 
-      <div className="card-face">
+      <div className="flex flex-col gap-2 md:hidden">
+        {users.map((user) => (
+          <div key={user.id} className="card-face flex flex-col gap-2 p-3">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="font-medium">{user.name}</span>
+              {user.active ? null : <Badge variant="outline">{t("admin.inactive")}</Badge>}
+            </span>
+            <span className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+              {/* The address is the one thing here that must never be cut: it
+                  is what the person signs in with. */}
+              <span dir="ltr" className="break-all text-start">
+                {user.email}
+              </span>
+              <span>
+                {t(`admin.role.${user.role}`)} · {t("admin.companiesOnFloor", { count: user.companies })}
+              </span>
+            </span>
+            <span className="flex flex-wrap gap-1">
+              <RowActions user={user} onDone={refresh} />
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="card-face hidden md:block">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -98,59 +127,7 @@ export function UsersPanel({ users }: { users: AdminUser[] }) {
                 </TableCell>
                 <TableCell className="p-3">
                   <span className="flex flex-wrap justify-end gap-1">
-                    <UserDialog
-                      mode="edit"
-                      user={user}
-                      trigger={
-                        <Button variant="ghost" size="sm">
-                          {t("common.edit")}
-                        </Button>
-                      }
-                    />
-                    <PromptDialog
-                      trigger={
-                        <Button variant="ghost" size="sm">
-                          {t("admin.resetPassword")}
-                        </Button>
-                      }
-                      title={t("admin.resetPasswordTitle", { name: user.name })}
-                      description={t("admin.resetPasswordHint")}
-                      label={t("admin.newPassword")}
-                      confirmLabel={t("admin.resetPassword")}
-                      successMessage={t("admin.passwordReset", { name: user.name })}
-                      onConfirm={(password) =>
-                        send(resetPasswordAction, { userId: user.id, password })
-                      }
-                      onDone={refresh}
-                    />
-                    <ConfirmDialog
-                      trigger={
-                        <Button variant="ghost" size="sm">
-                          {user.active ? t("admin.deactivate") : t("admin.activate")}
-                        </Button>
-                      }
-                      title={
-                        user.active
-                          ? t("admin.deactivateTitle", { name: user.name })
-                          : t("admin.activateTitle", { name: user.name })
-                      }
-                      description={
-                        user.active ? t("admin.deactivateHint") : t("admin.activateHint")
-                      }
-                      confirmLabel={user.active ? t("admin.deactivate") : t("admin.activate")}
-                      successMessage={
-                        user.active
-                          ? t("admin.deactivated", { name: user.name })
-                          : t("admin.activated", { name: user.name })
-                      }
-                      onConfirm={() =>
-                        send(setUserActiveAction, {
-                          userId: user.id,
-                          active: String(!user.active),
-                        })
-                      }
-                      onDone={refresh}
-                    />
+                    <RowActions user={user} onDone={refresh} />
                   </span>
                 </TableCell>
               </TableRow>
@@ -159,6 +136,66 @@ export function UsersPanel({ users }: { users: AdminUser[] }) {
         </Table>
       </div>
     </div>
+  );
+}
+
+/**
+ * Edit, Reset password and Deactivate — written once and rendered twice, by the
+ * table from `md` up and by the card below it. Two copies of three dialogs is
+ * three chances for one layout to keep a button the other lost.
+ */
+function RowActions({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+  const t = useTranslations();
+
+  return (
+    <>
+      <UserDialog
+        mode="edit"
+        user={user}
+        trigger={
+          <Button variant="ghost" size="sm">
+            {t("common.edit")}
+          </Button>
+        }
+      />
+      <PromptDialog
+        trigger={
+          <Button variant="ghost" size="sm">
+            {t("admin.resetPassword")}
+          </Button>
+        }
+        title={t("admin.resetPasswordTitle", { name: user.name })}
+        description={t("admin.resetPasswordHint")}
+        label={t("admin.newPassword")}
+        confirmLabel={t("admin.resetPassword")}
+        successMessage={t("admin.passwordReset", { name: user.name })}
+        onConfirm={(password) => send(resetPasswordAction, { userId: user.id, password })}
+        onDone={onDone}
+      />
+      <ConfirmDialog
+        trigger={
+          <Button variant="ghost" size="sm">
+            {user.active ? t("admin.deactivate") : t("admin.activate")}
+          </Button>
+        }
+        title={
+          user.active
+            ? t("admin.deactivateTitle", { name: user.name })
+            : t("admin.activateTitle", { name: user.name })
+        }
+        description={user.active ? t("admin.deactivateHint") : t("admin.activateHint")}
+        confirmLabel={user.active ? t("admin.deactivate") : t("admin.activate")}
+        successMessage={
+          user.active
+            ? t("admin.deactivated", { name: user.name })
+            : t("admin.activated", { name: user.name })
+        }
+        onConfirm={() =>
+          send(setUserActiveAction, { userId: user.id, active: String(!user.active) })
+        }
+        onDone={onDone}
+      />
+    </>
   );
 }
 
