@@ -84,6 +84,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   load" from a tab click. Every trigger in the kit resolves it first
   (`useSlotChild`); nothing at a call site has to know. It only shows on a soft
   navigation, so pressing the button in a test that loaded the URL directly proves nothing.
+- **One rejected input, one sentence, and it is the app's.** `required` on an input makes
+  the browser refuse the submit and show its own bubble, in the BROWSER's language and
+  direction — an Arabic screen in an English Chrome answered "Please fill out this field",
+  and the action that has a sentence for exactly that case never ran. Forms carry
+  `noValidate`; `required` stays, because it is what a screen reader announces.
 - **A screen is readable before it is live.** React takes over the server-rendered HTML a
   moment after it paints, and a press in between does nothing at all — no error, no dialog.
   The fast screens lose that race, so a suite passes cold and fails warm. `<Hydrated>` marks

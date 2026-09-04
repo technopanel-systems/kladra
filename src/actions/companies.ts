@@ -28,32 +28,11 @@ import { assertCompanyOpen, assertCompanyVisible } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { liveAudienceFor } from "@/lib/companies";
 import { parseDay } from "@/lib/dates";
+import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
 import { notifyLive } from "@/lib/live";
 import { SAUDI_CODE } from "@/lib/lookups";
 import { normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
-
-type Fields = Record<string, string>;
-
-/** A form value, trimmed, with "" read as "not filled in". */
-function field(formData: FormData, name: string): string | undefined {
-  const raw = formData.get(name);
-  if (typeof raw !== "string") return undefined;
-  const value = raw.trim();
-  return value === "" ? undefined : value;
-}
-
-/** Turn Zod issues into one message per field name the form knows. */
-function fieldErrorsOf(error: z.ZodError, required: string, invalid: string): Fields {
-  const out: Fields = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (!key || out[key]) continue;
-    out[key] =
-      issue.code === "invalid_type" || issue.code === "too_small" ? required : invalid;
-  }
-  return out;
-}
 
 /**
  * The one place `requireActor` and NotAllowed become an ActionResult.
@@ -126,7 +105,7 @@ async function resolvePlace(
   cityId: number | undefined,
   cityText: string | undefined,
   t: (key: string) => string,
-): Promise<{ ok: true; cityId: number | null; cityText: string | null } | { ok: false; fieldErrors: Fields }> {
+): Promise<{ ok: true; cityId: number | null; cityText: string | null } | { ok: false; fieldErrors: FieldErrors }> {
   const [country] = await db
     .select({ code: countries.code })
     .from(countries)

@@ -26,28 +26,9 @@ import { assertCompanyOpen } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { liveAudienceFor } from "@/lib/companies";
 import { parseDay, todayRiyadh } from "@/lib/dates";
+import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { notifyLive } from "@/lib/live";
 import type { ActionResult, SessionUser } from "@/lib/types";
-
-type Fields = Record<string, string>;
-
-function field(formData: FormData, name: string): string | undefined {
-  const raw = formData.get(name);
-  if (typeof raw !== "string") return undefined;
-  const value = raw.trim();
-  return value === "" ? undefined : value;
-}
-
-function fieldErrorsOf(error: z.ZodError, required: string, invalid: string): Fields {
-  const out: Fields = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0] ?? "");
-    if (!key || out[key]) continue;
-    out[key] =
-      issue.code === "invalid_type" || issue.code === "too_small" ? required : invalid;
-  }
-  return out;
-}
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,

@@ -13,6 +13,7 @@ import { useActionOutcome } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/types";
@@ -123,11 +124,17 @@ function EditForm({
       onSubmit={() => {
         saved.current = draft.name.trim() || draft.phone.trim();
       }}
+      // The browser's own validation is off: it refuses the submit before the
+      // action runs and shows its bubble in the BROWSER's language, in its own
+      // direction, with wording nobody here wrote. One rejected input, one
+      // sentence, from the action that rejected it (DESIGN §5). `required`
+      // stays on the inputs — it is what a screen reader announces.
+      noValidate
       className="flex min-h-0 flex-1 flex-col"
     >
       <input type="hidden" name="contactId" value={contact.id} />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4">
+      <FormBody>
         <ContactFields
           idPrefix="edit-contact"
           names={{
@@ -143,27 +150,13 @@ function EditForm({
           errors={errors}
           disabled={pending}
         />
-      </div>
+      </FormBody>
 
-      <div className="border-t border-line bg-surface-2 p-4">
-        {state && !state.ok && !state.fieldErrors ? (
-          <p role="alert" className="mb-3 text-sm text-destructive">
-            {state.error}
-          </p>
-        ) : null}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
-            {t("common.cancel")}
-          </Button>
-          <Button
-            type="submit"
-            disabled={pending}
-            className="bg-[image:var(--brand-grad)] text-primary-foreground shadow-[var(--brand-glow)] hover:opacity-90"
-          >
-            {pending ? t("common.saving") : t("common.save")}
-          </Button>
-        </div>
-      </div>
+      <FormFooter
+        error={state && !state.ok && !state.fieldErrors ? state.error : null}
+        pending={pending}
+        onCancel={onCancel}
+      />
     </form>
   );
 }

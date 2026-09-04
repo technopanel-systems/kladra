@@ -35,7 +35,10 @@ export function LoginForm() {
   const failed = state !== null && !state.ok;
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    // noValidate: the browser's own bubble is in the browser's language, not
+    // the app's, and the sign-in screen is the first thing anyone sees
+    // (DESIGN §5). The action answers instead.
+    <form action={action} noValidate className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">{t("auth.email")}</Label>
         <Input
