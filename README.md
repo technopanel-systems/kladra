@@ -47,6 +47,11 @@ npm run test                  # Playwright: reseeds the DB, boots dev on 3100, r
 
 The acceptance scripts the tests walk are in WORKFLOW.md §3, one per role.
 
+> **Next 16 differs from 13–15** — `params` is a Promise and `middleware.ts` is
+> `proxy.ts`. Version-correct docs ship at `node_modules/next/dist/docs/`; read
+> those rather than memory. (`next dev`'s wish to append notes to CLAUDE.md is
+> disabled via `agentRules: false` — that file is hand-written.)
+
 ## Deployment
 
 One Windows PC, Docker, Cloudflare Tunnel; `cloudflared` runs on the host, not in compose.
