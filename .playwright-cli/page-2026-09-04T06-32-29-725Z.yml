@@ -1,0 +1,66 @@
+- generic [active] [ref=f7e1]:
+  - link "تخطٍ إلى المحتوى" [ref=f7e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f7e3]:
+    - complementary "التنقل الرئيسي" [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - generic [aria-hidden] [ref=f7e6]: K
+        - generic [ref=f7e7]: كلادرا
+      - navigation [ref=f7e8]:
+        - list [ref=f7e10]:
+          - listitem [ref=f7e11]:
+            - link "الفريق" [ref=f7e12] [cursor=pointer]:
+              - /url: /ar/team
+          - listitem [ref=f7e18]:
+            - link "الشركات" [ref=f7e19] [cursor=pointer]:
+              - /url: /ar/companies
+          - listitem [ref=f7e25]:
+            - link "المشاريع" [ref=f7e26] [cursor=pointer]:
+              - /url: /ar/projects
+          - listitem [ref=f7e30]:
+            - link "عروض الأسعار" [ref=f7e31] [cursor=pointer]:
+              - /url: /ar/quotations
+          - listitem [ref=f7e36]:
+            - link "التوريدات" [ref=f7e37] [cursor=pointer]:
+              - /url: /ar/dispatches
+        - generic [ref=f7e44]:
+          - paragraph [ref=f7e45]: الإدارة
+          - list [ref=f7e46]:
+            - listitem [ref=f7e47]:
+              - link "المستخدمون" [ref=f7e48] [cursor=pointer]:
+                - /url: /ar/admin/users
+            - listitem [ref=f7e55]:
+              - link "الأهداف" [ref=f7e56] [cursor=pointer]:
+                - /url: /ar/admin/targets
+            - listitem [ref=f7e62]:
+              - link "القوائم" [ref=f7e63] [cursor=pointer]:
+                - /url: /ar/admin/lookups
+            - listitem [ref=f7e68]:
+              - link "العطل والإجازات" [ref=f7e69] [cursor=pointer]:
+                - /url: /ar/admin/holidays
+            - listitem [ref=f7e73]:
+              - link "تصدير" [ref=f7e74] [cursor=pointer]:
+                - /url: /ar/admin/export
+      - button "طيّ القائمة الجانبية" [ref=f7e80]
+    - generic [ref=f7e85]:
+      - banner [ref=f7e86]:
+        - generic [ref=f7e87]:
+          - button "ابحث في الشركات وجهات الاتصال والمشاريع — بالاسم أو رقم الهاتف Ctrl K" [ref=f7e88]:
+            - generic [ref=f7e92]: ابحث في الشركات وجهات الاتصال والمشاريع — بالاسم أو رقم الهاتف
+            - generic [ref=f7e93]: Ctrl K
+          - generic [ref=f7e94]:
+            - heading "البحث في كلادرا" [level=2] [ref=f7e95]
+            - paragraph [ref=f7e96]: اكتب اسمًا أو رقم هاتف أو رقم عرض سعر.
+          - generic [ref=f7e97]:
+            - link "الإشعارات" [ref=f7e98] [cursor=pointer]:
+              - /url: /ar/notifications
+            - button "حسابك" [ref=f7e99]:
+              - generic [ref=f7e100]: J
+              - generic [ref=f7e102]:
+                - generic [ref=f7e103]: Jerom
+                - generic [ref=f7e104]: مدير النظام
+      - main [ref=f7e105]:
+        - generic [ref=f7e107]:
+          - heading "الفريق" [level=1] [ref=f7e109]
+          - paragraph [ref=f7e111]: لا يوجد مندوبون بعد — يضيف مدير النظام الأشخاص من المستخدمين.
+  - region "Notifications alt+T"

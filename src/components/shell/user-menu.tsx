@@ -65,16 +65,18 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
           variant="ghost"
           size="lg"
           aria-label={t("shell.accountMenu")}
-          className="gap-2 px-1.5 md:px-2"
+          className="h-11 gap-2 px-1.5 md:h-9 md:px-2"
         >
           <Avatar className="size-7">
             <AvatarFallback className="bg-(image:--avatar-user-grad) text-[11px] font-semibold text-brand-ink">
               {initialsOf(name)}
             </AvatarFallback>
           </Avatar>
+          {/* 36 (144px) cut "Abdulrahman Al-Zahrani" mid-surname at 1366, where
+              there is room to spare. Widen once the viewport can afford it. */}
           <span className="hidden min-w-0 flex-col items-start leading-tight md:flex">
-            <span className="max-w-36 truncate text-[13px] font-medium">{name}</span>
-            <span className="max-w-36 truncate text-[11px] font-normal text-muted-foreground">
+            <span className="max-w-36 truncate text-[13px] font-medium lg:max-w-56">{name}</span>
+            <span className="max-w-36 truncate text-[11px] font-normal text-muted-foreground lg:max-w-56">
               {t(`common.${role}`)}
             </span>
           </span>

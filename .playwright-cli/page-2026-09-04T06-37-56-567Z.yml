@@ -1,0 +1,39 @@
+- generic [active] [ref=f10e1]:
+  - link "Skip to content" [ref=f10e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f10e3]:
+    - complementary "Main navigation" [ref=f10e4]:
+      - generic [ref=f10e5]:
+        - generic [aria-hidden] [ref=f10e6]: K
+        - generic [ref=f10e7]: Kladra
+      - navigation [ref=f10e8]:
+        - list [ref=f10e10]:
+          - listitem [ref=f10e11]:
+            - link "Companies" [ref=f10e12] [cursor=pointer]:
+              - /url: /en/companies
+          - listitem [ref=f10e18]:
+            - link "Projects" [ref=f10e19] [cursor=pointer]:
+              - /url: /en/projects
+          - listitem [ref=f10e23]:
+            - link "Quotations" [ref=f10e24] [cursor=pointer]:
+              - /url: /en/quotations
+          - listitem [ref=f10e29]:
+            - link "Dispatches" [ref=f10e30] [cursor=pointer]:
+              - /url: /en/dispatches
+      - button "Collapse sidebar" [ref=f10e38]
+    - generic [ref=f10e43]:
+      - banner [ref=f10e44]:
+        - generic [ref=f10e45]:
+          - button "Search companies, contacts, projects — name or phone" [ref=f10e46]:
+            - generic [aria-hidden] [ref=f10e51]: Ctrl K
+          - generic [ref=f10e52]:
+            - link "1 unread notification" [ref=f10e53] [cursor=pointer]:
+              - /url: /en/notifications
+              - generic [aria-hidden] [ref=f10e55]: "1"
+            - button "Your account" [ref=f10e56]:
+              - generic [ref=f10e57]: FA
+              - generic [ref=f10e59]:
+                - generic [ref=f10e60]: Faisal Al-Harbi
+                - generic [ref=f10e61]: Rep
+      - main [ref=f10e62]
+  - region "Notifications alt+T"

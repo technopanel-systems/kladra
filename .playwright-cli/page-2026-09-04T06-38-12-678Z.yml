@@ -1,0 +1,46 @@
+- generic [active] [ref=f12e1]:
+  - link "Skip to content" [ref=f12e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f12e3]:
+    - complementary "Main navigation" [ref=f12e4]:
+      - generic [ref=f12e5]:
+        - generic [aria-hidden] [ref=f12e6]: K
+        - generic [ref=f12e7]: Kladra
+      - navigation [ref=f12e8]:
+        - list [ref=f12e10]:
+          - listitem [ref=f12e11]:
+            - link "Companies" [ref=f12e12] [cursor=pointer]:
+              - /url: /en/companies
+          - listitem [ref=f12e18]:
+            - link "Projects" [ref=f12e19] [cursor=pointer]:
+              - /url: /en/projects
+          - listitem [ref=f12e23]:
+            - link "Quotations" [ref=f12e24] [cursor=pointer]:
+              - /url: /en/quotations
+          - listitem [ref=f12e29]:
+            - link "Dispatches" [ref=f12e30] [cursor=pointer]:
+              - /url: /en/dispatches
+      - button "Collapse sidebar" [ref=f12e38]
+    - generic [ref=f12e43]:
+      - banner [ref=f12e44]:
+        - generic [ref=f12e45]:
+          - button "Search companies, contacts, projects — name or phone" [ref=f12e46]:
+            - generic [aria-hidden] [ref=f12e51]: Ctrl K
+          - generic [ref=f12e52]:
+            - link "1 unread notification" [ref=f12e53] [cursor=pointer]:
+              - /url: /en/notifications
+              - generic [aria-hidden] [ref=f12e55]: "1"
+            - button "Your account" [ref=f12e56]:
+              - generic [ref=f12e57]: FA
+              - generic [ref=f12e59]:
+                - generic [ref=f12e60]: Faisal Al-Harbi
+                - generic [ref=f12e61]: Rep
+      - main [ref=f12e62]:
+        - generic [ref=f12e64]:
+          - generic [ref=f12e65]:
+            - heading "Companies" [level=1] [ref=f12e66]
+            - button "Add company" [disabled]
+          - generic [ref=f12e67]:
+            - paragraph [ref=f12e68]: No companies yet — add the first one.
+            - button "Add company" [disabled]
+  - region "Notifications alt+T"

@@ -1,0 +1,40 @@
+- generic [active] [ref=f2e1]:
+  - link "الانتقال إلى المحتوى" [ref=f2e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f2e3]:
+    - complementary [ref=f2e4]:
+      - generic [ref=f2e5]:
+        - generic [aria-hidden] [ref=f2e6]: K
+        - generic [ref=f2e7]: كلادرا
+      - navigation "التنقل الرئيسي" [ref=f2e8]:
+        - list [ref=f2e10]:
+          - listitem [ref=f2e11]:
+            - link "الطلبات الواردة" [ref=f2e12] [cursor=pointer]:
+              - /url: /ar/queue
+          - listitem [ref=f2e17]:
+            - link "عروض الأسعار" [ref=f2e18] [cursor=pointer]:
+              - /url: /ar/quotations
+          - listitem [ref=f2e23]:
+            - link "التوريدات" [ref=f2e24] [cursor=pointer]:
+              - /url: /ar/dispatches
+      - button "طيّ القائمة الجانبية" [ref=f2e32]
+    - generic [ref=f2e37]:
+      - banner [ref=f2e38]:
+        - generic [ref=f2e39]:
+          - button "ابحث في الشركات وجهات الاتصال والمشاريع — بالاسم أو رقم الهاتف" [ref=f2e40]:
+            - generic [aria-hidden] [ref=f2e45]: Ctrl K
+          - generic [ref=f2e46]:
+            - link "إشعاران غير مقروءين" [ref=f2e47] [cursor=pointer]:
+              - /url: /ar/notifications
+              - generic [aria-hidden] [ref=f2e49]: "2"
+            - button "حسابك" [ref=f2e50]:
+              - generic [ref=f2e51]: R
+              - generic [ref=f2e53]:
+                - generic [ref=f2e54]: Rawan
+                - generic [ref=f2e55]: منسقة المبيعات
+      - main [ref=f2e56]:
+        - generic [ref=f2e58]:
+          - heading "الطلبات الواردة" [level=1] [ref=f2e60]
+          - paragraph [ref=f2e62]: لا شيء بالانتظار — تصل إلى هنا طلبات عروض الأسعار والتوريدات.
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f2e68] [cursor=pointer]

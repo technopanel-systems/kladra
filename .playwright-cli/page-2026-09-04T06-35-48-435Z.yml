@@ -1,0 +1,52 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e33] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e34]:
+    - complementary "Main navigation" [ref=e35]:
+      - generic [ref=e36]:
+        - generic [aria-hidden] [ref=e37]: K
+        - generic [ref=e38]: Kladra
+      - navigation [ref=e39]:
+        - list [ref=e41]:
+          - listitem [ref=e42]:
+            - link "Companies" [ref=e43] [cursor=pointer]:
+              - /url: /en/companies
+          - listitem [ref=e49]:
+            - link "Projects" [ref=e50] [cursor=pointer]:
+              - /url: /en/projects
+          - listitem [ref=e54]:
+            - link "Quotations" [ref=e55] [cursor=pointer]:
+              - /url: /en/quotations
+          - listitem [ref=e60]:
+            - link "Dispatches" [ref=e61] [cursor=pointer]:
+              - /url: /en/dispatches
+      - button "Collapse sidebar" [ref=e69]
+    - generic [ref=e74]:
+      - banner [ref=e75]:
+        - generic [ref=e76]:
+          - button "Search companies, contacts, projects — name or phone Ctrl K" [ref=e77]:
+            - generic [ref=e81]: Search companies, contacts, projects — name or phone
+            - generic [ref=e82]: Ctrl K
+          - generic [ref=e83]:
+            - heading "Search Kladra" [level=2] [ref=e84]
+            - paragraph [ref=e85]: Type a name, a phone number or a quotation number.
+          - generic [ref=e86]:
+            - link "1 unread notification" [ref=e87] [cursor=pointer]:
+              - /url: /en/notifications
+              - generic [aria-hidden] [ref=e89]: "1"
+            - button "Your account" [ref=e90]:
+              - generic [ref=e91]: FA
+              - generic [ref=e93]:
+                - generic [ref=e94]: Faisal Al-Harbi
+                - generic [ref=e95]: Rep
+      - main [ref=e96]:
+        - generic [ref=e98]:
+          - generic [ref=e99]:
+            - heading "Companies" [level=1] [ref=e100]
+            - button "Add company" [disabled]
+          - generic [ref=e101]:
+            - paragraph [ref=e102]: No companies yet — add the first one.
+            - button "Add company" [disabled]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e28] [cursor=pointer]
+  - alert [ref=e32]: Companies

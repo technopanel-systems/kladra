@@ -1,0 +1,25 @@
+- generic [active] [ref=f3e1]:
+  - main [ref=f3e2]:
+    - generic [ref=f3e3]:
+      - generic [ref=f3e4]:
+        - generic [aria-hidden] [ref=f3e5]: K
+        - generic [ref=f3e6]: كلادرا
+      - generic [ref=f3e7]:
+        - generic [ref=f3e8]:
+          - generic [ref=f3e9]: تسجيل الدخول
+          - generic [ref=f3e10]: الرجاء إدخال البريد الإلكتروني وكلمة المرور.
+        - generic [ref=f3e12]:
+          - generic [ref=f3e13]:
+            - generic [ref=f3e14]: البريد الإلكتروني
+            - textbox "البريد الإلكتروني" [ref=f3e15]
+          - generic [ref=f3e16]:
+            - generic [ref=f3e17]: كلمة المرور
+            - textbox "كلمة المرور" [ref=f3e18]
+          - button "تسجيل الدخول" [ref=f3e19]
+      - generic [ref=f3e20]:
+        - paragraph [ref=f3e21]: الحسابات يُنشئها مدير النظام.
+        - link "English" [ref=f3e22] [cursor=pointer]:
+          - /url: /en/login
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f3e28] [cursor=pointer]
+  - alert [ref=f3e32]

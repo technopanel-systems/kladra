@@ -10,28 +10,38 @@ import { useCallback, useSyncExternalStore } from "react";
  * localStorage is an external store, so it is read through
  * `useSyncExternalStore` rather than copied into state by an effect: the
  * server snapshot is "expanded", the client snapshot is what was saved, and
- * another tab's change arrives through the `storage` event.
+ * another tab's change arrives through the `storage` event. The value is also
+ * held in memory, so the toggle still works where storage is blocked — a
+ * private window would otherwise read back the old answer and never move.
  */
 const KEY = "kladra.sidebar";
 
 const listeners = new Set<() => void>();
+let cached: boolean | null = null;
 
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
-  window.addEventListener("storage", onChange);
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== null && event.key !== KEY) return;
+    cached = null;
+    onChange();
+  };
+  window.addEventListener("storage", onStorage);
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener("storage", onChange);
+    window.removeEventListener("storage", onStorage);
   };
 }
 
 function readCollapsed(): boolean {
-  try {
-    return window.localStorage.getItem(KEY) === "collapsed";
-  } catch {
-    // Private mode or blocked storage: expanded is the safe default.
-    return false;
+  if (cached === null) {
+    try {
+      cached = window.localStorage.getItem(KEY) === "collapsed";
+    } catch {
+      cached = false; // private mode or blocked storage: expanded is the default
+    }
   }
+  return cached;
 }
 
 function serverCollapsed(): boolean {
@@ -39,30 +49,43 @@ function serverCollapsed(): boolean {
 }
 
 function writeCollapsed(next: boolean): void {
+  cached = next;
   try {
     window.localStorage.setItem(KEY, next ? "collapsed" : "expanded");
   } catch {
-    // Nothing to persist to; the choice still applies to this page.
+    // Nothing to persist to; the choice still applies to this browser session.
   }
   for (const onChange of listeners) onChange();
 }
 
-const neverChanges = () => () => {};
-const onClient = () => true;
-const onServer = () => false;
+/**
+ * True from the first frame AFTER hydration has painted. The stored width
+ * cannot be known on the server, so the rail's first client render may change
+ * its width; enabling the transition a frame later makes that a snap instead
+ * of an unasked-for animation on every page load (DESIGN §2: motion where it
+ * explains, never motion for its own sake).
+ */
+let painted = false;
+function subscribePainted(onChange: () => void): () => void {
+  const frame = requestAnimationFrame(() => {
+    painted = true;
+    onChange();
+  });
+  return () => cancelAnimationFrame(frame);
+}
+const readPainted = () => painted;
+const serverPainted = () => false;
 
 export type SidebarState = {
   collapsed: boolean;
-  /** False for the first paint, when the stored width is not knowable yet. */
+  /** False until the first frame after hydration; gates the width transition. */
   ready: boolean;
   toggle: () => void;
 };
 
 export function useSidebar(): SidebarState {
   const collapsed = useSyncExternalStore(subscribe, readCollapsed, serverCollapsed);
-  // Gating the width transition on this makes the first paint a snap rather
-  // than an animation of the rail moving on its own.
-  const ready = useSyncExternalStore(neverChanges, onClient, onServer);
+  const ready = useSyncExternalStore(subscribePainted, readPainted, serverPainted);
 
   const toggle = useCallback(() => {
     writeCollapsed(!readCollapsed());

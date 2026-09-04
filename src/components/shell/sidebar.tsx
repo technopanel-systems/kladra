@@ -62,7 +62,6 @@ export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "r
   return (
     <TooltipProvider delayDuration={200}>
       <aside
-        aria-label={t("shell.mainNav")}
         data-collapsed={collapsed}
         className={cn(
           "sticky top-0 z-30 hidden h-svh shrink-0 flex-col overflow-hidden border-e border-line bg-rail glass md:flex",
@@ -70,7 +69,12 @@ export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "r
           collapsed ? "w-[4.5rem]" : "w-60",
         )}
       >
-        <div className={cn("flex h-14 shrink-0 items-center gap-2.5", collapsed ? "px-4" : "px-3")}>
+        <div
+          className={cn(
+            "flex h-14 shrink-0 items-center gap-2.5",
+            collapsed ? "justify-center px-0" : "px-3",
+          )}
+        >
           <BrandMark />
           <span
             className={cn(
@@ -82,11 +86,12 @@ export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "r
           </span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 pb-3">
+        <nav aria-label={t("shell.mainNav")} className="flex-1 overflow-y-auto px-3 pb-3">
           {groups.map((group, index) => (
             <div key={group.labelKey ?? index}>
               {group.labelKey ? (
                 <p
+                  id={`nav-group-${index}`}
                   className={cn(
                     "px-2.5 pt-5 pb-1.5 text-[11px] font-medium text-rail-text/70",
                     collapsed && "sr-only",
@@ -96,7 +101,12 @@ export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "r
                 </p>
               ) : null}
               {group.labelKey && collapsed ? <div className="my-3 h-px bg-line" /> : null}
-              <ul className="flex flex-col gap-0.5">{group.items.map(row)}</ul>
+              <ul
+                aria-labelledby={group.labelKey ? `nav-group-${index}` : undefined}
+                className="flex flex-col gap-0.5"
+              >
+                {group.items.map(row)}
+              </ul>
             </div>
           ))}
         </nav>
@@ -108,11 +118,13 @@ export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "r
             aria-label={t(collapsed ? "common.expand" : "common.collapse")}
             className={cn(
               "flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-medium text-rail-text transition-colors hover:bg-rail-active hover:text-rail-strong",
-              collapsed ? "w-10 justify-center px-0" : "w-full px-2.5",
+              collapsed ? "mx-auto w-10 justify-center px-0" : "w-full px-2.5",
             )}
           >
             <ToggleIcon className="size-[18px] shrink-0 rtl:-scale-x-100" />
-            <span className={cn("truncate", collapsed && "sr-only")}>{t("common.collapse")}</span>
+            <span className={cn("truncate", collapsed && "sr-only")}>
+              {t(collapsed ? "common.expand" : "common.collapse")}
+            </span>
           </button>
         </div>
       </aside>

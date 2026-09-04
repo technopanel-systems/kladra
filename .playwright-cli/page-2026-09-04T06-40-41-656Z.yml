@@ -1,0 +1,47 @@
+- generic [active] [ref=f19e1]:
+  - link "تخطٍ إلى المحتوى" [ref=f19e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f19e3]:
+    - complementary [ref=f19e4]:
+      - generic [ref=f19e5]:
+        - generic [aria-hidden] [ref=f19e6]: K
+        - generic [ref=f19e7]: كلادرا
+      - navigation "التنقل الرئيسي" [ref=f19e8]:
+        - list [ref=f19e10]:
+          - listitem [ref=f19e11]:
+            - link "الشركات" [ref=f19e12] [cursor=pointer]:
+              - /url: /ar/companies
+          - listitem [ref=f19e18]:
+            - link "المشاريع" [ref=f19e19] [cursor=pointer]:
+              - /url: /ar/projects
+          - listitem [ref=f19e23]:
+            - link "عروض الأسعار" [ref=f19e24] [cursor=pointer]:
+              - /url: /ar/quotations
+          - listitem [ref=f19e29]:
+            - link "التوريدات" [ref=f19e30] [cursor=pointer]:
+              - /url: /ar/dispatches
+      - button "طيّ القائمة الجانبية" [ref=f19e38]
+    - generic [ref=f19e43]:
+      - banner [ref=f19e44]:
+        - generic [ref=f19e45]:
+          - button "ابحث في الشركات وجهات الاتصال والمشاريع — بالاسم أو رقم الهاتف" [ref=f19e46]:
+            - generic [aria-hidden] [ref=f19e51]: Ctrl K
+          - generic [ref=f19e52]:
+            - link "إشعار غير مقروء" [ref=f19e53] [cursor=pointer]:
+              - /url: /ar/notifications
+              - generic [aria-hidden] [ref=f19e55]: "1"
+            - button "حسابك" [ref=f19e56]:
+              - generic [ref=f19e57]: FA
+              - generic [ref=f19e59]:
+                - generic [ref=f19e60]: Faisal Al-Harbi
+                - generic [ref=f19e61]: المندوب
+      - main [ref=f19e62]:
+        - generic [ref=f19e64]:
+          - generic [ref=f19e65]:
+            - heading "الشركات" [level=1] [ref=f19e66]
+            - button "إضافة شركة" [disabled]
+          - generic [ref=f19e67]:
+            - paragraph [ref=f19e68]: لا توجد شركات بعد — أضف أول شركة.
+            - button "إضافة شركة" [disabled]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f19e74] [cursor=pointer]

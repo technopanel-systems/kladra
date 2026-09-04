@@ -6,13 +6,19 @@ import { useTranslations } from "next-intl";
 import { searchAllAction, type SearchResults } from "@/actions/search";
 import {
   Command,
-  CommandDialog,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
   CommandShortcut,
 } from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useRouter } from "@/i18n/navigation";
 import { formatPhone } from "@/lib/phone";
 
@@ -26,7 +32,12 @@ import { formatPhone } from "@/lib/phone";
  * the drawer, which is how the open record stays in the URL (SPEC §3).
  */
 
-const EMPTY: SearchResults = { companies: [], contacts: [], projects: [], quotations: [] };
+const EMPTY: SearchResults = {
+  companies: [],
+  contacts: [],
+  projects: [],
+  quotations: [],
+};
 const DEBOUNCE_MS = 200;
 const MIN_TERM = 2;
 
@@ -77,7 +88,10 @@ export function SearchCommand() {
     const timer = setTimeout(async () => {
       const outcome = await searchAllAction(query);
       if (cancelled) return;
-      setAnswer({ query, results: outcome.ok && outcome.data ? outcome.data : EMPTY });
+      setAnswer({
+        query,
+        results: outcome.ok && outcome.data ? outcome.data : EMPTY,
+      });
     }, DEBOUNCE_MS);
     return () => {
       cancelled = true;
@@ -111,7 +125,7 @@ export function SearchCommand() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-lg border border-line bg-surface-2 text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground sm:w-full sm:max-w-md sm:shrink sm:justify-start sm:px-3 lg:max-w-lg"
+        className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-lg border border-line bg-surface-2 px-3 text-muted-foreground transition-colors hover:border-line-strong hover:text-foreground sm:max-w-md md:h-9 lg:max-w-lg"
       >
         <Search className="size-4 shrink-0" />
         <span className="flex-1 truncate text-start text-[13px] sm:hidden">
@@ -120,122 +134,138 @@ export function SearchCommand() {
         <span className="hidden flex-1 truncate text-start text-[13px] sm:inline">
           {t("common.searchPlaceholder")}
         </span>
-        <kbd className="num hidden shrink-0 items-center rounded border border-line px-1.5 py-0.5 text-[10px] text-faint lg:inline-flex">
+        {/* The keycap is decoration; without this it joins the button's name.
+            Key names are Latin on an Arabic keyboard too, so it is not
+            translated — but it needs dir="ltr" or bidi reorders "Ctrl K" in an
+            RTL line. It is an inline element, never a layout container. */}
+        <kbd
+          aria-hidden="true"
+          dir="ltr"
+          className="num hidden shrink-0 items-center rounded border border-line px-1.5 py-0.5 text-[10px] text-faint lg:inline-flex"
+        >
           {mac ? "⌘K" : "Ctrl K"}
         </kbd>
       </button>
 
-      <CommandDialog
-        open={open}
-        onOpenChange={onOpenChange}
-        title={t("shell.searchDialog")}
-        description={t("shell.searchHint")}
-        className="sm:max-w-xl"
-      >
-        <Command shouldFilter={false}>
-          <CommandInput
-            value={term}
-            onValueChange={setTerm}
-            placeholder={t("common.searchPlaceholder")}
-          />
-          <CommandList>
-            {showHint ? (
-              <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                {t("shell.searchHint")}
-              </p>
-            ) : null}
-            {showLoading ? (
-              <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                {t("common.loading")}
-              </p>
-            ) : null}
-            {showNothing ? (
-              <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                {t("shell.searchNoResults", { q: query })}
-              </p>
-            ) : null}
+      {/*
+       * Dialog rather than shadcn's CommandDialog: that one renders its
+       * sr-only header outside DialogContent, so "Search Kladra" sat in every
+       * page's heading outline even with the palette shut.
+       */}
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          showCloseButton={false}
+          className="top-1/3 translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-xl"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>{t("shell.searchDialog")}</DialogTitle>
+            <DialogDescription>{t("shell.searchHint")}</DialogDescription>
+          </DialogHeader>
+          <Command shouldFilter={false}>
+            <CommandInput
+              value={term}
+              onValueChange={setTerm}
+              placeholder={t("common.searchPlaceholder")}
+            />
+            <CommandList>
+              {showHint ? (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  {t("shell.searchHint")}
+                </p>
+              ) : null}
+              {showLoading ? (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  {t("common.loading")}
+                </p>
+              ) : null}
+              {showNothing ? (
+                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                  {t("shell.searchNoResults", { q: query })}
+                </p>
+              ) : null}
 
-            {rows.companies.length > 0 ? (
-              <CommandGroup heading={t("common.companies")}>
-                {rows.companies.map((row) => (
-                  <CommandItem
-                    key={row.id}
-                    value={`company-${row.id}`}
-                    onSelect={() => go(`/companies?open=${row.id}`)}
-                  >
-                    <Building2 className="text-muted-foreground" />
-                    <span className="truncate">{row.name}</span>
-                    {row.city ? (
-                      <CommandShortcut className="max-w-[40%] truncate tracking-normal">
-                        {row.city}
-                      </CommandShortcut>
-                    ) : null}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ) : null}
+              {rows.companies.length > 0 ? (
+                <CommandGroup heading={t("common.companies")}>
+                  {rows.companies.map((row) => (
+                    <CommandItem
+                      key={row.id}
+                      value={`company-${row.id}`}
+                      onSelect={() => go(`/companies?open=${row.id}`)}
+                    >
+                      <Building2 className="text-muted-foreground" />
+                      <span className="truncate">{row.name}</span>
+                      {row.city ? (
+                        <CommandShortcut className="max-w-[40%] truncate tracking-normal">
+                          {row.city}
+                        </CommandShortcut>
+                      ) : null}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
 
-            {rows.contacts.length > 0 ? (
-              <CommandGroup heading={t("common.contacts")}>
-                {rows.contacts.map((row) => (
-                  <CommandItem
-                    key={row.id}
-                    value={`contact-${row.id}`}
-                    onSelect={() => go(`/companies?open=${row.companyId}`)}
-                  >
-                    <UserRound className="text-muted-foreground" />
-                    <span className="truncate">{row.name}</span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {row.companyName}
-                    </span>
-                    <CommandShortcut className="tracking-normal">
-                      <span dir="ltr" className="num">
-                        {formatPhone(row.phone)}
+              {rows.contacts.length > 0 ? (
+                <CommandGroup heading={t("common.contacts")}>
+                  {rows.contacts.map((row) => (
+                    <CommandItem
+                      key={row.id}
+                      value={`contact-${row.id}`}
+                      onSelect={() => go(`/companies?open=${row.companyId}`)}
+                    >
+                      <UserRound className="text-muted-foreground" />
+                      <span className="truncate">{row.name}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {row.companyName}
                       </span>
-                    </CommandShortcut>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ) : null}
+                      <CommandShortcut className="tracking-normal">
+                        <span dir="ltr" className="num">
+                          {formatPhone(row.phone)}
+                        </span>
+                      </CommandShortcut>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
 
-            {rows.projects.length > 0 ? (
-              <CommandGroup heading={t("common.projects")}>
-                {rows.projects.map((row) => (
-                  <CommandItem
-                    key={row.id}
-                    value={`project-${row.id}`}
-                    onSelect={() => go(`/projects?open=${row.id}`)}
-                  >
-                    <FolderKanban className="text-muted-foreground" />
-                    <span className="truncate">{row.name}</span>
-                    <CommandShortcut className="max-w-[40%] truncate tracking-normal">
-                      {row.companyName}
-                    </CommandShortcut>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ) : null}
+              {rows.projects.length > 0 ? (
+                <CommandGroup heading={t("common.projects")}>
+                  {rows.projects.map((row) => (
+                    <CommandItem
+                      key={row.id}
+                      value={`project-${row.id}`}
+                      onSelect={() => go(`/projects?open=${row.id}`)}
+                    >
+                      <FolderKanban className="text-muted-foreground" />
+                      <span className="truncate">{row.name}</span>
+                      <CommandShortcut className="max-w-[40%] truncate tracking-normal">
+                        {row.companyName}
+                      </CommandShortcut>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
 
-            {rows.quotations.length > 0 ? (
-              <CommandGroup heading={t("common.quotations")}>
-                {rows.quotations.map((row) => (
-                  <CommandItem
-                    key={row.id}
-                    value={`quotation-${row.id}`}
-                    onSelect={() => go(`/quotations?open=${row.id}`)}
-                  >
-                    <FileText className="text-muted-foreground" />
-                    <span className="num truncate">{row.number}</span>
-                    <CommandShortcut className="max-w-[40%] truncate tracking-normal">
-                      {row.companyName}
-                    </CommandShortcut>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ) : null}
-          </CommandList>
-        </Command>
-      </CommandDialog>
+              {rows.quotations.length > 0 ? (
+                <CommandGroup heading={t("common.quotations")}>
+                  {rows.quotations.map((row) => (
+                    <CommandItem
+                      key={row.id}
+                      value={`quotation-${row.id}`}
+                      onSelect={() => go(`/quotations?open=${row.id}`)}
+                    >
+                      <FileText className="text-muted-foreground" />
+                      <span className="num truncate">{row.number}</span>
+                      <CommandShortcut className="max-w-[40%] truncate tracking-normal">
+                        {row.companyName}
+                      </CommandShortcut>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
+            </CommandList>
+          </Command>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

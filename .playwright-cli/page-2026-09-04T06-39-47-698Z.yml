@@ -1,0 +1,30 @@
+- generic [active] [ref=f16e1]:
+  - link "Skip to content" [ref=f16e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f16e3]:
+    - generic [ref=f16e4]:
+      - banner [ref=f16e5]:
+        - generic [ref=f16e6]:
+          - link "Kladra" [ref=f16e7] [cursor=pointer]:
+            - /url: /en/companies
+            - generic [aria-hidden] [ref=f16e8]: K
+          - button "Search" [ref=f16e10]
+          - generic [ref=f16e15]:
+            - link "1 unread notification" [ref=f16e16] [cursor=pointer]:
+              - /url: /en/notifications
+              - generic [aria-hidden] [ref=f16e18]: "1"
+            - button "Your account" [ref=f16e19]:
+              - generic [ref=f16e20]: FA
+      - main [ref=f16e22]
+    - navigation "Main navigation" [ref=f16e35]:
+      - link "Companies" [ref=f16e36] [cursor=pointer]:
+        - /url: /en/companies
+      - link "Projects" [ref=f16e42] [cursor=pointer]:
+        - /url: /en/projects
+      - link "Quotes" [ref=f16e46] [cursor=pointer]:
+        - /url: /en/quotations
+      - link "Dispatches" [ref=f16e51] [cursor=pointer]:
+        - /url: /en/dispatches
+      - button "Menu" [ref=f16e58]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=f16e66] [cursor=pointer]
