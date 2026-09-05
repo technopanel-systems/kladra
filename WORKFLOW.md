@@ -60,6 +60,7 @@
       - [ ] A Read it as a stranger, build nothing yet: schema, actions, screens, seed,
             tests, a full day for each of the five people; a ranked findings list in §5
             with the cause of each, not the symptom; then fixed worst first in slices
+            — the list is written (§5, sixty-seven entries, unverified); the fixing has begun
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -748,3 +749,185 @@ the rail is a list of links too and an unscoped `li` finds a nav item first.
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.
+
+
+## §5 What a stranger found (P11A) — ranked, with causes
+
+Twelve readers, each a fresh model given one lens and told to read Kladra as another
+developer's work: write paths, schema, the queue, Faisal's day, admin and backup, the team
+figures, live updates, hand-over and floor rules, seed and tests, words, identity, the phone.
+Seventy-three findings, sixty-seven after merging what two readers saw. The refute pass that
+was to follow them hit the usage limit and never ran, so **every entry below is unverified
+until the fix reads the code** — the worst ones first, and each fix slice starts by checking
+the claim. Where a reader quoted the code the entry says so; where two readers disagreed the
+entry says that too. Fixed items are ticked and dated in place; the list is not rewritten.
+
+Rank is by consequence to the people: wrong metres or money, silent loss, a screen that
+lies, a write that can corrupt, then a screen that confuses, then hygiene.
+
+- [ ] 1 **Two dispatches can spend the same panels.** `src/actions/dispatches.ts:173-212`
+  `checkQuantities` is a plain SELECT under READ COMMITTED with no row lock; two Saves at once
+  both pass and both commit. Cause: the check is at the door and the door is not locked. Fix:
+  lock the quotation row for the transaction, and a test that races two requests. Two readers
+  cited the code; a third called the same function "correctly re-verified" — verify first.
+- [ ] 2 **A dispatch already waiting is never re-checked against a later revision.**
+  `src/actions/dispatches.ts:461-528`. D36's rule runs only when a dispatch is raised; Rawan
+  can approve one against a price the customer no longer holds. Fix: re-check the live revision
+  at approval and say so in the queue. Reader cites code.
+- [ ] 3 **A hand-over rewrites past months' achieved metres.** `src/lib/dispatches.ts:585-603`,
+  `src/lib/months.ts:67-73`. Achieved joins the CURRENT `companies.rep_id`, so moving a
+  customer moves his history to the new rep. Cause: no attribution at the time of the sale
+  although `dispatches.rep_id` already holds it. Fix: attribute to the rep who raised the
+  dispatch (decision for SPEC §4). Reader cites code.
+- [ ] 4 **A quotation names the rep who no longer owns the company.** `src/lib/quotations.ts:
+  196-207`, `src/actions/companies.ts:407-411`. `quotations.rep_id` is frozen at creation while
+  the floor moved. With 3 decided, the display is right and the sentence beside it must say
+  "raised by". Reader cites code.
+- [ ] 5 **A SMAC number cannot be corrected, and a duplicate says "something went wrong".**
+  `src/db/schema.ts:374-391`, `src/actions/quotations.ts:388-446`, `src/actions/dispatches.ts:
+  461-528`; contrast the phone-duplicate handling in `src/actions/contacts.ts:27-31`. The one
+  value the spec itself calls error-prone has no named error and no way out of a typo. Fix: a
+  named 23505 check that says which record holds the number, and a correction path. Two readers.
+- [ ] 6 **Six status transitions have no compare-and-swap.** `src/actions/quotations.ts:409-413,
+  479-484, 558-562`, `src/actions/dispatches.ts:486-495, 563-567`; contrast `companies.ts:
+  460-466` which guards its UPDATE with the expected prior state. A second tab overwrites a
+  decision silently. Fix: `where status = expected`, check the returned count, say "somebody
+  already acted — reload". Two readers cite code.
+- [ ] 7 **Archiving a company records no reason.** `src/db/schema.ts:218-252`, `src/actions/
+  companies.ts:451-479`. Every other terminal state got a reason column or audit details; S16
+  promised "the record shows why". Reader cites code.
+- [ ] 8 **Unfiling an old entry rewrites a reported day.** `src/actions/activities.ts:219-245`
+  vs `308-341`: edit checks `mayWriteFor(day)`, archive never does, and the button is always
+  offered. Fix: the same gate on both, and the button only while the day is open. Reader cites code.
+- [ ] 9 **Phones are normalised as Saudi whatever the country.** `src/lib/phone.ts:34-47` and
+  its three callers; the country is in scope at every one. Fix: pass it. Reader cites code.
+- [ ] 10 **A promoted account keeps its floor for ever.** `src/lib/floor.ts:51-54` `mayWrite`
+  checks identity only; its sibling `mayQuote` checks the role too. Fix: require a floor-holding
+  role, and make a role change force a hand-over. Reader cites code.
+- [ ] 11 **Restoring a stray archived contact un-archives its company as a side effect.**
+  `src/actions/admin.ts:601-630`. Fix: restore the child alone when the company was archived on
+  its own, and say what the restore will do. Reader cites code.
+- [ ] 12 **`backup:verify` fails on any day the business used Kladra.** `scripts/backup-verify.ts:
+  169-196` compares the live database now against a dump from earlier. Fix: capture the counts
+  when the dump is taken. Reader cites code.
+- [ ] 13 **The six-month card calls a month "the first with anything" while its own bars say
+  otherwise.** `src/lib/months.ts:116-132`, `months-card.tsx:74-84`: null percent comes from the
+  previous month alone. Fix: first only when every earlier month is nought. Reader cites code.
+- [ ] 14 **D84's guard does not cover the phone's back gesture.** `log-dialog.tsx`: a route
+  change loses the typed entry. Fix: a popstate guard while dirty. Reader cites code.
+- [ ] 15 **The drawer's follow-up picker cannot clear a badge a project drives, and says it
+  did.** `src/lib/followups.ts:85-93`, `company-header.tsx:168-194`, `actions/companies.ts:
+  305-333`: the badge is least(company, projects); the picker writes the company only. Reader
+  cites code.
+- [ ] 16 **A quotation raised from the company drawer belongs to no project, by default.**
+  `company-drawer.tsx:377-384`, `request-quotation-dialog.tsx:184-274`, `actions/quotations.ts:
+  205-254`; SPEC says every quotation belongs to one. Reader cites code.
+- [ ] 17 **A Postgres blip longer than one reconnect loses live events with no resync.**
+  `src/app/api/events/route.ts:92-174`, `live-provider.tsx:122-130`. Fix: broadcast a refresh
+  when the listener heals. Reader cites code. (11B territory.)
+- [ ] 18 **`requireActor()` gates the SSE and count routes, so live updates 401 during
+  "view as".** `events/route.ts:162-169`, `authz.ts:105-111`, `notifications/count/route.ts:
+  15-20`. Fix: a read-only identity check for reads. Reader cites code. (11B.)
+- [ ] 19 **CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`.** `src/lib/
+  export.ts:28-32`. Reader cites code.
+- [ ] 20 **No error boundary in the signed-in app.** No `error.tsx` anywhere; `loading.tsx`
+  exists. Fix: a themed, bilingual error page in the shell. Reader cites absence. (11G.)
+- [ ] 21 **Edit and unfile of a log entry never call `notifyLive`.** `activities.ts:276-296,
+  320-337`; every other write does. Reader cites code. (11B.)
+- [ ] 22 **The adoption headline counts people the same screen excuses as away.** `src/lib/
+  adoption.ts:74-112`, `use-panel.tsx:118-132`. Reader cites code.
+- [ ] 23 **A rep's "open quotations" does not sum to the two figures under it.** `standing.ts:
+  69-81, 136-149`, `day.ts:57-160`: the total counts requested too; the breakdown never does.
+  Fix: a reason for a plain "requested" one, or a caption that says it. Reader cites code.
+- [ ] 24 **The queue's "longest wait" can name a request in neither list under it.**
+  `standing.ts:318-366` never filters archived companies; the lists do. Reader cites code.
+- [ ] 25 **`check-messages` guards five computed-key families and misses six more**, including
+  `LINE_FIELDS` on the revision-diff screen. `scripts/check-messages.ts:186-192`. Two readers.
+- [ ] 26 **A rep who works a Saturday cannot write that day's report.** `workdays.ts:13-16`,
+  `reports.ts:374-389`; S47 allows recorded Saturday work. Reader cites code.
+- [ ] 27 **The day's Log and WhatsApp controls are small and sit over a whole-card link.**
+  `call-band.tsx:66-120`. A rushed thumb opens the drawer. Reader cites code. (11H.)
+- [ ] 28 **New Project and Edit Project never become bottom sheets.** They call the raw Dialog;
+  nine others use `ResponsiveDialog`. Reader cites code. (11H.)
+- [ ] 29 **"Calls due" has no way to place a call.** `phone.ts:61-63` exports WhatsApp only;
+  `tel:` appears nowhere. Reader cites code.
+- [ ] 30 **Marketing's daily report shows six figures it can never move.** `reports.ts:256`,
+  `report-figures.ts:32-49`; the coordinator got a trimmed set, marketing did not. Reader cites code.
+- [ ] 31 **The SMAC prompt hides the company while the number is retyped.** `prompt-dialog.tsx:
+  94-101`: title and description carry a bare label. Reader cites code.
+- [ ] 32 **Stuck-request ageing reads holidays from the first of this month only.** `team.ts:
+  412-432, 516-532`, `calendar.ts:21-27`. Reader cites code.
+- [ ] 33 **The queue's headline counts are a capped array's length.** `queue/page.tsx:71-134`;
+  `/dispatches` counts. Unreachable at fourteen people; wrong shape all the same. Reader cites code.
+- [ ] 34 **The board's "current card" ring is the alert red DESIGN already retired once.**
+  `board.tsx:98`, `globals.css:181`. Reader cites code. (11G.)
+- [ ] 35 **The phone breakpoint is written three times — 639, 640 and 768.** `responsive-dialog.
+  tsx:35`, `company-header.tsx:56`, `bottom-bar.tsx:34`; between 641 and 767 the shell is a
+  phone and the dialogs are not. Two readers. (11H.)
+- [ ] 36 **The admin gate is hand-copied into seven pages, and both test sweeps miss `admin/use`.**
+  Derive the lists from `nav.ts`. Reader cites code.
+- [ ] 37 **A dispatch is never refused in the seed, the spec or the walk.** `demo-data.ts:
+  885-929`, `tests/dispatches.spec.ts`; WORKFLOW §3 marks it done. Reader cites code.
+- [ ] 38 **Nor is a quotation ever rejected live, nor `quotations_decided_check` tested.** Same
+  shape. Reader cites code.
+- [ ] 39 **A call card with no contact says nothing; the customer list says "no contact".**
+  `call-band.tsx` vs `companies-table.tsx:101-111`. Reader cites code.
+- [ ] 40 **A collapsed sidebar snaps open on every load.** `use-sidebar.ts`: localStorage only,
+  no cookie like theme and locale. Reader cites code. (11G.)
+- [ ] 41 **The browser chrome colour follows the OS, not Kladra's theme.** `layout.tsx:46-54`.
+  Reader cites code. (11G.)
+- [ ] 42 **`notifications.subject_type` is free text pretending to be a closed type.** `schema.
+  ts:592, 611`. Fix: a pgEnum or CHECK. Reader cites code. (11C.)
+- [ ] 43 **`audit_log` has no index for the adoption query.** `schema.ts:636-642`, `adoption.ts:
+  78-95`: `(user_id, at)`. Reader cites code. (11C.)
+- [ ] 44 **Seven admin writes log an audit row whether or not a row changed.** `admin.ts:196-630`;
+  `.returning()` and a count, as `archiveCompanyAction` does. Reader cites code.
+- [ ] 45 **The funnel calls a fresh "sent back" request "never asked again".** `chain.ts:34-121`.
+  Fix: an age, said in the caption. Reader cites code.
+- [ ] 46 **The round-sum-round m² formula is retyped in six places.** `dispatches.ts:571`,
+  `months.ts:65`, `reports.ts:157`, `standing.ts:59`, `export.ts:193`, a test. One fragment. (11C.)
+- [ ] 47 **`check:messages` is not in the build or the stated pre-commit chain**, though three
+  files say a locale gap fails the build. `package.json:12`. Fix: chain it. Reader cites code.
+- [ ] 48 **"Revision" is نسخة on a dispatch error and مراجعة everywhere else.** `messages/ar/
+  dispatches.json:44`, `common.json:48`. Reader cites code.
+- [ ] 49 **The D68 name test passes when the person does not render at all.** `reading.spec.ts:
+  401-408`. Reader cites code.
+- [ ] 50 **The "nothing can be written while viewing" test can skip its only write.** `view-as.
+  spec.ts:104-120`. Reader cites code.
+- [ ] 51 **The 44px touch rule lives in one file.** `bottom-bar.tsx`, `button.tsx:29-41` tops
+  out at 36. Reader cites code. (11H.)
+- [ ] 52 **The hand-over warning for marketing names what never moves and not what does.**
+  `drawer.json:46`, `companies.ts:407-422`. Reader cites code.
+- [ ] 53 **The offline page is always dark.** `public/offline.html:20-33`; the theme cookie is
+  readable without a server. Reader cites code. (11G.)
+- [ ] 54 **The coordinator's queue never highlights an arrived row.** `use-arrived.ts` is wired
+  into two tables, not hers. Reader cites code. (11B.)
+- [ ] 55 **`quotation_items` has no unique index on position; `dispatch_items` has.** `schema.
+  ts:407-448` vs `505-509`. Unreachable through the app today. (11C.)
+- [ ] 56 **A target's month is normalised in Zod only, never in the database.** `admin.ts:
+  297-300`, `schema.ts:516-542`. (11C.)
+- [ ] 57 **Two revisions at once collide on the unique index and crash generically.**
+  `quotations.ts:629-651`. Fix: name the collision. Reader cites code.
+- [ ] 58 **`unused-messages` exempts all of `common.*` off one dynamic call**, hiding a dead
+  and wrong key. `unused-messages.mts:28-46`. Reader cites code.
+- [ ] 59 **"picked" in `errors.cityNotInCountry`; the glossary says never pick or select.**
+  `errors.json:12`. Reader cites code.
+- [ ] 60 **"Person" is الموظف on the team screen and الشخص in admin.** `team.json:14`,
+  `admin.json:61`. Reader cites code.
+- [ ] 61 **`seed:volume` writes no audit trail**, so every trail panel is empty at the one scale
+  meant to be walked. `seed-volume.ts`. Reader cites code.
+- [ ] 62 **`admin.spec.ts` re-implements Riyadh-today and the weekend.** `admin.spec.ts:37-58`.
+  Import the real ones. Reader cites code.
+- [ ] 63 **Nothing automated covers the live channel.** No spec opens `/api/events`. (11B.)
+- [ ] 64 **The NOTIFY chunking branch has never run.** `live.ts:30-51`, 150 per payload against
+  fourteen people. A unit test with a synthetic audience. (11B.)
+- [ ] 65 **The log dialog does not preselect the contact the card shows.** `log-dialog.tsx`,
+  `call-band.tsx`: a `projectId` prop exists, no `contactId`. Reader cites code.
+- [ ] 66 **Eleven primary buttons fall back to a flat red instead of the brand gradient.**
+  `button.tsx:12`, `globals.css:169`: `default` aliases `--primary` to the brand hue. (11G.)
+- [ ] 67 **`archivedCount()` is dead code whose comment describes a badge that was never
+  built.** `admin.ts:275-282`. Reader cites code.
+
+Merged: the quantity race (two readers), the SMAC pair, the six blind transitions, the
+computed-key families, the breakpoint trio. Dropped: the un-capped waiting list, fixed in
+P10d before this list was written (D83).
