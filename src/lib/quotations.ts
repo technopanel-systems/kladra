@@ -50,6 +50,7 @@ import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { quotationLabel } from "@/lib/labels";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
+import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotation-diff";
 import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
 import type { SessionUser } from "@/lib/types";
 
@@ -348,6 +349,12 @@ export type QuotationItemRow = {
 
 export type QuotationDetail = QuotationRow & {
   notes: string | null;
+  /**
+   * The quotation this one was raised on, where it is a revision. The column
+   * and not "the revision before mine": what the rep had in front of him when
+   * he pressed Revise is the thing his changes are changes TO (D76).
+   */
+  revisionOf: string | null;
   items: QuotationItemRow[];
   /** Every revision of this number, newest first, this one included (S34). */
   revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
@@ -366,7 +373,11 @@ export async function getQuotation(
   id: string,
 ): Promise<QuotationDetail | null> {
   const [row] = await db
-    .select({ ...selection(await getLocale()), notes: quotations.notes })
+    .select({
+      ...selection(await getLocale()),
+      notes: quotations.notes,
+      revisionOf: quotations.revisionOf,
+    })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
@@ -424,6 +435,7 @@ export async function getQuotation(
   return {
     ...base,
     notes: row.notes ?? null,
+    revisionOf: row.revisionOf ?? null,
     items: items.map((item) => ({
       id: item.id,
       position: item.position,
@@ -543,6 +555,65 @@ export async function lastQuotationForCompany(
   if (!quotation) return null;
 
   return { label: quotation.label, lines: draftLinesFrom(quotation.items) };
+}
+
+/** What a revision changed, and which quotation it changed it from. */
+export type RevisionChanges = {
+  /** The revision it came from — Q-12 under a Q-12/2. */
+  label: string;
+  changes: LineChange[];
+};
+
+/**
+ * What this revision changed from the one it was raised on (SPEC D76).
+ *
+ * She priced Q-12, issued it, and Q-12/2 arrives a week later carrying the same
+ * three lines with nothing to say which of them moved. So she either prices all
+ * of it again or opens the old one beside it and compares nine fields a line by
+ * eye — the walk called it re-issuing blind, and it is the one thing on the
+ * chain that costs her time on every single revision.
+ *
+ * Read against the quotation this one names as its parent, not against the
+ * newest older revision: Q-12/3 is a change to Q-12/2, which is what the rep had
+ * in front of him when he raised it.
+ *
+ * Null when there is nothing to compare — a first ask, or a parent whose lines
+ * this reader may not see, which cannot happen through the app (both hang off
+ * one company) and is answered with silence rather than a guess if it ever does.
+ *
+ * Compared on the WORDS, not the ids: supplier N and class A2G1 are what the
+ * screen shows and what she reads, and a line whose class id moved while its
+ * name did not is not a change to anybody looking at it.
+ */
+export async function revisionChanges(
+  user: SessionUser,
+  quotation: QuotationDetail,
+): Promise<RevisionChanges | null> {
+  if (!quotation.revisionOf) return null;
+
+  const parent = await getQuotation(user, quotation.revisionOf).catch(() => null);
+  if (!parent) return null;
+
+  return {
+    label: parent.label,
+    changes: compareLines(parent.items.map(comparable), quotation.items.map(comparable)),
+  };
+}
+
+/** A stored line as the comparison reads it: the words, and its number. */
+function comparable(item: QuotationItemRow): ComparableLine {
+  return {
+    position: item.position,
+    colourCode: item.colourCode,
+    supplier: item.supplier,
+    fireRating: item.fireRating,
+    class: item.className,
+    qty: String(item.qty),
+    thickness: item.thickness,
+    width: item.width,
+    length: item.length,
+    pricePerSqm: item.pricePerSqm,
+  };
 }
 
 /** One thing that happened to a quotation, for the trail on its drawer. */

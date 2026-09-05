@@ -388,6 +388,15 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     expect(openId(page), "the revision is a new quotation, not the old one").not.toBe(quotationId);
     expect(await figures(sheetFor(page, revision))).toEqual(expectedTotals(ITEMS[0].price));
 
+    // And it says what it changed, which is the whole of what Rawan opens it
+    // for: she priced the first one, and only one of its two lines moved (D76).
+    const changed = sheetFor(page, revision).locator("li[data-change]");
+    await expect(changed, "the revision lists changes it did not make").toHaveCount(1);
+    await expect(changed.first()).toHaveAttribute("data-change", "changed");
+    await expect(changed.first()).toContainText(t("common.pricePerSqm"));
+    await expect(changed.first()).toContainText(String(ITEMS[0].price));
+    await expect(changed.first()).toContainText(String(REVISED_PRICE));
+
     // The first one is still readable, and says it has been overtaken.
     await page.goto(`/${locale}/quotations?open=${quotationId}`);
     await expect(sheetFor(page, label).getByText(t("quotations.supersededBadge"), { exact: true })).toBeVisible();

@@ -207,6 +207,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   blames the app. Wait for the form to close, then assert inside the panel that should have
   changed. Scope the assertion too: `page.getByText(x)` sees the whole document, including
   the form.
+- **Two values of one thing are a label, a value and an aside — never one sentence with
+  two numbers in it.** "Thickness 5.0 — was 4.0" put both figures in the same size and
+  colour, so the only thing separating what it IS from what it WAS was the word "was", and
+  a coordinator scanning nine fields reads a string of digits. The value she is about to
+  act on now sits where every value on that drawer sits, after its label; the old one is a
+  fainter aside behind it. And never an arrow between them: an arrow is a left-to-right
+  glyph on a screen that is read both ways.
 - **A row of three facts is a row on a desk and a column on a phone.** The stuck list put
   the customer, the rep and the age on one flex line at every width, with `flex-1 min-w-0`
   on the customer — so the customer's name was the only child allowed to shrink, and on a

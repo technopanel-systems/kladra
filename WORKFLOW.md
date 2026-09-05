@@ -44,7 +44,7 @@
             - [x] c A quotation's history, and the reason that outlived it (item 5)
             - [x] d Every quotation line is typed from nothing (item 7)
             - [x] e Leave is invisible everywhere except the pace arithmetic (item 9)
-            - [ ] f A revision does not say what changed (item 10)
+            - [x] f A revision does not say what changed (item 10)
             - [ ] g Nothing says whether the team is using the app (item 12)
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
@@ -62,7 +62,7 @@ border (D69). The mid-session sign-out seen during the 9C screenshots was confir
 `seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
 looks exactly like a bug, so the README says so now.
 
-P9.6 is the 9A list itself, best first, and five of it are done. A log entry can be
+P9.6 is the 9A list itself, best first, and six of it are done. A log entry can be
 corrected by its author and unfiled onto the audit line (D70), he logs the call from the
 row he called from (D71), and a quotation now remembers what happened to it (D72). The
 third one found the defect underneath it: a reason that outlived the state it explained,
@@ -71,7 +71,9 @@ schema was written. Item 7 is done too: Add item opens on the sheet above it, an
 customer who has been quoted before is offered his last quotation to start from (D74).
 Item 9 is done: a rep on leave is named on the manager's screen and what is due on his
 floor is listed beside him, and his own day says who has it while he is out (D75).
-**P9.6f is next: item 10, a revision does not say what changed.**
+Item 10 is done: a revision names what it changed from the quotation it was raised on,
+above the lines, where she reads it before pricing them (D76).
+**P9.6g is next: item 12, nothing says whether the team is using the app.**
 
 **Carried, new in P9.6d:** a form dialog that scrolls does not say so. Measured on the
 request form: one item fits exactly, two do not, and the totals and the note to the
@@ -405,7 +407,7 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 2. The drawer that opens shows the same four figures, worked out again in SQL.
 3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
 4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again.
-5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2 and the first is Superseded.
+5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2, the first is Superseded, and the revision says which one line it changed and what the price was before.
 6. The drawer says what happened to it, in order and in his language — requested, sent back, lines edited, issued, accepted — and her reason left the screen the moment he fixed it.
 7. Second test: a request the seed sent back twice says so, both her reasons are readable, and each line names her.
 8. Third test: a repeat ask at a customer already quoted opens on that quotation's items in one press, the offer leaves once there is work to lose, and a new item opens on the sheet above it.

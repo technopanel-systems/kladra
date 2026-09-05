@@ -459,6 +459,11 @@ export type QuotationSheetProps = {
    * audit log and the reader's own language both live.
    */
   history: ReactNode;
+  /**
+   * On a revision, what it changed from the one it was raised on (D76). Null on
+   * a first ask, which is most of them.
+   */
+  changes: ReactNode;
 };
 
 export function QuotationSheet({
@@ -470,6 +475,7 @@ export function QuotationSheet({
   standing,
   dispatches,
   history,
+  changes,
 }: QuotationSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -562,6 +568,11 @@ export function QuotationSheet({
             }}
             scope={scope}
           />
+
+          {/* Above the lines, because it is what she reads before them: on a
+              revision the only question she has is which line is not what she
+              already priced (D76). */}
+          {changes}
 
           <ul className="flex flex-col gap-2">
             {items.map((item) => (

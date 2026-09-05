@@ -3,13 +3,14 @@ import { z } from "zod";
 import { DispatchMiniList } from "@/components/dispatches/dispatch-mini-list";
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { QuotationHistory } from "@/components/quotations/quotation-history";
+import { RevisionChanges } from "@/components/quotations/revision-changes";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayQuote } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { draftLinesFrom } from "@/lib/quotation-draft";
-import { getQuotation, quotationHistory } from "@/lib/quotations";
+import { getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
 import { quotationStanding } from "@/lib/standing";
 
 /**
@@ -47,10 +48,11 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   if (!quotation) return null;
 
   const owner = mayQuote(user, quotation.companyRepId);
-  const [dispatches, standing, history] = await Promise.all([
+  const [dispatches, standing, history, changes] = await Promise.all([
     listDispatchesForQuotation(user, quotation.id, locale),
     quotationStanding(quotation.id),
     quotationHistory(quotation.id),
+    revisionChanges(user, quotation),
   ]);
 
   // S38: goods move against paper that exists. Before it is issued there is
@@ -91,6 +93,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         ) : null
       }
       history={<QuotationHistory history={history} />}
+      changes={changes ? <RevisionChanges changes={changes} /> : null}
       quotation={quotation}
       standing={standing}
       items={quotation.items}
