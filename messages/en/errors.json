@@ -17,5 +17,7 @@
   "projectNotAtCompany": "That project belongs to another company.",
   "contactNotAtCompany": "That contact belongs to another company.",
   "handOverWho": "Choose who takes this company.",
-  "handOverSame": "This company is already theirs."
+  "handOverSame": "This company is already theirs.",
+  "activityDayClosed": "That day is closed. Today’s entries and the last working day’s can still be corrected.",
+  "activityNotFound": "That entry is no longer there."
 }

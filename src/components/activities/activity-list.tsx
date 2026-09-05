@@ -4,6 +4,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Prose } from "@/components/ui-ext/prose";
+import { ActivityActions } from "./activity-actions";
+import type { LogContact, LogProject } from "./log-dialog";
 
 /**
  * The log, newest first (SPEC S24/S27 — a company's history is the manager's
@@ -30,6 +32,12 @@ export type ActivityEntry = {
   userName: string;
   contactName?: string | null;
   projectName?: string | null;
+  contactId?: string | null;
+  projectId?: string | null;
+  /** The reader wrote this one, so it is theirs to correct or unfile (D70). */
+  mine?: boolean;
+  /** …and its day is still open, so the words can still change (D58). */
+  dayOpen?: boolean;
 };
 
 const CHANNEL_ICON = {
@@ -42,10 +50,21 @@ const CHANNEL_ICON = {
 export function ActivityList({
   activities,
   empty = null,
+  correct,
 }: {
   activities: readonly ActivityEntry[];
   /** Shown instead of the list: one sentence and its primary action. */
   empty?: ReactNode;
+  /**
+   * What a correction needs, where the caller can offer one (D70). Absent on
+   * a screen that only reads the log — the manager's, and the daily report.
+   */
+  correct?: {
+    companyId: string;
+    companyName?: string;
+    contacts: readonly LogContact[];
+    projects: readonly LogProject[];
+  };
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -72,6 +91,25 @@ export function ActivityList({
               <span className="text-xs text-faint">
                 {t("common.by", { name: entry.userName })}
               </span>
+
+              {correct && entry.mine ? (
+                <span className="ms-auto">
+                  <ActivityActions
+                    entry={{
+                      id: entry.id,
+                      text: entry.text,
+                      channel: entry.channel,
+                      contactId: entry.contactId ?? null,
+                      projectId: entry.projectId ?? null,
+                    }}
+                    companyId={correct.companyId}
+                    companyName={correct.companyName}
+                    contacts={correct.contacts}
+                    projects={correct.projects}
+                    dayOpen={entry.dayOpen === true}
+                  />
+                </span>
+              ) : null}
             </div>
 
             {/* His words, in his direction, whichever page it is on. */}

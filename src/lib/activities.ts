@@ -14,14 +14,15 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { activities, companies, contacts, projects, users } from "@/db/schema";
 import { NotAllowed } from "@/lib/authz";
 import { personName } from "@/lib/people";
 import { mayOpen, mayWrite } from "@/lib/floor";
-import type { Day } from "@/lib/dates";
+import { lastWorkingDay } from "@/lib/reports";
+import { todayRiyadh, type Day } from "@/lib/dates";
 import type { SessionUser } from "@/lib/types";
 
 export type ActivityChannel = "visit" | "call" | "whatsapp" | "other";
@@ -33,9 +34,14 @@ export type ActivityRow = {
   channel: ActivityChannel;
   happenedOn: Day;
   userName: string;
+  contactId: string | null;
   contactName: string | null;
   projectId: string | null;
   projectName: string | null;
+  /** The reader wrote this one, so it is theirs to correct or unfile (D70). */
+  mine: boolean;
+  /** …and its day is still open, so the words can still change (D58). */
+  dayOpen: boolean;
 };
 
 export { mayOpen, mayWrite };
@@ -132,14 +138,16 @@ export async function assertProjectMine(
  * `created_at` breaks ties, so two entries typed on the same day read in the
  * order they were written.
  */
-function activityQuery(locale: string) {
+function activityQuery(locale: string, where: SQL) {
   return db
     .select({
       id: activities.id,
       text: activities.text,
       channel: activities.channel,
       happenedOn: activities.happenedOn,
+      userId: activities.userId,
       userName: personName(locale),
+      contactId: activities.contactId,
       contactName: contacts.name,
       projectId: activities.projectId,
       projectName: projects.name,
@@ -147,7 +155,12 @@ function activityQuery(locale: string) {
     .from(activities)
     .innerJoin(users, eq(users.id, activities.userId))
     .leftJoin(contacts, eq(contacts.id, activities.contactId))
-    .leftJoin(projects, eq(projects.id, activities.projectId));
+    .leftJoin(projects, eq(projects.id, activities.projectId))
+    // The caller's own filter AND the one every caller needs: an unfiled entry
+    // is off every list and out of every count (D70). The condition is an
+    // argument rather than a second `.where()` because Drizzle allows one, and
+    // it is required rather than optional so a third caller cannot forget.
+    .where(and(isNull(activities.archivedAt), where));
 }
 
 type ActivityQueryRow = {
@@ -155,22 +168,37 @@ type ActivityQueryRow = {
   text: string;
   channel: ActivityChannel;
   happenedOn: Day;
+  userId: string;
   userName: string;
+  contactId: string | null;
   contactName: string | null;
   projectId: string | null;
   projectName: string | null;
 };
 
-function toRows(rows: ActivityQueryRow[]): ActivityRow[] {
+async function toRows(rows: ActivityQueryRow[], user: SessionUser): Promise<ActivityRow[]> {
+  // Asked once for the whole list rather than per row: the window is two days
+  // wide and finding the second of them reads the holiday table (D58, D70).
+  const today = todayRiyadh();
+  const open = rows.some((row) => row.happenedOn !== today && row.userId === user.id)
+    ? await lastWorkingDay(today)
+    : today;
+
   return rows.map((row) => ({
     id: row.id,
     text: row.text,
     channel: row.channel,
     happenedOn: row.happenedOn,
+    userId: row.userId,
     userName: row.userName,
+    contactId: row.contactId ?? null,
     contactName: row.contactName ?? null,
     projectId: row.projectId ?? null,
     projectName: row.projectName ?? null,
+    // Viewing as somebody is reading, never writing (D52) — every write action
+    // refuses it, so the screen does not offer it either.
+    mine: row.userId === user.id && !user.viewedBy,
+    dayOpen: row.happenedOn === today || row.happenedOn === open,
   }));
 }
 
@@ -180,10 +208,9 @@ export async function listActivitiesForCompany(
   companyId: string,
 ): Promise<ActivityRow[]> {
   await assertCompanyVisible(user, companyId);
-  const rows = await activityQuery(await getLocale())
-    .where(eq(activities.companyId, companyId))
+  const rows = await activityQuery(await getLocale(), eq(activities.companyId, companyId))
     .orderBy(desc(activities.happenedOn), desc(activities.createdAt));
-  return toRows(rows);
+  return toRows(rows, user);
 }
 
 /**
@@ -195,8 +222,9 @@ export async function listActivitiesForProject(
   projectId: string,
 ): Promise<ActivityRow[]> {
   const owner = await assertProjectVisible(user, projectId);
-  const rows = await activityQuery(await getLocale())
-    .where(and(eq(activities.projectId, projectId), eq(activities.companyId, owner.companyId)))
-    .orderBy(desc(activities.happenedOn), desc(activities.createdAt));
-  return toRows(rows);
+  const rows = await activityQuery(
+    await getLocale(),
+    and(eq(activities.projectId, projectId), eq(activities.companyId, owner.companyId))!,
+  ).orderBy(desc(activities.happenedOn), desc(activities.createdAt));
+  return toRows(rows, user);
 }

@@ -5,7 +5,7 @@ import { useId, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { logActivityAction } from "@/actions/activities";
+import { editActivityAction, logActivityAction } from "@/actions/activities";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -66,6 +66,15 @@ const CHANNELS: readonly { value: ActivityChannel; Icon: typeof MapPin }[] = [
 const BOTTOM_SHEET_AT_375 =
   "max-sm:inset-x-0! max-sm:top-auto! max-sm:bottom-0! max-sm:translate-x-0! max-sm:translate-y-0! max-sm:max-w-none! max-sm:rounded-b-none!";
 
+/** An entry being corrected rather than written (D70). */
+export type LogEdit = {
+  id: string;
+  text: string;
+  channel: ActivityChannel;
+  contactId: string | null;
+  projectId: string | null;
+};
+
 export function LogDialog({
   companyId,
   companyName,
@@ -73,6 +82,7 @@ export function LogDialog({
   contacts,
   projects,
   trigger,
+  entry,
 }: {
   companyId: string;
   /** Shown, never editable. Omitted only where the caller has no name to hand. */
@@ -82,7 +92,15 @@ export function LogDialog({
   contacts: readonly LogContact[];
   projects: readonly LogProject[];
   trigger?: ReactNode;
+  /**
+   * Present when this is a correction, not a new entry (D70). The same three
+   * fields a person meant to type — the words, the channel, whose meeting it
+   * was — and neither the day nor the follow-up: the day is the entry's
+   * identity, and the follow-up is a figure two other screens read.
+   */
+  entry?: LogEdit;
 }) {
+  const editing = entry !== undefined;
   const t = useTranslations();
   const router = useRouter();
   const ids = useId();
@@ -110,12 +128,12 @@ export function LogDialog({
     if (!next) return;
     // A fresh entry every time it opens, and today is today in Riyadh — never
     // the browser's day (src/lib/dates.ts).
-    setText("");
-    setChannel("visit");
+    setText(entry?.text ?? "");
+    setChannel(entry?.channel ?? "visit");
     setHappenedOn(todayRiyadh());
     setNextFollowUp(null);
-    setProject(projectId ?? NONE);
-    setContact(NONE);
+    setProject(entry?.projectId ?? projectId ?? NONE);
+    setContact(entry?.contactId ?? NONE);
     setTextError(null);
   }
 
@@ -141,13 +159,16 @@ export function LogDialog({
       fields.set("happenedOn", happenedOn);
       fields.set("nextFollowUp", nextFollowUp ?? "");
 
-      const result = await logActivityAction(null, fields);
+      if (entry) fields.set("activityId", entry.id);
+      const result = entry
+        ? await editActivityAction(null, fields)
+        : await logActivityAction(null, fields);
       if (!result.ok) {
         setTextError(result.fieldErrors?.text ?? null);
         toast.error(result.error);
         return;
       }
-      toast.success(t("drawer.logged"));
+      toast.success(t(entry ? "drawer.corrected" : "drawer.logged"));
       setOpen(false);
       // The drawer's activity list and the home follow-up strip are server
       // rendered; one refresh brings both up to date (SPEC §3: no refresh
@@ -171,8 +192,10 @@ export function LogDialog({
         className={cn("max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md", BOTTOM_SHEET_AT_375)}
       >
         <DialogHeader>
-          <DialogTitle>{t("drawer.logTitle")}</DialogTitle>
-          <DialogDescription>{t("drawer.logSubtitle")}</DialogDescription>
+          <DialogTitle>{t(editing ? "drawer.correctTitle" : "drawer.logTitle")}</DialogTitle>
+          <DialogDescription>
+            {t(editing ? "drawer.correctSubtitle" : "drawer.logSubtitle")}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Validation is ours, so the message is translated and announced
@@ -248,7 +271,11 @@ export function LogDialog({
             </div>
           </fieldset>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Neither of these is offered when correcting (D70): the day is the
+              entry's identity, and the follow-up is a figure the company row and
+              two bands on the day screen read — moving it from here would leave
+              two answers for one date. */}
+          <div className={cn("grid gap-4 sm:grid-cols-2", editing && "hidden")}>
             <div className="flex flex-col gap-1.5">
               <span id={happenedLabelId} className="text-sm font-medium">
                 {t("drawer.happenedOn")}

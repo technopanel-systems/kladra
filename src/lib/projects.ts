@@ -72,6 +72,7 @@ function lastActivitySql(): SQL<Day | null> {
     select max(a.happened_on)
       from activities a
      where a.project_id = projects.id
+       and a.archived_at is null
   )`;
 }
 

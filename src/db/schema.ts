@@ -309,6 +309,13 @@ export const activities = pgTable(
     channel: channelEnum("channel").notNull().default("visit"),
     happenedOn: date("happened_on").notNull(),
     nextFollowUp: date("next_follow_up"),
+    /**
+     * Unfiled: the entry was written against the wrong customer, or was a
+     * mistake (D70). Archived rather than deleted (S16) — the row stays, and
+     * every query that counts the log excludes it. There is no "restore": a
+     * person who unfiles the wrong entry writes the right one.
+     */
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
     ...stamps,
   },
   (t) => [

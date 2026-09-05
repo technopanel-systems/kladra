@@ -504,6 +504,7 @@ async function seedActivities(
         channel: a.channel,
         happenedOn: day,
         nextFollowUp: a.followUpDays === undefined ? null : addDays(TODAY, a.followUpDays),
+        archivedAt: a.unfiled ? instant(day, 17, 5) : null,
         createdAt: instant(day, 9 + (i % 8), (i * 11) % 60),
         updatedAt: instant(day, 9 + (i % 8), (i * 11) % 60),
       };

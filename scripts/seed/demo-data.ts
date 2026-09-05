@@ -519,6 +519,13 @@ export type ActivitySeed = {
   /** Put it on the weekend day just before that working day instead. */
   onWeekend?: boolean;
   /**
+   * Unfiled: written against the wrong customer and taken off the floor (D70).
+   * It stays in the table and appears in no list and no count, so the exclusion
+   * every one of those queries carries is a thing somebody has seen work
+   * (rules/data.md).
+   */
+  unfiled?: boolean;
+  /**
    * Calendar days from today. Set ONLY on a company's newest entry, and only
    * where it equals what that company carries in `next_follow_up` — a log entry
    * is one of the two things that sets it (SPEC D9), and two different answers
@@ -537,6 +544,9 @@ export const ACTIVITIES: ActivitySeed[] = [
   { company: "f2", project: "p2", contact: 1, channel: "visit", back: 6, followUpDays: -4, text: "زيارة المكتب، طلبوا عرض سعر للواجهة، 2,400 متر تقريباً" },
 
   { company: "f3", contact: 0, channel: "visit", back: 3, text: "زيارة المكتب الاستشاري، اعتمدوا مواصفة A2 للمشاريع الحكومية" },
+  // Faisal wrote this against the wrong customer and unfiled it (D70). It is in
+  // the table, on no screen, and in no count.
+  { company: "f3", channel: "call", back: 4, unfiled: true, text: "اتصال بخصوص طلب المصنع — التسجيل على الشركة الخطأ" },
 
   { company: "f4", contact: 0, channel: "whatsapp", back: 12, text: "طلب لوحات إعلانية 3 مم، ما عندنا، عرضت عليه 4 مم" },
   { company: "f4", contact: 0, channel: "call", back: 6, text: "ما رد، أعيد الاتصال الأسبوع الجاي" },

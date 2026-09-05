@@ -125,7 +125,9 @@ async function floorDay(userId: string, day: Day): Promise<FloorDay> {
     with logs as (
       select count(*)::int as logged, count(distinct activities.company_id)::int as companies
         from activities
-       where activities.user_id = ${userId}::uuid and activities.happened_on = ${day}::date
+       where activities.user_id = ${userId}::uuid
+         and activities.happened_on = ${day}::date
+         and activities.archived_at is null
     ),
     raised as (
       select count(*)::int as n from quotations
@@ -183,6 +185,7 @@ async function floorDay(userId: string, day: Day): Promise<FloorDay> {
                 where a.company_id = due.company_id
                   and a.happened_on = ${day}::date
                   and a.user_id = ${userId}::uuid
+                  and a.archived_at is null
              )) as calls_made
       from logs, raised, sent_back, answers, raised_dispatches, moved
   `);
@@ -304,7 +307,15 @@ function stepWorking(day: Day, by: -1 | 1, nonWorking: NonWorking[]): Day {
 export async function mayWriteFor(day: Day, today: Day = todayRiyadh()): Promise<boolean> {
   if (day === today) return true;
   if (day > today) return false;
+  return day === (await lastWorkingDay(today));
+}
 
+/**
+ * The other half of the same window, for a caller with a LIST of days to judge
+ * (D70): the log's correction controls ask it once and compare, rather than
+ * running the holiday query per row.
+ */
+export async function lastWorkingDay(today: Day = todayRiyadh()): Promise<Day> {
   const offDays = await db.execute<{ day: Day; user_id: string | null }>(sql`
     select to_char(n.day, 'YYYY-MM-DD') as day, n.user_id
       from non_working_days n
@@ -315,7 +326,7 @@ export async function mayWriteFor(day: Day, today: Day = todayRiyadh()): Promise
     userId: row.user_id,
   }));
 
-  return day === stepWorking(today, -1, nonWorking);
+  return stepWorking(today, -1, nonWorking);
 }
 
 /**

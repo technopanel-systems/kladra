@@ -142,9 +142,13 @@ export function followUpFilterSql(
 export function goneQuietCompanySql(followUp: SQL): SQL {
   return sql`(
     (${followUp}) is null
-    and exists (select 1 from activities where activities.company_id = companies.id)
+    and exists (
+      select 1 from activities
+       where activities.company_id = companies.id and activities.archived_at is null
+    )
     and (
-      select max(a.happened_on) from activities a where a.company_id = companies.id
+      select max(a.happened_on) from activities a
+       where a.company_id = companies.id and a.archived_at is null
     ) <= ${riyadhTodaySql()} - ${NEVER_CONTACTED_DAYS}::int
   )`;
 }
@@ -160,7 +164,10 @@ export function goneQuietCompanySql(followUp: SQL): SQL {
  */
 export function neverContactedCompanySql(): SQL {
   return sql`(
-    not exists (select 1 from activities where activities.company_id = companies.id)
+    not exists (
+      select 1 from activities
+       where activities.company_id = companies.id and activities.archived_at is null
+    )
     and (companies.created_at at time zone 'Asia/Riyadh')::date
         <= ${riyadhTodaySql()} - ${NEVER_CONTACTED_DAYS}::int
   )`;
@@ -169,7 +176,10 @@ export function neverContactedCompanySql(): SQL {
 /** The same, for a project: nothing logged against it, and old enough to nag. */
 export function neverContactedProjectSql(): SQL {
   return sql`(
-    not exists (select 1 from activities where activities.project_id = projects.id)
+    not exists (
+      select 1 from activities
+       where activities.project_id = projects.id and activities.archived_at is null
+    )
     and (projects.created_at at time zone 'Asia/Riyadh')::date
         <= ${riyadhTodaySql()} - ${NEVER_CONTACTED_DAYS}::int
   )`;

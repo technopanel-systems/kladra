@@ -141,6 +141,7 @@ function lastActivitySql(): SQL<Day | null> {
     select max(a.happened_on)
       from activities a
      where a.company_id = companies.id
+       and a.archived_at is null
   )`;
 }
 
@@ -366,7 +367,10 @@ export async function getCompany(
 
     db
       .select({
-        activities: sql<number>`(select count(*) from activities where activities.company_id = companies.id)::int`,
+        activities: sql<number>`(
+          select count(*) from activities
+           where activities.company_id = companies.id and activities.archived_at is null
+        )::int`,
         quotations: sql<number>`(select count(*) from quotations where quotations.company_id = companies.id)::int`,
       })
       .from(companies)

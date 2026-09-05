@@ -95,7 +95,7 @@ export async function companyStanding(companyId: string): Promise<CompanyStandin
       (
         select to_char(max(a.happened_on), 'YYYY-MM-DD')
           from activities a
-         where a.company_id = ${id}
+         where a.company_id = ${id} and a.archived_at is null
       ) as last_activity_on
   `);
   const row = result.rows[0];
@@ -150,7 +150,7 @@ export async function projectStanding(projectId: string): Promise<ProjectStandin
       (
         select to_char(max(a.happened_on), 'YYYY-MM-DD')
           from activities a
-         where a.project_id = ${id}
+         where a.project_id = ${id} and a.archived_at is null
       ) as last_activity_on
   `);
   const row = result.rows[0];

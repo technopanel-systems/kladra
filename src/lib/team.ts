@@ -381,7 +381,10 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
         from companies
         join users u on u.id = companies.rep_id
        where companies.archived_at is null
-         and not exists (select 1 from activities where activities.company_id = companies.id)
+         and not exists (
+           select 1 from activities
+            where activities.company_id = companies.id and activities.archived_at is null
+         )
          and (companies.created_at at time zone 'Asia/Riyadh')::date
              <= (now() at time zone 'Asia/Riyadh')::date - ${NEVER_CONTACTED_DAYS}::int
        order by days desc
@@ -393,7 +396,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
              ${personNameOf("u", locale)} as rep_name,
              ((now() at time zone 'Asia/Riyadh')::date
                - (select max(a.happened_on) from activities a
-                   where a.company_id = companies.id))::int as days
+                   where a.company_id = companies.id and a.archived_at is null))::int as days
         from companies
         join users u on u.id = companies.rep_id
        where companies.archived_at is null
@@ -403,8 +406,12 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
               and p.archived_at is null
               and p.lost_at is null
          )) is null
-         and exists (select 1 from activities where activities.company_id = companies.id)
-         and (select max(a.happened_on) from activities a where a.company_id = companies.id)
+         and exists (
+           select 1 from activities
+            where activities.company_id = companies.id and activities.archived_at is null
+         )
+         and (select max(a.happened_on) from activities a
+               where a.company_id = companies.id and a.archived_at is null)
              <= (now() at time zone 'Asia/Riyadh')::date - ${NEVER_CONTACTED_DAYS}::int
        order by days desc
     `),

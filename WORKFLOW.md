@@ -57,10 +57,11 @@ looks exactly like a bug, so the README says so now. **P9.6 is next: the 9A list
 first.**
 
 **Carried, and still carried:** every list in the app renders every row it is given —
-`listCompanies`, `stuckList` and the four call-list bands have no LIMIT — which is item 7
-on the 9A list below and is now the first thing P9.6 should weigh. The apostrophe question
-went into 9E and is done: English copy uses `’`, and the message checker fails on a
-typewriter one.
+`listCompanies`, `stuckList` and the four call-list bands have no LIMIT. It is NOT on the
+ranked list below, because the five days were walked on a seeded floor where no list is
+long enough to hurt; it came out of the interface-guidelines pass instead, and P9.6 weighs
+it against the twelve that are. The apostrophe question went into 9E and is done: English
+copy uses `’`, and the message checker fails on a typewriter one.
 
 Three checks were added to the gate across these two boxes, each after the defect it would
 have caught: the message checker reads the specs, because a key three of them named had
@@ -516,6 +517,15 @@ to right, in a page that runs right to left. And a refusal answers without movin
 wordmark's position is measured before the wrong password and after the error, and the two must be
 the same number, because the card grows by a line and the whole block is centred on the canvas. The
 alert is located by its id, not its role: Next keeps its own route announcer, which is also an alert.
+
+**Correcting the log** — `tests/correct.spec.ts`
+Faisal logs a visit, corrects the words, then unfiles the entry, and the spec counts rows
+rather than reading the screen: the three figures the log feeds for that customer — how many
+entries, the last day anything was logged, and how many he logged today — must be unchanged
+by the correction and one lower after the unfiling (D70). The row is then checked to be still
+there: nothing is deleted (S16). Each write waits for its DIALOG to close before the database
+is read, because the words are in the box he typed them into as well as in the list, and a
+page-wide text assertion passes while the write is still in flight.
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

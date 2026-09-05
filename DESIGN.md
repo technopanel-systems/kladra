@@ -194,6 +194,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   goes on one line and the year on a second, inked on the first column and wherever
   the year turns over, with the slot kept empty on the others so the bars keep one
   baseline. `truncate` belongs on a name somebody typed, never on a label we chose.
+- **A spec that reads the database waits for the DIALOG to close, not for the words to
+  appear.** The words it just typed are in the box it typed them into as well as in the
+  list behind it, so a page-wide text assertion passes while the write is still in flight —
+  and the next line, which counts rows, then reads the database one row too early and
+  blames the app. Wait for the form to close, then assert inside the panel that should have
+  changed. Scope the assertion too: `page.getByText(x)` sees the whole document, including
+  the form.
 - **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
   three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
   dead controls. Every spec now fails on the exception itself and names it.

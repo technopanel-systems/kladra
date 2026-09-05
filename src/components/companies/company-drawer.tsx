@@ -103,16 +103,12 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
     );
   }
 
-  const activities = await listActivitiesForCompany(user, companyId);
-  const entries: ActivityEntry[] = activities.map((row) => ({
-    id: row.id,
-    text: row.text,
-    channel: row.channel,
-    happenedOn: row.happenedOn,
-    userName: row.userName,
-    contactName: row.contactName,
-    projectName: row.projectName,
-  }));
+  // Handed straight through, not copied field by field. It WAS copied, and the
+  // copy silently dropped `mine` and `dayOpen` the day they were added, so the
+  // correction controls rendered on nothing and the failure looked like a
+  // missing button rather than a missing field (D70). A mapping between two
+  // nearly identical shapes is a second copy, and the second copy drifts (D64).
+  const entries: ActivityEntry[] = await listActivitiesForCompany(user, companyId);
 
   /**
    * Whose floor this is. A manager and an admin open every company and write on
@@ -210,6 +206,13 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             // branch that vanishes the moment it works, the copy that loses its
             // own confirmation (see the note on EmptyPanel).
             empty={<EmptyPanel sentence={t("drawer.emptyActivity")} />}
+            // What a correction needs, on the reader's own entries (D70).
+            correct={{
+              companyId: company.id,
+              companyName: company.name,
+              contacts: logContacts,
+              projects: logProjects,
+            }}
           />
         </TabsContent>
 

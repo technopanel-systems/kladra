@@ -48,5 +48,13 @@
   "handOverPick": "Choose a person",
   "handOverSearch": "Search people",
   "handOverNobody": "Nobody else can hold a company.",
-  "handedOver": "{name} is now with {rep}."
+  "handedOver": "{name} is now with {rep}.",
+  "correctTitle": "Correct the entry",
+  "correctSubtitle": "What you meant to write. The day it happened does not change.",
+  "corrected": "Entry corrected.",
+  "unfile": "Unfile",
+  "unfileTitle": "Unfile this entry?",
+  "unfileWarning": "It leaves this customer’s history and every count that included it. Nothing is deleted, and there is no putting it back — write the entry where it belongs.",
+  "unfiled": "Entry unfiled.",
+  "correct": "Correct"
 }

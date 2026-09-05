@@ -126,6 +126,14 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       activity={
         <ActivityList
           activities={project.activities}
+          // The same corrections as the company drawer, on the same entries
+          // (D70). The project is preselected because that is where he is.
+          correct={{
+            companyId: project.companyId,
+            companyName: project.companyName,
+            contacts: contacts.map((row) => ({ id: row.id, name: row.name })),
+            projects: [{ id: project.id, name: project.name }],
+          }}
           empty={
             <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
               <p className="max-w-prose text-sm text-muted-foreground">

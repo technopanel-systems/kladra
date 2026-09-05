@@ -43,6 +43,13 @@
       "when": 1788596657917,
       "tag": "0005_people_name_ar",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788602193296,
+      "tag": "0006_activity_archive",
+      "breakpoints": true
     }
   ]
 }
