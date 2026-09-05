@@ -194,6 +194,12 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   goes on one line and the year on a second, inked on the first column and wherever
   the year turns over, with the slot kept empty on the others so the bars keep one
   baseline. `truncate` belongs on a name somebody typed, never on a label we chose.
+- **An `aria-label` must CONTAIN the words written on the control.** The Log button on a
+  call row says "Log" and was labelled "Log what happened with «customer»" so a screen
+  reader would say which customer — which is right in English, where the label starts with
+  the visible word, and wrong in Arabic, where «سجّل ما حدث مع» does not contain «تسجيل
+  النشاط». Somebody using speech input says the word they can see, and nothing happens.
+  The label extends the visible text; it never replaces it.
 - **A spec that reads the database waits for the DIALOG to close, not for the words to
   appear.** The words it just typed are in the box it typed them into as well as in the
   list behind it, so a page-wide text assertion passes while the write is still in flight —

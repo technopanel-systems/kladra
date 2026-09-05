@@ -527,5 +527,10 @@ there: nothing is deleted (S16). Each write waits for its DIALOG to close before
 is read, because the words are in the box he typed them into as well as in the list, and a
 page-wide text assertion passes while the write is still in flight.
 
+The same file holds the other half of the complaint (D71): from his day, with nobody's
+customer list in between, he opens the log on a call row, writes, saves — and the assertion
+is the URL. He never left. The row locator is scoped to the "who to call" section, because
+the rail is a list of links too and an unscoped `li` finds a nav item first.
+
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

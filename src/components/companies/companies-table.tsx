@@ -63,13 +63,17 @@ function Phone({ name, phone }: { name: string; phone: E164 }) {
       href={whatsappHref(phone)}
       target="_blank"
       rel="noreferrer"
-      aria-label={t("companies.whatsappContact", { name })}
       className="relative z-10 inline-flex items-center gap-1 rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <MessageCircle aria-hidden="true" className="size-3 shrink-0" />
-      <span dir="ltr" className="num">
+      <span dir="ltr" translate="no" className="num">
         {formatPhone(phone)}
       </span>
+      {/* The number is the visible label, so it stays IN the accessible name and
+          this extends it — an `aria-label` here replaced the number with the
+          contact's name, and a person using speech input says what they can see
+          (DESIGN §5). The same shape the call list already used. */}
+      <span className="sr-only">{t("companies.whatsappContact", { name })}</span>
     </a>
   );
 }

@@ -7,5 +7,6 @@
   "refused": "مرفوض",
   "withCustomer": "لدى العميل",
   "whoToCall": "الاتصالات المطلوبة",
-  "nobodyToCall": "لا أحد ينتظر اتصالًا اليوم."
+  "nobodyToCall": "لا أحد ينتظر اتصالًا اليوم.",
+  "logFor": "تسجيل النشاط مع {name}"
 }

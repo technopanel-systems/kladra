@@ -1,6 +1,9 @@
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, NotebookPen } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
+import { LogDialog } from "@/components/activities/log-dialog";
+import { Button } from "@/components/ui/button";
 import { DayText } from "@/components/ui-ext/day-text";
+import { NO_TARGETS, type LogTargets } from "@/lib/log-targets";
 import { Link } from "@/i18n/navigation";
 import type { CompanyRow } from "@/lib/companies";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
@@ -38,11 +41,18 @@ export async function CallList({
   today,
   never,
   quiet,
+  targets,
 }: {
   overdue: CompanyRow[];
   today: CompanyRow[];
   never: CompanyRow[];
   quiet: CompanyRow[];
+  /**
+   * What the log dialog needs, per company (D71). The whole point of this
+   * screen is that the next thing he does is press the phone number; the thing
+   * after that is say what was said, and it used to cost two page loads.
+   */
+  targets: Map<string, LogTargets>;
 }) {
   const t = await getTranslations();
   const locale = await getLocale();
@@ -120,6 +130,28 @@ export async function CallList({
                       className={cn("text-xs", TONE_TEXT[band.tone])}
                     />
                   ) : null}
+
+                  {/* Above the stretched link, like the phone number: the card
+                      is one target and these two are the exceptions (D71). */}
+                  <span className="relative z-10">
+                    <LogDialog
+                      companyId={row.id}
+                      companyName={row.name}
+                      contacts={(targets.get(row.id) ?? NO_TARGETS).contacts}
+                      projects={(targets.get(row.id) ?? NO_TARGETS).projects}
+                      trigger={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs"
+                          aria-label={t("day.logFor", { name: row.name })}
+                        >
+                          <NotebookPen aria-hidden="true" />
+                          {t("common.log")}
+                        </Button>
+                      }
+                    />
+                  </span>
 
                   {row.mainContactPhone ? (
                     <a

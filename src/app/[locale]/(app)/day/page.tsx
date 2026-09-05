@@ -8,6 +8,7 @@ import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
+import { logTargetsFor } from "@/lib/log-targets";
 import { waitingOnRep } from "@/lib/day";
 import { monthsBack } from "@/lib/months";
 import { repMonth } from "@/lib/team";
@@ -54,6 +55,11 @@ export default async function DayPage() {
     listCompanies({ user, filter: "quiet", locale }),
   ]);
 
+  // One pair of queries for the whole screen, after the bands are known (D71).
+  const targets = await logTargetsFor(
+    [...overdue, ...today, ...never, ...quiet].map((row) => row.id),
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">{t("day.title")}</h1>
@@ -71,7 +77,13 @@ export default async function DayPage() {
       ) : null}
       {months ? <MonthsCard months={months} /> : null}
       {hasChain ? <WaitingList rows={waiting} /> : null}
-      <CallList overdue={overdue} today={today} never={never} quiet={quiet} />
+      <CallList
+        overdue={overdue}
+        today={today}
+        never={never}
+        quiet={quiet}
+        targets={targets}
+      />
 
       {/* Last, because it is the last thing done: the report is written when
           the day is finished, not while it is being worked (D55). */}

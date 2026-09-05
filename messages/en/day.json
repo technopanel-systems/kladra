@@ -7,5 +7,6 @@
   "refused": "Refused",
   "withCustomer": "With the customer",
   "whoToCall": "Calls due",
-  "nobodyToCall": "Nobody is owed a call today."
+  "nobodyToCall": "Nobody is owed a call today.",
+  "logFor": "Log what happened with {name}"
 }

@@ -106,3 +106,43 @@ async function counts(companyId: string, userId: string) {
   );
   return { entries: row.entries, lastActivity: row.last_activity, logged: row.logged };
 }
+
+/**
+ * Logging from the day screen (SPEC D71, 9A item 4).
+ *
+ * The day lists who to call and used to send him somewhere else to say what
+ * happened: press the row, wait for the customer list, press Log, type. Two of
+ * those steps were navigation, for one sentence about a call he has just
+ * finished standing in a lobby. The assertion is the URL — he never left.
+ */
+test("a rep says what happened without leaving his day", async ({ page, locale, t }) => {
+  test.slow();
+
+  await login(page, locale, "faisal");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/day`), COLD);
+
+  const band = page.getByRole("heading", { name: new RegExp(t("common.overdue")) });
+  await expect(band, "nobody is overdue on the seeded floor").toBeVisible(COLD);
+
+  // Inside the "who to call" section: the rail is a list of links too, and an
+  // unscoped `li` locator finds a nav item first.
+  const calls = page.locator("section").filter({ hasText: t("day.whoToCall") }).first();
+  const row = calls.locator("li").first();
+  const written = `From the day ${Date.now()}`;
+
+  await row.getByRole("button", { name: new RegExp(t("common.log")) }).click();
+  const dialog = page.getByRole("dialog", { name: t("drawer.logTitle") });
+  await expect(dialog).toBeVisible(COLD);
+  await dialog.getByLabel(t("drawer.whatHappened")).fill(written);
+  await dialog.getByRole("button", { name: t("common.save") }).click();
+  await expect(dialog).toBeHidden(COLD);
+
+  // Still on his day. That is the whole feature.
+  await expect(page).toHaveURL(new RegExp(`/${locale}/day`));
+
+  const kept = await query(
+    `select 1 from activities where text = $1::text and archived_at is null`,
+    [written],
+  );
+  expect(kept.length, "the entry was not written").toBe(1);
+});
