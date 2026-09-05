@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
 import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
+import type { Waited } from "@/lib/waiting";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -25,6 +26,7 @@ import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { Sqm } from "@/components/ui-ext/figures";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatSqm } from "@/lib/money";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
 import { dispatchTone } from "@/lib/state-tone";
@@ -99,6 +101,7 @@ export function DispatchesTable({
   openId,
   view = "list",
   showFilters = true,
+  waiting,
 }: {
   /** "/dispatches" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
   base: string;
@@ -115,6 +118,9 @@ export function DispatchesTable({
   /** List or board (DESIGN §6). The queue has one state and shows neither. */
   view?: ListView;
   showFilters?: boolean;
+  /** How long each row has waited, by id. The queue passes it; nothing else
+   *  does — see the same prop on QuotationsTable (D59). */
+  waiting?: Record<string, Waited>;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -245,7 +251,11 @@ export function DispatchesTable({
                     <span dir="ltr" className="num font-medium">
                       {row.label}
                     </span>
-                    <StatusBadge status={row.status} />
+                    {waiting?.[row.id] ? (
+                      <WaitedFor waited={waiting[row.id]} />
+                    ) : (
+                      <StatusBadge status={row.status} />
+                    )}
                   </span>
                   <span className="truncate text-sm">{row.companyName}</span>
                   {row.projectName ? (
@@ -272,7 +282,9 @@ export function DispatchesTable({
                     <TableHead className="p-3">{t("common.project")}</TableHead>
                     <TableHead className="p-3">{t("common.quotation")}</TableHead>
                     <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
-                    <TableHead className="p-3">{t("common.status")}</TableHead>
+                    <TableHead className="p-3">
+                      {waiting ? t("queue.waited") : t("common.status")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -310,7 +322,11 @@ export function DispatchesTable({
                       </TableCell>
                       <TableCell className="p-3">
                         <span className="flex flex-col gap-1">
-                          <StatusBadge status={row.status} />
+                          {waiting?.[row.id] ? (
+                            <WaitedFor waited={waiting[row.id]} className="font-medium" />
+                          ) : (
+                            <StatusBadge status={row.status} />
+                          )}
                           <DayText
                             day={row.approvedOn ?? row.createdOn}
                             locale={locale}

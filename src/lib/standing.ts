@@ -220,10 +220,21 @@ export async function pipelineByRep(): Promise<Map<string, string>> {
 }
 
 export type QueueStanding = {
-  /** The day the longest-waiting request on her desk was raised. */
-  oldestWaitingOn: Day | null;
+  /**
+   * The day each waiting request arrived, both chains. A list rather than the
+   * one oldest date, because the screen asks two things of it — how long the
+   * worst one has waited, and how many are past the line — and computing the
+   * second from the first is impossible (D59).
+   */
+  waitingSince: Day[];
   /** What she has answered today, both chains: issued, sent back, approved, refused. */
   answeredToday: number;
+  /**
+   * What arrived today, both chains. `answeredToday` alone is a number with
+   * nothing to be measured against; beside this one it answers the question she
+   * actually asks at five o'clock, which is whether she is keeping up.
+   */
+  arrivedToday: number;
 };
 
 /**
@@ -236,17 +247,21 @@ export type QueueStanding = {
  * the strip and the list cannot disagree.
  */
 export async function queueStanding(): Promise<QueueStanding> {
-  const result = await db.execute<{ oldest: string | null; answered: number }>(sql`
+  const result = await db.execute<{
+    waiting: string[] | null;
+    answered: number;
+    arrived: number;
+  }>(sql`
     select
       (
-        select to_char(min(raised), 'YYYY-MM-DD') from (
+        select array_agg(to_char(waiting.raised, 'YYYY-MM-DD')) from (
           select (q.created_at at time zone 'Asia/Riyadh')::date as raised
             from quotations q where q.status = 'requested'
           union all
           select (d.created_at at time zone 'Asia/Riyadh')::date
             from dispatches d where d.status = 'submitted'
         ) waiting
-      ) as oldest,
+      ) as waiting,
       (
         select count(*)::int from (
           select 1 from quotations q
@@ -259,13 +274,25 @@ export async function queueStanding(): Promise<QueueStanding> {
              and (d.updated_at at time zone 'Asia/Riyadh')::date
                  = (now() at time zone 'Asia/Riyadh')::date
         ) answered
-      ) as answered
+      ) as answered,
+      (
+        select count(*)::int from (
+          select 1 from quotations q
+           where (q.created_at at time zone 'Asia/Riyadh')::date
+                 = (now() at time zone 'Asia/Riyadh')::date
+          union all
+          select 1 from dispatches d
+           where (d.created_at at time zone 'Asia/Riyadh')::date
+                 = (now() at time zone 'Asia/Riyadh')::date
+        ) arrived
+      ) as arrived
   `);
   const row = result.rows[0];
 
   return {
-    oldestWaitingOn: (row?.oldest as Day | null) ?? null,
+    waitingSince: (row?.waiting ?? []) as Day[],
     answeredToday: Number(row?.answered ?? 0),
+    arrivedToday: Number(row?.arrived ?? 0),
   };
 }
 

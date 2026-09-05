@@ -94,6 +94,15 @@ broken at least once in FACET, Kladra's predecessor.
   app. It is `note ~ '[^[:space:]]'` now. Every CHECK gets a row in
   `tests/schema.spec.ts` that it must refuse.
 
+- **A figure the demo always shows as zero is a figure nobody has ever seen
+  work.** The manager's "requests waiting" counted quotations stuck more than
+  two working days, and the seed's oldest request was one working day old — so
+  that figure had read 0 in every screenshot since P8, and so had the
+  coordinator's own late count the day it was added. The seed is the only place
+  anybody looks at these screens before the pilot. **Every band, every count and
+  every threshold gets a row in `scripts/seed/demo-data.ts` that lands on the
+  wrong side of it.**
+
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.
 

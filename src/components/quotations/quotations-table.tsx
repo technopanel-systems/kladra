@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
+import type { Waited } from "@/lib/waiting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import { Money, Sqm } from "@/components/ui-ext/figures";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatMoney } from "@/lib/money";
 import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
 import type { QuotationStanding } from "@/lib/standing";
@@ -114,6 +116,7 @@ export function QuotationsTable({
   openId,
   view = "list",
   showFilters = true,
+  waiting,
 }: {
   /** "/quotations" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
   base: string;
@@ -125,6 +128,14 @@ export function QuotationsTable({
   view?: ListView;
   /** The coordinator's queue is one status by definition; it needs no chips. */
   showFilters?: boolean;
+  /**
+   * How long each row has been waiting, by id — the coordinator's queue passes
+   * it, every other screen does not. Where it is given the status cell says the
+   * wait instead of the status, because on a screen where every row has the
+   * same status the badge says nothing and the wait is the whole question
+   * (D59).
+   */
+  waiting?: Record<string, Waited>;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -265,7 +276,11 @@ export function QuotationsTable({
                     <span dir="ltr" className="num font-medium">
                       {row.label}
                     </span>
-                    <StatusBadge status={row.status} />
+                    {waiting?.[row.id] ? (
+                      <WaitedFor waited={waiting[row.id]} />
+                    ) : (
+                      <StatusBadge status={row.status} />
+                    )}
                   </span>
                   <span className="truncate text-sm">{row.companyName}</span>
                   {row.projectName ? (
@@ -292,7 +307,9 @@ export function QuotationsTable({
                     <TableHead className="p-3">{t("common.project")}</TableHead>
                     <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
                     <TableHead className="p-3 text-end">{t("common.grandTotal")}</TableHead>
-                    <TableHead className="p-3">{t("common.status")}</TableHead>
+                    <TableHead className="p-3">
+                      {waiting ? t("queue.waited") : t("common.status")}
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -326,7 +343,11 @@ export function QuotationsTable({
                       </TableCell>
                       <TableCell className="p-3">
                         <span className="flex flex-col gap-1">
-                          <StatusBadge status={row.status} />
+                          {waiting?.[row.id] ? (
+                            <WaitedFor waited={waiting[row.id]} className="font-medium" />
+                          ) : (
+                            <StatusBadge status={row.status} />
+                          )}
                           <DayText
                             day={row.issuedOn ?? row.createdOn}
                             locale={locale}

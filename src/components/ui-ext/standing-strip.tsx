@@ -14,6 +14,15 @@ import { cn } from "@/lib/utils";
  * Two to four items. More than four and it stops being a glance, and on a phone
  * they wrap to two rows rather than shrink to nothing.
  *
+ * Each item may carry a CAPTION, and that is Jerom's phase-9C rule made into a
+ * slot rather than a habit: every number must answer a question somebody asks
+ * daily, and the screen must say what the number means in words beside it. A
+ * caption is not a definition of the figure — "the number of quotations" is a
+ * tooltip and nobody reads it twice. It is the reading: what it is measured
+ * against, or what part of it somebody has to do something about. "3" answers
+ * nothing on its own; "3" with "1 waiting more than 2 working days" is a
+ * morning's work in two lines.
+ *
  * The label wraps; the figure does not. Four columns inside a drawer are narrow
  * enough that the longest English label — OPEN QUOTATIONS — was clipped to
  * "OPEN QUOTATIO…", which says less than nothing. Two short lines of label above
@@ -23,7 +32,13 @@ export function StandingStrip({
   items,
   className,
 }: {
-  items: { label: string; value: ReactNode; tone?: StateTone | null }[];
+  items: {
+    label: string;
+    value: ReactNode;
+    /** What the figure means, in words. One short line, never a definition. */
+    caption?: ReactNode;
+    tone?: StateTone | null;
+  }[];
   className?: string;
 }) {
   return (
@@ -45,6 +60,15 @@ export function StandingStrip({
           <dd className={cn("truncate text-sm leading-tight", item.tone && TONE_TEXT[item.tone])}>
             {item.value}
           </dd>
+          {/* Wraps, because a sentence that truncates says something else. */}
+          {item.caption ? (
+            <dd
+              data-slot="figure-caption"
+              className="text-xs leading-snug text-balance text-muted-foreground"
+            >
+              {item.caption}
+            </dd>
+          ) : null}
         </div>
       ))}
     </dl>

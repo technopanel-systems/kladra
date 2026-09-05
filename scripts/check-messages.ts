@@ -39,16 +39,81 @@ function load(locale: string): Map<string, string> {
 const en = load("en");
 const ar = load("ar");
 /**
- * The named arguments a message takes — `{name}` and `{name, plural, …}`.
+ * The named arguments a message takes — `{name}` and `{name, plural, …}` — as a
+ * SET, in one sorted line.
  *
- * NOT every `{word` in the string: a plural branch whose text happens to start
- * with a Latin word ("one {added # days ago}") would be read as an argument
- * called `added`, and the English and Arabic of the same message would then
- * "differ" because Arabic starts that branch with an Arabic word. A real
- * argument is a name followed by `}` or `,`.
+ * Two things it must not be, both of which it was:
+ *
+ * A regex over `{word}`. A plural branch whose whole body is one Latin word —
+ * `=0 {today}` — is indistinguishable from an argument that way, so English read
+ * an argument called `today` that Arabic did not have and the two "differed".
+ * This walks the message with the same frame stack `src/i18n/isolate.ts` uses,
+ * because the question is the same one: is this `{` an argument or a branch?
+ *
+ * A multiset. Arabic has six plural categories and English has two, so a plural
+ * whose branches each mention `{days}` yields three names in English and seven
+ * in Arabic — a difference that means nothing. What matters is WHICH arguments a
+ * message takes, and a name repeated is still one argument.
  */
-const placeholders = (s: string) =>
-  [...s.matchAll(/\{(\w+)\s*[},]/g)].map((m) => m[1]).sort().join(",");
+function args(message: string): string {
+  const found = new Set<string>();
+  const frames: ("message" | "argument")[] = ["message"];
+  let i = 0;
+
+  while (i < message.length) {
+    const char = message[i];
+
+    // ICU quoting: '' is one apostrophe, and '{ starts a literal run.
+    if (char === "'") {
+      const next = message[i + 1];
+      if (next === "'") {
+        i += 2;
+        continue;
+      }
+      if (next === "{" || next === "}" || next === "#" || next === "|") {
+        const end = message.indexOf("'", i + 2);
+        i = end === -1 ? message.length : end + 1;
+        continue;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      if (frames.length > 1) frames.pop();
+      i += 1;
+      continue;
+    }
+
+    if (char !== "{") {
+      i += 1;
+      continue;
+    }
+
+    // Inside an argument, a `{` opens one of its sub-messages, not a name.
+    if (frames[frames.length - 1] === "argument") {
+      frames.push("message");
+      i += 1;
+      continue;
+    }
+
+    const close = message.indexOf("}", i + 1);
+    const comma = message.indexOf(",", i + 1);
+    const simple = close !== -1 && (comma === -1 || close < comma);
+    const name = (simple ? message.slice(i + 1, close) : message.slice(i + 1, comma)).trim();
+
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(name)) found.add(name);
+    if (simple) {
+      i = close + 1;
+      continue;
+    }
+
+    frames.push("argument");
+    i += 1;
+  }
+
+  return [...found].sort().join(",");
+}
 
 const problems: string[] = [];
 for (const k of en.keys()) if (!ar.has(k)) problems.push(`missing in ar: ${k}`);
@@ -58,7 +123,7 @@ for (const [k, v] of ar) {
   if (v.trim() === "") problems.push(`empty in ar: ${k}`);
   const e = en.get(k);
   if (e === undefined) continue;
-  if (placeholders(e) !== placeholders(v)) problems.push(`placeholders differ: ${k}`);
+  if (args(e) !== args(v)) problems.push(`placeholders differ: ${k} — en(${args(e)}) ar(${args(v)})`);
   // Allowed identical values: brand words, codes, numbers, units.
   if (e === v && /[a-z]{3,}/i.test(v) && !/^(Kladra|SMAC|VAT|WhatsApp|SAR|English|Q-|D-|N|K|C|D|B1|A2|CT|TT|Cargo|m²)$/.test(v)) {
     problems.push(`untranslated in ar: ${k} = "${v}"`);

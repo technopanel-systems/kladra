@@ -617,7 +617,15 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p2",
     rep: "faisal",
     status: "requested",
-    createdBack: 1,
+    /*
+     * Four working days back, which is past the line (S53, D59): this is the one
+     * row in the dataset that makes the manager's "requests waiting" figure and
+     * the coordinator's own late caption say something other than nought. It was
+     * one working day, so both of those figures were zero on every screenshot
+     * ever taken of this app, and a figure that is always zero in the demo is a
+     * figure nobody has ever seen work.
+     */
+    createdBack: 4,
     notes: "العميل مستعجل، الواجهة الرئيسية فقط في هذه المرحلة",
     items: [
       { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 90, width: "1.24", length: "5.8", pricePerSqm: "112.00" },
@@ -895,7 +903,9 @@ export const NOTIFICATIONS: NotificationSeed[] = [
     params: { label: "Q-1", rep: "Faisal Al-Harbi" },
     linkBase: "/queue",
     read: false,
-    back: 1,
+    // The same four working days as the request it is about: a notice dated
+    // after the thing it announces is a small lie the seed has no reason to tell.
+    back: 4,
   },
   {
     user: "rawan",

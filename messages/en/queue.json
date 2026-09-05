@@ -1,5 +1,11 @@
 {
-  "oldest": "Waiting since",
+  "longestWait": "Longest wait",
+  "since": "since {day}",
+  "workingDays": "{days, plural, =0 {today} one {# working day} other {# working days}}",
+  "nothingWaiting": "nothing waiting",
+  "latePart": "{late, plural, =0 {none past {days} working days} one {# past {days} working days} other {# past {days} working days}}",
   "answeredToday": "Answered today",
+  "arrivedToday": "{arrived, plural, =0 {nothing arrived today} one {# arrived today} other {# arrived today}}",
+  "waited": "Waiting",
   "clear": "Nothing is waiting on you. The desk is clear."
 }

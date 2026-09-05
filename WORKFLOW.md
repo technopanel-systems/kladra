@@ -28,7 +28,12 @@
       - [x] P9.1 Five days walked end to end, judged against the sheet, ranked list written here (9A)
       - [x] P9.2 The schema read as a critic and fixed while the data is still fake (9D)
       - [x] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
-      - [ ] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
+      - [~] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
+            - [x] a The caption slot, and the coordinator's queue: a wait is a length, not a date
+            - [ ] b One figure, one name, one definition — the labels audited across every screen
+            - [ ] c m² by month, so there is a month before this one
+            - [ ] d Where quotations die
+            - [ ] e Which companies went quiet
       - [ ] P9.5 The login screen, and the identity audited as a whole (9E)
       - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
 
@@ -444,6 +449,25 @@ language does, no label the app wrote is cut off mid-word at 375, 768, 1024 or 1
 figure is in Western digits. **A new screen goes on its list the day it lands** — `/reports` was
 added with P9.3 and immediately caught the date navigator, which had been written with `dir="ltr"`
 and the mono figure face round a date that carries a month name.
+
+**How long something has waited** — `tests/waiting.spec.ts`
+The fourth spec that is not a walk through a screen, and it earns the exception the same way the
+floor rule does: when this is wrong it looks right. "2 working days" beside a request raised on
+Thursday and read on Sunday is a plausible number, and the only way to know it is a lie is to count
+the weekend yourself. Every case crosses a Friday or a Saturday on purpose, on a fixed week rather
+than on today, because a spec whose answer changes with the day it runs is one nobody trusts on a
+Monday. Today is nought and not one; a weekend is not a wait; nor is a holiday or that person's own
+leave; on the line is not over it (D59).
+
+**Numbers that answer a question** — `tests/numbers.spec.ts`
+Rawan's four figures, checked for the two things Jerom's rule actually asks. Each one carries a
+caption — four figures, four lines of words — and the strip agrees with the list beneath it: the
+longest wait shown is the worst row's own wait, and the count of late ones in the caption is the
+number of rows the list itself marks late. Both come from `src/lib/waiting.ts`, so the caption
+cannot drift from the rows. The count is read off the element rather than out of the sentence,
+because the sentence has two numbers in it — how many are late, and what late means — which is
+right for a person and useless for a test. Locators are `:visible`: every row renders twice, a card
+for the phone and a table for the desk, and counting DOM nodes counts each row twice and passes.
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

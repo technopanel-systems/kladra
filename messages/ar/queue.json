@@ -1,5 +1,11 @@
 {
-  "oldest": "بالانتظار منذ",
+  "longestWait": "أطول انتظار",
+  "since": "منذ {day}",
+  "workingDays": "{days, plural, =0 {اليوم} zero {لا أيام عمل} one {يوم عمل واحد} two {يوما عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}",
+  "nothingWaiting": "لا شيء بالانتظار",
+  "latePart": "{late, plural, =0 {لا شيء تجاوز {days} أيام عمل} zero {لا شيء تجاوز {days} أيام عمل} one {واحد تجاوز {days} أيام عمل} two {اثنان تجاوزا {days} أيام عمل} few {# تجاوزت {days} أيام عمل} many {# تجاوزت {days} أيام عمل} other {# تجاوز {days} أيام عمل}}",
   "answeredToday": "تمت الإجابة اليوم",
+  "arrivedToday": "{arrived, plural, =0 {لم يصل شيء اليوم} zero {لم يصل شيء اليوم} one {وصل طلب واحد اليوم} two {وصل طلبان اليوم} few {وصلت # طلبات اليوم} many {وصل # طلبًا اليوم} other {وصل # طلب اليوم}}",
+  "waited": "الانتظار",
   "clear": "لا شيء بالانتظار. المكتب خالٍ."
 }

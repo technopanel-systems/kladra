@@ -28,6 +28,7 @@ import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
 import { pipelineByRep, pipelineSqm } from "@/lib/standing";
+import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
 import type { Role } from "@/lib/types";
 
@@ -249,7 +250,14 @@ async function openQuotationsFor(repId: string): Promise<number> {
  * after the read costs nothing and cannot silently empty a screen the way
  * filtering a PAGE would (rules/data.md).
  */
-export const STUCK_REQUEST_WORKING_DAYS = 2;
+/**
+ * Re-exported, not redefined. The number lives in `src/lib/waiting.ts` now,
+ * because the coordinator's queue asks the same question this list does — "how
+ * long has this been sitting?" — and two copies of the answer is the manager's
+ * screen calling a request late while the screen that could clear it says
+ * nothing (D59).
+ */
+export const STUCK_REQUEST_WORKING_DAYS = LATE_AFTER_WORKING_DAYS;
 export const STUCK_FOLLOW_UP_DAYS = 3;
 
 export type StuckRequest = {
