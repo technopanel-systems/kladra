@@ -28,6 +28,14 @@ import { cn } from "@/lib/utils";
  * "OPEN QUOTATIO…", which says less than nothing. Two short lines of label above
  * a whole figure is the right way round: the figure is what the eye came for.
  */
+/** Written out, because Tailwind reads class names and not expressions. */
+const COLUMNS: Record<1 | 2 | 3 | 4, string> = {
+  1: "sm:grid-cols-1",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-4",
+};
+
 export function StandingStrip({
   items,
   className,
@@ -45,7 +53,12 @@ export function StandingStrip({
     <dl
       data-slot="standing"
       className={cn(
-        "grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-line bg-surface-2 px-3 py-2.5 sm:grid-cols-4",
+        "grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-line bg-surface-2 px-3 py-2.5",
+        // As many columns as there are figures, up to four. It was always four,
+        // so a strip of two sat in the left half of a full-width card with the
+        // right half bare — which reads as two tiles that failed to load rather
+        // than as a strip with two figures on it.
+        COLUMNS[Math.min(items.length, 4) as 1 | 2 | 3 | 4],
         className,
       )}
     >

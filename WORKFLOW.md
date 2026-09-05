@@ -24,7 +24,7 @@
       - [x] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
       - [x] P8.8 View as: the admin checks the app as any role or any person, marked
       - [x] P8.9 Roles beyond the four, if the business needs them — propose, record, build
-- [ ] P9 Think, then deepen — Jerom's second pass after using it (adds to SPEC §3, replaces nothing)
+- [x] P9 Think, then deepen — Jerom's second pass after using it (adds to SPEC §3, replaces nothing)
       - [x] P9.1 Five days walked end to end, judged against the sheet, ranked list written here (9A)
       - [x] P9.2 The schema read as a critic and fixed while the data is still fake (9D)
       - [x] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
@@ -38,14 +38,20 @@
             - [x] a The sign-in screen, built to the app it opens
             - [x] b A person is named in the reader's script
             - [x] c The rest of the identity, audited screen by screen
-      - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
+      - [x] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
             - [x] a A log entry can be corrected, and unfiled (item 3)
             - [x] b The rep logs the call without leaving his day (item 4)
             - [x] c A quotation's history, and the reason that outlived it (item 5)
             - [x] d Every quotation line is typed from nothing (item 7)
             - [x] e Leave is invisible everywhere except the pace arithmetic (item 9)
             - [x] f A revision does not say what changed (item 10)
-            - [ ] g Nothing says whether the team is using the app (item 12)
+            - [x] g Nothing says whether the team is using the app (item 12)
+- [ ] P10 The half-built and the carried, then a pilot on real volumes
+      - [ ] a A person has a standing strip of his own — the one thing "how is this going"
+            is not asked about anywhere
+      - [ ] b A notification that has been read and acted on stops being a row for ever
+      - [ ] c The carried three: every list renders every row it is given, a form dialog
+            that scrolls does not say so, and a dispatch is typed from nothing too
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
@@ -62,7 +68,8 @@ border (D69). The mid-session sign-out seen during the 9C screenshots was confir
 `seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
 looks exactly like a bug, so the README says so now.
 
-P9.6 is the 9A list itself, best first, and six of it are done. A log entry can be
+P9.6 is the 9A list itself, best first, and all seven of its boxes are done — every
+item on the ranked list that was still open. A log entry can be
 corrected by its author and unfiled onto the audit line (D70), he logs the call from the
 row he called from (D71), and a quotation now remembers what happened to it (D72). The
 third one found the defect underneath it: a reason that outlived the state it explained,
@@ -73,7 +80,16 @@ Item 9 is done: a rep on leave is named on the manager's screen and what is due 
 floor is listed beside him, and his own day says who has it while he is out (D75).
 Item 10 is done: a revision names what it changed from the quotation it was raised on,
 above the lines, where she reads it before pricing them (D76).
-**P9.6g is next: item 12, nothing says whether the team is using the app.**
+Item 12 is done: the admin's own screen says who last opened Kladra and what each person
+changed this week, counted from the audit log (D77).
+
+**P9 is finished, and with it every item on the ranked list the five days produced.** What
+is next is P10, and it is the three things this phase deliberately did not do, in this
+order: the two half-built ones the walk named — a standing strip that answers "how is this
+going" for a company and a project but for no PERSON, and notifications that are created
+and never expire — and then the carried list below, which has grown to three. After that
+the app is ready for a pilot rather than for another feature: a run through every
+acceptance script with the founder's own data volumes, not the seed's.
 
 **Carried, new in P9.6d:** a form dialog that scrolls does not say so. Measured on the
 request form: one item fits exactly, two do not, and the totals and the note to the
@@ -433,8 +449,8 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 6. The bell lists his notifications; mark one read and the count drops.
 
 **Jerom (admin)** — `tests/admin.spec.ts`
-1. Sign in as Jerom. Home is the team screen, and the Admin section lists Users, Targets, Lookups, Holidays and leave, Archive, Export.
-2. Create user "Majed" as rep; he signs in with the password Jerom read out.
+1. Sign in as Jerom. Home is the team screen, and the Admin section lists Users, Targets, Lookups, Holidays and leave, Use, Archive, Export.
+2. Create user "Majed" as rep; the Use screen shows him as an account nobody has opened, and the figure above it is what the database says has been quiet for a week. He signs in with the password Jerom read out, and the Use screen stops saying never.
 3. Reset his password: the old one is refused, the new one works, and his open session is gone.
 4. Deactivate him: he stays on the list marked Inactive, and cannot sign in.
 5. Set Faisal's target for this month; the team table shows it.

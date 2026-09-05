@@ -34,6 +34,14 @@ export type UserSeed = {
   email: string;
   role: "rep" | "marketing" | "coordinator" | "manager" | "admin";
   locale: "en" | "ar";
+  /**
+   * Calendar days back for `last_seen_on`, or `null` for somebody who has never
+   * signed in (D77). Absent means today.
+   *
+   * The demo needs both sides of the week line or the admin's use screen reads
+   * the same every day it is opened: everybody here, nobody gone (rules/data.md).
+   */
+  lastSeenDaysAgo?: number | null;
 };
 
 /**
@@ -62,6 +70,20 @@ export const USERS: UserSeed[] = [
     email: "abdulrahman@technopanel.com.sa",
     role: "manager",
     locale: "en",
+    /*
+     * The one who has stopped opening it — nine days, the wrong side of the week
+     * line, so the admin's use screen names somebody instead of reading nought
+     * every day (rules/data.md).
+     *
+     * The manager and not a rep, because he is the only person in this dataset
+     * for whom it is TRUE: what a person did is counted from the audit log, and
+     * every rep here logged a call two days ago. A manager writes nothing — he
+     * reads — so a manager who has stopped opening it leaves no other trace at
+     * all, which is exactly the failure this screen exists to catch, and the
+     * worst one: the screen that replaced his spreadsheet is the one he stopped
+     * looking at.
+     */
+    lastSeenDaysAgo: 9,
   },
   {
     key: "rawan",

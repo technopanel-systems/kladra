@@ -11,6 +11,7 @@ import type { Adapter, AdapterSession, AdapterUser } from "@auth/core/adapters";
 
 import { db } from "@/db";
 import { sessions, users } from "@/db/schema";
+import { todayRiyadh } from "@/lib/dates";
 
 /** Sessions last 30 days; sign-out is explicit (SPEC §3). */
 export const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
@@ -100,6 +101,23 @@ export const kladraAdapter: Adapter = {
       .where(and(eq(sessions.sessionToken, sessionToken), eq(users.active, true)))
       .limit(1);
     if (!row) return null;
+
+    /*
+     * Last seen, written here because this is the one query every authenticated
+     * request already makes (D77). A day rather than an instant: the question is
+     * who has not opened it this week, and a day makes the write cheap — one
+     * UPDATE per person per day, skipped for every request after it.
+     *
+     * Awaited rather than fired and forgotten: an un-awaited promise in a server
+     * request is cut off when the response is sent, and a figure that is right
+     * on a slow day and wrong on a fast one is worse than no figure. It costs
+     * one round trip, once a day, per person.
+     */
+    const today = todayRiyadh();
+    if (row.user.lastSeenOn !== today) {
+      await db.update(users).set({ lastSeenOn: today }).where(eq(users.id, row.user.id));
+    }
+
     return { session: toAdapterSession(row.session), user: toAdapterUser(row.user) };
   },
 

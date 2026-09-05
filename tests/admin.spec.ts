@@ -107,6 +107,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
       t("common.targets"),
       t("common.lookups"),
       t("common.holidays"),
+      t("admin.use"),
       t("admin.archive"),
       t("common.export"),
     ]) {
@@ -137,6 +138,28 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     );
     expect(saved.role).toBe("rep");
     expect(saved.active).toBe(true);
+
+    // And on the use screen he is what he is: an account nobody has opened
+    // (D77). This is the only moment in the app's life when that is true of
+    // somebody, which is why it is asserted here rather than seeded.
+    await openAdmin(page, locale, "use", t("admin.use"));
+    await expect(
+      row(page, person),
+      "the new account is not on the use screen",
+    ).toContainText(t("admin.useNever"));
+
+    // And the figure above the table is the rule, counted: whatever the database
+    // says has not been opened for a week is what the screen says.
+    const quiet = await one<{ n: number }>(
+      `select count(*)::int as n from users
+        where active = true
+          and (last_seen_on is null
+               or last_seen_on <= (now() at time zone 'Asia/Riyadh')::date - 7)`,
+    );
+    const strip = page.locator('[data-slot="standing"]').first();
+    await expect(strip.locator("> div").filter({ hasText: t("admin.useQuiet") })).toContainText(
+      String(quiet.n),
+    );
   });
 
   await test.step("3 · Majed signs in with the password Jerom read out", async () => {
@@ -158,6 +181,17 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     );
 
     await login(page, locale, "jerom");
+
+    // He signed in a moment ago, so the use screen says today and no longer says
+    // never — which is the whole of D77: the day is written by the one query
+    // every signed-in request already makes, not by anything anybody types.
+    const seen = await one<{ day: string | null }>(
+      "select to_char(last_seen_on, 'YYYY-MM-DD') as day from users where id = $1::uuid",
+      [majed.id],
+    );
+    expect(seen.day, "signing in did not record the day").toBe(todayRiyadh());
+    await openAdmin(page, locale, "use", t("admin.use"));
+    await expect(row(page, person)).not.toContainText(t("admin.useNever"));
     await openAdmin(page, locale, "users", t("common.users"));
     await row(page, person).getByRole("button", { name: t("admin.resetPassword") }).click();
 

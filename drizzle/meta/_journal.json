@@ -57,6 +57,13 @@
       "when": 1788606083807,
       "tag": "0007_quotation_return_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788615933147,
+      "tag": "0008_last_seen",
+      "breakpoints": true
     }
   ]
 }

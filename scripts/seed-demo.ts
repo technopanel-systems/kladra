@@ -219,6 +219,13 @@ async function seedUsers(): Promise<Map<string, string>> {
           role: u.role,
           active: true,
           locale: u.locale,
+          // Absent means today; null means an account nobody has opened (D77).
+          lastSeenOn:
+            u.lastSeenDaysAgo === undefined
+              ? TODAY
+              : u.lastSeenDaysAgo === null
+                ? null
+                : addDays(TODAY, -u.lastSeenDaysAgo),
         })),
       )
       .returning({ id: users.id, email: users.email });
@@ -514,6 +521,29 @@ async function seedActivities(
       };
     });
     const rows = await tx.insert(activities).values(values).returning({ id: activities.id });
+
+    /*
+     * And the audit row each of those writes would have left (D77).
+     *
+     * The admin's use screen counts what each person changed this week out of
+     * `audit_log`, because that is the one place every write in this app already
+     * records who and when — so a dataset that inserts rows without their audit
+     * rows shows a floor where nobody has done anything. The trail on a
+     * quotation was the same defect one screen along (D72).
+     */
+    await tx.insert(auditLog).values(
+      rows.map((row, i) => ({
+        userId: values[i].userId,
+        action: "activity.create",
+        recordType: "activity",
+        recordId: row.id,
+        details: { channel: values[i].channel },
+        at: values[i].createdAt,
+        createdAt: values[i].createdAt,
+        updatedAt: values[i].createdAt,
+      })),
+    );
+
     return rows.length;
   });
 }
@@ -1052,18 +1082,32 @@ async function seedNotifications(
  */
 async function seedReports(userIds: Map<string, string>): Promise<number> {
   await db.transaction(async (tx) => {
-    await tx.insert(dailyReports).values(
-      REPORTS.map((r) => {
-        const day = back(r.back);
-        const written = instant(day, 17, 40);
-        return {
-          userId: must(userIds, r.user, "user"),
-          day,
-          note: r.note,
-          createdAt: written,
-          updatedAt: written,
-        };
-      }),
+    const values = REPORTS.map((r) => {
+      const day = back(r.back);
+      const written = instant(day, 17, 40);
+      return {
+        userId: must(userIds, r.user, "user"),
+        day,
+        note: r.note,
+        createdAt: written,
+        updatedAt: written,
+      };
+    });
+    const rows = await tx.insert(dailyReports).values(values).returning({ id: dailyReports.id });
+
+    // The same rule as the log entries above: what a person did is counted from
+    // the audit log, so a seeded write without its audit row is work nobody did.
+    await tx.insert(auditLog).values(
+      rows.map((row, i) => ({
+        userId: values[i].userId,
+        action: "report.write",
+        recordType: "daily_report",
+        recordId: row.id,
+        details: { day: values[i].day },
+        at: values[i].createdAt,
+        createdAt: values[i].createdAt,
+        updatedAt: values[i].createdAt,
+      })),
     );
   });
   return REPORTS.length;

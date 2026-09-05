@@ -70,6 +70,17 @@ export const users = pgTable("users", {
   role: roleEnum("role").notNull().default("rep"),
   active: boolean("active").notNull().default(true),
   locale: text("locale").notNull().default("en"),
+  /**
+   * The last Riyadh day this person opened Kladra (D77).
+   *
+   * A day and not an instant: the question it exists for is "who has not opened
+   * it this week", nobody acts on the hour, and a day is what makes the write
+   * cheap — it is set once per person per day, by the one query every
+   * authenticated request already makes (`getSessionAndUser`), and skipped for
+   * the rest of that day. Null means never, which a new account is until the
+   * person signs in for the first time.
+   */
+  lastSeenOn: date("last_seen_on"),
   ...stamps,
 });
 
