@@ -148,7 +148,10 @@ export function SearchCommand() {
         <kbd
           aria-hidden="true"
           dir="ltr"
-          className="num hidden shrink-0 items-center rounded border border-line px-1.5 py-0.5 text-[10px] text-faint lg:inline-flex"
+          // `font-mono` and not `.num`: a key cap belongs in the mono face by
+          // convention, but `.num` means "this is a figure" and also sets
+          // tabular figures, which is meaningless for letters (DESIGN §1).
+          className="hidden shrink-0 items-center rounded border border-line px-1.5 py-0.5 font-mono text-[10px] text-faint lg:inline-flex"
         >
           {mac ? "⌘K" : "Ctrl K"}
         </kbd>

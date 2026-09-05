@@ -18,6 +18,12 @@ const buttonVariants = cva(
           "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        // The one primary action on a screen (DESIGN §1, §2). It was a class
+        // string written by hand in fourteen files, in two spellings and two
+        // token names for the same colour — the app's most important control,
+        // copy-pasted. A variant, so there is one of it (D69).
+        brand:
+          "bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow) hover:opacity-90",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {

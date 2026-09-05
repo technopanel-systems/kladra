@@ -87,7 +87,7 @@ export function QuotationActions({
         <>
           <PromptDialog
             trigger={
-              <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+              <Button variant="brand">
                 <FileText aria-hidden="true" />
                 {t("quotations.issue")}
               </Button>
@@ -155,7 +155,7 @@ export function QuotationActions({
         <>
           <ConfirmDialog
             trigger={
-              <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+              <Button variant="brand">
                 <Check aria-hidden="true" />
                 {t("quotations.accepted")}
               </Button>

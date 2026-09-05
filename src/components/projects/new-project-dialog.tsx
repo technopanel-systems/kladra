@@ -128,7 +128,7 @@ export function NewProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+          <Button variant="brand">
             {t("projects.newProject")}
           </Button>
         )}

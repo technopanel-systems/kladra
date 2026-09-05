@@ -21,7 +21,7 @@ primary button only. Values carried from FACET's globals.css:
 | brand-grad | `linear-gradient(135deg,#f2566b,#ff7a4a)` | `linear-gradient(135deg,#c8102e,#e5502f)` |
 | brand-glow | `0 0 0 1px rgba(242,86,107,.35), 0 8px 28px -8px rgba(242,86,107,.55)` | `0 0 0 1px rgba(200,16,46,.25), 0 8px 24px -8px rgba(200,16,46,.4)` |
 | mark-grad (the K, both themes) | `linear-gradient(140deg,#e5233c,#7a1020)` | same |
-| avatar-user-grad / avatar-person-grad | `linear-gradient(140deg,#8a3244,#4a1622)` / `(140deg,#31527f,#1b2f4c)` | same |
+| avatar-user-grad (the initials circle in the top bar) | `linear-gradient(140deg,#8a3244,#4a1622)` | same |
 | state-bad (raw red) bg / fg | `rgba(242,86,107,.14)` / `#ff8fa0` | `rgba(200,16,46,.09)` / `#c8102e` |
 | state-wait (raw amber) bg / fg | `rgba(227,166,62,.14)` / `#ebb35a` | `rgba(138,90,0,.11)` / `#8a5a00` |
 | state-good (raw green) bg / fg | `rgba(87,197,126,.14)` / `#6fd08f` | `rgba(21,128,61,.09)` / `#15803d` |
@@ -39,11 +39,37 @@ and dialogs take the solid surface — never blurred. Row colour means how long 
 waited: overdue red, due today amber, otherwise faint. Status was a word and not a colour
 until P8; it is now a word AND a colour, from the five in §6, and the word never goes away.
 
-The three gradients below brand-grad are marks, not surfaces: the K in the sidebar and on
-the installed app's icon, and the two initials circles. They are the same in both themes
-because a logo does not change colour when somebody turns the lights off, and they are the
-only gradients outside the primary button (§4). `scripts/icons.ts` redraws the icon files
-from mark-grad; the K there is paths, not type, so no machine's font list can change it.
+The two gradients below brand-grad are marks, not surfaces: the K in the sidebar, on the
+sign-in screen and on the installed app's icon, and the initials circle in the top bar. They
+are the same in both themes because a logo does not change colour when somebody turns the
+lights off. `scripts/icons.ts` redraws the icon files from mark-grad; the K there is paths,
+not type, so no machine's font list can change it.
+
+So there are exactly four gradients in the running app: the primary button, the mark, the
+initials circle, and the canvas glow on `<body>`. A third mark gradient, for a contact's own
+initials circle, was defined for eleven months and used by nothing — an identity table that
+lists a colour nobody can see is a table that cannot be checked, so it is gone (D69).
+
+**One primary action means one button.** `variant="brand"` on `Button`, in the fifteen places
+a screen has a primary action. It was a class string written by hand in fourteen files, in
+two syntaxes and under two token names for the same colour, which is how the app's most
+important control drifts without anybody deciding anything.
+
+**Two surfaces, and they are not interchangeable.** `card-face` is a thing at rest: 14px,
+a 1px `--line` border, the shadow, and a hairline along its top edge. The inset strip —
+`rounded-xl border border-line bg-surface-2` — is a panel WITHIN a card or a header, and has
+no shadow because a shadow says "this is lifted off the page" and it is not. Every floating
+surface (dialog, drawer, menu, popover, select) takes the same `--line` border as a card;
+they keep their own tighter shadows, because a menu that appears under the pointer for two
+seconds should not wear the shadow of a card that has been sitting there all day. What none
+of them may be is a RING: a ring was shadcn's default, it sits outside the box rather than
+inside it, and it was a different colour from every border in the app.
+
+**A date is not set in the number face, and that is deliberate.** Money and m² are, because
+they stand in columns that have to line up. A date does not: `03/Sep/2026` is one value on a
+row, and in Arabic it is `03/سبتمبر/2026` — a Latin day and year around an Arabic month name.
+Setting that string in IBM Plex Mono would render the month in whatever the browser falls
+back to, so the one string on the screen that mixes two scripts would also mix two typefaces.
 
 ## §2 Principles
 

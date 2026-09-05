@@ -7,7 +7,7 @@
     "dev:test": "tsx scripts/dev-test.ts",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3100",
-    "lint": "eslint && tsx scripts/one-name.mts",
+    "lint": "eslint && tsx scripts/one-name.mts && tsx scripts/one-look.mts",
     "typecheck": "tsc --noEmit",
     "check:messages": "tsx scripts/check-messages.ts && tsx scripts/unused-messages.mts && tsx scripts/gendered-arabic.mts",
     "db:generate": "drizzle-kit generate",

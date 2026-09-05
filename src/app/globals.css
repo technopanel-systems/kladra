@@ -143,7 +143,6 @@
   --brand-glow: 0 0 0 1px rgba(200, 16, 46, 0.25), 0 8px 24px -8px rgba(200, 16, 46, 0.4);
   --mark-grad: linear-gradient(140deg, var(--red-500), #7a1020);
   --avatar-user-grad: linear-gradient(140deg, #8a3244, #4a1622);
-  --avatar-person-grad: linear-gradient(140deg, #31527f, #1b2f4c);
 
   --a-red-bg: rgba(200, 16, 46, 0.09);
   --a-red-fg: #c8102e;

@@ -610,9 +610,9 @@ export function DispatchSheetSkeleton() {
           <SheetDescription className="sr-only">{t("dispatches.requestHint")}</SheetDescription>
           <Skeleton className="h-6 w-40" />
           <Skeleton className="h-3 w-2/3" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
+          <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
+          <Skeleton className="h-32 w-full rounded-[calc(var(--radius)+4px)]" />
         </div>
       </SheetContent>
     </Sheet>

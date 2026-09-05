@@ -81,7 +81,7 @@ export default async function QuotationsPage({
           <RequestQuotationDialog
             projects={projects}
             trigger={
-              <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+              <Button variant="brand">
                 {t("quotations.request")}
               </Button>
             }

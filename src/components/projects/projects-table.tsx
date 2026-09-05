@@ -609,7 +609,7 @@ export function ProjectSheet({
               contacts={contacts}
               projects={projects}
               trigger={
-                <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+                <Button variant="brand">
                   {t("common.log")}
                 </Button>
               }
@@ -689,7 +689,7 @@ export function ProjectSheetSkeleton() {
         </SheetHeader>
         <div className="flex flex-col gap-2 p-4">
           {[0, 1, 2, 3].map((row) => (
-            <Skeleton key={row} className="h-16 w-full rounded-xl" />
+            <Skeleton key={row} className="h-16 w-full rounded-[calc(var(--radius)+4px)]" />
           ))}
         </div>
       </SheetContent>

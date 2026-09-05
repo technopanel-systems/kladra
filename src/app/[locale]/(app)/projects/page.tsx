@@ -58,7 +58,7 @@ export default async function ProjectsPage({
         {!ownsCompanies(user.role) ? null : companies.length > 0 ? (
           <NewProjectDialog companies={companies} />
         ) : (
-          <Button asChild className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+          <Button asChild variant="brand">
             <Link href="/companies">{t("projects.openCompanies")}</Link>
           </Button>
         )}

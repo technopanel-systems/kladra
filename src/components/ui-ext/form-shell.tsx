@@ -58,7 +58,7 @@ export function FormFooter({
         <Button
           type="submit"
           disabled={pending}
-          className="bg-[image:var(--brand-grad)] text-primary-foreground shadow-[var(--brand-glow)] hover:opacity-90"
+          variant="brand"
         >
           {pending ? t("saving") : t("save")}
         </Button>

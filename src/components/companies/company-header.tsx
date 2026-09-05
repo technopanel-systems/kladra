@@ -314,7 +314,7 @@ export function CompanyHeader({
           contacts={contacts}
           projects={projects}
           trigger={
-            <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow) hover:opacity-90">
+            <Button variant="brand">
               <NotebookPen aria-hidden="true" />
               {t("common.log")}
             </Button>

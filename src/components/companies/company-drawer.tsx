@@ -423,7 +423,7 @@ function CompanyDrawerSkeleton({ title, description }: { title: string; descript
       <SheetDescription className="sr-only">{description}</SheetDescription>
       <Skeleton className="h-6 w-2/3" />
       <Skeleton className="h-3 w-1/2" />
-      <Skeleton className="h-12 w-full rounded-xl" />
+      <Skeleton className="h-12 w-full rounded-[calc(var(--radius)+4px)]" />
       <div className="flex gap-2">
         <Skeleton className="h-8 w-20 rounded-lg" />
         <Skeleton className="h-8 w-28 rounded-lg" />
@@ -432,7 +432,7 @@ function CompanyDrawerSkeleton({ title, description }: { title: string; descript
       <Skeleton className="h-8 w-full rounded-lg" />
       <div className="flex flex-col gap-2">
         {[0, 1, 2].map((row) => (
-          <Skeleton key={row} className="h-20 w-full rounded-xl" />
+          <Skeleton key={row} className="h-20 w-full rounded-[calc(var(--radius)+4px)]" />
         ))}
       </div>
     </div>

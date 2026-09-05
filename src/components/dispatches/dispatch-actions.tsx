@@ -75,7 +75,7 @@ export function DispatchActions({
         <>
           <PromptDialog
             trigger={
-              <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+              <Button variant="brand">
                 <Check aria-hidden="true" />
                 {t("dispatches.approve")}
               </Button>

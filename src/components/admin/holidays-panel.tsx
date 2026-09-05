@@ -124,7 +124,7 @@ function AddDayDialog({ people }: { people: { id: string; name: string }[] }) {
       title={t("admin.addDay")}
       description={t("admin.dayHint")}
       trigger={
-        <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+        <Button variant="brand">
           <Plus aria-hidden="true" />
           {t("admin.addDay")}
         </Button>

@@ -91,7 +91,7 @@ export function AddCompanyDialog({ trigger }: { trigger?: ReactNode }) {
           // Never disabled while the lists load: nothing is fetched until this
           // is pressed, and a primary action that greys itself out reads as
           // broken (DESIGN §2).
-          <Button className="bg-[image:var(--brand-grad)] text-primary-foreground shadow-[var(--brand-glow)] hover:opacity-90">
+          <Button variant="brand">
             <Plus />
             {t("forms.addCompany")}
           </Button>

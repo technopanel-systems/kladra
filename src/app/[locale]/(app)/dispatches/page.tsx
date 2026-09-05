@@ -63,7 +63,7 @@ export default async function DispatchesPage({
           <RequestDispatchDialog
             quotations={quotations}
             trigger={
-              <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+              <Button variant="brand">
                 {t("dispatches.request")}
               </Button>
             }

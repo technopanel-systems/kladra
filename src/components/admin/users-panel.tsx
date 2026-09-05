@@ -68,7 +68,7 @@ export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }
         <UserDialog
           mode="create"
           trigger={
-            <Button className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">
+            <Button variant="brand">
               <Plus aria-hidden="true" />
               {t("admin.addUser")}
             </Button>

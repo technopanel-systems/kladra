@@ -34,38 +34,39 @@
             - [x] c m² by month, so there is a month before this one
             - [x] d Where quotations die
             - [x] e Which companies went quiet
-      - [~] P9.5 The login screen, and the identity audited as a whole (9E)
+      - [x] P9.5 The login screen, and the identity audited as a whole (9E)
             - [x] a The sign-in screen, built to the app it opens
             - [x] b A person is named in the reader's script
-            - [ ] c The rest of the identity, audited screen by screen
+            - [x] c The rest of the identity, audited screen by screen
       - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P9.1–P9.4 done. 9C ended with four causes fixed rather than four
+**Where I stopped:** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
 lists (D64), a chart label truncated into a wrong year in Arabic (D65), a demo whose
 company target hid two of the three pace colours (D66), and the gone-quiet band itself
-(D63). P9.5 — the login screen and the identity as a whole — is next, and it starts
-with one thing to confirm: during the 9C screenshot pass a signed-in manager was thrown
-back to /en/login mid-session, once, with no action of his own. Sessions last thirty days,
-so this was almost certainly `seed:demo` truncating the `sessions` table under a live
-browser — which is correct behaviour and worth SAYING somewhere, because it looks exactly
-like a session bug. P9.5 confirms it and writes it down.
+(D63). 9E was the same shape: the sign-in screen was the last one built to rules the app
+had outgrown (D67), a person is named in the reader's script now rather than in Latin on
+every Arabic screen (D68), and the identity audit found the primary button written by
+hand in fourteen files and every floating surface drawing a ring where the app draws a
+border (D69). The mid-session sign-out seen during the 9C screenshots was confirmed as
+`seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
+looks exactly like a bug, so the README says so now. **P9.6 is next: the 9A list, best
+first.**
 
-**Carried out of 9C, not dropped:** two findings from the interface-guidelines pass that
-belong to later boxes rather than to this one. Every list in the app still renders every
-row it is given — `listCompanies`, `stuckList` and the four call-list bands have no LIMIT
-— which is item 7 on the 9A list (caps for ten thousand rows) and stays there. And no
-English message in the app uses a typographic apostrophe; "coordinator's" is a straight
-quote in all of them. That is a whole-identity question about type, so it goes into P9.5
-with the login screen rather than being half-done here.
+**Carried, and still carried:** every list in the app renders every row it is given —
+`listCompanies`, `stuckList` and the four call-list bands have no LIMIT — which is item 7
+on the 9A list below and is now the first thing P9.6 should weigh. The apostrophe question
+went into 9E and is done: English copy uses `’`, and the message checker fails on a
+typewriter one.
 
-A third, from the Arabic review, is now built (D68): every person's name rendered in
-Latin on the Arabic screens, because `users.name` was one column while every lookup in the
-schema has two. People have two now, the second optional, and `npm run lint` fails on a
-query that names somebody in Latin on a screen.
+Three checks were added to the gate across these two boxes, each after the defect it would
+have caught: the message checker reads the specs, because a key three of them named had
+moved and only a ten-minute suite noticed; `one-name` fails on a query that names a person
+in Latin on a screen, and found three the hand sweep had missed; and `one-look` fails on a
+primary button written as a class string or a surface drawn with a ring.
 
 The five days were walked before any P9 code and the ranked list is §4 below. Its first item was
 the daily report, and it is built: the system assembles the day — log entries, companies, quotation

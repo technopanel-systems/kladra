@@ -101,7 +101,8 @@ export function LoginForm() {
         disabled={pending}
         // The one primary action on the screen, so the one brand gradient
         // (DESIGN.md §1). Both values are tokens from globals.css.
-        className="mt-1 w-full bg-[image:var(--brand-grad)] text-primary-foreground shadow-[var(--brand-glow)] hover:opacity-90"
+        variant="brand"
+        className="mt-1 w-full"
       >
         {pending ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
