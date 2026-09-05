@@ -2,12 +2,13 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { DispatchMiniList } from "@/components/dispatches/dispatch-mini-list";
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
+import { QuotationHistory } from "@/components/quotations/quotation-history";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayQuote } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
-import { getQuotation } from "@/lib/quotations";
+import { getQuotation, quotationHistory } from "@/lib/quotations";
 import { quotationStanding } from "@/lib/standing";
 
 /**
@@ -45,9 +46,10 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   if (!quotation) return null;
 
   const owner = mayQuote(user, quotation.companyRepId);
-  const [dispatches, standing] = await Promise.all([
+  const [dispatches, standing, history] = await Promise.all([
     listDispatchesForQuotation(user, quotation.id, locale),
     quotationStanding(quotation.id),
+    quotationHistory(quotation.id),
   ]);
 
   // S38: goods move against paper that exists. Before it is issued there is
@@ -87,6 +89,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
           </div>
         ) : null
       }
+      history={<QuotationHistory history={history} />}
       quotation={quotation}
       standing={standing}
       items={quotation.items}

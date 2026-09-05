@@ -94,6 +94,20 @@ broken at least once in FACET, Kladra's predecessor.
   app. It is `note ~ '[^[:space:]]'` now. Every CHECK gets a row in
   `tests/schema.spec.ts` that it must refuse.
 
+- **A column that explains a state lives exactly as long as that state, and
+  the database is what says so.** `quotations.return_reason` held the
+  coordinator's words about why she sent a request back. The rep fixed it, the
+  status went to `requested`, and the words stayed — untrue about a corrected
+  quotation, and invisible, because every screen asks the status before it prints
+  the reason. Wrong in the one way nothing catches: no pixel shows it, no figure
+  moves, and the next reader of that column inherits a trap. The twin column on
+  the dispatch table had carried `(refuse_reason is not null) = (status =
+  'refused')` since the schema was written, which is the whole story of how it
+  happened — two columns doing one job, one of them guarded. Write the
+  biconditional, both ways round, for every reason, instant and number that
+  belongs to one state: `(col is not null) = (status = …)`. An action that
+  forgets then fails at the write instead of quietly in the column.
+
 - **A figure the demo always shows as zero is a figure nobody has ever seen
   work.** The manager's "requests waiting" counted quotations stuck more than
   two working days, and the seed's oldest request was one working day old — so

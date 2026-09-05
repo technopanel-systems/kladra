@@ -453,6 +453,12 @@ export type QuotationSheetProps = {
    * built on the server, because both need the reader's own scope (S38).
    */
   dispatches: ReactNode;
+  /**
+   * What happened to it, oldest first (D72). A node rather than data for the
+   * same reason `dispatches` is one: it is built on the server, where the
+   * audit log and the reader's own language both live.
+   */
+  history: ReactNode;
 };
 
 export function QuotationSheet({
@@ -463,6 +469,7 @@ export function QuotationSheet({
   scope,
   standing,
   dispatches,
+  history,
 }: QuotationSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -628,6 +635,8 @@ export function QuotationSheet({
               </ul>
             </div>
           ) : null}
+
+          {history}
         </div>
       </SheetContent>
     </Sheet>

@@ -28,6 +28,7 @@ import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { createNotification } from "@/lib/notify";
 import { quotationLabel } from "@/lib/labels";
+import { quotationEvent } from "@/lib/quotation-events";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
@@ -260,7 +261,7 @@ export async function requestQuotationAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "quotation.request",
+        action: quotationEvent("request"),
         recordType: "quotation",
         recordId: row.id,
         details: { companyId: input.companyId, lines: items.length },
@@ -322,14 +323,18 @@ export async function updateQuotationAction(
     await db.transaction(async (tx) => {
       await tx.delete(quotationItems).where(eq(quotationItems.quotationId, quotation.id));
       await insertItems(tx, quotation.id, items);
+      // The reason dies with the state it explained. It was left on the row, so
+      // a quotation he had already fixed still carried "the sizes are missing"
+      // in the database, and every later reader had to remember that the words
+      // only count while the status is `returned` — one of them will not (D72).
       await tx
         .update(quotations)
-        .set({ status: "requested", notes })
+        .set({ status: "requested", notes, returnReason: null })
         .where(eq(quotations.id, quotation.id));
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "quotation.update",
+        action: quotationEvent("update"),
         recordType: "quotation",
         recordId: quotation.id,
         details: { lines: items.length, from: quotation.status },
@@ -399,7 +404,7 @@ export async function issueQuotationAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "quotation.issue",
+        action: quotationEvent("issue"),
         recordType: "quotation",
         recordId: quotation.id,
         details: { smacNumber: parsed.data.smacNumber },
@@ -463,7 +468,7 @@ export async function sendBackQuotationAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "quotation.sendBack",
+        action: quotationEvent("sendBack"),
         recordType: "quotation",
         recordId: quotation.id,
         details: { reason: parsed.data.reason },
@@ -535,7 +540,7 @@ export async function decideQuotationAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: `quotation.${decision}`,
+        action: quotationEvent(decision),
         recordType: "quotation",
         recordId: quotation.id,
         details: reason ? { reason } : {},
@@ -619,7 +624,7 @@ export async function reviseQuotationAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "quotation.revise",
+        action: quotationEvent("revise"),
         recordType: "quotation",
         recordId: row.id,
         details: { revisionOf: quotation.id, lines: items.length },
@@ -675,14 +680,16 @@ export async function cancelQuotationAction(
     }
 
     await db.transaction(async (tx) => {
+      // Same rule as the edit above: he took it back, so her reason for sending
+      // it back is not the reason it is closed, and it does not survive (D72).
       await tx
         .update(quotations)
-        .set({ status: "cancelled", decidedAt: new Date() })
+        .set({ status: "cancelled", decidedAt: new Date(), returnReason: null })
         .where(eq(quotations.id, quotation.id));
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "quotation.cancel",
+        action: quotationEvent("cancel"),
         recordType: "quotation",
         recordId: quotation.id,
         details: {},

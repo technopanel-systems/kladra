@@ -33,7 +33,7 @@ import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm"
 import { QueryBuilder } from "drizzle-orm/pg-core";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { personName } from "@/lib/people";
+import { personName, personNameOf } from "@/lib/people";
 import {
   classes,
   companies,
@@ -46,8 +46,10 @@ import {
   users,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
+import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { quotationLabel } from "@/lib/labels";
+import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
 import type { SessionUser } from "@/lib/types";
 
 export type QuotationStatus =
@@ -496,4 +498,60 @@ export async function listQuotationsForCompany(
     .orderBy(desc(quotations.createdAt));
 
   return rows.map(toRow);
+}
+
+/** One thing that happened to a quotation, for the trail on its drawer. */
+export type QuotationEvent = {
+  /** The audit action with its `quotation.` prefix removed: `sendBack`, `issue`… */
+  what: QuotationEventName;
+  /** A Riyadh day, "YYYY-MM-DD". */
+  day: Day;
+  /** Who did it, named in the reader's script (D68). Null if the account is gone. */
+  who: string | null;
+  /** The coordinator's words, where the event carried any. */
+  note: string | null;
+};
+
+/**
+ * What happened to this quotation, oldest first (SPEC D72, 9A item 5).
+ *
+ * Sent back twice and sent back five times read the same on the board: the
+ * quotation carries the instants it was created, issued and decided, and the
+ * return reason of the LAST time it came back. Everything between is the rework
+ * this business runs on, and the manager could not see any of it.
+ *
+ * Read from `audit_log` and not from a history table of its own. Every one of
+ * these transitions already writes an audit row with who and when, inside the
+ * same transaction as the change — a second table beside it would be a second
+ * answer to one question, which is the drift trap (rules/data.md, and the note
+ * on the table in the schema).
+ */
+export async function quotationHistory(id: string): Promise<QuotationEvent[]> {
+  const locale = await getLocale();
+  const rows = await db.execute<{ what: string; day: Day; who: string | null; note: string | null }>(
+    sql`
+      select replace(a.action, 'quotation.', '') as what,
+             to_char((a.at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day,
+             ${personNameOf("u", locale)} as who,
+             nullif(btrim(coalesce(a.details ->> 'reason', '')), '') as note
+        from audit_log a
+        left join users u on u.id = a.user_id
+       where a.record_type = 'quotation'
+         and a.record_id = ${id}::text
+       order by a.at asc
+    `,
+  );
+  // Anything the app has no word for is not shown. `action` is a text column
+  // and the trail prints a sentence per event: an unknown one would reach the
+  // screen as a missing-message crash rather than as a line nobody minds.
+  return rows.rows.flatMap((row) =>
+    isQuotationEvent(row.what)
+      ? [{ what: row.what, day: row.day, who: row.who, note: row.note }]
+      : [],
+  );
+}
+
+/** How many times this one came back — the figure the trail is really for. */
+export function sentBackCount(history: readonly QuotationEvent[]): number {
+  return history.filter((event) => event.what === "sendBack").length;
 }

@@ -378,6 +378,17 @@ export const quotations = pgTable(
       "quotations_smac_check",
       sql`(${t.smacNumber} is not null) = (${t.status} in ('issued','accepted','rejected'))`,
     ),
+    // A reason lives exactly as long as the state it explains. It did not: the
+    // rep fixed what she had sent back, the status went to `requested`, and her
+    // words stayed on the row saying something untrue about it. Nothing showed
+    // them — the screens ask the status first — so the column was quietly wrong
+    // and every future reader of it had to know that (D72). The dispatch beside
+    // it had this constraint from the start, and the quotation did not; that is
+    // the whole story of how it happened.
+    check(
+      "quotations_returned_check",
+      sql`(${t.returnReason} is not null) = (${t.status} = 'returned')`,
+    ),
   ],
 );
 

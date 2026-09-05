@@ -207,6 +207,15 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   blames the app. Wait for the form to close, then assert inside the panel that should have
   changed. Scope the assertion too: `page.getByText(x)` sees the whole document, including
   the form.
+- **The same words may say two things on one screen; a spec then names the ELEMENT, not
+  the words.** The quotation drawer says "Sent back" twice over — once as the badge under
+  its name, which is where it is now, and once in the trail, which is what happened on the
+  27th. A reader tells them apart by where they are and never notices the repetition; six
+  assertions matching that text exactly broke the moment the trail arrived. The wording is
+  not the defect and rewording to keep a locator unique is a screen bent around its test:
+  a spec that means the badge asks for the badge, by the `data-tone` attribute every state
+  badge already carries. Every element a spec needs to name has an attribute that says
+  what it IS (`data-tone`, `data-event`, `data-slot='figure-sqm'`), and no class names.
 - **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
   three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
   dead controls. Every spec now fails on the exception itself and names it.

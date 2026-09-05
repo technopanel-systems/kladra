@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one, userId } from "./helpers/db";
+import { one, personName, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 
 /**
@@ -99,6 +99,19 @@ async function fillTheItems(form: Locator, t: Translate, firstPrice: number) {
   return figures(form);
 }
 
+/**
+ * Where the quotation is NOW — the badge under its name.
+ *
+ * The trail further down the drawer says some of the same words about a day
+ * gone by: "Sent back" is the state it is in and also the thing that happened
+ * on the 27th, and a reader tells the two apart by where they are on the screen.
+ * A locator cannot, so a spec that means the badge asks for the badge, by the
+ * tone attribute every state badge carries (DESIGN §5).
+ */
+function statusOf(sheet: Locator): Locator {
+  return sheet.locator("[data-tone]").first();
+}
+
 /** The quotation drawer, which is named by the quotation itself (Q-12). */
 function sheetFor(page: Page, label: string): Locator {
   return page.getByRole("dialog", { name: label });
@@ -137,6 +150,16 @@ async function nameOfTheOpenQuotation(page: Page): Promise<string> {
   const heading = page.getByRole("dialog").first().getByRole("heading").first();
   await expect(heading).toHaveText(/^Q-\d+$/, COLD);
   return (await heading.innerText()).trim();
+}
+
+/**
+ * The trail on the drawer, one line per thing that happened, oldest first.
+ *
+ * Read by the attribute the component stamps rather than by the words, so the
+ * order can be asserted in a language the assertion does not have to know.
+ */
+function trail(sheet: Locator): Locator {
+  return sheet.locator("li[data-event]");
 }
 
 /** The id in ?open= — the app's own way of saying which record is open. */
@@ -225,7 +248,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     label = await nameOfTheOpenQuotation(page);
 
     const sheet = sheetFor(page, label);
-    await expect(sheet.getByText(t("quotations.statusRequested"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheet)).toHaveText(t("quotations.statusRequested"));
     expect(await figures(sheet), "the stored figures differ from the typed ones").toEqual(
       expectedTotals(ITEMS[0].price),
     );
@@ -276,7 +299,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     await expect(page).toHaveURL(new RegExp(`/quotations\\?open=${quotationId}`));
 
     const sheet = sheetFor(page, label);
-    await expect(sheet.getByText(t("quotations.statusReturned"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheet)).toHaveText(t("quotations.statusReturned"));
     await expect(sheet.getByText(t("quotations.sentBackReason"), { exact: true })).toBeVisible();
 
     await sheet.getByRole("button", { name: t("quotations.editRequest") }).click();
@@ -290,6 +313,22 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
 
     await form.getByRole("button", { name: t("common.save") }).click();
     await expect(page.getByText(t("quotations.requested"))).toBeVisible(COLD);
+
+    // Her reason is off the screen with the state it explained (D72). It also
+    // came off the ROW — which nothing here can see, because every screen asks
+    // the status first, and which is exactly how it survived being wrong. The
+    // database refuses it now; tests/schema.spec.ts is where that is proved, and
+    // it is why this save would fail outright if the action ever forgot again.
+    const fixed = sheetFor(page, label);
+    await expect(fixed.getByText(t("quotations.sentBackReason"), { exact: true })).toHaveCount(0);
+
+    // What happened to it, on the other hand, is kept: asked, sent back, fixed.
+    await expect(trail(fixed)).toContainText([
+      t("quotations.event.request"),
+      t("quotations.event.sendBack"),
+      t("quotations.event.update"),
+    ]);
+    await expect(fixed.getByText(t("quotations.sentBackTimes", { count: 1 }))).toBeVisible();
   });
 
   await test.step("6 · Rawan gives it SMAC's number, which is what issues it", async () => {
@@ -297,7 +336,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     await page.goto(`/${locale}/queue?open=${quotationId}`);
 
     const sheet = sheetFor(page, label);
-    await expect(sheet.getByText(t("quotations.statusRequested"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheet)).toHaveText(t("quotations.statusRequested"));
     expect(await figures(sheet), "the edit did not reach the stored figures").toEqual(
       expectedTotals(REVISED_PRICE),
     );
@@ -317,7 +356,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     await page.goto(`/${locale}/quotations?open=${quotationId}`);
 
     const sheet = sheetFor(page, label);
-    await expect(sheet.getByText(t("quotations.statusIssued"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheet)).toHaveText(t("quotations.statusIssued"));
     await expect(sheet.getByText("SMAC-2026-0442")).toBeVisible();
 
     // Once it is issued the request is not editable any more; a change is a
@@ -329,7 +368,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     await ask.getByRole("button", { name: t("quotations.accepted") }).click();
 
     await expect(page.getByText(t("quotations.acceptedDone", { label }))).toBeVisible(COLD);
-    await expect(sheetFor(page, label).getByText(t("quotations.statusAccepted"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheetFor(page, label))).toHaveText(t("quotations.statusAccepted"));
   });
 
   await test.step("8 · and a revision carries the same number, one up", async () => {
@@ -351,7 +390,68 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     // The first one is still readable, and says it has been overtaken.
     await page.goto(`/${locale}/quotations?open=${quotationId}`);
     await expect(sheetFor(page, label).getByText(t("quotations.supersededBadge"), { exact: true })).toBeVisible();
+
+    // And it carries its whole life, in the order it was lived. Six steps, six
+    // lines, written by the six actions this walk just performed — the trail is
+    // the audit log the actions already write, not a record kept beside it.
+    await expect(trail(sheetFor(page, label))).toContainText([
+      t("quotations.event.request"),
+      t("quotations.event.sendBack"),
+      t("quotations.event.update"),
+      t("quotations.event.issue"),
+      t("quotations.event.accepted"),
+    ]);
   });
+});
+
+/**
+ * Twice is not once, and until the trail was read back nothing said which.
+ *
+ * A quotation carries the reason it came back the LAST time and no memory of the
+ * one before, so a request Rawan had returned twice looked exactly like one she
+ * had returned once — on her queue, on his day, and in the drawer. The count is
+ * the figure the manager asked for by name (9A item 5, D72).
+ */
+test("a quotation that came back twice says so, and says what was wrong each time", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const rawan = await personName("rawan@technopanel.com.sa", locale);
+  const returned = await one<{ id: string; reasons: string[] }>(
+    `select q.id,
+            array_agg(a.details ->> 'reason' order by a.at) as reasons
+       from quotations q
+       join audit_log a
+         on a.record_type = 'quotation'
+        and a.record_id = q.id::text
+        and a.action = 'quotation.sendBack'
+      where q.status = 'returned'
+      group by q.id
+     having count(*) = 2
+      limit 1`,
+  );
+
+  await login(page, locale, "rawan");
+  await page.goto(`/${locale}/quotations?open=${returned.id}`);
+  const label = await nameOfTheOpenQuotation(page);
+  const sheet = sheetFor(page, label);
+
+  await expect(sheet.getByText(t("quotations.sentBackTimes", { count: 2 }))).toBeVisible(COLD);
+
+  // Both of her reasons are there — the first one is the one the row itself
+  // threw away when he fixed it and she sent it back again. The last one is on
+  // the drawer twice over, in the trail and in the box that says why it is with
+  // him now, so the assertion takes the first of whichever it matches.
+  for (const reason of returned.reasons) {
+    await expect(sheet.getByText(reason).first()).toBeVisible();
+  }
+
+  // Every line says who, in the reader's own script (D68).
+  await expect(trail(sheet).filter({ hasText: t("quotations.event.sendBack") })).toContainText([
+    rawan,
+    rawan,
+  ]);
 });
 
 /**
@@ -409,6 +509,6 @@ test("a rep withdraws his own request and it leaves the coordinator's queue", as
     await page.goto(`/${locale}/quotations`);
     await expect(labelOnScreen(page, label)).toBeVisible(COLD);
     await labelOnScreen(page, label).click();
-    await expect(sheetFor(page, label).getByText(t("quotations.statusCancelled"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheetFor(page, label))).toHaveText(t("quotations.statusCancelled"));
   });
 });

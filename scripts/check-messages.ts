@@ -188,6 +188,7 @@ const families: [string, string[]][] = [
   ["common", union("src/db/schema.ts", "channelEnum")],
   ["reports", tableKeys("src/lib/report-figures.ts")],
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
+  ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
 ];
 for (const [namespace, members] of families) {
   for (const member of members) {

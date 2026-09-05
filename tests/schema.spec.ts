@@ -114,6 +114,30 @@ test("a status and the instants that belong to it agree", async () => {
   expect(noNumber).toContain("quotations_smac_check");
 });
 
+test("a reason lives exactly as long as the state it explains", async () => {
+  const returned = await one<{ id: string }>(
+    "select id from quotations where status = 'returned' limit 1",
+  );
+
+  // The rep fixes what she sent back and asks again — and her words must not
+  // come with it. They did: the status moved to `requested` and the reason
+  // stayed, saying something untrue about a corrected quotation. No screen shows
+  // it, because every screen asks the status first, which is exactly why it
+  // survived to be read by something else one day (D72).
+  const stale = await refused(
+    "update quotations set status = 'requested' where id = $1::uuid",
+    [returned.id],
+  );
+  expect(stale).toContain("quotations_returned_check");
+
+  // And the other way round: sent back is sent back FOR something. A returned
+  // quotation with no reason is a rep told to fix he does not know what.
+  const silent = await refused("update quotations set return_reason = null where id = $1::uuid", [
+    returned.id,
+  ]);
+  expect(silent).toContain("quotations_returned_check");
+});
+
 test("a revision names a quotation that exists", async () => {
   const quotation = await one<{ id: string }>("select id from quotations limit 1");
   const message = await refused(

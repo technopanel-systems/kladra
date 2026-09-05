@@ -656,6 +656,21 @@ export type QuotationItemSeed = {
   pricePerSqm: string;
 };
 
+/**
+ * One time the coordinator sent it back, and what happened after (D72).
+ *
+ * The quotation row carries the reason of the LAST return only, so sent back
+ * once and sent back three times read identically everywhere except the trail —
+ * which is the whole reason the trail exists. The trail is written from here.
+ */
+export type SentBackSeed = {
+  /** Working days back when she sent it back. */
+  back: number;
+  reason: string;
+  /** Working days back when he fixed it and asked again. Absent while it still sits with him. */
+  fixedBack?: number;
+};
+
 export type QuotationSeed = {
   key: string;
   company: string;
@@ -664,7 +679,12 @@ export type QuotationSeed = {
   status: "requested" | "returned" | "issued" | "accepted" | "rejected";
   notes?: string;
   smacNumber?: string;
-  returnReason?: string;
+  /**
+   * Every time it came back, oldest first. `return_reason` on the row is the
+   * last of these and only while it is still `returned` — the seed derives it
+   * rather than being told it twice.
+   */
+  sentBack?: SentBackSeed[];
   decisionReason?: string;
   /** Working days back from today for `issued_at` / `decided_at`. */
   issuedBack?: number;
@@ -704,8 +724,17 @@ export const QUOTATIONS: QuotationSeed[] = [
     company: "f8",
     rep: "faisal",
     status: "returned",
-    createdBack: 4,
-    returnReason: "المقاسات ناقصة — أحتاج الطول والعرض لكل بند قبل الإصدار",
+    createdBack: 6,
+    /*
+     * Sent back twice. Nothing on the row says so — it keeps the last reason and
+     * nothing else — so before the trail was read back, a quotation that had
+     * come back twice and one that had come back once looked the same on every
+     * screen (9A item 5, D72). This is the row that makes the count say two.
+     */
+    sentBack: [
+      { back: 5, reason: "المقاسات ناقصة — أحتاج الطول والعرض لكل بند قبل الإصدار", fixedBack: 4 },
+      { back: 3, reason: "الكمية لا تغطي الواجهة في المخطط — راجع الكشف مع الاستشاري" },
+    ],
     items: [
       { colourCode: "RAL 9016", supplier: "K", fireRating: "Normal", className: "B", thickness: "4.0", qty: 12, width: "1.24", length: "3.2", pricePerSqm: "98.00" },
     ],
@@ -717,6 +746,9 @@ export const QUOTATIONS: QuotationSeed[] = [
     rep: "faisal",
     status: "issued",
     createdBack: 7,
+    // Came back once and went out the next day: the ordinary case, and the one
+    // that proves a trail can carry rework and still end well.
+    sentBack: [{ back: 7, reason: "ينقص كود اللون للبند الثالث", fixedBack: 6 }],
     issuedBack: 6,
     smacNumber: "4512",
     notes: "Consultant asked for A2 on every elevation",

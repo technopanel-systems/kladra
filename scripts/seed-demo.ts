@@ -30,6 +30,7 @@ import {
   todayRiyadh,
 } from "../src/lib/dates";
 import { normalizePhone } from "../src/lib/phone";
+import { type QuotationEventName, quotationEvent } from "../src/lib/quotation-events";
 import { isWeekend, nextWorkingDay } from "../src/lib/workdays";
 import { MONTHS_SHOWN } from "../src/lib/months";
 import {
@@ -87,6 +88,7 @@ if (!process.env.DATABASE_URL) {
 const { db, pool } = await import("../src/db/index");
 const {
   activities,
+  auditLog,
   cities,
   classes,
   companies,
@@ -551,6 +553,66 @@ async function seedFollowUps(
 }
 
 // ============================================================================
+// The trail — what happened to a quotation, and when
+// ============================================================================
+
+/*
+ * The drawer's history is read from `audit_log` (SPEC D72): every transition an
+ * action performs writes a row there inside the same transaction as the change,
+ * so the log IS the history and a second table beside it would be a second
+ * answer to one question (rules/data.md, and the note on the table itself).
+ *
+ * Which means a seeded quotation with no audit rows has an empty trail, and a
+ * panel that is empty in every demo is a panel nobody has ever seen work — the
+ * same defect as a figure that always reads nought. So the seed writes the trail
+ * out of the facts it is already writing the row from, using the one list of
+ * event names the actions use.
+ */
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type TrailEvent = {
+  name: QuotationEventName;
+  at: Date;
+  /** The user id of whoever did it — the rep for his own asks, her for hers. */
+  by: string;
+  /** Her words, where the event carried any; this is what the trail prints. */
+  reason?: string;
+};
+
+async function writeTrail(tx: Tx, quotationId: string, events: TrailEvent[]): Promise<void> {
+  // Out of order here is a trail that reads backwards on the screen, and the
+  // screen sorts by the instant rather than by anything it could re-derive.
+  for (let i = 1; i < events.length; i += 1) {
+    if (events[i].at.getTime() < events[i - 1].at.getTime()) {
+      throw new Error(
+        `quotation trail out of order: ${events[i - 1].name} then ${events[i].name}`,
+      );
+    }
+  }
+
+  await tx.insert(auditLog).values(
+    events.map((e) => ({
+      userId: e.by,
+      action: quotationEvent(e.name),
+      recordType: "quotation",
+      recordId: quotationId,
+      details: e.reason ? { reason: e.reason } : {},
+      at: e.at,
+      createdAt: e.at,
+      updatedAt: e.at,
+    })),
+  );
+}
+
+/** She issues and she sends back, whoever she is this year. */
+function coordinatorKey(): string {
+  const her = USERS.find((u) => u.role === "coordinator");
+  if (!her) throw new Error("the demo has no coordinator to issue anything");
+  return her.key;
+}
+
+// ============================================================================
 // Phase 7 — quotations and their items
 // ============================================================================
 
@@ -564,6 +626,8 @@ async function seedQuotations(
   const itemIds = new Map<string, string[]>();
   const numbers = new Map<string, number>();
   let itemCount = 0;
+
+  const her = must(userIds, coordinatorKey(), "user");
 
   await db.transaction(async (tx) => {
     for (const q of QUOTATIONS) {
@@ -579,6 +643,42 @@ async function seedQuotations(
       numbers.set(q.key, number);
 
       const created = instant(back(q.createdBack), 10, 20);
+      const him = must(userIds, q.rep, "user");
+
+      // Every time it came back, and what the row itself is left holding: the
+      // reason of the last return, and only while it is still sitting with him.
+      // The moment he sends it again the app clears it (D72), so the seed must
+      // not leave a reason on a quotation that has moved on.
+      const returns = q.sentBack ?? [];
+      const openReturn = returns.at(-1)?.fixedBack === undefined ? returns.at(-1) : undefined;
+      if (q.status === "returned" && !openReturn) {
+        throw new Error(`quotation "${q.key}" is returned and nothing sent it back`);
+      }
+
+      const trail: TrailEvent[] = [
+        { name: q.revisionOf ? "revise" : "request", at: created, by: him },
+      ];
+      for (const r of returns) {
+        trail.push({ name: "sendBack", at: instant(back(r.back), 14, 10), by: her, reason: r.reason });
+        if (r.fixedBack !== undefined) {
+          trail.push({ name: "update", at: instant(back(r.fixedBack), 11, 30), by: him });
+        }
+      }
+      if (q.issuedBack !== undefined) {
+        trail.push({ name: "issue", at: instant(back(q.issuedBack), 13, 5), by: her });
+      }
+      if (q.decidedBack !== undefined) {
+        if (q.status !== "accepted" && q.status !== "rejected") {
+          throw new Error(`quotation "${q.key}" is ${q.status} and has a decision date`);
+        }
+        trail.push({
+          name: q.status,
+          at: instant(back(q.decidedBack), 15, 40),
+          by: him,
+          reason: q.decisionReason,
+        });
+      }
+
       const [row] = await tx
         .insert(quotations)
         .values({
@@ -587,11 +687,11 @@ async function seedQuotations(
           revisionOf: q.revisionOf ? must(quotationIds, q.revisionOf, "quotation") : null,
           companyId: must(companyIds, q.company, "company"),
           projectId: q.project ? must(projectIds, q.project, "project") : null,
-          repId: must(userIds, q.rep, "user"),
+          repId: him,
           status: q.status,
           notes: q.notes ?? null,
           smacNumber: q.smacNumber ?? null,
-          returnReason: q.returnReason ?? null,
+          returnReason: q.status === "returned" ? (openReturn?.reason ?? null) : null,
           decisionReason: q.decisionReason ?? null,
           issuedAt: q.issuedBack === undefined ? null : instant(back(q.issuedBack), 13, 5),
           decidedAt: q.decidedBack === undefined ? null : instant(back(q.decidedBack), 15, 40),
@@ -600,6 +700,7 @@ async function seedQuotations(
         })
         .returning({ id: quotations.id });
       quotationIds.set(q.key, row.id);
+      await writeTrail(tx, row.id, trail);
 
       // `sqm` is GENERATED (width × length × qty) — never in the column list.
       const items = await tx
@@ -712,6 +813,7 @@ async function seedHistory(
   lk: Lookups,
 ): Promise<number> {
   let smac = 4000;
+  const her = must(userIds, coordinatorKey(), "user");
 
   await db.transaction(async (tx) => {
     for (const h of HISTORY) {
@@ -726,6 +828,7 @@ async function seedHistory(
       smac += 1;
 
       const created = instant(on(12), 10, 20);
+      const him = must(userIds, h.rep, "user");
       const [quotation] = await tx
         .insert(quotations)
         .values({
@@ -733,7 +836,7 @@ async function seedHistory(
           revision: 1,
           companyId: must(companyIds, h.company, "company"),
           projectId: null,
-          repId: must(userIds, h.rep, "user"),
+          repId: him,
           status: "accepted" as const,
           smacNumber: String(smac),
           issuedAt: instant(on(18), 13, 5),
@@ -742,6 +845,15 @@ async function seedHistory(
           updatedAt: instant(on(20), 15, 40),
         })
         .returning({ id: quotations.id });
+
+      // A month behind us reads with the same queries this month reads with, and
+      // its trail is written the same way too — otherwise the history is a set of
+      // quotations that were never asked for and never issued by anybody.
+      await writeTrail(tx, quotation.id, [
+        { name: "request", at: created, by: him },
+        { name: "issue", at: instant(on(18), 13, 5), by: her },
+        { name: "accepted", at: instant(on(20), 15, 40), by: him },
+      ]);
 
       const [item] = await tx
         .insert(quotationItems)
@@ -809,6 +921,19 @@ async function seedHistory(
       // which is also what the schema insists on (D52).
       const issued = l.status === "rejected" || l.status === "issued";
       const created = instant(on(9), 9, 40);
+      const him = must(userIds, l.rep, "user");
+
+      const trail: TrailEvent[] = [{ name: "request", at: created, by: him }];
+      if (l.status === "returned") {
+        trail.push({ name: "sendBack", at: instant(on(12), 14, 10), by: her, reason: l.reason });
+      }
+      if (issued) trail.push({ name: "issue", at: instant(on(14), 11, 10), by: her });
+      if (l.status === "rejected") {
+        trail.push({ name: "rejected", at: instant(on(21), 16, 5), by: him, reason: l.reason });
+      }
+      if (l.status === "cancelled") {
+        trail.push({ name: "cancel", at: instant(on(21), 16, 5), by: him });
+      }
 
       const [quotation] = await tx
         .insert(quotations)
@@ -817,7 +942,7 @@ async function seedHistory(
           revision: 1,
           companyId: must(companyIds, l.company, "company"),
           projectId: null,
-          repId: must(userIds, l.rep, "user"),
+          repId: him,
           status: l.status,
           smacNumber: issued ? String(smac) : null,
           returnReason: l.status === "returned" ? (l.reason ?? null) : null,
@@ -834,6 +959,8 @@ async function seedHistory(
           updatedAt: instant(on(21), 16, 5),
         })
         .returning({ id: quotations.id });
+
+      await writeTrail(tx, quotation.id, trail);
 
       await tx.insert(quotationItems).values({
         quotationId: quotation.id,

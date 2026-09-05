@@ -39,6 +39,13 @@
             - [x] b A person is named in the reader's script
             - [x] c The rest of the identity, audited screen by screen
       - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
+            - [x] a A log entry can be corrected, and unfiled (item 3)
+            - [x] b The rep logs the call without leaving his day (item 4)
+            - [x] c A quotation's history, and the reason that outlived it (item 5)
+            - [ ] d Every quotation line is typed from nothing (item 7)
+            - [ ] e Leave is invisible everywhere except the pace arithmetic (item 9)
+            - [ ] f A revision does not say what changed (item 10)
+            - [ ] g Nothing says whether the team is using the app (item 12)
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
@@ -53,8 +60,14 @@ every Arabic screen (D68), and the identity audit found the primary button writt
 hand in fourteen files and every floating surface drawing a ring where the app draws a
 border (D69). The mid-session sign-out seen during the 9C screenshots was confirmed as
 `seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
-looks exactly like a bug, so the README says so now. **P9.6 is next: the 9A list, best
-first.**
+looks exactly like a bug, so the README says so now.
+
+P9.6 is the 9A list itself, best first, and three of it are done. A log entry can be
+corrected by its author and unfiled onto the audit line (D70), he logs the call from the
+row he called from (D71), and a quotation now remembers what happened to it (D72). The
+third one found the defect underneath it: a reason that outlived the state it explained,
+on a column whose twin on the dispatch table had been guarded by a constraint since the
+schema was written. **P9.6d is next: item 7, every quotation line typed from nothing.**
 
 **Carried, and still carried:** every list in the app renders every row it is given —
 `listCompanies`, `stuckList` and the four call-list bands have no LIMIT. It is NOT on the
@@ -374,7 +387,9 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
 4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again.
 5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2 and the first is Superseded.
-6. Second test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
+6. The drawer says what happened to it, in order and in his language — asked, sent back, lines changed, issued, accepted — and her reason left the screen the moment he fixed it.
+7. Second test: a request the seed sent back twice says so, both her reasons are readable, and each line names her.
+8. Third test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
 
 **Rawan-2 (coordinator, dispatches)** — `tests/dispatches.spec.ts`
 1. Faisal opens an issued quotation and sends part of item 1, with a shipment method, a destination and payment terms. The m² adds up as he types.
@@ -435,11 +450,12 @@ Rawan is the same amber as a quotation waiting on her (DESIGN §6).
 
 **What a row may contain** — `tests/schema.spec.ts`
 The third spec that is not a walk through a screen, and it earns the exception the same way:
-a quotation line with a zero quantity does not look broken, it looks like arithmetic. Six
-attempts are made against the DATABASE with the app nowhere in the picture — a zero and a
+a quotation line with a zero quantity does not look broken, it looks like arithmetic. Every
+attempt below is made against the DATABASE with the app nowhere in the picture — a zero and a
 minus in every measurement, the same quotation line twice on one dispatch, a SMAC number
 typed onto a second quotation, a second main contact, a company given both a picked city and
-a typed one, an issued quotation stripped of its instant and of its number, and a revision
+a typed one, an issued quotation stripped of its instant and of its number, a reason left on a
+quotation the rep has already fixed and a returned one with no reason at all, and a revision
 pointing at a quotation that does not exist, a daily report of nothing but whitespace, and a second
 report for one person on one day. Each must be refused (D52, D53, D55). Nothing is ever written,
 so there is nothing to clean up — and the whitespace case is why that sentence is checked rather

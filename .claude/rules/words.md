@@ -138,3 +138,13 @@ editing one, before running anything else.
 SPEC §5 is the glossary and it wins over a literal translation:
 عرض السعر never اقتباس, التوريد for a dispatch, سحب الطلب for a withdrawal and never
 إلغاء. One figure has one name on every screen that shows it.
+
+## A verb beside a name needs somebody in it
+The history trail prints an event, a day and the person who did it on one line, and
+writing those eight sentences settled two words the rest of the app had got wrong for a
+phase. "Lines changed" next to «بواسطة فيصل» says the lines changed by themselves; the
+Arabic «تغيّرت البنود» said it twice over. And «إصدار مراجعة» on the rep's button claimed
+he issues a revision, when what he raises is a request that waits in the coordinator's
+queue exactly as his first one did (D73). A line that names a person is the hardest test
+a verb takes: write the sentence with the name in it before choosing the word, and the
+passive that hides the actor stops looking neutral.

@@ -60,5 +60,17 @@
   "alreadyIssued": "This quotation has already been issued — a change to it is a revision now.",
   "notWaiting": "This request is not waiting any more.",
   "notIssued": "The customer’s answer is recorded once the quotation has been issued.",
-  "notIssuedYet": "This one has not been issued yet — edit the request instead of revising it."
+  "notIssuedYet": "This one has not been issued yet — edit the request instead of revising it.",
+  "history": "What happened",
+  "sentBackTimes": "{count, plural, one {sent back once} other {sent back # times}}",
+  "event": {
+    "request": "Requested",
+    "update": "Lines edited",
+    "issue": "Issued",
+    "sendBack": "Sent back",
+    "revise": "Revision raised",
+    "cancel": "Withdrawn",
+    "accepted": "Customer accepted",
+    "rejected": "Customer rejected"
+  }
 }
