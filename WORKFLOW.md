@@ -47,7 +47,7 @@
             - [x] f A revision does not say what changed (item 10)
             - [x] g Nothing says whether the team is using the app (item 12)
 - [ ] P10 The half-built and the carried, then a pilot on real volumes
-      - [ ] a A person has a standing strip of his own — the one thing "how is this going"
+      - [x] a A person has a standing strip of his own — the one thing "how is this going"
             is not asked about anywhere
       - [ ] b A notification that has been read and acted on stops being a row for ever
       - [ ] c The carried three: every list renders every row it is given, a form dialog
@@ -82,6 +82,15 @@ Item 10 is done: a revision names what it changed from the quotation it was rais
 above the lines, where she reads it before pricing them (D76).
 Item 12 is done: the admin's own screen says who last opened Kladra and what each person
 changed this week, counted from the audit log (D77).
+
+**P10a is done.** A rep's floor carries its own band of three — pipeline, open quotations with
+the part the customer is holding beside it, and what has been sent back or refused — between the
+month card above it and the calls due below (D78). The manager reads it by pressing a name on the
+team screen, the rep reads the same band on his own floor, and the two counts come from the list
+his day already renders rather than from a second derivation of it. Two things were fixed at the
+cause while building it: "open quotations" existed twice, once in SQL and once in the query
+builder, and the strip's phone grid left an empty cell beside an odd last figure — the same defect
+as the half-empty two-figure strip in P9.6g, one width down, and now a rule in DESIGN §5.
 
 **P9 is finished, and with it every item on the ranked list the five days produced.** What
 is next is P10, and it is the three things this phase deliberately did not do, in this
