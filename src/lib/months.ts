@@ -22,6 +22,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
+import { SUM_SQM } from "@/lib/sqm";
 
 /** How many months a card shows, this one included. */
 export const MONTHS_SHOWN = 6;
@@ -62,15 +63,13 @@ export async function monthsBack(
     ),
     moved as (
       select date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)::date as m,
-             round(sum(round(qi.width * qi.length * di.qty, 2)), 2) as sqm
+             ${sql.raw(SUM_SQM)} as sqm
         from dispatches d
         join dispatch_items di on di.dispatch_id = d.id
         join quotation_items qi on qi.id = di.quotation_item_id
-        join quotations q on q.id = d.quotation_id
-        join companies c on c.id = q.company_id
        where d.status = 'approved'
          and (d.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-         and (${userId}::uuid is null or c.rep_id = ${userId}::uuid)
+         and (${userId}::uuid is null or d.rep_id = ${userId}::uuid)
        group by 1
     )
     select to_char(months.m, 'YYYY-MM-DD') as month,

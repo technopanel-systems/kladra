@@ -16,6 +16,7 @@ import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import type { Day } from "@/lib/dates";
 import { waitingOnRep } from "@/lib/day";
+import { SUM_SQM, sqmOf } from "@/lib/sqm";
 
 export type CompanyStanding = {
   /** SPEC S45: expected m² on live projects — not lost, not archived. */
@@ -56,7 +57,7 @@ export function pipelineSqmSql(scope: SQL): SQL<string> {
  */
 export function approvedSqmSql(scope: SQL): SQL<string> {
   return sql`(
-    select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text
+    select ${sql.raw(SUM_SQM)}::text
       from dispatches d
       join dispatch_items di on di.dispatch_id = d.id
       join quotation_items qi on qi.id = di.quotation_item_id
@@ -245,18 +246,19 @@ export type QuotationStanding = {
  * as the dispatch form does, so the two cannot disagree about what is available
  * (D12).
  */
-export async function quotationStanding(quotationId: string): Promise<QuotationStanding> {
-  const id = sql`${quotationId}::uuid`;
-  const result = await db.execute<{ remaining_sqm: string }>(sql`
-    select round(coalesce(sum(
-             round(qi.width * qi.length * greatest(qi.qty - (
+/** What a line has left to send: quoted minus committed, never below nought (D12). */
+const REMAINING_QTY = `greatest(qi.qty - (
                select coalesce(sum(di.qty), 0)::int
                  from dispatch_items di
                  join dispatches d on d.id = di.dispatch_id
                 where di.quotation_item_id = qi.id
                   and d.status in ('submitted', 'approved')
-             ), 0), 2)
-           ), 0), 2)::text as remaining_sqm
+             ), 0)`;
+
+export async function quotationStanding(quotationId: string): Promise<QuotationStanding> {
+  const id = sql`${quotationId}::uuid`;
+  const result = await db.execute<{ remaining_sqm: string }>(sql`
+    select round(coalesce(sum(${sql.raw(sqmOf(REMAINING_QTY))}), 0), 2)::text as remaining_sqm
       from quotation_items qi
      where qi.quotation_id = ${id}
   `);

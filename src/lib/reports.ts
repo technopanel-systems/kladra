@@ -31,6 +31,7 @@ import { addDays, todayRiyadh, type Day } from "@/lib/dates";
 import { writesReports } from "@/lib/floor";
 import type { Role } from "@/lib/types";
 import { isWorkingDay, type NonWorking } from "@/lib/workdays";
+import { SUM_SQM } from "@/lib/sqm";
 
 /** What a person on a floor did with customers on one day. */
 export type FloorDay = {
@@ -154,7 +155,7 @@ async function floorDay(userId: string, day: Day): Promise<FloorDay> {
          and (dispatches.created_at at time zone 'Asia/Riyadh')::date = ${day}::date
     ),
     moved as (
-      select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2) as sqm,
+      select ${sql.raw(SUM_SQM)} as sqm,
              count(distinct d.id)::int as approved
         from dispatches d
         join dispatch_items di on di.dispatch_id = d.id
@@ -163,7 +164,7 @@ async function floorDay(userId: string, day: Day): Promise<FloorDay> {
         join companies c on c.id = q.company_id
        where d.status = 'approved'
          and (d.approved_at at time zone 'Asia/Riyadh')::date = ${day}::date
-         and c.rep_id = ${userId}::uuid
+         and d.rep_id = ${userId}::uuid
     ),
     due as (
       select c.id as company_id from companies c

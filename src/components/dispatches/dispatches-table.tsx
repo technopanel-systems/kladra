@@ -482,7 +482,7 @@ export function DispatchSheet({
                   </span>
                 </Link>
               </Fact>
-              <Fact label={t("common.rep")}>{dispatch.repName}</Fact>
+              <Fact label={t("common.raisedBy")}>{dispatch.repName}</Fact>
               <Fact label={t("common.date")}>
                 <DayText day={dispatch.createdOn} locale={locale} />
               </Fact>

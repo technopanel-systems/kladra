@@ -61,7 +61,8 @@
             tests, a full day for each of the five people; a ranked findings list in §5
             with the cause of each, not the symptom; then fixed worst first in slices
             — the list is written (§5, sixty-seven entries, unverified); fixed so far:
-            1, 2, 6, 57 (a write holds its row, D85)
+            1, 2, 6, 57 (a write holds its row, D85); 3, 4, 46, 52 (achieved is the
+            raiser's, the formula written once, D86)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -673,6 +674,13 @@ held under the list screen's, so a person following "and 30 more" never lands on
 rows than he left (D80); the band and the group are not ordered against each other, because
 they summarise different screens for different people.
 
+**Whose metres these are** — `tests/attribution.spec.ts`
+Abdulrahman hands one of Faisal's companies — one with dispatches approved this month — to
+Saad. On the team screen Faisal's Achieved is what it was and Saad's is what it was: the
+metres stayed with the person who raised the dispatch, as D86 says, and the quotation drawer
+under that company says "Raised by Faisal" rather than naming its new owner. The company is
+handed back by SQL afterwards, with the hand-over's own audit row and notification removed.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -789,12 +797,12 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `src/actions/dispatches.ts:461-528`. D36's rule runs only when a dispatch is raised; Rawan
   can approve one against a price the customer no longer holds. Fix: re-check the live revision
   at approval and say so in the queue. Reader cites code.
-- [ ] 3 **A hand-over rewrites past months' achieved metres.** `src/lib/dispatches.ts:585-603`,
+- [x] 3 **A hand-over rewrites past months' achieved metres.** Verified; achieved follows `dispatches.rep_id` now (P11A-2, D86). `src/lib/dispatches.ts:585-603`,
   `src/lib/months.ts:67-73`. Achieved joins the CURRENT `companies.rep_id`, so moving a
   customer moves his history to the new rep. Cause: no attribution at the time of the sale
   although `dispatches.rep_id` already holds it. Fix: attribute to the rep who raised the
   dispatch (decision for SPEC §4). Reader cites code.
-- [ ] 4 **A quotation names the rep who no longer owns the company.** `src/lib/quotations.ts:
+- [x] 4 **A quotation names the rep who no longer owns the company.** The label says "Raised by" now, which is what the column holds (P11A-2, D86). `src/lib/quotations.ts:
   196-207`, `src/actions/companies.ts:407-411`. `quotations.rep_id` is frozen at creation while
   the floor moved. With 3 decided, the display is right and the sentence beside it must say
   "raised by". Reader cites code.
@@ -899,7 +907,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `.returning()` and a count, as `archiveCompanyAction` does. Reader cites code.
 - [ ] 45 **The funnel calls a fresh "sent back" request "never asked again".** `chain.ts:34-121`.
   Fix: an age, said in the caption. Reader cites code.
-- [ ] 46 **The round-sum-round m² formula is retyped in six places.** `dispatches.ts:571`,
+- [x] 46 **The round-sum-round m² formula is retyped in six places.** Verified — six files and two specs; `src/lib/sqm.ts` and `one-figure` in the lint (P11A-2, D86). `dispatches.ts:571`,
   `months.ts:65`, `reports.ts:157`, `standing.ts:59`, `export.ts:193`, a test. One fragment. (11C.)
 - [ ] 47 **`check:messages` is not in the build or the stated pre-commit chain**, though three
   files say a locale gap fails the build. `package.json:12`. Fix: chain it. Reader cites code.
@@ -911,7 +919,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   spec.ts:104-120`. Reader cites code.
 - [ ] 51 **The 44px touch rule lives in one file.** `bottom-bar.tsx`, `button.tsx:29-41` tops
   out at 36. Reader cites code. (11H.)
-- [ ] 52 **The hand-over warning for marketing names what never moves and not what does.**
+- [x] 52 **The hand-over warning for marketing names what never moves and not what does.** Rewritten with D86: what moves, and that approved metres stay (P11A-2).
   `drawer.json:46`, `companies.ts:407-422`. Reader cites code.
 - [ ] 53 **The offline page is always dark.** `public/offline.html:20-33`; the theme cookie is
   readable without a server. Reader cites code. (11G.)

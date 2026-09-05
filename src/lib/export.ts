@@ -17,6 +17,7 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { mainContactIdSql } from "@/lib/companies";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import { LINE_SQM } from "@/lib/sqm";
 
 export const EXPORTS = ["companies", "quotations", "dispatches"] as const;
 export type ExportName = (typeof EXPORTS)[number];
@@ -190,7 +191,7 @@ async function dispatchesCsv(): Promise<string> {
            -- Rounded ONCE, at the end, exactly as dispatchTotals in
            -- src/lib/dispatches.ts and lineSqm in src/lib/money.ts do it. The
            -- three move together or the file disagrees with the screen (D38).
-           round(qi.width * qi.length * di.qty, 2) as sqm
+           ${sql.raw(LINE_SQM)} as sqm
       from dispatches d
       join quotations q on q.id = d.quotation_id
       join companies c on c.id = q.company_id

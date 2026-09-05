@@ -542,7 +542,7 @@ export function QuotationSheet({
             />
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              <Fact label={t("common.rep")}>{quotation.repName}</Fact>
+              <Fact label={t("common.raisedBy")}>{quotation.repName}</Fact>
             </dl>
           </div>
 

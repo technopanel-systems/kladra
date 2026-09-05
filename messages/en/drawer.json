@@ -43,7 +43,7 @@
   "quoted": "Quoted",
   "handOver": "Hand over",
   "handOverTitle": "Hand {name} to somebody else?",
-  "handOverWarning": "Their projects, quotations, dispatches and square metres move with the company. What is already in the activity log stays as it was written.",
+  "handOverWarning": "Their projects, open quotations and dispatches move with the company. What was already approved stays counted in the month of the person who raised it, and the activity log stays as it was written.",
   "handOverTo": "Who takes it",
   "handOverPick": "Choose a person",
   "handOverSearch": "Search people",

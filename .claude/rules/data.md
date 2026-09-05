@@ -194,3 +194,11 @@ the expected-state check comes after it. A dispatch request holds the QUOTATION 
 the quantity sum it reads is the one the previous request wrote. A comment that says
 "the transaction makes this impossible" is not a lock; `tests/two-hands.spec.ts` presses
 Save in two tabs at once and reads the table afterwards.
+
+## The square-metre formula lives in one file
+`src/lib/sqm.ts` — `LINE_SQM` / `SUM_SQM` for SQL written as text (dispatch lines `di`,
+quotation lines `qi`), `lineSqm` / `sumSqm` for a Drizzle query. It was retyped in six
+files, each copy right and none checked against another, until P11A (D86);
+`scripts/one-figure.mts` fails the lint on any copy outside that file. The specs keep
+their own copy on purpose. And "achieved" attributes by `dispatches.rep_id`, the rep who
+raised it — never by the company's current owner, which a hand-over changes.

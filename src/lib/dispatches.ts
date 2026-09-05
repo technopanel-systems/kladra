@@ -52,6 +52,7 @@ import { NotAllowed, seesAll } from "@/lib/authz";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
+import { lineSqm, sumSqm } from "@/lib/sqm";
 
 export type DispatchStatus = "submitted" | "approved" | "refused";
 
@@ -134,9 +135,7 @@ const qb = new QueryBuilder();
 const dispatchTotals = qb
   .select({
     dispatchId: dispatchItems.dispatchId,
-    sqm: sql<string>`round(coalesce(sum(round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)), 0), 2)`.as(
-      "total_sqm",
-    ),
+    sqm: sumSqm.as("total_sqm"),
     itemCount: sql<number>`count(*)::int`.as("item_count"),
   })
   .from(dispatchItems)
@@ -408,7 +407,7 @@ export async function getDispatch(
       quotedQty: quotationItems.qty,
       width: quotationItems.width,
       length: quotationItems.length,
-      sqm: sql<string>`round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)`,
+      sqm: lineSqm,
     })
     .from(dispatchItems)
     .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
@@ -568,7 +567,7 @@ export async function remainingOnQuotation(
  * browser computes the same thing with `lineSqm` in src/lib/money.ts and
  * tests/dispatches.spec.ts checks the two against each other (D38).
  */
-const approvedSqm = sql<string>`round(coalesce(sum(round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)), 0), 2)`;
+const approvedSqm = sumSqm;
 
 /**
  * Achieved m² per rep for one Riyadh month — the ONE definition (S43).
@@ -584,12 +583,13 @@ const approvedSqm = sql<string>`round(coalesce(sum(round(${quotationItems.width}
  */
 export async function achievedByRep(month: string): Promise<Map<string, string>> {
   const rows = await db
-    .select({ repId: companies.repId, sqm: approvedSqm })
+    // The rep who RAISED the dispatch (D86), not whoever holds the company
+    // today: a hand-over moves the customer and his open work, never the
+    // metres already approved in somebody's month.
+    .select({ repId: dispatches.repId, sqm: approvedSqm })
     .from(dispatches)
     .innerJoin(dispatchItems, eq(dispatchItems.dispatchId, dispatches.id))
     .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
     .where(
       and(
         eq(dispatches.status, "approved"),
@@ -597,7 +597,7 @@ export async function achievedByRep(month: string): Promise<Map<string, string>>
               = date_trunc('month', ${month}::date)`,
       ),
     )
-    .groupBy(companies.repId);
+    .groupBy(dispatches.repId);
 
   return new Map(rows.map((row) => [row.repId, String(row.sqm ?? "0")]));
 }
