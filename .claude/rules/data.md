@@ -32,6 +32,17 @@ broken at least once in FACET, Kladra's predecessor.
   rather than failing** — a text id INNER-JOINed against a uuid silently
   returns nothing forever.
 
+- **A JS array interpolated into a `sql` template is ONE parameter, not a
+  list.** Drizzle binds it as a single value whose text is the members joined by
+  commas, so `where u.id = any(${ids}::uuid[])` reaches Postgres as
+  `any(('a,b')::uuid[])` and raises `malformed array literal` — at run time, on
+  the branch that only happens when the list is non-empty, which is exactly the
+  branch a demo with nobody on leave never takes. Build the list with
+  `sql.join`, one fragment per member carrying its own cast, or use the query
+  builder's `inArray`. Both bind a parameter per member.
+  Found by a screenshot, not by a test: the seeded condition existed only on a
+  working day and the suite ran on a Saturday.
+
 - **The app's "today" is Riyadh's, computed in SQL with the timezone.** The
   two shapes that lose it are hook-blocked (H6/H7): `current_date` is the
   server's UTC day, one behind Riyadh until 03:00; `AT TIME ZONE` on a bare
@@ -48,6 +59,15 @@ broken at least once in FACET, Kladra's predecessor.
   seeded, and had no box on it. Any rule of the form "the last N days" is a rule
   about **working** days here: ask `isWorkingDay` and walk, cap the walk, and test
   the rule on a Saturday before believing it.
+
+  The other half of that: **a rule whose screen only exists on a working day
+  cannot be proved by walking the screen.** "Who is away today" is empty every
+  Friday and Saturday — correctly, since nobody is at work to be missed — so a
+  Playwright walk of the manager's screen asserts nothing at all two days in
+  seven, and asserts it silently, passing. The rule goes in a pure function
+  (`awayFrom` in `src/lib/workdays.ts`) with a spec that picks its own days
+  (`tests/leave.spec.ts`), and the walk keeps whichever half of the case the day
+  it runs on can show.
 
 - **A figure the browser shows while somebody types is computed by the
   function the database uses.** Round once, at the end, on both sides:

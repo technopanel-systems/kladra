@@ -43,7 +43,7 @@
             - [x] b The rep logs the call without leaving his day (item 4)
             - [x] c A quotation's history, and the reason that outlived it (item 5)
             - [x] d Every quotation line is typed from nothing (item 7)
-            - [ ] e Leave is invisible everywhere except the pace arithmetic (item 9)
+            - [x] e Leave is invisible everywhere except the pace arithmetic (item 9)
             - [ ] f A revision does not say what changed (item 10)
             - [ ] g Nothing says whether the team is using the app (item 12)
 
@@ -62,14 +62,16 @@ border (D69). The mid-session sign-out seen during the 9C screenshots was confir
 `seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
 looks exactly like a bug, so the README says so now.
 
-P9.6 is the 9A list itself, best first, and four of it are done. A log entry can be
+P9.6 is the 9A list itself, best first, and five of it are done. A log entry can be
 corrected by its author and unfiled onto the audit line (D70), he logs the call from the
 row he called from (D71), and a quotation now remembers what happened to it (D72). The
 third one found the defect underneath it: a reason that outlived the state it explained,
 on a column whose twin on the dispatch table had been guarded by a constraint since the
 schema was written. Item 7 is done too: Add item opens on the sheet above it, and a
 customer who has been quoted before is offered his last quotation to start from (D74).
-**P9.6e is next: item 9, leave invisible everywhere except the pace arithmetic.**
+Item 9 is done: a rep on leave is named on the manager's screen and what is due on his
+floor is listed beside him, and his own day says who has it while he is out (D75).
+**P9.6f is next: item 10, a revision does not say what changed.**
 
 **Carried, new in P9.6d:** a form dialog that scrolls does not say so. Measured on the
 request form: one item fits exactly, two do not, and the totals and the note to the
@@ -424,8 +426,9 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
 2. Each rep row shows target, achieved, pace, open quotations, overdue follow-ups.
 3. The Stuck list names the waiting request, the overdue follow-up and the never-contacted company.
-4. Open Faisal's companies read-only; no Add company button, and — `tests/rep.spec.ts` — no Log, New contact, New project, Edit, Archive, Mark lost or Request quotation in either drawer, and the follow-up dates read as sentences rather than pickers (D42).
-5. The bell lists his notifications; mark one read and the count drops.
+4. A rep on leave is named under his own row with the day he is back, and what is due on his floor today is the first group of the Stuck list, with his name on every row; on his own day he is told who has it while he is out. On a Friday or a Saturday nobody is away and none of it appears — the case `tests/leave.spec.ts` covers, because that screen cannot be walked on a weekend.
+5. Open Faisal's companies read-only; no Add company button, and — `tests/rep.spec.ts` — no Log, New contact, New project, Edit, Archive, Mark lost or Request quotation in either drawer, and the follow-up dates read as sentences rather than pickers (D42).
+6. The bell lists his notifications; mark one read and the count drops.
 
 **Jerom (admin)** — `tests/admin.spec.ts`
 1. Sign in as Jerom. Home is the team screen, and the Admin section lists Users, Targets, Lookups, Holidays and leave, Archive, Export.

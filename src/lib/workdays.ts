@@ -62,6 +62,38 @@ export function nextWorkingDay(day: Day, nonWorking: NonWorking[] = [], userId?:
   return d;
 }
 
+/** One person who is not at work while the office is (D75). */
+export type Away = {
+  /** The next day this person works — a weekend and a holiday are not it. */
+  backOn: Day;
+};
+
+/**
+ * Who is away on `day`, given the non-working rows around it.
+ *
+ * Away means not at work while the office IS: on a Friday, a Saturday or a
+ * company holiday nobody is away, because nobody is there to be missed and
+ * there is no floor for anybody else to cover. It is his own leave that leaves
+ * work with no owner, which is the whole point of asking (9A item 9).
+ *
+ * `backOn` and not "until": whoever reads this is deciding whether to cover a
+ * customer today, and that turns on when the rep is next at his desk — which is
+ * a different day from the end of his leave whenever it runs into a weekend.
+ *
+ * Pure, so `tests/leave.spec.ts` can ask it on a Saturday. The rows come from
+ * `src/lib/leave.ts`, which is the only thing that loads them.
+ */
+export function awayFrom(day: Day, nonWorking: NonWorking[] = []): Map<string, Away> {
+  const away = new Map<string, Away>();
+  if (!isWorkingDay(day, nonWorking)) return away;
+
+  for (const row of nonWorking) {
+    if (row.userId === null || row.day !== day || away.has(row.userId)) continue;
+    away.set(row.userId, { backOn: nextWorkingDay(addDays(day, 1), nonWorking, row.userId) });
+  }
+  return away;
+}
+
 /** Month pace: elapsed working days (through today) over the month's total. */
 export function monthPace(
   today: Day,

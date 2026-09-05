@@ -1166,5 +1166,23 @@ export const HOLIDAY_NOTE = "اليوم الوطني";
 export const LEAVE_NOTE = "إجازة سنوية";
 /** Day of next month the company holiday falls on. */
 export const HOLIDAY_DAY_OF_MONTH = 23;
-/** Calendar days from today for Turki's leave. */
+/** Calendar days from today for Turki's leave — a day still ahead of us. */
 export const LEAVE_DAYS_AHEAD = 7;
+
+/*
+ * And Saad is away TODAY, for three working days.
+ *
+ * Leave was in this dataset from the beginning and always in the future, so
+ * every screen that knows about it — the pace arithmetic, the daily report's
+ * "off" state, and from P9.6e the team row and the manager's uncovered band —
+ * has been showing the same thing every day since P6: nobody is ever away. A
+ * state the demo never reaches is a state nobody has seen work (rules/data.md).
+ *
+ * Saad because his floor has work falling due while he is out: one follow-up a
+ * day old and one due in two days, so the manager's screen has something on it
+ * to cover rather than an empty heading. It also puts leave inside somebody's
+ * current month, which is what the per-person pace was built for and had never
+ * been given.
+ */
+export const AWAY_REP: RepKey = "saad";
+export const AWAY_WORKING_DAYS = 3;

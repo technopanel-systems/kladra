@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
-import { login } from "./helpers/auth";
+import { login, type Persona } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
+import { formatDay, type Day } from "@/lib/dates";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -203,4 +204,109 @@ test("a rep who follows a link to the team screen lands on his own home", async 
 
   await expect(page).toHaveURL(/\/day/, COLD);
   await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
+});
+
+/**
+ * Somebody is away, and his floor is not left to nobody (D75, 9A item 9).
+ *
+ * Leave has been in this system since the schema and reached exactly two
+ * things: the pace arithmetic, and the daily report's own "off" mark. So a rep
+ * went on leave and his customers simply stopped being anybody's — the five-day
+ * walk put it in four words, nobody covers a floor.
+ *
+ * Both halves are asserted from the database rather than from the seed: who is
+ * away today is a row in `non_working_days`, and what is due on his floor is the
+ * same follow-up arithmetic every other screen uses. On a Friday or a Saturday
+ * the right answer is nothing at all — a weekend is not leave, and there is no
+ * floor to cover on a day the office is shut — so that is what the test asks for
+ * instead, which is the case that would have gone untested (rules/data.md).
+ */
+test("a rep on leave is named on the manager's screen, and what is due on his floor with him", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const today = await one<{ day: Day }>(
+    "select to_char((now() at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day",
+  );
+  const away = await query<{ id: string; email: string; back_on: Day }>(
+    `select u.id, u.email, to_char(min(n2.day), 'YYYY-MM-DD') as back_on
+       from non_working_days n
+       join users u on u.id = n.user_id
+       join generate_series(n.day + 1, n.day + 45, interval '1 day') as n2(day)
+         on extract(isodow from n2.day) not in (5, 6)
+        and not exists (
+          select 1 from non_working_days x
+           where x.day = n2.day::date
+             and (x.user_id is null or x.user_id = u.id)
+        )
+      where n.day = $1::date
+      group by u.id, u.email`,
+    [today.day],
+  );
+
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/team`);
+  await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
+
+  if (away.length === 0) {
+    // A weekend, or a day nobody happens to be off. Nothing may claim otherwise.
+    await expect(page.getByRole("heading", { name: t("team.uncovered") })).toHaveCount(0);
+    return;
+  }
+
+  const person = away[0];
+  const name = await personName(person.email, locale);
+  const backOn = person.back_on;
+
+  await test.step("his row says he is away and when he is back", async () => {
+    const row = page.getByRole("row").filter({ hasText: name });
+    await expect(row.first()).toBeVisible();
+    await expect(page.getByText(t("team.backOn", { day: formatDay(backOn, locale) })).first()).toBeVisible();
+  });
+
+  await test.step("what is due on his floor is on this screen, with his name on it", async () => {
+    const due = await query<{ id: string }>(
+      `select companies.id from companies
+        where companies.archived_at is null
+          and companies.rep_id = $1::uuid
+          and companies.next_follow_up is not null
+          and companies.next_follow_up <= (now() at time zone 'Asia/Riyadh')::date
+       union all
+       select projects.id from projects
+        join companies c on c.id = projects.company_id
+        where projects.archived_at is null
+          and projects.lost_at is null
+          and c.archived_at is null
+          and c.rep_id = $1::uuid
+          and projects.next_follow_up is not null
+          and projects.next_follow_up <= (now() at time zone 'Asia/Riyadh')::date`,
+      [person.id],
+    );
+
+    if (due.length === 0) {
+      await expect(page.getByRole("heading", { name: t("team.uncovered") })).toHaveCount(0);
+      return;
+    }
+
+    const group = page.getByRole("heading", { name: t("team.uncovered") });
+    await expect(group).toBeVisible();
+    await expect(page.getByText(t("team.uncoveredMeans"))).toBeVisible();
+    await expect(
+      page.getByText(t("team.awayBackOn", { name, day: formatDay(backOn, locale) })).first(),
+      "the row does not say whose floor it is or when he is back",
+    ).toBeVisible();
+  });
+
+  await test.step("and his own day says it to him, without hiding what is due", async () => {
+    // Whoever the seed has away — the personas are named by the local part of
+    // their address, so the test follows the data rather than a name in it.
+    await login(page, locale, person.email.split("@")[0] as Persona);
+    await page.goto(`/${locale}/day`);
+    await expect(page.getByText(t("day.onLeave", { day: formatDay(backOn, locale) }))).toBeVisible(
+      COLD,
+    );
+  });
 });

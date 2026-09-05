@@ -1,4 +1,4 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import {
   Table,
   TableBody,
@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
+import { formatDay, type Day } from "@/lib/dates";
 import { formatSqmWhole } from "@/lib/money";
 import { paceTone, TONE_TEXT } from "@/lib/state-tone";
 import type { TeamMember } from "@/lib/team";
@@ -57,6 +58,7 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
             className="card-face flex flex-col gap-2 p-3"
           >
             <span className="font-medium">{member.name}</span>
+            {member.away ? <AwayLine backOn={member.away.backOn} /> : null}
 
             {/* Two figures joined by a slash and no word for either was the
                 phone card until P9.4: a reader had to know which side was
@@ -128,10 +130,15 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
           <TableBody>
             {members.map((member) => (
               <TableRow key={member.userId}>
-                <TableCell className="p-0">
-                  <Link href={`/companies?rep=${member.userId}`} className="block p-3 font-medium">
+                {/* The leave line sits beside the link and not inside it: the
+                    link is named by the person and nothing else, so it stays
+                    the same control to say out loud and to click on the day he
+                    goes away (DESIGN §5). */}
+                <TableCell className="p-3">
+                  <Link href={`/companies?rep=${member.userId}`} className="font-medium">
                     {member.name}
                   </Link>
+                  {member.away ? <AwayLine backOn={member.away.backOn} /> : null}
                 </TableCell>
                 <TableCell className="p-3 text-end">
                   {/* What is still out there to win (S45), beside what has
@@ -187,6 +194,23 @@ function Count({ value }: { value: number }) {
         {value}
       </span>
     </TableCell>
+  );
+}
+
+/**
+ * Not at work today, under his name (D75).
+ *
+ * Under the name and not in a column of its own: it is true of the person
+ * rather than of his month, and every other cell on the row is a figure. It
+ * says when he is back, which is the only part of it a manager acts on — the
+ * work due on his floor while he is out is listed under What is stuck.
+ */
+async function AwayLine({ backOn }: { backOn: Day }) {
+  const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
+  return (
+    <span className={cn("block text-xs", TONE_TEXT.wait)}>
+      {t("team.backOn", { day: formatDay(backOn, locale) })}
+    </span>
   );
 }
 

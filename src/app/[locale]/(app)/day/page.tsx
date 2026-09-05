@@ -8,6 +8,8 @@ import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
+import { formatDay, todayRiyadh } from "@/lib/dates";
+import { awayOn } from "@/lib/leave";
 import { logTargetsFor } from "@/lib/log-targets";
 import { waitingOnRep } from "@/lib/day";
 import { monthsBack } from "@/lib/months";
@@ -42,7 +44,7 @@ export default async function DayPage() {
   const hasMonth = carriesMetres(user.role);
   const hasChain = sells(user.role);
 
-  const [t, month, months, waiting, overdue, today, never, quiet] = await Promise.all([
+  const [t, month, months, waiting, overdue, today, never, quiet, away] = await Promise.all([
     getTranslations(),
     hasMonth ? repMonth(user.id) : null,
     // Only where there is a target to read them against — marketing carries
@@ -53,6 +55,7 @@ export default async function DayPage() {
     listCompanies({ user, filter: "today", locale }),
     listCompanies({ user, filter: "never", locale }),
     listCompanies({ user, filter: "quiet", locale }),
+    awayOn(todayRiyadh()),
   ]);
 
   // One pair of queries for the whole screen, after the bands are known (D71).
@@ -60,9 +63,22 @@ export default async function DayPage() {
     [...overdue, ...today, ...never, ...quiet].map((row) => row.id),
   );
 
+  const onLeave = away.get(user.id);
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">{t("day.title")}</h1>
+
+      {/* His own leave, said on his own screen (D75). The bands underneath are
+          left exactly as they are: a customer who was promised a call on Tuesday
+          is still waiting whether or not the rep was at work, and telling him
+          otherwise would be a comfortable lie. What this says instead is who has
+          it while he is out. */}
+      {onLeave ? (
+        <p className="card-face px-4 py-3 text-sm text-muted-foreground">
+          {t("day.onLeave", { day: formatDay(onLeave.backOn, locale) })}
+        </p>
+      ) : null}
 
       {/* The same card the manager reads, with this rep's own figures — one
           layout for one set of facts, so a rep recognises his row on the team

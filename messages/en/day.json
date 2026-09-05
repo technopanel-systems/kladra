@@ -1,4 +1,5 @@
 {
+  "onLeave": "You are on leave today. Anything due is on the manager’s screen until you are back on {day}.",
   "title": "Your day",
   "myMonth": "This month",
   "waitingOnYou": "Waiting on you",

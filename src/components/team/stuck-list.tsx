@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { DayText } from "@/components/ui-ext/day-text";
+import { formatDay } from "@/lib/dates";
 import { Link } from "@/i18n/navigation";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { TONE_TEXT } from "@/lib/state-tone";
@@ -9,13 +10,18 @@ import { cn } from "@/lib/utils";
 /**
  * What is waiting longer than it should be (SPEC D14).
  *
- * Four questions, each with its own window: a quotation request more than two
- * WORKING days on the coordinator's desk, a follow-up more than three days past
- * its date, a company added more than fourteen days ago and never contacted, and
- * a customer somebody DID contact and then dropped — no next step anywhere on
- * him and nothing logged for a fortnight (D63). That last one is the biggest of
- * the four and was invisible until P9.4: it is on no band of any screen, because
- * every band this app had was keyed on a date and these have none.
+ * Five questions, each with its own window: work due today on the floor of
+ * somebody who is on leave (D75), a quotation request more than two WORKING days
+ * on the coordinator's desk, a follow-up more than three days past its date, a
+ * company added more than fourteen days ago and never contacted, and a customer
+ * somebody DID contact and then dropped — no next step anywhere on him and
+ * nothing logged for a fortnight (D63). The fourth is the biggest and was
+ * invisible until P9.4: it is on no band of any screen, because every band this
+ * app had was keyed on a date and these have none.
+ *
+ * The first is the only one about TODAY, so it is first on the screen. The rest
+ * have been waiting for days and will still be there tomorrow; a customer
+ * expecting a call this morning from a rep who is not at work will not.
  *
  * Working days for the first one because a request raised on a Thursday is not
  * late on Sunday, and a rep back from Eid must not be told he is behind (S48).
@@ -30,6 +36,7 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
 
   const nothing =
+    stuck.uncovered.length === 0 &&
     stuck.requests.length === 0 &&
     stuck.followUps.length === 0 &&
     stuck.neverContacted.length === 0 &&
@@ -49,6 +56,39 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   return (
     <section className="flex flex-col gap-4">
       <h2 className="text-sm font-medium text-muted-foreground">{t("team.stuck")}</h2>
+
+      {/* First, because it is the only group here about TODAY: a customer
+          expecting a call this morning from somebody who is on leave. The rest
+          have been waiting days and will still be waiting tomorrow. */}
+      {stuck.uncovered.length > 0 ? (
+        <Group title={t("team.uncovered")} means={t("team.uncoveredMeans")}>
+          {stuck.uncovered.map((row) => (
+            <Row
+              key={`away-${row.kind}-${row.id}`}
+              href={
+                row.kind === "company" ? `/companies?open=${row.id}` : `/projects?open=${row.id}`
+              }
+              name={
+                row.kind === "company" ? (
+                  row.name
+                ) : (
+                  <>
+                    <bdi>{row.name}</bdi> · <bdi>{row.companyName}</bdi>
+                  </>
+                )
+              }
+              who={t("team.awayBackOn", { name: row.repName, day: formatDay(row.backOn, locale) })}
+              note={
+                row.daysOverdue > 0 ? (
+                  t("team.overdueDays", { count: row.daysOverdue })
+                ) : (
+                  t("common.dueToday")
+                )
+              }
+            />
+          ))}
+        </Group>
+      ) : null}
 
       {stuck.requests.length > 0 ? (
         <Group title={t("team.stuckRequests")}>
@@ -169,13 +209,20 @@ function Row({
   who: string;
   note: React.ReactNode;
 }) {
+  /*
+   * Three things on one line where there is room, and three lines where there is
+   * not. It was one flex row at every width: the name was the only child allowed
+   * to shrink, so on a phone it gave up all its space to the rep's name and the
+   * date beside it and came out one word per line, touching the text next to it.
+   * A row about a customer whose name is unreadable is a row nobody can act on.
+   */
   return (
     <li>
       <Link
         href={href}
-        className="card-face flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3 outline-none transition-colors hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="card-face flex flex-col gap-1 p-3 outline-none transition-colors hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4"
       >
-        <span className="min-w-0 flex-1 text-sm">{name}</span>
+        <span className="min-w-0 text-sm sm:flex-1">{name}</span>
         <span className="text-xs text-muted-foreground">{who}</span>
         <span className={cn("text-xs", TONE_TEXT.wait)}>{note}</span>
       </Link>

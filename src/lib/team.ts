@@ -28,6 +28,7 @@ import { firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
+import { awayOn, type Away } from "@/lib/leave";
 import { personName, personNameOf } from "@/lib/people";
 import { pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
@@ -74,6 +75,12 @@ export type TeamMember = MonthFigures & {
   overdueFollowUps: number;
   /** Added and never contacted, old enough to be a habit (S51). */
   neverContacted: number;
+  /**
+   * Not at work today, and the day he is back (D75). Null is the ordinary case.
+   * His figures are still his — the month does not stop because he is away, and
+   * his pace already counts only the days he works (S48).
+   */
+  away: Away | null;
 };
 
 export type TeamMonth = {
@@ -122,7 +129,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
   // for the asking and no caller had to change.
   const locale = await getLocale();
 
-  const [people, targetRows, companyTargetRow, achieved, companyAchieved, nonWorking] =
+  const [people, targetRows, companyTargetRow, achieved, companyAchieved, nonWorking, away] =
     await Promise.all([
       db
         .select({ id: users.id, name: personName(locale), role: users.role })
@@ -141,6 +148,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
       achievedByRep(month),
       companyAchievedSqm(month),
       listNonWorkingDays(firstOfMonth(day), lastOfMonth(day)),
+      awayOn(day),
     ]);
 
   // One statement for everybody's pipeline, and the company's is the same rows
@@ -173,6 +181,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
         openQuotations: open,
         overdueFollowUps: counts.overdue,
         neverContacted: counts.neverContacted,
+        away: away.get(person.id) ?? null,
       };
     }),
   );
@@ -187,6 +196,99 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
     },
     members,
   };
+}
+
+/**
+ * What is due on the floors of the people who are not here (D75).
+ *
+ * Asked only when somebody is away, which is most days nobody: an empty map is
+ * an empty band and no query at all. Due TODAY counts as well as overdue, which
+ * is the difference between this group and the stuck one — a customer expecting
+ * a call this morning from a rep who is on leave is the whole point, and by the
+ * time it is three days late the damage is done.
+ */
+async function uncoveredFollowUps(
+  away: Map<string, Away>,
+  locale: string,
+): Promise<UncoveredFollowUp[]> {
+  if (away.size === 0) return [];
+
+  /*
+   * A JS array interpolated into a `sql` template is ONE parameter, and its text
+   * is the members joined by commas — so `= any($1::uuid[])` reached Postgres as
+   * a single string and the whole team screen answered 500 with "malformed array
+   * literal" the moment anybody was on leave (rules/data.md). `sql.join` is the
+   * shape that makes a list: one bound parameter per id, cast at each one.
+   */
+  const ids = sql.join(
+    [...away.keys()].map((id) => sql`${id}::uuid`),
+    sql`, `,
+  );
+
+  const rows = await db.execute<{
+    id: string;
+    name: string;
+    company_name: string;
+    rep_name: string;
+    rep_id: string;
+    day: Day;
+    days_overdue: number;
+    kind: "company" | "project";
+  }>(sql`
+    select companies.id::text as id,
+           companies.name as name,
+           companies.name as company_name,
+           ${personNameOf("u", locale)} as rep_name,
+           u.id::text as rep_id,
+           to_char(companies.next_follow_up, 'YYYY-MM-DD') as day,
+           ((now() at time zone 'Asia/Riyadh')::date - companies.next_follow_up)::int as days_overdue,
+           'company' as kind
+      from companies
+      join users u on u.id = companies.rep_id
+     where companies.archived_at is null
+       and companies.next_follow_up is not null
+       and companies.next_follow_up <= (now() at time zone 'Asia/Riyadh')::date
+       and u.id in (${ids})
+    union all
+    select projects.id::text as id,
+           projects.name as name,
+           c.name as company_name,
+           ${personNameOf("u", locale)} as rep_name,
+           u.id::text as rep_id,
+           to_char(projects.next_follow_up, 'YYYY-MM-DD') as day,
+           ((now() at time zone 'Asia/Riyadh')::date - projects.next_follow_up)::int as days_overdue,
+           'project' as kind
+      from projects
+      join companies c on c.id = projects.company_id
+      join users u on u.id = c.rep_id
+     where projects.archived_at is null
+       and projects.lost_at is null
+       and projects.next_follow_up is not null
+       and c.archived_at is null
+       and projects.next_follow_up <= (now() at time zone 'Asia/Riyadh')::date
+       and u.id in (${ids})
+     order by day asc
+  `);
+
+  return rows.rows.flatMap((row) => {
+    // The query asked for these people by id, so this cannot miss; a row whose
+    // rep is not in the map would be one this band cannot say anything true
+    // about, and it is left out rather than given a made-up day.
+    const back = away.get(row.rep_id);
+    if (!back) return [];
+    return [
+      {
+        id: row.id,
+        name: row.name,
+        companyName: row.company_name,
+        repName: row.rep_name,
+        day: row.day,
+        daysOverdue: Number(row.days_overdue),
+        kind: row.kind,
+        backOn: back.backOn,
+      },
+    ];
+  });
 }
 
 /**
@@ -299,9 +401,24 @@ export type StuckCompany = {
   days: number;
 };
 
+/**
+ * A follow-up due on a floor nobody is standing on (D75).
+ *
+ * The same row as a stuck follow-up, plus the day its rep is back — which is
+ * the whole decision the manager is making when he reads it: call the customer
+ * himself, or leave it three days.
+ */
+export type UncoveredFollowUp = StuckFollowUp & { backOn: Day };
+
 export type Stuck = {
   requests: StuckRequest[];
   followUps: StuckFollowUp[];
+  /**
+   * Due today or already past, and the rep is on leave. First on the screen
+   * because it is the only group on it that is about TODAY: the others have
+   * been waiting days and will still be there tomorrow.
+   */
+  uncovered: UncoveredFollowUp[];
   neverContacted: StuckCompany[];
   /**
    * Contacted, then dropped: no next step anywhere on the customer and nothing
@@ -314,7 +431,7 @@ export type Stuck = {
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   const locale = await getLocale();
-  const [waiting, followUps, never, quiet, nonWorking] = await Promise.all([
+  const [waiting, followUps, never, quiet, nonWorking, away] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -417,6 +534,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     `),
 
     listNonWorkingDays(firstOfMonth(day), day),
+    awayOn(day),
   ]);
 
   const requests: StuckRequest[] = [];
@@ -435,6 +553,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
 
   return {
     requests,
+    uncovered: await uncoveredFollowUps(away, locale),
     followUps: followUps.rows.map((row) => ({
       id: row.id,
       name: row.name,

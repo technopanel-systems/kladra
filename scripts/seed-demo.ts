@@ -58,6 +58,8 @@ import {
   HISTORY,
   HISTORY_ITEM,
   HISTORY_LOST,
+  AWAY_REP,
+  AWAY_WORKING_DAYS,
   HOLIDAY_DAY_OF_MONTH,
   HOLIDAY_NOTE,
   LEAVE_DAYS_AHEAD,
@@ -1093,10 +1095,24 @@ async function seedNonWorkingDays(userIds: Map<string, string>): Promise<void> {
   const holiday = nextMonth.slice(0, 8) + String(HOLIDAY_DAY_OF_MONTH).padStart(2, "0");
   const leave = nextWorkingDay(addDays(TODAY, LEAVE_DAYS_AHEAD));
 
+  // Saad's own leave, starting today: the working days from today forward, so
+  // the stretch never lands on a Friday and the demo always has somebody away
+  // whichever day it is run (D75).
+  const away: Day[] = [];
+  for (let d = TODAY; away.length < AWAY_WORKING_DAYS; d = addDays(d, 1)) {
+    if (!isWeekend(d)) away.push(d);
+  }
+
   await db.transaction(async (tx) => {
     await tx.insert(nonWorkingDays).values([
       { day: holiday, kind: "holiday" as const, userId: null, note: HOLIDAY_NOTE },
       { day: leave, kind: "leave" as const, userId: must(userIds, "turki", "user"), note: LEAVE_NOTE },
+      ...away.map((day) => ({
+        day,
+        kind: "leave" as const,
+        userId: must(userIds, AWAY_REP, "user"),
+        note: LEAVE_NOTE,
+      })),
     ]);
   });
 }

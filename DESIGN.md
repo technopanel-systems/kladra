@@ -207,6 +207,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   blames the app. Wait for the form to close, then assert inside the panel that should have
   changed. Scope the assertion too: `page.getByText(x)` sees the whole document, including
   the form.
+- **A row of three facts is a row on a desk and a column on a phone.** The stuck list put
+  the customer, the rep and the age on one flex line at every width, with `flex-1 min-w-0`
+  on the customer — so the customer's name was the only child allowed to shrink, and on a
+  375 screen it gave up every pixel to the two beside it and came out one word per line,
+  its first word touching the rep's name. The fix is not a truncation: the name is what the
+  row is FOR. Stack below `sm:` and keep the one-line row above it, which is what the
+  tables on this app already do. Where a row's pieces cannot all shrink, the one carrying
+  the subject must not be the one that gives way.
 - **A control that would replace what somebody typed either asks first, or is only there
   while there is nothing to lose.** "Copy the items from Q-12" fills a whole form from an
   earlier quotation, which is the point of it — and pressing it after ten minutes of typing
