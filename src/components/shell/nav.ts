@@ -99,6 +99,10 @@ const adminItems: NavItem[] = [
 
 export function navFor(role: Role): NavGroup[] {
   switch (role) {
+    case "marketing":
+      // No quotations and no dispatches: marketing finds customers and hands
+      // them on, and a screen it can only read is a screen it stops opening.
+      return [{ items: [day, companies, projects] }];
     case "coordinator":
       return [{ items: [queue, quotations, dispatches] }];
     case "manager":

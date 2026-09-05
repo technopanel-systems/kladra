@@ -14,23 +14,55 @@
 - [x] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
 - [x] P6 Manager view, admin, notifications
 - [x] P7 Polish, acceptance runs, PWA, handover
-- [ ] P8 Depth — Jerom used it and asked for more (his list, added to SPEC §3 not replacing it)
+- [x] P8 Depth — Jerom used it and asked for more (his list, added to SPEC §3 not replacing it)
       - [x] P8.1 Research, the identity decisions, and the view rulings written into DESIGN
       - [x] P8.2 Every list creates from itself; the missing-primary-action sweep
       - [x] P8.3 Semantic colour: state, overdue, stuck, ahead — one small set, both themes
       - [x] P8.4 m² is the headline on quotations and dispatches; price is the quiet one
       - [x] P8.5 The drawers reworked: what a person needs first, at the top
       - [x] P8.6 A dashboard per role, each answering that person's daily question
-      - [ ] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
-      - [ ] P8.8 View as: the admin checks the app as any role or any person, marked
-      - [ ] P8.9 Roles beyond the four, if the business needs them — propose, record, build
+      - [x] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
+      - [x] P8.8 View as: the admin checks the app as any role or any person, marked
+      - [x] P8.9 Roles beyond the four, if the business needs them — propose, record, build
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P7 done and green. Every box is ticked, and what is left is the
-part Claude cannot do: Faisal, Rawan, Abdulrahman and Jerom using it. Seventy-one specs pass
-in both locales, the image builds and boots with no `.env`, and README.md is the handover.
+**Where I stopped:** P8 done. Jerom used Kladra himself and asked for depth rather than
+features, and his seven notes were all one complaint said seven ways: the app told him what
+records exist and not how anything is going. Every list creates from itself now and asks for
+the parent when it needs one; colour carries state from one five-tone map with the raw hues
+deleted so nothing can reach past it; m² is the headline and price the quiet line under it;
+the drawers open on how a customer is going before what he is; each role has a screen that
+answers its own morning question; quotations and dispatches have a board where a board earns
+its place; an admin can look through anybody's eyes and write nothing while he does; and
+marketing is a role of its own that owns companies, works them like a rep and stops at the
+price.
+
+Three of P8's defects were the shape P7 had already named — one rule kept in two places. The
+company and project drawers still asked `repId === user.id` by hand, so they offered Log and
+Edit while an admin was viewing as somebody, and the fix went into `mayWrite` where every
+screen reads it. The action guards took the literal `"rep"` while the screens asked
+predicates, which is how a manager could be offered a quotation button the server would
+refuse; the guards take `FLOOR_ROLES` and `SELLING_ROLES` now and a spec holds both lists to
+the functions they came from. And the View switch wrote `?view=` for the board but not for
+the list, so pressing List left a bare URL, the cookie still said board, and the board came
+straight back.
+
+Two screens were caught saying nothing rather than something: marketing's day carried a month
+card with no target behind it and a "waiting on you" band that can never fill, because
+everything that waits on a person there is a quotation or a dispatch. Both are gone for that
+role, which is the same sentence D44 already made about the team table.
+
+Handing a company over is the piece that makes the role work, and it is one column: every
+list is scoped by `companies.rep_id`, so the projects, quotations, dispatches and metres
+travel with the customer and the log stays where it was written. It is also how a floor
+survives somebody leaving, which had no answer before.
+
+What is left is still the part Claude cannot do: Faisal, Rawan, Abdulrahman and Jerom using
+it. The image builds and boots with no `.env`, and README.md is the handover.
+
+**Where P7 stopped.** Every box was ticked and the specs passed in both locales.
 
 P7's four defects were all one shape: a rule kept in more than one place. A manager and an
 admin could edit, log against and archive any rep's records for three phases because the
@@ -223,7 +255,10 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 4. The cache is listed by name and holds exactly two files. Anything else in it is offline DATA, which SPEC §3 rules out.
 
 **The floor rule** — `tests/floor.spec.ts`
-One of two specs that are not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42).
+One of two specs that are not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42). The five roles are asked the same way about
+the four sentences that separate them — who owns companies, who may price one, who carries a
+month, whose floor a company may sit on — and the role LISTS the action guards take are held to
+those same sentences, so a screen and the server cannot answer differently (D50).
 
 **Creating from a list** — `tests/create.spec.ts`
 Faisal adds a project from the Projects screen, requests a quotation from the Quotations
@@ -238,6 +273,13 @@ The mapping from a status to one of the five tones is asked directly, and then t
 quotations and dispatches lists are filtered to one status at a time and every badge on
 screen is read back through `data-tone`. Two chains, one meaning: a dispatch waiting on
 Rawan is the same amber as a quotation waiting on her (DESIGN §6).
+
+**Marketing** — `tests/marketing.spec.ts`
+Marketing signs in and lands on a day with no month card, sees Companies and Projects in the
+rail and neither chain screen, opens one of its own leads and is offered every piece of a rep's
+work on it except the price — on the drawer and on the Quotations screen both. Then it hands the
+lead to Faisal: the dialog asks who, says what travels with the company, and the move is checked
+in the database and in the audit log (D50, D51).
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

@@ -15,5 +15,7 @@
   "reasonRequired": "Write the reason — the project has to explain itself later.",
   "alreadyLost": "This project is already marked lost.",
   "projectNotAtCompany": "That project belongs to another company.",
-  "contactNotAtCompany": "That contact belongs to another company."
+  "contactNotAtCompany": "That contact belongs to another company.",
+  "handOverWho": "Choose who takes this company.",
+  "handOverSame": "This company is already theirs."
 }

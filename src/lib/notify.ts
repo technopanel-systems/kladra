@@ -28,8 +28,9 @@ import { notifyLive } from "@/lib/live";
  * neither side would have noticed until a rep saw a raw key on a screen.
  *
  * The params are a fixed vocabulary too: `label` is always the record's own
- * name (Q-12, D-3), `smacNumber` is always SMAC's, `rep` is a person, `reason`
- * is what somebody wrote.
+ * name (Q-12, D-3, and a customer's name where a handover is concerned),
+ * `smacNumber` is always SMAC's, `rep` is a person, `reason` is what somebody
+ * wrote.
  */
 export const NOTIFICATION_KINDS = [
   "quotationRequested",
@@ -41,6 +42,7 @@ export const NOTIFICATION_KINDS = [
   "dispatchRequested",
   "dispatchApproved",
   "dispatchRefused",
+  "companyHandedOver",
 ] as const;
 
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];

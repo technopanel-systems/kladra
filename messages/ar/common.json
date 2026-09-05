@@ -128,5 +128,10 @@
   "date": "التاريخ",
   "by": "بواسطة {name}",
   "readOnly": "للقراءة فقط",
-  "never": "لا شيء"
+  "never": "لا شيء",
+  "view": "العرض",
+  "viewList": "قائمة",
+  "viewBoard": "لوحة",
+  "boardEmpty": "لا شيء هنا.",
+  "marketing": "التسويق"
 }

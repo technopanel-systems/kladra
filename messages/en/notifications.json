@@ -8,5 +8,6 @@
   "dispatchRequested": "{rep} raised {label}.",
   "dispatchApproved": "{label} is approved — SMAC {smacNumber}.",
   "dispatchRefused": "{label} was refused: {reason}",
+  "companyHandedOver": "{rep} handed you {label}.",
   "unreadMark": "Unread"
 }

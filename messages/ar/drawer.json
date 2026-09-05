@@ -38,7 +38,15 @@
   "archiveProjectWarning": "يخرج المشروع من قوائمك ويبقى سجله. هذا ليس تسجيله كخاسر — المشروع الخاسر يبقى ظاهرًا مع سببه.",
   "pipeline": "إجمالي الفرص",
   "approved": "المعتمد",
-  "openQuotations": "عروض سعر مفتوحة",
+  "openQuotations": "عروض أسعار مفتوحة",
   "lastActivity": "آخر نشاط",
-  "quoted": "المعروض"
+  "quoted": "المعروض",
+  "handOver": "تسليم",
+  "handOverTitle": "تسليم {name} إلى شخص آخر؟",
+  "handOverWarning": "تنتقل مع الشركة مشاريعها وعروض أسعارها وتوريداتها وأمتارها المربعة. ويبقى ما في سجل النشاط كما كُتب.",
+  "handOverTo": "من يستلمها",
+  "handOverPick": "اختيار الشخص",
+  "handOverSearch": "البحث عن شخص",
+  "handOverNobody": "لا يوجد شخص آخر يمكن تسليم الشركة إليه.",
+  "handedOver": "تم تسليم {name} إلى {rep}."
 }

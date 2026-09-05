@@ -4,6 +4,7 @@ import { MonthCard } from "@/components/team/month-card";
 import { WaitingList } from "@/components/day/waiting-list";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
+import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
 import { waitingOnRep } from "@/lib/day";
 import { repMonth } from "@/lib/team";
@@ -24,15 +25,23 @@ import { repMonth } from "@/lib/team";
  */
 export default async function DayPage() {
   const [user, locale] = await Promise.all([requireUser(), getLocale()]);
-  // Reps only. The coordinator has no companies and the manager reads the team
-  // screen for the same question; either one following a link here goes to
-  // their own home rather than to an empty screen (D15, S8).
-  if (user.role !== "rep") redirect({ href: homeFor(user.role), locale });
+  // The two roles that own companies. The coordinator has none and the manager
+  // reads the team screen for the same question; either one following a link
+  // here goes to their own home rather than to an empty screen (D15, S8).
+  if (!ownsCompanies(user.role)) redirect({ href: homeFor(user.role), locale });
+
+  // Marketing carries no target, so it gets no month card — an empty one would
+  // be a figure that says the wrong thing every month (D44, P8.9). The same
+  // sentence takes the waiting band off: everything that can wait on a person
+  // here is a quotation or a dispatch, and marketing raises neither, so the
+  // band would say "nothing waiting" every day for ever. Its day is the calls.
+  const hasMonth = carriesMetres(user.role);
+  const hasChain = sells(user.role);
 
   const [t, month, waiting, overdue, today, never] = await Promise.all([
     getTranslations(),
-    repMonth(user.id),
-    waitingOnRep(user),
+    hasMonth ? repMonth(user.id) : null,
+    hasChain ? waitingOnRep(user) : [],
     listCompanies({ user, filter: "overdue", locale }),
     listCompanies({ user, filter: "today", locale }),
     listCompanies({ user, filter: "never", locale }),
@@ -45,13 +54,15 @@ export default async function DayPage() {
       {/* The same card the manager reads, with this rep's own figures — one
           layout for one set of facts, so a rep recognises his row on the team
           screen as the card on his own. */}
-      <MonthCard
-        title={t("day.myMonth")}
-        target={month.target}
-        achieved={month.achieved}
-        pace={month.pace}
-      />
-      <WaitingList rows={waiting} />
+      {month ? (
+        <MonthCard
+          title={t("day.myMonth")}
+          target={month.target}
+          achieved={month.achieved}
+          pace={month.pace}
+        />
+      ) : null}
+      {hasChain ? <WaitingList rows={waiting} /> : null}
       <CallList overdue={overdue} today={today} never={never} />
     </div>
   );

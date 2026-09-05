@@ -9,12 +9,14 @@ FACET's SPEC and its thirty archive documents at C:\Projects\facet-crm), the fou
 ## §1 People
 
 - **Rep** — owns companies, logs what happened, requests quotations, raises dispatches, chases customers. Has a monthly m² target.
+- **Marketing** — owns companies and works them exactly as a rep does — logs, follow-ups, projects — and hands each one to the rep who will price it. No quotations, no dispatches, no target.
 - **Coordinator** — the desk: issues quotations in SMAC and types the number back, or sends a request back; approves or refuses dispatch requests. No target.
 - **Manager** — sees every rep, every company, the team table and what is stuck. No personal target; the company target is his measure.
 - **Admin** — users, passwords, targets, lookups, holidays, export. Sees what the manager sees.
 
 Real team: Jerom (admin) · Abdulrahman Al-Zahrani (manager) · Rawan (coordinator) ·
-Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing works as a rep for now.
+Faisal Al-Harbi, Saad Al-Qahtani, Turki Al-Shammari (reps). Marketing is a role of its own
+from P8 (D50); the seed carries it as an account, not a named person, until Jerom says who.
 
 ## §2 How the business works
 
@@ -184,6 +186,9 @@ Jerom used the app himself before P8. His verdict was that it beats FACET and is
 - D48 The month bar carries two marks and takes its colour from the gap between them. S46 forbids combining target and activity into one score, and nothing here does: the figures still sit side by side and the bar still shows the two of them, the fill for what has gone out and a notch for how far through the month the calendar is. What P8 added is the colour Jerom asked for on that gap — ahead is green, a little behind amber, properly behind red — and the band is deliberately wide, because a rep four per cent short on the eighth of the month has not gone wrong and a screen that says he has stops being read. In the first five working days it is grey, for the same reason the sentence beside it says the month has just started (S49). The bar was painted with the brand gradient before this; a gradient on a measurement is decoration, and DESIGN §4 keeps it for the primary button. DEFAULT — founder may change.
 - D49 A rep's home is his day, not his company list. D15 gave each role one home and gave the rep his companies, which answers "who are my customers" — a question he asks a few times a week. The question he opens the app with is "what do I do now", and until P8 nothing answered it: he had to read a list, remember the dates and decide. `/day` answers it in one column, in the order the work should be done — his month, what has come back to him and is stopped, then who is owed a call, in three bands worst first. The company list is one press away and is still where he searches. The coordinator and the manager keep their own homes, because their screens already ask their own daily question. DEFAULT — founder may change.
 
+- D50 Marketing is a role, and what it cannot do is put a price in front of a customer. §1 said "marketing works as a rep for now" and P8's seventh item asked whether the four roles are enough; this is the answer. Marketing owns companies, logs, sets follow-ups, opens projects and reads its own day exactly as a rep does, and stops at the quotation — the price is the sales conversation, and the person who has it is the rep the lead is handed to. It carries no monthly target for the same reason: metres are what a sale moved, and a role that never closes one would read as a permanent shortfall (D44). Three sentences carry the whole thing — `ownsCompanies`, `sells`, `holdsFloor` in src/lib/floor.ts — and the guards that let an action run are the same lists, so a screen and the server cannot answer differently. The seed carries the account, not a person: nobody has been named to it. What is deliberately NOT built is a figure for what marketing produced — leads found, leads handed on, leads that became metres. Handing a company over gives it away, so after the handover marketing's own screens are silent about it, and that is the honest state until Jerom says how the role is measured. How you measure somebody changes what they do, and it is his decision, not a default worth guessing. The audit log has every handover with both names in the meantime.
+- D51 A company can be handed to somebody else, and only its owner, the manager or the admin may do it. Without it marketing is a dead end — it finds a customer it may never quote and has no way to pass him on — and a rep who leaves takes his floor out of sight with him, because every list is scoped by `companies.rep_id`. That one column is also why the move is one statement: projects, quotations, dispatches and achieved metres are all read through it, so they travel with the customer, which is what S8 already said about whose metres these are. The log does not travel — an activity records who did the thing, and rewriting that would be rewriting the report (S27). A manager doing this is not a hole in D42: he still writes nothing ON a floor, and who a customer belongs to is a different question from what happened with him. Both names go in the audit row and the new owner is told. DEFAULT — founder may change.
+
 ## §5 One word per thing
 
 The word on the left is the only one the screens use, in both languages. A
@@ -215,6 +220,8 @@ screen differently, and how a rep learns one name and reads another.
 | Pipeline | إجمالي الفرص | The sum of the expected m² on live projects (S45). Not a total of quotations, and not money. |
 | Lookups | القوائم المرجعية | The reference lists an admin edits — cities, categories, suppliers, thicknesses. Never القوائم alone: the phone's bottom bar already says **Menu / القائمة**, and the two are one letter apart. |
 | Rep | المندوب | §1. |
+| Marketing | التسويق | §1, D50. The role, and the account that holds it. |
+| Hand over | تسليم | Move a company to another person's floor (D51). Never نقل, which is what a shipment does. |
 | Coordinator | منسقة المبيعات | §1 — Rawan. |
 | Sales manager | مدير المبيعات | §1 — Abdulrahman. |
 | Admin | مدير النظام | §1 — Jerom. |

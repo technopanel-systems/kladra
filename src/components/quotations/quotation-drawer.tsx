@@ -5,7 +5,7 @@ import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { mayWrite } from "@/lib/floor";
+import { mayQuote } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { getQuotation } from "@/lib/quotations";
 import { quotationStanding } from "@/lib/standing";
@@ -44,7 +44,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   }
   if (!quotation) return null;
 
-  const owner = mayWrite(user, quotation.companyRepId);
+  const owner = mayQuote(user, quotation.companyRepId);
   const [dispatches, standing] = await Promise.all([
     listDispatchesForQuotation(user, quotation.id, locale),
     quotationStanding(quotation.id),

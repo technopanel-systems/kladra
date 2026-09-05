@@ -1,0 +1,13 @@
+-- Marketing is its own role (SPEC §1, P8.9).
+--
+-- SPEC §1 said "Marketing works as a rep for now". The cost of that "for now"
+-- was a lead generator carrying a monthly m² target he can never meet, and a
+-- permanent row of dashes on the manager's team table. The role now exists.
+--
+-- Ordered after "rep" because that is where it belongs in the shape of the
+-- business: the two roles that own companies, then the desk, then the two who
+-- read everything. Nothing sorts by the enum, so the position is documentation.
+--
+-- ADD VALUE is allowed inside a transaction in PostgreSQL 12+ as long as the
+-- new value is not USED in the same transaction. Nothing here uses it.
+ALTER TYPE "public"."role" ADD VALUE IF NOT EXISTS 'marketing' AFTER 'rep';

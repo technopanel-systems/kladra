@@ -2,10 +2,10 @@
   "title": "يومك",
   "myMonth": "هذا الشهر",
   "waitingOnYou": "بانتظارك",
-  "nothingWaiting": "لم يُعَد إليك شيء.",
+  "nothingWaiting": "لم يرجع إليك شيء.",
   "sentBack": "أُعيد للتعديل",
   "refused": "مرفوض",
   "withCustomer": "لدى العميل",
-  "whoToCall": "الاتصالات المستحقة",
+  "whoToCall": "الاتصالات المطلوبة",
   "nobodyToCall": "لا أحد ينتظر اتصالًا اليوم."
 }

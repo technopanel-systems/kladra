@@ -23,12 +23,14 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { auditLog, cities, companies, contacts, countries } from "@/db/schema";
+import { auditLog, cities, companies, contacts, countries, users } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
+import { FLOOR_ROLES, holdsFloor, mayHandOver } from "@/lib/floor";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { createNotification } from "@/lib/notify";
 import { SAUDI_CODE } from "@/lib/lookups";
 import { normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
@@ -42,6 +44,8 @@ import type { ActionResult, Role, SessionUser } from "@/lib/types";
  * belongs to the rep who found it (SPEC S8). A manager or admin pressing Save
  * would quietly become its rep, so they are refused instead, and the button is
  * not offered to them either (WORKFLOW §3, Abdulrahman: no Add company button).
+ * The list is `FLOOR_ROLES` rather than a literal, so who owns companies is one
+ * sentence and every screen asks that same one (P8.9).
  */
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -226,7 +230,7 @@ export async function createCompanyAction(
 
     revalidateFloor();
     return { ok: true, data: { companyId } };
-  }, "rep");
+  }, ...FLOOR_ROLES);
 }
 
 /** Edit — the same fields, minus the contact, which has its own dialog. */
@@ -335,6 +339,105 @@ export async function setCompanyFollowUpAction(
     });
 
     revalidateFloor();
+    return { ok: true };
+  });
+}
+
+/**
+ * Hand this company to somebody else (P8.9).
+ *
+ * The action marketing exists for: it finds a customer, works him, and passes
+ * him to the rep who will quote. It is also how a floor survives a person —
+ * before this, deactivating an account took its companies out of sight for
+ * good, because every list is scoped by `companies.rep_id`.
+ *
+ * Which is exactly why the whole floor moves in one statement and nothing else
+ * has to: the projects, the quotations, the dispatches and the achieved metres
+ * are all read through that one column (S8, and the note on `achievedByRep`).
+ * The log does not move — an activity records who did it, and rewriting that
+ * would be rewriting the report (S27).
+ *
+ * Both sides are told. The new owner gets a notification, because a company
+ * appearing on his floor with a follow-up already on it is news; the audit row
+ * carries both names, for the six-months-later question (S55).
+ */
+export async function handOverCompanyAction(
+  companyId: unknown,
+  toUserId: unknown,
+): Promise<ActionResult> {
+  return guard(async (actor) => {
+    const tc = await getTranslations("common");
+    const t = await getTranslations("errors");
+
+    // Two answers, two sentences: a broken id is "something is not right", and
+    // "you have not said who" is its own line, because it is the one a person
+    // actually hits — the confirm button is live before the picker is touched,
+    // the way every control in the app is (DESIGN §5).
+    const id = z.uuid().safeParse(companyId);
+    if (!id.success) return { ok: false, error: tc("invalid") };
+    const to = z.uuid().safeParse(toUserId);
+    if (!to.success) return { ok: false, error: t("handOverWho") };
+    const input = { companyId: id.data, toUserId: to.data };
+
+    // Not `assertCompanyMine`: the manager writes nothing on a floor and still
+    // decides whose floor it is (D42, `mayHandOver`). Archived is not there:
+    // a company off the floor has no floor to move to, and restoring it is the
+    // admin's own action (S16).
+    const [company] = await db
+      .select({ id: companies.id, name: companies.name, repId: companies.repId })
+      .from(companies)
+      .where(and(eq(companies.id, input.companyId), isNull(companies.archivedAt)))
+      .limit(1);
+    if (!company) return { ok: false, error: t("companyNotFound") };
+    if (!mayHandOver(actor, company.repId)) throw new NotAllowed();
+
+    // Active, and somebody a company can sit with. A deactivated account would
+    // take the company back out of sight the moment it landed there, and the
+    // coordinator has no floor at all (D15).
+    const [target] = await db
+      .select({ id: users.id, name: users.name, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, input.toUserId), eq(users.active, true)))
+      .limit(1);
+    if (!target || !holdsFloor(target.role)) return { ok: false, error: t("handOverWho") };
+    if (target.id === company.repId) return { ok: false, error: t("handOverSame") };
+
+    const from = company.repId;
+    await db.transaction(async (tx) => {
+      await tx
+        .update(companies)
+        .set({ repId: target.id })
+        .where(eq(companies.id, company.id));
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "company.handOver",
+        recordType: "company",
+        recordId: company.id,
+        details: { name: company.name, from, to: target.id },
+      });
+
+      // Not to himself: a rep who hands a company on knows he did.
+      if (target.id !== actor.id) {
+        await createNotification(tx, {
+          userId: target.id,
+          kind: "companyHandedOver",
+          params: { label: company.name, rep: actor.name },
+          link: `/companies?open=${company.id}`,
+        });
+      }
+
+      // Both floors changed, so both are told, and so is everybody who reads
+      // the team screen.
+      const audience = new Set([...(await liveAudienceFor(from, actor.id)), target.id]);
+      await notifyLive(tx, [...audience], {
+        type: "company",
+        id: company.id,
+      });
+    });
+
+    revalidateFloor();
+    revalidatePath("/[locale]/team", "page");
     return { ok: true };
   });
 }

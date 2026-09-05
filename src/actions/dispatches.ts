@@ -38,7 +38,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
-import { mayWrite } from "@/lib/floor";
+import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
@@ -276,7 +276,7 @@ export async function requestDispatchAction(
       .where(eq(quotations.id, parsed.data.quotationId))
       .limit(1);
     if (!quotation) return { ok: false, error: td("quotationNotFound") };
-    if (!mayWrite(actor, quotation.companyRepId)) throw new NotAllowed();
+    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
     if (quotation.companyArchived) return { ok: false, error: td("quotationNotFound") };
     // S38: the paper has to exist before goods move against it. A request that
     // has been sent back or refused is not a quotation yet.
@@ -366,7 +366,7 @@ export async function requestDispatchAction(
 
     revalidateChain();
     return { ok: true, data: { dispatchId: outcome.id } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /**
@@ -405,7 +405,7 @@ export async function updateDispatchAction(
 
     const dispatch = await load(actor, parsed.data.dispatchId);
     if (!dispatch) return { ok: false, error: td("notFound") };
-    if (!mayWrite(actor, dispatch.companyRepId)) throw new NotAllowed();
+    if (!mayQuote(actor, dispatch.companyRepId)) throw new NotAllowed();
     if (dispatch.status !== "submitted") return { ok: false, error: td("notWaiting") };
 
     const asked = askedFor(items);
@@ -447,7 +447,7 @@ export async function updateDispatchAction(
 
     revalidateChain();
     return { ok: true, data: { dispatchId: dispatch.id } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /**

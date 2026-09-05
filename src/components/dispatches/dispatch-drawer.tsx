@@ -2,7 +2,7 @@ import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { DispatchSheet } from "@/components/dispatches/dispatches-table";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { mayWrite } from "@/lib/floor";
+import { mayQuote } from "@/lib/floor";
 import { getDispatch } from "@/lib/dispatches";
 
 /**
@@ -64,7 +64,7 @@ export async function DispatchDrawer({
         coordinator: user.role === "coordinator",
         // The rep whose COMPANY it is — not whoever raised it, and not a
         // manager, who sees everything and owns none of it (S8).
-        owner: mayWrite(user, dispatch.companyRepId),
+        owner: mayQuote(user, dispatch.companyRepId),
       }}
     />
   );

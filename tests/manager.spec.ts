@@ -70,6 +70,9 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     const jerom = await one<{ name: string }>(
       "select name from users where email = 'jerom@technopanel.com.sa'",
     );
+    const marketing = await one<{ name: string }>(
+      "select name from users where email = 'marketing@technopanel.com.sa'",
+    );
 
     // Every column §3 asks for, by its own heading.
     for (const key of [
@@ -93,6 +96,9 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     // him a box — one rule, two screens (D44).
     await expect(page.getByRole("link", { name: rawan.name, exact: true })).toHaveCount(0);
     await expect(page.getByRole("link", { name: jerom.name, exact: true })).toHaveCount(0);
+    // Nor marketing, which owns companies and closes none of them: a target it
+    // could never meet would read as a shortfall every month (D44, D50).
+    await expect(page.getByRole("link", { name: marketing.name, exact: true })).toHaveCount(0);
   });
 
   await test.step("3 · the Stuck list names what has stopped moving", async () => {

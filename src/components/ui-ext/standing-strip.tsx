@@ -13,6 +13,11 @@ import { cn } from "@/lib/utils";
  *
  * Two to four items. More than four and it stops being a glance, and on a phone
  * they wrap to two rows rather than shrink to nothing.
+ *
+ * The label wraps; the figure does not. Four columns inside a drawer are narrow
+ * enough that the longest English label — OPEN QUOTATIONS — was clipped to
+ * "OPEN QUOTATIO…", which says less than nothing. Two short lines of label above
+ * a whole figure is the right way round: the figure is what the eye came for.
  */
 export function StandingStrip({
   items,
@@ -31,7 +36,10 @@ export function StandingStrip({
     >
       {items.map((item) => (
         <div key={item.label} className="flex min-w-0 flex-col gap-0.5">
-          <dt className="truncate text-[0.6875rem] leading-none font-medium tracking-wide text-muted-foreground uppercase">
+          <dt
+            data-slot="figure-label"
+            className="text-[0.6875rem] leading-tight font-medium tracking-wide text-balance text-muted-foreground uppercase"
+          >
             {item.label}
           </dt>
           <dd className={cn("truncate text-sm leading-tight", item.tone && TONE_TEXT[item.tone])}>

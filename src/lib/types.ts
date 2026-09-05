@@ -1,6 +1,12 @@
 // Shared contracts. Small on purpose; feature types live beside their queries.
 
-export type Role = "rep" | "coordinator" | "manager" | "admin";
+/**
+ * Marketing was added in P8.9. SPEC §1 had said "Marketing works as a rep for
+ * now", and that "for now" had a cost: a lead generator with a rep's role
+ * carries a monthly m² target he can never meet and sits on the manager's team
+ * table as a permanent row of dashes.
+ */
+export type Role = "rep" | "marketing" | "coordinator" | "manager" | "admin";
 
 /** What every server component and action gets from `requireUser()`. */
 export type SessionUser = {
@@ -9,6 +15,12 @@ export type SessionUser = {
   email: string;
   role: Role;
   locale: "en" | "ar";
+  /**
+   * Set only while an admin is looking at the app as this person (P8.8). Its
+   * presence is what makes every write refuse, so it is on the user rather than
+   * in a context somebody could forget to read.
+   */
+  viewedBy?: { id: string; name: string };
 };
 
 /** Result shape every server action returns; forms read `error` and `fieldErrors`. */

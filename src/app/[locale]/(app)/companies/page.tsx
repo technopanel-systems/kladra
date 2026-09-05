@@ -8,7 +8,8 @@ import { ListSearch } from "@/components/companies/list-search";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
-import { can, requireUser, seesAll } from "@/lib/authz";
+import { requireUser, seesAll } from "@/lib/authz";
+import { ownsCompanies } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
 import { todayRiyadh } from "@/lib/dates";
 import { followUpCounts, followUpCountsForRep, parseFollowUpFilter } from "@/lib/followups";
@@ -55,7 +56,7 @@ export default async function CompaniesPage({
    * `listCompanies` still scopes him underneath.
    */
   const repId = seesAll(user) ? (params.rep?.trim() || null) : null;
-  const viewing = repId ?? (can(user, "rep") ? user.id : null);
+  const viewing = repId ?? (ownsCompanies(user.role) ? user.id : null);
 
   /**
    * Only a rep adds a company. The new row's `rep_id` is whoever pressed Save,
@@ -64,7 +65,7 @@ export default async function CompaniesPage({
    * (WORKFLOW §3, Abdulrahman: no Add company button). The action refuses them
    * as well; this only keeps a button they cannot use off the screen.
    */
-  const mayAdd = can(user, "rep");
+  const mayAdd = ownsCompanies(user.role);
 
   const [t, rows, counts, viewedName, month] = await Promise.all([
     getTranslations(),

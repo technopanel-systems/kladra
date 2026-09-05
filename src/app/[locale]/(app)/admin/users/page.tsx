@@ -26,7 +26,7 @@ export default async function AdminUsersPage() {
           {t("shell.emptyUsers")}
         </p>
       ) : (
-        <UsersPanel users={users} />
+        <UsersPanel users={users} meId={user.id} />
       )}
     </div>
   );

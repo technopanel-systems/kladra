@@ -58,12 +58,6 @@
   "restored": "{name} is back.",
   "exportHint": "Three files. Excel opens them with the Arabic names intact.",
   "download": "Download",
-  "role": {
-    "rep": "Rep",
-    "coordinator": "Coordinator",
-    "manager": "Sales manager",
-    "admin": "Admin"
-  },
   "lookup": {
     "categories": "Company categories",
     "leadSources": "Lead sources",

@@ -25,12 +25,15 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { Money, Sqm } from "@/components/ui-ext/figures";
+import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { formatMoney } from "@/lib/money";
 import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
 import type { QuotationStanding } from "@/lib/standing";
 import { quotationTone } from "@/lib/state-tone";
+import { ViewSwitch } from "@/components/ui-ext/view-switch";
+import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
 
 /**
@@ -60,6 +63,20 @@ const STATUS_KEYS: Record<QuotationStatus, string> = {
 const FILTERS: QuotationStatus[] = ["requested", "returned", "issued", "accepted", "rejected"];
 
 /**
+ * The board's columns: EVERY status, taken off the map above rather than
+ * written out again.
+ *
+ * The board was built from the chips, and the chips leave out `cancelled` on
+ * purpose — a withdrawn request is not work anybody is waiting on, so it is not
+ * a filter people want. On a board that same omission deletes the record: it is
+ * in the list, it is on no column, and a rep who withdrew a request and pressed
+ * Board would find it gone. A state with no column is a record with no home, so
+ * the columns come from the Record, which TypeScript makes exhaustive — add a
+ * sixth status and it gets a column whether anybody remembers or not.
+ */
+const BOARD_STATUSES = Object.keys(STATUS_KEYS) as QuotationStatus[];
+
+/**
  * The same list is two screens: the rep's quotations and the coordinator's
  * queue. Every link it builds stays on the screen it was built from, so
  * pressing a row in the queue does not quietly move her to somebody's list.
@@ -69,11 +86,17 @@ function listHref(
   q: string,
   status: QuotationStatus | null,
   open?: string | null,
+  view?: ListView,
 ): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (status) params.set("status", status);
   if (open) params.set("open", open);
+  // Written whenever a caller names one. The view switch names both, because
+  // "list" has to be sayable in a URL: without it, pressing List left an
+  // address with no view on it, the cookie still said board, and the board came
+  // straight back. Ordinary row links pass nothing and stay clean.
+  if (view) params.set("view", view);
   const query = params.toString();
   return query ? `${base}?${query}` : base;
 }
@@ -89,6 +112,7 @@ export function QuotationsTable({
   q,
   status,
   openId,
+  view = "list",
   showFilters = true,
 }: {
   /** "/quotations" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
@@ -97,6 +121,8 @@ export function QuotationsTable({
   q: string;
   status: QuotationStatus | null;
   openId: string | null;
+  /** List or board (DESIGN §6). The queue has one state and shows neither. */
+  view?: ListView;
   /** The coordinator's queue is one status by definition; it needs no chips. */
   showFilters?: boolean;
 }) {
@@ -132,24 +158,64 @@ export function QuotationsTable({
     go(listHref(base, "", status));
   }
 
+  /**
+   * The board's columns: the same five states the chips filter by, in the order
+   * the work moves through them. A column carries its count and a card carries
+   * the day it arrived, because without those two a board is a list in a wider
+   * shape (DESIGN §6).
+   */
+  const columns: BoardColumn[] = BOARD_STATUSES.map((value) => ({
+    key: value,
+    label: t(STATUS_KEYS[value]),
+    tone: quotationTone(value),
+    cards: rows
+      .filter((row) => row.status === value)
+      .map((row) => ({
+        id: row.id,
+        href: listHref(base, term.trim(), null, row.id, "board"),
+        label: row.label,
+        title: row.companyName,
+        subtitle: row.projectName,
+        sqm: row.totalSqm,
+        day: row.issuedOn ?? row.createdOn,
+        current: openId === row.id,
+      })),
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       {showFilters ? (
         <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((value) => (
+          <ViewSwitch
+            screen="quotations"
+            view={view}
+            listHref={listHref(base, term.trim(), status, null, "list")}
+            boardHref={listHref(base, term.trim(), null, null, "board")}
+          />
+          {/* A board of states IS the status view, so the chips would be a
+              filter that leaves one column standing. They come back with the
+              list. */}
+          <span aria-hidden="true" className="h-4 w-px bg-line" />
+          {view === "board"
+            ? null
+            : FILTERS.map((value) => (
             <FilterChip
               key={value}
               // Pressing the chip you are on takes the filter off again.
               href={listHref(base, term.trim(), status === value ? null : value)}
               active={status === value}
-            >
-              {t(STATUS_KEYS[value])}
-            </FilterChip>
-          ))}
-          <span aria-hidden="true" className="h-4 w-px bg-line" />
-          <FilterChip href={listHref(base, term.trim(), null)} active={status === null}>
-            {t("common.all")}
-          </FilterChip>
+              >
+                {t(STATUS_KEYS[value])}
+              </FilterChip>
+            ))}
+          {view === "board" ? null : (
+            <>
+              <span aria-hidden="true" className="h-4 w-px bg-line" />
+              <FilterChip href={listHref(base, term.trim(), null)} active={status === null}>
+                {t("common.all")}
+              </FilterChip>
+            </>
+          )}
         </div>
       ) : null}
 
@@ -181,7 +247,9 @@ export function QuotationsTable({
       </div>
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
-        {rows.length === 0 ? (
+        {view === "board" && showFilters ? (
+          <Board columns={columns} />
+        ) : rows.length === 0 ? (
           <EmptyQuotations base={base} q={q} status={status} onClear={clearTerm} />
         ) : (
           <>

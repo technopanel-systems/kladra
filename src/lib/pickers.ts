@@ -18,12 +18,13 @@
  */
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { companies, projects, quotations } from "@/db/schema";
+import { companies, projects, quotations, users } from "@/db/schema";
 import { committedQtySql } from "@/lib/dispatches";
+import { holdsFloor, sells } from "@/lib/floor";
 import { quotationLabel } from "@/lib/labels";
 import type { PickerOption } from "@/lib/picker-option";
 import { isLatestRevisionSql } from "@/lib/quotations";
-import type { SessionUser } from "@/lib/types";
+import type { Role, SessionUser } from "@/lib/types";
 
 export type { PickerOption };
 
@@ -46,6 +47,10 @@ export async function companyOptions(user: SessionUser): Promise<PickerOption[]>
  * until the coordinator asked why.
  */
 export async function projectOptions(user: SessionUser): Promise<PickerOption[]> {
+  // Nothing to offer somebody who does not quote: the Quotations screen then
+  // draws no button at all, rather than one that would be refused (P8.9).
+  if (!sells(user.role)) return [];
+
   const rows = await db
     .select({
       id: projects.id,
@@ -82,6 +87,8 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
  * first one already claimed.
  */
 export async function dispatchableQuotationOptions(user: SessionUser): Promise<PickerOption[]> {
+  if (!sells(user.role)) return [];
+
   const rows = await db
     .select({
       id: quotations.id,
@@ -113,4 +120,29 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
     label: quotationLabel(row.number, row.revision),
     hint: row.projectName ?? row.companyName,
   }));
+}
+
+/**
+ * The people a company can be handed to (P8.9).
+ *
+ * Everybody active whose floor a company may sit on, minus whoever has it now —
+ * handing a company to the person already holding it is not a move, and an
+ * option that does nothing is one more thing to read past.
+ *
+ * The role is the hint rather than part of the name, so "Faisal" stays one
+ * value and the two never end up either side of a separator (D46).
+ */
+export async function floorHolderOptions(
+  exceptId: string,
+  roleName: (role: Role) => string,
+): Promise<PickerOption[]> {
+  const rows = await db
+    .select({ id: users.id, name: users.name, role: users.role })
+    .from(users)
+    .where(eq(users.active, true))
+    .orderBy(asc(users.name));
+
+  return rows
+    .filter((row) => row.id !== exceptId && holdsFloor(row.role as Role))
+    .map((row) => ({ value: row.id, label: row.name, hint: roleName(row.role as Role) }));
 }

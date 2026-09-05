@@ -22,11 +22,14 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
+import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { Sqm } from "@/components/ui-ext/figures";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { formatSqm } from "@/lib/money";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
 import { dispatchTone } from "@/lib/state-tone";
+import { ViewSwitch } from "@/components/ui-ext/view-switch";
+import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,6 +55,14 @@ const STATUS_KEYS: Record<DispatchStatus, string> = {
 const FILTERS: DispatchStatus[] = ["submitted", "approved", "refused"];
 
 /**
+ * The board's columns: every status, off the map above. Today it is the same
+ * three the chips offer, and it is written this way so it stays true — the
+ * quotations board was built from its chips and lost every withdrawn request
+ * the day one existed.
+ */
+const BOARD_STATUSES = Object.keys(STATUS_KEYS) as DispatchStatus[];
+
+/**
  * The same list is two screens: the rep's dispatches and the coordinator's
  * queue. Every link it builds stays on the screen it was built from.
  */
@@ -61,11 +72,15 @@ function listHref(
   q: string,
   status: DispatchStatus | null,
   open?: string | null,
+  view?: ListView,
 ): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (status) params.set("status", status);
   if (open) params.set(param, open);
+  // Written whenever a caller names one — "list" included, because it has to be
+  // sayable in a URL or the cookie wins and the board never goes away.
+  if (view) params.set("view", view);
   const query = params.toString();
   return query ? `${base}?${query}` : base;
 }
@@ -82,6 +97,7 @@ export function DispatchesTable({
   q,
   status,
   openId,
+  view = "list",
   showFilters = true,
 }: {
   /** "/dispatches" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
@@ -96,6 +112,8 @@ export function DispatchesTable({
   q: string;
   status: DispatchStatus | null;
   openId: string | null;
+  /** List or board (DESIGN §6). The queue has one state and shows neither. */
+  view?: ListView;
   showFilters?: boolean;
 }) {
   const t = useTranslations();
@@ -129,23 +147,55 @@ export function DispatchesTable({
     go(listHref(base, param, "", status));
   }
 
+  /** The three states a dispatch can be in, in the order it moves through them. */
+  const columns: BoardColumn[] = BOARD_STATUSES.map((value) => ({
+    key: value,
+    label: t(STATUS_KEYS[value]),
+    tone: dispatchTone(value),
+    cards: rows
+      .filter((row) => row.status === value)
+      .map((row) => ({
+        id: row.id,
+        href: listHref(base, param, term.trim(), null, row.id, "board"),
+        label: row.label,
+        title: row.companyName,
+        subtitle: row.projectName,
+        sqm: row.totalSqm,
+        day: row.approvedOn ?? row.createdOn,
+        current: openId === row.id,
+      })),
+  }));
+
   return (
     <div className="flex flex-col gap-4">
       {showFilters ? (
         <div className="flex flex-wrap items-center gap-2">
-          {FILTERS.map((value) => (
+          <ViewSwitch
+            screen="dispatches"
+            view={view}
+            listHref={listHref(base, param, term.trim(), status, null, "list")}
+            boardHref={listHref(base, param, term.trim(), null, null, "board")}
+          />
+          <span aria-hidden="true" className="h-4 w-px bg-line" />
+          {view === "board"
+            ? null
+            : FILTERS.map((value) => (
             <FilterChip
               key={value}
               href={listHref(base, param, term.trim(), status === value ? null : value)}
               active={status === value}
-            >
-              {t(STATUS_KEYS[value])}
-            </FilterChip>
-          ))}
-          <span aria-hidden="true" className="h-4 w-px bg-line" />
-          <FilterChip href={listHref(base, param, term.trim(), null)} active={status === null}>
-            {t("common.all")}
-          </FilterChip>
+              >
+                {t(STATUS_KEYS[value])}
+              </FilterChip>
+            ))}
+          {view === "board" ? null : (
+            <>
+              <span aria-hidden="true" className="h-4 w-px bg-line" />
+              <FilterChip href={listHref(base, param, term.trim(), null)} active={status === null}>
+                {t("common.all")}
+              </FilterChip>
+            </>
+          )}
         </div>
       ) : null}
 
@@ -177,7 +227,9 @@ export function DispatchesTable({
       </div>
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
-        {rows.length === 0 ? (
+        {view === "board" && showFilters ? (
+          <Board columns={columns} />
+        ) : rows.length === 0 ? (
           <EmptyDispatches base={base} q={q} status={status} onClear={clearTerm} />
         ) : (
           <>

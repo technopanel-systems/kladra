@@ -7,6 +7,7 @@
 
 import { eq } from "drizzle-orm";
 import { AuthError } from "next-auth";
+import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 
@@ -16,6 +17,7 @@ import { users } from "@/db/schema";
 import { redirect } from "@/i18n/navigation";
 import { homeFor } from "@/lib/authz";
 import type { ActionResult } from "@/lib/types";
+import { VIEW_AS_COOKIE } from "@/lib/view-as";
 
 const credentials = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),
@@ -78,6 +80,11 @@ export async function signInAction(
  */
 export async function signOutAction(): Promise<void> {
   const locale = await getLocale();
+  // Whoever signs in next on this browser starts as themselves. The cookie is
+  // already harmless without an admin session behind it (src/lib/view-as.ts
+  // checks the REAL role every request), but leaving it would put a banner in
+  // front of the next admin for no reason.
+  (await cookies()).delete(VIEW_AS_COOKIE);
   await signOut({ redirect: false });
   redirect({ href: "/login", locale });
 }

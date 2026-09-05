@@ -77,7 +77,7 @@ async function record(
 
 // ---- users -------------------------------------------------------------------
 
-const roleSchema = z.enum(["rep", "coordinator", "manager", "admin"]);
+const roleSchema = z.enum(["rep", "marketing", "coordinator", "manager", "admin"]);
 
 /** Long enough to be worth having; nothing else, because a rule nobody can meet
  *  is a rule everybody writes on a sticky note. */

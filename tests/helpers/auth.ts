@@ -4,13 +4,21 @@ import { getTranslator, type Locale } from "./i18n";
 
 loadEnv();
 
-/** The six seed accounts (README.md "Seed logins" — scripts/seed-demo.ts, P2). */
-export type Persona = "faisal" | "saad" | "turki" | "rawan" | "abdulrahman" | "jerom";
+/** The seven seed accounts (README.md "Seed logins" — scripts/seed-demo.ts). */
+export type Persona =
+  | "faisal"
+  | "saad"
+  | "turki"
+  | "marketing"
+  | "rawan"
+  | "abdulrahman"
+  | "jerom";
 
 const EMAILS: Record<Persona, string> = {
   faisal: "faisal@technopanel.com.sa",
   saad: "saad@technopanel.com.sa",
   turki: "turki@technopanel.com.sa",
+  marketing: "marketing@technopanel.com.sa",
   rawan: "rawan@technopanel.com.sa",
   abdulrahman: "abdulrahman@technopanel.com.sa",
   jerom: "jerom@technopanel.com.sa",

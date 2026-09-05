@@ -8,5 +8,6 @@
   "dispatchRequested": "طلب {rep} التوريد {label}.",
   "dispatchApproved": "تم اعتماد التوريد {label} برقم سماك {smacNumber}.",
   "dispatchRefused": "رُفض التوريد {label}: {reason}",
+  "companyHandedOver": "سلّمك {rep} {label}.",
   "unreadMark": "غير مقروء"
 }

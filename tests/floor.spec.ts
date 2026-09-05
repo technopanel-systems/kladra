@@ -1,5 +1,17 @@
 import { test, expect } from "@playwright/test";
-import { mayOpen, mayWrite, seesAllRoles } from "@/lib/floor";
+import {
+  carriesMetres,
+  FLOOR_ROLES,
+  holdsFloor,
+  mayHandOver,
+  mayOpen,
+  mayQuote,
+  mayWrite,
+  ownsCompanies,
+  seesAllRoles,
+  SELLING_ROLES,
+  sells,
+} from "@/lib/floor";
 import type { Role, SessionUser } from "@/lib/types";
 
 /**
@@ -23,7 +35,7 @@ function who(role: Role, id: string): SessionUser {
   return { id, name: role, email: `${role}@technopanel.com.sa`, role, locale: "en" };
 }
 
-const ROLES: Role[] = ["rep", "coordinator", "manager", "admin"];
+const ROLES: Role[] = ["rep", "marketing", "coordinator", "manager", "admin"];
 
 test("a manager and an admin see every floor; a rep and the coordinator see one", () => {
   expect(seesAllRoles("manager")).toBe(true);
@@ -64,4 +76,73 @@ test("reading a floor never implies writing on it", () => {
     }
     expect(mayOpen(user, FAISAL)).toBe(seesAllRoles(role));
   }
+});
+
+/**
+ * The marketing role, which is defined entirely by what it may not do (D50).
+ *
+ * Every sentence about it is one of these three functions, and every screen and
+ * every action guard asks one of them rather than naming a role — so this is
+ * where the role actually exists.
+ */
+test("marketing owns companies, does not price them, and carries no month", () => {
+  expect(ownsCompanies("marketing")).toBe(true);
+  expect(ownsCompanies("rep")).toBe(true);
+  // The manager adds none; one reaches him by handover (S8, D51).
+  expect(ownsCompanies("manager")).toBe(false);
+  expect(ownsCompanies("coordinator")).toBe(false);
+  expect(ownsCompanies("admin")).toBe(false);
+
+  expect(sells("marketing")).toBe(false);
+  expect(sells("rep")).toBe(true);
+  expect(sells("manager")).toBe(true);
+
+  // No target, for the same reason: a role that never closes a sale would read
+  // as a permanent shortfall every month (D44).
+  expect(carriesMetres("marketing")).toBe(false);
+
+  // Its own leads included: owning a company is not being allowed to price it.
+  const marketing = who("marketing", "marketing-id");
+  expect(mayWrite(marketing, "marketing-id")).toBe(true);
+  expect(mayQuote(marketing, "marketing-id")).toBe(false);
+  expect(mayQuote(who("rep", FAISAL), FAISAL)).toBe(true);
+});
+
+/**
+ * The guards take role LISTS and the screens ask predicates. A list that has
+ * drifted from its function is `mayTouch` again (D42): the screen offers the
+ * work and the server refuses it, or worse, the other way round.
+ */
+test("the role lists say exactly what the rules say", () => {
+  for (const role of ROLES) {
+    expect(FLOOR_ROLES.includes(role), `FLOOR_ROLES disagrees about ${role}`).toBe(
+      ownsCompanies(role),
+    );
+    expect(SELLING_ROLES.includes(role), `SELLING_ROLES disagrees about ${role}`).toBe(sells(role));
+  }
+});
+
+test("a company can sit on a floor, or there is nobody to hand it to", () => {
+  expect(holdsFloor("rep")).toBe(true);
+  expect(holdsFloor("marketing")).toBe(true);
+  // He adds none and can be given one — that is how a floor survives somebody
+  // leaving (D51).
+  expect(holdsFloor("manager")).toBe(true);
+  expect(holdsFloor("coordinator")).toBe(false);
+  expect(holdsFloor("admin")).toBe(false);
+});
+
+test("who may move a company: its owner, the manager, the admin — and nobody viewing", () => {
+  expect(mayHandOver(who("marketing", "marketing-id"), "marketing-id")).toBe(true);
+  expect(mayHandOver(who("rep", FAISAL), FAISAL)).toBe(true);
+  expect(mayHandOver(who("manager", "manager-id"), FAISAL)).toBe(true);
+  expect(mayHandOver(who("admin", "admin-id"), FAISAL)).toBe(true);
+
+  // Not a colleague's, and not the coordinator's business at all.
+  expect(mayHandOver(who("rep", SAAD), FAISAL)).toBe(false);
+  expect(mayHandOver(who("coordinator", "rawan-id"), FAISAL)).toBe(false);
+
+  // Viewing is reading, here as everywhere (P8.8).
+  const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };
+  expect(mayHandOver(viewing, FAISAL)).toBe(false);
 });

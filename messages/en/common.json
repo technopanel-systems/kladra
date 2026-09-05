@@ -71,8 +71,9 @@
   "position": "Position",
   "name": "Name",
   "rep": "Rep",
+  "marketing": "Marketing",
   "coordinator": "Coordinator",
-  "manager": "Manager",
+  "manager": "Sales manager",
   "admin": "Admin",
   "role": "Role",
   "signIn": "Sign in",
@@ -128,5 +129,9 @@
   "date": "Date",
   "by": "by {name}",
   "readOnly": "Read only",
-  "never": "Never"
+  "never": "Never",
+  "view": "View",
+  "viewList": "List",
+  "viewBoard": "Board",
+  "boardEmpty": "Nothing here."
 }

@@ -22,7 +22,7 @@ import {
 
 // ---- enums -----------------------------------------------------------------
 
-export const roleEnum = pgEnum("role", ["rep", "coordinator", "manager", "admin"]);
+export const roleEnum = pgEnum("role", ["rep", "marketing", "coordinator", "manager", "admin"]);
 export const nonWorkingKindEnum = pgEnum("non_working_kind", ["holiday", "leave"]);
 export const channelEnum = pgEnum("channel", ["visit", "call", "whatsapp", "other"]);
 export const quotationStatusEnum = pgEnum("quotation_status", [

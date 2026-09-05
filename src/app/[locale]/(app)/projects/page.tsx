@@ -6,6 +6,7 @@ import { ProjectSheetSkeleton, ProjectsTable } from "@/components/projects/proje
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/authz";
+import { ownsCompanies } from "@/lib/floor";
 import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
 import { companyOptions } from "@/lib/pickers";
 import { listProjects } from "@/lib/projects";
@@ -24,7 +25,9 @@ import { listProjects } from "@/lib/projects";
  * dropdown he is already looking at beats a list he has to go and find.
  *
  * A person with no companies of his own is offered the earlier step instead,
- * never a button whose dropdown would be empty.
+ * never a button whose dropdown would be empty — and somebody who does not own
+ * companies at all is offered neither, because "add a company first" is not a
+ * step the manager reading this list can take (P8.9).
  */
 
 type Search = { q?: string; filter?: string; open?: string };
@@ -52,7 +55,7 @@ export default async function ProjectsPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.projects")}</h1>
         {/* The brand gradient lives on the primary button and nowhere else. */}
-        {companies.length > 0 ? (
+        {!ownsCompanies(user.role) ? null : companies.length > 0 ? (
           <NewProjectDialog companies={companies} />
         ) : (
           <Button asChild className="bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow)">

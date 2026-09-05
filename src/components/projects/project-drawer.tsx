@@ -8,6 +8,7 @@ import { z } from "zod";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
+import { mayQuote, mayWrite } from "@/lib/floor";
 import { getProject } from "@/lib/projects";
 import { projectStanding } from "@/lib/standing";
 import { listQuotationsForProject } from "@/lib/quotations";
@@ -70,11 +71,13 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
    * and work none (S8, D42), which is the same answer the actions give — so the
    * drawer offers no work the server would refuse (DESIGN §5).
    */
-  const mine = project.company.repId === user.id;
+  const mine = mayWrite(user, project.company.repId);
 
   // A lost project is finished work (S20): nothing new is raised against it,
   // so the button is not there rather than there and refusing (DESIGN §5).
-  const requestTrigger = project.lostAt || !mine ? null : (
+  // Marketing works a lead like a rep and stops at the price: quoting is the
+  // sales conversation, and it belongs to whoever the lead was handed to (P8.9).
+  const requestTrigger = project.lostAt || !mayQuote(user, project.company.repId) ? null : (
     <RequestQuotationDialog
       companyId={project.companyId}
       projectId={project.id}

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { cities, companies, contacts, projects, quotations } from "@/db/schema";
 import { requireActor, seesAll } from "@/lib/authz";
+import { ownsCompanies } from "@/lib/floor";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
@@ -87,7 +88,9 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
   const digits = term.replace(/\D/g, "");
 
   const all = seesAll(actor);
-  const isRep = actor.role === "rep";
+  // Marketing searches its own floor exactly as a rep searches his: the
+  // question is "are these companies mine", and both answer yes (P8.9).
+  const isRep = ownsCompanies(actor.role);
   const isCoordinator = actor.role === "coordinator";
 
   // The rep filter is a column comparison, so it lands in the WHERE clause and

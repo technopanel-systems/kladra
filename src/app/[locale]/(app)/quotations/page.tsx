@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
@@ -9,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { projectOptions } from "@/lib/pickers";
+import { viewCookie, viewFor } from "@/lib/view";
 import { listQuotations, type QuotationStatus } from "@/lib/quotations";
 
 /**
@@ -38,22 +40,36 @@ function parseStatus(value: string | undefined): QuotationStatus | null {
   return wanted ?? null;
 }
 
-type Search = { q?: string; status?: string; open?: string };
+type Search = { q?: string; status?: string; open?: string; view?: string };
 
 export default async function QuotationsPage({
   searchParams,
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
+  const [user, locale, params, jar] = await Promise.all([
+    requireUser(),
+    getLocale(),
+    searchParams,
+    cookies(),
+  ]);
 
   const q = (params.q ?? "").trim();
   const status = parseStatus(params.status);
   const open = params.open?.trim() || null;
+  // The URL wins, the cookie remembers, the list is the default (src/lib/view.ts).
+  const view = viewFor(params.view, jar.get(viewCookie("quotations"))?.value);
 
   const [t, rows, projects] = await Promise.all([
     getTranslations(),
-    listQuotations({ user, q: q || undefined, status: status ?? undefined, locale }),
+    // A board of states shows every state: narrowing to one would leave one
+    // column standing, which is why the chips are hidden in that view too.
+    listQuotations({
+      user,
+      q: q || undefined,
+      status: view === "board" ? undefined : (status ?? undefined),
+      locale,
+    }),
     projectOptions(user),
   ]);
 
@@ -73,7 +89,14 @@ export default async function QuotationsPage({
         ) : null}
       </div>
 
-      <QuotationsTable base="/quotations" rows={rows} q={q} status={status} openId={open} />
+      <QuotationsTable
+        base="/quotations"
+        rows={rows}
+        q={q}
+        status={status}
+        openId={open}
+        view={view}
+      />
 
       <Suspense key={open ?? "closed"} fallback={open ? <QuotationSheetSkeleton /> : null}>
         <QuotationDrawer quotationId={open} />

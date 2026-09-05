@@ -65,6 +65,44 @@ for (const [k, v] of ar) {
   }
 }
 
+/**
+ * Families a screen renders with a computed key — `t(`common.${role}`)`.
+ *
+ * The parity check above cannot see these: `common.marketing` was missing from
+ * BOTH locales, so both agreed, and the shell printed the key itself under
+ * everybody's name on every screen the day the fifth role landed. The members
+ * are read from the source union rather than listed here, because a list beside
+ * a union is the second copy that drifts (D42's shape, in messages).
+ */
+function union(file: string, name: string): string[] {
+  const source = readFileSync(resolve(import.meta.dirname, "..", file), "utf8");
+  const line = new RegExp(`export (?:type|const) ${name}[^=]*=([^;]+);`).exec(source);
+  if (!line) {
+    console.error(`check:messages — cannot find ${name} in ${file}; the families check is blind`);
+    process.exit(1);
+  }
+  // A union is a list of quoted words; a pgEnum is `pgEnum("name", [...])` and
+  // the SQL name is not one of them, so the array wins where there is one.
+  const list = /\[([^\]]*)\]/.exec(line[1]);
+  const members = [...(list ? list[1] : line[1]).matchAll(/"([a-z]\w*)"/g)].map((m) => m[1]);
+  if (members.length === 0) {
+    console.error(`check:messages — ${name} in ${file} has no members; the families check is blind`);
+    process.exit(1);
+  }
+  return members;
+}
+
+const families: [string, string[]][] = [
+  ["common", union("src/lib/types.ts", "Role")],
+  ["common", union("src/db/schema.ts", "channelEnum")],
+];
+for (const [namespace, members] of families) {
+  for (const member of members) {
+    const key = `${namespace}.${member}`;
+    if (!en.has(key)) problems.push(`no word for ${key} (a screen renders this key from a union)`);
+  }
+}
+
 if (problems.length) {
   console.error(`check:messages — ${problems.length} problem(s)`);
   for (const p of problems) console.error("  " + p);

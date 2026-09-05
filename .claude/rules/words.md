@@ -37,6 +37,17 @@ string**. `` `${company} · ${project}` `` is the same defect the loader fixes f
 messages — the · is neutral and settles against the paragraph, not against the
 name beside it. Render them as `<bdi>{company}</bdi> · <bdi>{project}</bdi>`.
 
+## A key a screen COMPUTES is invisible to the parity check
+`t(`common.${role}`)` is one call site and five keys. The both-locales check
+compares en against ar, so a member missing from **both** — which is what a new
+enum value always is — passes it, and the screen prints the key itself:
+`common.marketing` appeared under everybody's name on every screen the day the
+fifth role landed. `scripts/check-messages.ts` now reads each such union out of
+the source file and demands a word for every member. **Add a family to that
+list whenever a component renders a key from an enum**, and never write the
+members out beside the union — a list beside a union is the second copy that
+drifts.
+
 ## Digits are Western, everywhere (D6)
 The locale tag is `"ar"`, never `"ar-SA"` — `ar-SA` gives Arabic-Indic
 numerals and Jerom wants ٠٤ nowhere. When asking `Intl` for something

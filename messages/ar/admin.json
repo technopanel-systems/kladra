@@ -58,12 +58,6 @@
   "restored": "تم استرجاع {name}.",
   "exportHint": "ثلاثة ملفات بترميز UTF-8، يفتحها Excel والأسماء العربية سليمة.",
   "download": "تنزيل",
-  "role": {
-    "rep": "مندوب",
-    "coordinator": "منسقة المبيعات",
-    "manager": "مدير المبيعات",
-    "admin": "مدير النظام"
-  },
   "lookup": {
     "categories": "تصنيفات الشركات",
     "leadSources": "مصادر العملاء",

@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
+import { one } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -247,20 +248,53 @@ test("a value and the unit after it read the way the language does", async ({ pa
  * carried the full sentence from 640px up while it only had room for it from
  * 1024, so at a tablet width it was cut in both languages.
  */
+/** Everything on screen whose words the APP wrote, rather than a rep. */
+const APP_LABELS = "[data-slot='search-label'], [data-slot='figure-label']";
+
+async function cutOff(page: Page): Promise<string[]> {
+  return page.locator(APP_LABELS).evaluateAll((nodes) =>
+    nodes
+      .filter((node) => (node as HTMLElement).offsetParent !== null)
+      .filter((node) => node.scrollWidth > node.clientWidth + 1)
+      .map((node) => (node.textContent ?? "").trim()),
+  );
+}
+
+/**
+ * A customer's name may be cut short; a word the app chose may not.
+ *
+ * This looked at one slot on one screen, and P8 put four narrow columns of
+ * figures at the top of every drawer — where OPEN QUOTATIONS came out as "OPEN
+ * QUOTATIO…" at every width, on the widest screen anybody uses. A label that
+ * ends in an ellipsis has told the reader nothing, and "it fits in Arabic" is
+ * not an answer. So the check follows the labels rather than the screen: both
+ * slots, on the list and inside the drawer, at four widths.
+ */
 test("no label the app wrote is cut off mid-word", async ({ page, locale }) => {
   await login(page, locale, "faisal");
 
+  // Opened by address rather than by pressing a row: on a phone the list is not
+  // a table at all, it is a stack of cards, so a locator that reaches for one
+  // finds nothing at 375 and waits until the test dies.
+  const company = await one<{ id: string }>(
+    `select c.id from companies c
+       join users u on u.id = c.rep_id
+      where u.email = 'faisal@technopanel.com.sa' and c.archived_at is null
+      order by c.name
+      limit 1`,
+  );
+
   for (const width of [1366, 1024, 768, 375]) {
     await page.setViewportSize({ width, height: 768 });
-    await page.goto(`/${locale}/companies`);
 
-    const cut = await page.locator("[data-slot='search-label']").evaluateAll((nodes) =>
-      nodes
-        .filter((node) => (node as HTMLElement).offsetParent !== null)
-        .filter((node) => node.scrollWidth > node.clientWidth + 1)
-        .map((node) => (node.textContent ?? "").trim()),
-    );
-    expect(cut, `cut off at ${width}px`).toEqual([]);
+    await page.goto(`/${locale}/companies`);
+    expect(await cutOff(page), `cut off on the list at ${width}px`).toEqual([]);
+
+    // The drawer, where the band of figures is — and where the columns are
+    // narrowest, because the panel is narrower than the page.
+    await page.goto(`/${locale}/companies?open=${company.id}`);
+    await expect(page.locator("[data-slot='standing']").first()).toBeVisible();
+    expect(await cutOff(page), `cut off in the drawer at ${width}px`).toEqual([]);
   }
 });
 

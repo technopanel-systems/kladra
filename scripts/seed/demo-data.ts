@@ -21,7 +21,7 @@ import type { NotificationKind } from "../../src/lib/notify";
  *             rep put them, weekend or not.
  */
 
-export type RepKey = "faisal" | "saad" | "turki";
+export type RepKey = "faisal" | "saad" | "turki" | "marketing";
 export type Channel = "visit" | "call" | "whatsapp" | "other";
 
 // ---- users -------------------------------------------------------------------
@@ -30,11 +30,17 @@ export type UserSeed = {
   key: string;
   name: string;
   email: string;
-  role: "rep" | "coordinator" | "manager" | "admin";
+  role: "rep" | "marketing" | "coordinator" | "manager" | "admin";
   locale: "en" | "ar";
 };
 
-/** The six from README.md. Rawan reads Arabic; everyone else English. */
+/**
+ * The seven from README.md. Rawan and marketing read Arabic; the rest English.
+ *
+ * Marketing is a role account rather than a person, because Jerom has not named
+ * who holds it (SPEC §1, D50). It owns two leads and no target: what it exists
+ * to do is find a customer and hand him to a rep.
+ */
 export const USERS: UserSeed[] = [
   { key: "jerom", name: "Jerom", email: "jerom@technopanel.com.sa", role: "admin", locale: "en" },
   {
@@ -48,6 +54,13 @@ export const USERS: UserSeed[] = [
   { key: "faisal", name: "Faisal Al-Harbi", email: "faisal@technopanel.com.sa", role: "rep", locale: "en" },
   { key: "saad", name: "Saad Al-Qahtani", email: "saad@technopanel.com.sa", role: "rep", locale: "en" },
   { key: "turki", name: "Turki Al-Shammari", email: "turki@technopanel.com.sa", role: "rep", locale: "en" },
+  {
+    key: "marketing",
+    name: "Marketing",
+    email: "marketing@technopanel.com.sa",
+    role: "marketing",
+    locale: "ar",
+  },
 ];
 
 // ---- companies and contacts ---------------------------------------------------
@@ -369,6 +382,32 @@ export const COMPANIES: CompanySeed[] = [
       { name: "Ahmed Sherif", phone: "0507740119", position: "Engineer" },
     ],
   },
+
+  // ---- Marketing — leads waiting to be handed to a rep (2) -------------------
+  {
+    key: "m1",
+    name: "شركة واجهات الرياض للمقاولات",
+    rep: "marketing",
+    category: "Contractor",
+    source: "Exhibition",
+    city: "Riyadh",
+    notes: "من معرض البناء، طلبوا كتالوج وأسعار",
+    contacts: [
+      { name: "ريان الحربي", phone: "0553318890", position: "Procurement", email: "rayan@example.sa" },
+    ],
+  },
+  {
+    key: "m2",
+    name: "مؤسسة درع الخليج للديكور",
+    rep: "marketing",
+    category: "Contractor",
+    source: "Marketing",
+    city: "Riyadh",
+    // No activity anywhere below: this one is the "never contacted" band on
+    // marketing's day, which is the habit S51 wants visible.
+    notes: "وصلت من الموقع، لم يتم التواصل بعد",
+    contacts: [{ name: "ماجد الزهراني", phone: "0501129983", position: "Owner" }],
+  },
 ];
 
 // ---- projects -----------------------------------------------------------------
@@ -489,6 +528,9 @@ export const ACTIVITIES: ActivitySeed[] = [
   // Turki — 7
   { company: "t1", project: "p11", contact: 0, channel: "visit", back: 7, text: "زيارة الدمام، مبنى مكاتب 760 متر" },
   { company: "t1", contact: 0, channel: "call", back: 2, followUpDays: 4, text: "طلب عرض سعر بلونين، 168 و1020" },
+  // Overdue on purpose: marketing's day is the call list, and a screen with
+  // nothing on it shows nothing about the role (P8.9).
+  { company: "m1", contact: 0, channel: "call", back: 4, followUpDays: -2, text: "اتصلت بهم بعد المعرض، مهتمين بواجهة مشروع في الملقا" },
 
   { company: "t2", project: "p12", contact: 0, channel: "visit", back: 11, text: "زيارة الخبر، مركز تجاري كبير، الاستشاري يطلب A2" },
   { company: "t2", contact: 1, channel: "whatsapp", back: 5, text: "أرسلت شهادات مقاومة الحريق" },
@@ -523,6 +565,10 @@ export const FOLLOW_UPS: FollowUpSeed[] = [
   // Turki
   { project: "p12", days: 1 },
   { company: "t1", days: 4 },
+  // Marketing — one lead overdue, and the second one carries no follow-up at
+  // all because it has never been contacted. Between them its day shows both
+  // bands it can ever have (P8.9).
+  { company: "m1", days: -2 },
 ];
 
 // ---- quotations ---------------------------------------------------------------

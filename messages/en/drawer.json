@@ -40,5 +40,13 @@
   "approved": "Approved",
   "openQuotations": "Open quotations",
   "lastActivity": "Last activity",
-  "quoted": "Quoted"
+  "quoted": "Quoted",
+  "handOver": "Hand over",
+  "handOverTitle": "Hand {name} to somebody else?",
+  "handOverWarning": "Their projects, quotations, dispatches and square metres move with the company. What is already in the activity log stays as it was written.",
+  "handOverTo": "Who takes it",
+  "handOverPick": "Choose a person",
+  "handOverSearch": "Search people",
+  "handOverNobody": "Nobody else can hold a company.",
+  "handedOver": "{name} is now with {rep}."
 }

@@ -21,8 +21,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { listActivitiesForCompany } from "@/lib/activities";
+import { mayHandOver, mayQuote, mayWrite } from "@/lib/floor";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany, type CompanyDetail } from "@/lib/companies";
+import { floorHolderOptions } from "@/lib/pickers";
 import { listQuotationsForCompany } from "@/lib/quotations";
 import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
@@ -118,7 +120,17 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
    * offers work the server would refuse (DESIGN §5). A manager who sells passes
    * this on his own companies, because his id is the one on them.
    */
-  const mine = company.repId === user.id;
+  // The rule, not a copy of it: `mayWrite` is what the actions ask, so the
+  // drawer offers exactly the work the server would allow — including none of
+  // it while an admin is viewing as somebody (D42, P8.8).
+  const mine = mayWrite(user, company.repId);
+
+  // Who this customer belongs to is the manager's question as much as the
+  // owner's (D50). The list is read only when somebody may act on it, so a rep
+  // reading a colleague's company costs nothing.
+  const handOverTo = mayHandOver(user, company.repId)
+    ? await floorHolderOptions(company.repId, (role) => t(`common.${role}`))
+    : null;
 
   const contacts: readonly CompanyContact[] = company.contacts;
   const projects: readonly CompanyProject[] = company.projects;
@@ -178,6 +190,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         projects={logProjects}
         standing={company.standing}
         mine={mine}
+        handOverTo={handOverTo}
       />
 
       <Tabs defaultValue="activity" className="gap-3 px-4 py-3">
@@ -351,7 +364,9 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="quotations" className="flex flex-col gap-3">
-          {mine ? (
+          {/* Quoting is the sales conversation: marketing works the lead and
+              hands it on, so it owns this company and does not price it (P8.9). */}
+          {mayQuote(user, company.repId) ? (
             <div className="flex">
               <RequestQuotationDialog companyId={company.id} trigger={requestQuotationTrigger} />
             </div>

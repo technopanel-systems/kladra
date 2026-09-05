@@ -36,6 +36,7 @@ Password for every demo account: the `SEED_PASSWORD` in `.env` (default `kladra2
 | Faisal Al-Harbi | rep | faisal@technopanel.com.sa |
 | Saad Al-Qahtani | rep | saad@technopanel.com.sa |
 | Turki Al-Shammari | rep | turki@technopanel.com.sa |
+| Marketing | marketing | marketing@technopanel.com.sa |
 
 ## On a phone
 

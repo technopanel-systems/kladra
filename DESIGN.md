@@ -113,6 +113,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   places at once naming a Pages Router that does not exist here. `import type` is erased
   and is always safe; a VALUE is not. A pure helper and its type that both sides need
   live in their own file with no query in it (`src/lib/picker-option.ts`).
+- **A control sits beside the fact it changes, not in the row of buttons.** Handing a
+  company to somebody else changes one line of the header — whose it is — and the action
+  row below it was already carrying the four buttons it can hold on a phone. So the
+  control went next to the rep's name, which is also the only place a manager, who is
+  offered no action row at all, could ever have found it. The rule generalises: a row of
+  buttons is for work done TO a record; a control that edits one stated fact belongs
+  against that fact.
 - **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
   three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
   dead controls. Every spec now fails on the exception itself and names it.

@@ -1,0 +1,8 @@
+{
+  "start": "View as",
+  "title": "View the app as {name}?",
+  "hint": "Every screen becomes theirs, and nothing can be changed while you are looking. It ends when you press Stop, or after eight hours.",
+  "started": "Now viewing as {name}.",
+  "banner": "Viewing as {name} · {role}",
+  "stop": "Stop"
+}

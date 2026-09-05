@@ -29,6 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { startViewingAction } from "@/actions/view-as";
 import { useRouter } from "@/i18n/navigation";
 import type { AdminUser } from "@/lib/admin";
 import type { ActionResult, Role } from "@/lib/types";
@@ -51,9 +52,9 @@ import type { ActionResult, Role } from "@/lib/types";
  * on screen said there was anything to scroll to.
  */
 
-const ROLES: Role[] = ["rep", "coordinator", "manager", "admin"];
+const ROLES: Role[] = ["rep", "marketing", "coordinator", "manager", "admin"];
 
-export function UsersPanel({ users }: { users: AdminUser[] }) {
+export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }) {
   const t = useTranslations();
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
@@ -86,11 +87,11 @@ export function UsersPanel({ users }: { users: AdminUser[] }) {
                 {user.email}
               </span>
               <span>
-                {t(`admin.role.${user.role}`)} · {t("admin.companiesOnFloor", { count: user.companies })}
+                {t(`common.${user.role}`)} · {t("admin.companiesOnFloor", { count: user.companies })}
               </span>
             </span>
             <span className="flex flex-wrap gap-1">
-              <RowActions user={user} onDone={refresh} />
+              <RowActions user={user} meId={meId} onDone={refresh} />
             </span>
           </div>
         ))}
@@ -121,13 +122,13 @@ export function UsersPanel({ users }: { users: AdminUser[] }) {
                 <TableCell className="p-3 text-muted-foreground">
                   <span dir="ltr">{user.email}</span>
                 </TableCell>
-                <TableCell className="p-3">{t(`admin.role.${user.role}`)}</TableCell>
+                <TableCell className="p-3">{t(`common.${user.role}`)}</TableCell>
                 <TableCell className="p-3 text-muted-foreground">
                   {t("admin.companiesOnFloor", { count: user.companies })}
                 </TableCell>
                 <TableCell className="p-3">
                   <span className="flex flex-wrap justify-end gap-1">
-                    <RowActions user={user} onDone={refresh} />
+                    <RowActions user={user} meId={meId} onDone={refresh} />
                   </span>
                 </TableCell>
               </TableRow>
@@ -144,11 +145,39 @@ export function UsersPanel({ users }: { users: AdminUser[] }) {
  * table from `md` up and by the card below it. Two copies of three dialogs is
  * three chances for one layout to keep a button the other lost.
  */
-function RowActions({ user, onDone }: { user: AdminUser; onDone: () => void }) {
+function RowActions({
+  user,
+  meId,
+  onDone,
+}: {
+  user: AdminUser;
+  meId: string;
+  onDone: () => void;
+}) {
   const t = useTranslations();
+  const router = useRouter();
 
   return (
     <>
+      {/* Looking at the app as somebody else, from the screen where the admin
+          is already looking at the list of people (P8.8). Not offered on his
+          own row — that is not viewing, it is just working — and not on a
+          deactivated account, because it would be a way round deactivation. */}
+      {user.active && user.id !== meId ? (
+        <ConfirmDialog
+          trigger={
+            <Button variant="ghost" size="sm">
+              {t("viewAs.start")}
+            </Button>
+          }
+          title={t("viewAs.title", { name: user.name })}
+          description={t("viewAs.hint")}
+          confirmLabel={t("viewAs.start")}
+          successMessage={t("viewAs.started", { name: user.name })}
+          onConfirm={() => send(startViewingAction, { userId: user.id })}
+          onDone={() => router.refresh()}
+        />
+      ) : null}
       <UserDialog
         mode="edit"
         user={user}
@@ -270,7 +299,7 @@ function UserForm({
   const form = useRef<HTMLFormElement>(null);
   useFocusFirstError(form, answer);
 
-  const options = ROLES.map((value) => ({ value, label: t(`admin.role.${value}`) }));
+  const options = ROLES.map((value) => ({ value, label: t(`common.${value}`) }));
 
   return (
     <form ref={form} action={submit} noValidate className="flex min-h-0 flex-1 flex-col">

@@ -32,6 +32,17 @@ import type { ActionResult } from "@/lib/types";
  * sentence the server wrote and leaves the dialog open with the button live
  * again — a rep can read it and try, rather than losing the dialog and the
  * reason together.
+ *
+ * `children` is for the one confirmation that needs an answer as well as a
+ * yes — handing a company over asks WHO. A fourth hand-written dialog beside
+ * this one is how three confirmations end up disagreeing about how dangerous
+ * the same act is; a slot in the middle of this one is not.
+ *
+ * The confirm button is never disabled while that answer is missing. A control
+ * that cannot be pressed reads as a broken screen (DESIGN §5), and the action
+ * behind this already has a sentence for the case — which is the app's own
+ * sentence, in the reader's language, rather than a button quietly refusing to
+ * light up and explaining nothing.
  */
 export function ConfirmDialog({
   trigger,
@@ -41,6 +52,8 @@ export function ConfirmDialog({
   successMessage,
   onConfirm,
   onDone,
+  children,
+  onOpenChange,
 }: {
   trigger: ReactNode;
   title: string;
@@ -50,6 +63,10 @@ export function ConfirmDialog({
   onConfirm: () => Promise<ActionResult<unknown>>;
   /** Runs after a confirmed action succeeds — refresh, or navigate away. */
   onDone?: () => void;
+  /** The question this confirmation also has to ask, between text and buttons. */
+  children?: ReactNode;
+  /** So a caller can clear what it asked when the dialog closes. */
+  onOpenChange?: (open: boolean) => void;
 }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
@@ -63,21 +80,27 @@ export function ConfirmDialog({
         return;
       }
       toast.success(successMessage);
-      setOpen(false);
+      change(false);
       onDone?.();
     });
   }
 
+  function change(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={pending ? undefined : setOpen}>
+    <Dialog open={open} onOpenChange={pending ? undefined : change}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter>
-          <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
+          <Button type="button" variant="outline" disabled={pending} onClick={() => change(false)}>
             {t("common.cancel")}
           </Button>
           <Button type="button" disabled={pending} onClick={confirm}>

@@ -28,7 +28,7 @@ import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { createNotification } from "@/lib/notify";
 import { quotationLabel } from "@/lib/labels";
-import { mayWrite } from "@/lib/floor";
+import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
@@ -227,7 +227,7 @@ export async function requestQuotationAction(
       .where(eq(companies.id, input.companyId))
       .limit(1);
     if (!company) return { ok: false, error: t("companyNotFound") };
-    if (!mayWrite(actor, company.repId)) throw new NotAllowed();
+    if (!mayQuote(actor, company.repId)) throw new NotAllowed();
     if (company.archivedAt) return { ok: false, error: t("companyArchived") };
 
     if (input.projectId) {
@@ -287,7 +287,7 @@ export async function requestQuotationAction(
 
     revalidateChain();
     return { ok: true, data: { quotationId: created.id } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /**
@@ -310,7 +310,7 @@ export async function updateQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayWrite(actor, quotation.companyRepId)) throw new NotAllowed();
+    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
     if (quotation.status !== "requested" && quotation.status !== "returned") {
       return { ok: false, error: tq("alreadyIssued") };
     }
@@ -358,7 +358,7 @@ export async function updateQuotationAction(
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /**
@@ -524,7 +524,7 @@ export async function decideQuotationAction(
 
     const quotation = await load(actor, parsed.data.quotationId);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayWrite(actor, quotation.companyRepId)) throw new NotAllowed();
+    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
     if (quotation.status !== "issued") return { ok: false, error: tq("notIssued") };
 
     await db.transaction(async (tx) => {
@@ -560,7 +560,7 @@ export async function decideQuotationAction(
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /**
@@ -583,7 +583,7 @@ export async function reviseQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayWrite(actor, quotation.companyRepId)) throw new NotAllowed();
+    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
     if (quotation.status === "requested" || quotation.status === "returned") {
       return { ok: false, error: tq("notIssuedYet") };
     }
@@ -646,7 +646,7 @@ export async function reviseQuotationAction(
 
     revalidateChain();
     return { ok: true, data: { quotationId: created } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /**
@@ -669,7 +669,7 @@ export async function cancelQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayWrite(actor, quotation.companyRepId)) throw new NotAllowed();
+    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
     if (quotation.status !== "requested" && quotation.status !== "returned") {
       return { ok: false, error: tq("alreadyIssued") };
     }
@@ -707,7 +707,7 @@ export async function cancelQuotationAction(
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
-  }, "rep");
+  }, ...SELLING_ROLES);
 }
 
 /** Read: the quotations already on a project, for the request dialog's warning. */

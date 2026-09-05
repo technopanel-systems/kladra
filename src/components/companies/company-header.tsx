@@ -9,6 +9,7 @@ import { useSearchParams } from "next/navigation";
 import { setCompanyFollowUpAction } from "@/actions/companies";
 import { LogDialog, type LogContact, type LogProject } from "@/components/activities/log-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
+import { HandOverDialog } from "@/components/companies/hand-over-dialog";
 import {
   EditCompanyDialog,
   type CompanyEditable,
@@ -28,6 +29,7 @@ import { Sqm } from "@/components/ui-ext/figures";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { formatDay, todayRiyadh } from "@/lib/dates";
+import type { PickerOption } from "@/lib/picker-option";
 import type { CompanyStanding } from "@/lib/standing";
 import { followUpClass, TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
@@ -136,6 +138,7 @@ export function CompanyHeader({
   projects,
   standing,
   mine,
+  handOverTo,
 }: {
   company: DrawerCompany;
   contacts: readonly LogContact[];
@@ -149,6 +152,13 @@ export function CompanyHeader({
    * than a row of buttons that answer "Not allowed" (DESIGN §5).
    */
   mine: boolean;
+  /**
+   * The people this company can be handed to, or null for a reader who may not
+   * move it. Whose customer this is and what happened with him are two
+   * questions (D42, D50): the manager answers the first and writes none of the
+   * second, so this can be here while the action row below is not.
+   */
+  handOverTo: PickerOption[] | null;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -280,6 +290,16 @@ export function CompanyHeader({
           </div>
         ) : null}
       </div>
+
+      {handOverTo ? (
+        <div className="flex items-center gap-2">
+          <HandOverDialog
+            companyId={company.id}
+            companyName={company.name}
+            people={handOverTo}
+          />
+        </div>
+      ) : null}
 
       {mine ? (
       <div
