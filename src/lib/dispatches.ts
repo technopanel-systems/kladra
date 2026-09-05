@@ -50,6 +50,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 
 export type DispatchStatus = "submitted" | "approved" | "refused";
@@ -99,6 +100,8 @@ export type ListDispatchesInput = {
   /** Only this rep's — the manager's drill-down (P6). */
   repId?: string;
   locale?: string;
+  /** How many rows the screen will draw (D80). */
+  limit?: number;
 };
 
 /** She runs both chains, so she sees every dispatch on them (S9). */
@@ -285,6 +288,27 @@ function shipmentName(locale: string | undefined): SQL<string> {
 
 /** The dispatches a person may see, newest first. */
 export async function listDispatches(input: ListDispatchesInput): Promise<DispatchRow[]> {
+  const conditions = narrowTo(input);
+
+  const rows = await db
+    .select({ ...selection(input.locale ?? (await getLocale())), shipmentMethod: shipmentName(input.locale) })
+    .from(dispatches)
+    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
+    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .innerJoin(users, eq(users.id, dispatches.repId))
+    .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
+    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
+    .where(and(...conditions))
+    .orderBy(desc(dispatches.createdAt))
+    // Newest first and capped (D80).
+    .limit(input.limit ?? LIST_LIMIT);
+
+  return rows.map((row) => toRow(row, row.shipmentMethod));
+}
+
+/** The one place this list's narrowing is written — rows and count alike. */
+function narrowTo(input: ListDispatchesInput): (SQL | undefined)[] {
   const { user } = input;
   const term = (input.q ?? "").trim();
 
@@ -315,19 +339,19 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
     );
   }
 
-  const rows = await db
-    .select({ ...selection(input.locale ?? (await getLocale())), shipmentMethod: shipmentName(input.locale) })
+  return conditions;
+}
+
+/** How many there are, asked only when the list came back full (D80). */
+export async function countDispatches(input: ListDispatchesInput): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .innerJoin(users, eq(users.id, dispatches.repId))
-    .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
     .leftJoin(projects, eq(projects.id, quotations.projectId))
-    .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
-    .where(and(...conditions))
-    .orderBy(desc(dispatches.createdAt));
-
-  return rows.map((row) => toRow(row, row.shipmentMethod));
+    .where(and(...narrowTo(input)));
+  return Number(row?.total ?? 0);
 }
 
 export type DispatchItemRow = {
@@ -395,6 +419,57 @@ export async function getDispatch(
 }
 
 /** The dispatches raised against one quotation, newest first — the drawer's tab. */
+/**
+ * The last dispatch raised against one quotation, as a form fills from (D81).
+ *
+ * The same sentence as the quotation line one screen back (D74): a dispatch is
+ * typed from nothing, and the second one against a job goes to the same site on
+ * the same terms as the first. What carries over is what belongs to the JOB —
+ * where it is going, how it is paid for, how it ships. What does not is the
+ * quantity, which is the whole of what this dispatch is.
+ *
+ * Any status: a refused one describes the same site, and a dispatch that came
+ * back is the likeliest reason a rep is raising another.
+ */
+export type LastDispatch = {
+  label: string;
+  shipmentMethodId: string;
+  destination: string;
+  paymentTerms: string;
+};
+
+export async function lastDispatchForQuotation(
+  user: SessionUser,
+  quotationId: string,
+): Promise<LastDispatch | null> {
+  const [row] = await db
+    .select({
+      number: dispatches.number,
+      shipmentMethodId: dispatches.shipmentMethodId,
+      destination: dispatches.destination,
+      paymentTerms: dispatches.paymentTerms,
+    })
+    .from(dispatches)
+    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
+    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .where(
+      and(
+        eq(dispatches.quotationId, quotationId),
+        seesEveryDispatch(user) ? undefined : eq(companies.repId, user.id),
+      ),
+    )
+    .orderBy(desc(dispatches.createdAt))
+    .limit(1);
+
+  if (!row) return null;
+  return {
+    label: dispatchLabel(row.number),
+    shipmentMethodId: String(row.shipmentMethodId),
+    destination: row.destination ?? "",
+    paymentTerms: row.paymentTerms ?? "",
+  };
+}
+
 export async function listDispatchesForQuotation(
   user: SessionUser,
   quotationId: string,

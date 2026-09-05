@@ -30,6 +30,7 @@ import {
   followUpStateSql,
   neverContactedProjectSql,
 } from "@/lib/followups";
+import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 
 export type ProjectRow = {
@@ -50,6 +51,8 @@ export type ListProjectsInput = {
   filter?: FollowUpFilter;
   /** Defaults to the reader's saved language; scripts and tests pass one. */
   locale?: string;
+  /** How many rows the screen will draw (D80). */
+  limit?: number;
 };
 
 /** `%` and `_` are ILIKE wildcards; a rep typing them means the characters. */
@@ -77,27 +80,9 @@ function lastActivitySql(): SQL<Day | null> {
 }
 
 export async function listProjects(input: ListProjectsInput): Promise<ProjectRow[]> {
-  const { user, filter } = input;
-  const term = (input.q ?? "").trim();
   const pending = pendingFollowUpSql();
   const lastActivity = lastActivitySql();
-
-  const conditions: (SQL | undefined)[] = [
-    isNull(projects.archivedAt),
-    isNull(companies.archivedAt),
-    seesAll(user) ? undefined : eq(companies.repId, user.id),
-  ];
-
-  if (term) {
-    const anywhere = `%${escapeLike(term)}%`;
-    conditions.push(
-      sql`(${projects.name} ilike ${anywhere} or ${companies.name} ilike ${anywhere})`,
-    );
-  }
-
-  if (filter) {
-    conditions.push(followUpFilterSql(pending, filter, neverContactedProjectSql()));
-  }
+  const conditions = narrowTo(input);
 
   const rows = await db
     .select({
@@ -118,7 +103,9 @@ export async function listProjects(input: ListProjectsInput): Promise<ProjectRow
       sql`projects.lost_at is null desc`,
       sql`${lastActivity} desc nulls last`,
       asc(projects.name),
-    );
+    )
+    // What the screen will draw, not the whole floor (D80).
+    .limit(input.limit ?? LIST_LIMIT);
 
   return rows.map((row) => ({
     id: row.id,
@@ -131,6 +118,42 @@ export async function listProjects(input: ListProjectsInput): Promise<ProjectRow
     lostReason: row.lostReason ?? null,
     followUpState: row.followUpState ?? null,
   }));
+}
+
+/** The one place this list's narrowing is written, for the rows and the count. */
+function narrowTo(input: ListProjectsInput): (SQL | undefined)[] {
+  const { user, filter } = input;
+  const term = (input.q ?? "").trim();
+  const pending = pendingFollowUpSql();
+
+  const conditions: (SQL | undefined)[] = [
+    isNull(projects.archivedAt),
+    isNull(companies.archivedAt),
+    seesAll(user) ? undefined : eq(companies.repId, user.id),
+  ];
+
+  if (term) {
+    const anywhere = `%${escapeLike(term)}%`;
+    conditions.push(
+      sql`(${projects.name} ilike ${anywhere} or ${companies.name} ilike ${anywhere})`,
+    );
+  }
+
+  if (filter) {
+    conditions.push(followUpFilterSql(pending, filter, neverContactedProjectSql()));
+  }
+
+  return conditions;
+}
+
+/** How many there are, asked only when the list came back full (D80). */
+export async function countProjects(input: ListProjectsInput): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(projects)
+    .innerJoin(companies, eq(companies.id, projects.companyId))
+    .where(and(...narrowTo(input)));
+  return Number(row?.total ?? 0);
 }
 
 export type ProjectDetail = ProjectRow & {

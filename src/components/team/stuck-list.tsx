@@ -36,11 +36,11 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
 
   const nothing =
-    stuck.uncovered.length === 0 &&
-    stuck.requests.length === 0 &&
-    stuck.followUps.length === 0 &&
-    stuck.neverContacted.length === 0 &&
-    stuck.goneQuiet.length === 0;
+    stuck.uncovered.total === 0 &&
+    stuck.requests.total === 0 &&
+    stuck.followUps.total === 0 &&
+    stuck.neverContacted.total === 0 &&
+    stuck.goneQuiet.total === 0;
 
   if (nothing) {
     return (
@@ -60,9 +60,13 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
       {/* First, because it is the only group here about TODAY: a customer
           expecting a call this morning from somebody who is on leave. The rest
           have been waiting days and will still be waiting tomorrow. */}
-      {stuck.uncovered.length > 0 ? (
-        <Group title={t("team.uncovered")} means={t("team.uncoveredMeans")}>
-          {stuck.uncovered.map((row) => (
+      {stuck.uncovered.total > 0 ? (
+        <Group
+          title={t("team.uncovered")}
+          means={t("team.uncoveredMeans")}
+          more={stuck.uncovered.total - stuck.uncovered.rows.length}
+        >
+          {stuck.uncovered.rows.map((row) => (
             <Row
               key={`away-${row.kind}-${row.id}`}
               href={
@@ -90,9 +94,12 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
         </Group>
       ) : null}
 
-      {stuck.requests.length > 0 ? (
-        <Group title={t("team.stuckRequests")}>
-          {stuck.requests.map((row) => (
+      {stuck.requests.total > 0 ? (
+        <Group
+          title={t("team.stuckRequests")}
+          more={stuck.requests.total - stuck.requests.rows.length}
+        >
+          {stuck.requests.rows.map((row) => (
             <Row
               key={row.id}
               href={`/quotations?open=${row.id}`}
@@ -111,9 +118,12 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
         </Group>
       ) : null}
 
-      {stuck.followUps.length > 0 ? (
-        <Group title={t("team.stuckFollowUps")}>
-          {stuck.followUps.map((row) => (
+      {stuck.followUps.total > 0 ? (
+        <Group
+          title={t("team.stuckFollowUps")}
+          more={stuck.followUps.total - stuck.followUps.rows.length}
+        >
+          {stuck.followUps.rows.map((row) => (
             <Row
               key={`${row.kind}-${row.id}`}
               href={
@@ -143,12 +153,13 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
         </Group>
       ) : null}
 
-      {stuck.goneQuiet.length > 0 ? (
+      {stuck.goneQuiet.total > 0 ? (
         <Group
           title={t("team.stuckQuiet")}
           means={t("common.quietMeans", { days: NEVER_CONTACTED_DAYS })}
+          more={stuck.goneQuiet.total - stuck.goneQuiet.rows.length}
         >
-          {stuck.goneQuiet.map((row) => (
+          {stuck.goneQuiet.rows.map((row) => (
             <Row
               key={row.id}
               href={`/companies?open=${row.id}`}
@@ -160,9 +171,12 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
         </Group>
       ) : null}
 
-      {stuck.neverContacted.length > 0 ? (
-        <Group title={t("team.stuckNever")}>
-          {stuck.neverContacted.map((row) => (
+      {stuck.neverContacted.total > 0 ? (
+        <Group
+          title={t("team.stuckNever")}
+          more={stuck.neverContacted.total - stuck.neverContacted.rows.length}
+        >
+          {stuck.neverContacted.rows.map((row) => (
             <Row
               key={row.id}
               href={`/companies?open=${row.id}`}
@@ -177,16 +191,21 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   );
 }
 
-function Group({
+async function Group({
   title,
   means,
+  more,
   children,
 }: {
   title: string;
   /** The rule behind the group, where its name does not carry it (D59). */
   means?: string;
+  /** How many are not drawn, when the group is longer than a screen (D80). */
+  more: number;
   children: React.ReactNode;
 }) {
+  const t = await getTranslations();
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-baseline gap-x-2">
@@ -194,6 +213,10 @@ function Group({
         {means ? <p className="text-xs text-muted-foreground">{means}</p> : null}
       </div>
       <ul className="flex flex-col gap-2">{children}</ul>
+      {/* Said rather than silently dropped. Forty companies nobody has
+          contacted is a real floor, and a list that shows twenty of them and
+          says nothing is a screen that has decided for the reader (D80). */}
+      {more > 0 ? <p className="text-xs text-faint">{t("common.andMore", { count: more })}</p> : null}
     </div>
   );
 }

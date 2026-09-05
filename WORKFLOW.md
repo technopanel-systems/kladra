@@ -50,8 +50,35 @@
       - [x] a A person has a standing strip of his own — the one thing "how is this going"
             is not asked about anywhere
       - [x] b A notification that has been read and acted on stops being a row for ever
-      - [ ] c The carried three: every list renders every row it is given, a form dialog
+      - [x] c The carried three: every list renders every row it is given, a form dialog
             that scrolls does not say so, and a dispatch is typed from nothing too
+      - [ ] d The pilot: the acceptance scripts walked at the founder's volumes
+            (`npm run seed:volume`), what broke fixed, what was measured written here
+- [ ] P11 Independent review and hard polish — a different model reads it as a stranger,
+      owns it, and does not stop. The specs stay green; a rule that changes takes its test
+      and its reason with it, said out loud.
+      - [ ] A Read it as a stranger, build nothing yet: schema, actions, screens, seed,
+            tests, a full day for each of the five people; a ranked findings list in §5
+            with the cause of each, not the symptom; then fixed worst first in slices
+      - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
+            notifications; a dropped connection, a sleeping laptop, two tabs, a server
+            restart — and make it a permanent test
+      - [ ] C Database and data honesty, read as a critic: shapes, constraints, indexes,
+            figures computable two ways, history worth keeping; then the messy realities;
+            migrations proved from information_schema
+      - [ ] D The whole flow, creation to oversight, walked step by step: what is retyped,
+            how many clicks, what a person must remember, where two screens could disagree
+      - [ ] E Dashboards and reports audited as products: one look, no interpretation,
+            every figure saying what it means; charts where a shape is clearer than a number
+      - [ ] F A view per screen, chosen not copied, the question each answers written in
+            DESIGN; drag only where the drop needs nothing the system does not already have
+      - [ ] G Identity, motion and feel audited as one thing; loading, empty, error and
+            offline states on every screen; reduced-motion honoured
+      - [ ] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
+      - [ ] I Speed and reliability, measured: first paint on a mid phone, ten thousand
+            rows, queries that grow, the unhappy paths — nothing silent, nothing lost
+      - [ ] J What a good CRM has that Kladra does not: proposed freely, then deleted down
+            to what names a person, a day and what it replaces; the rejected list kept
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
@@ -91,6 +118,22 @@ his day already renders rather than from a second derivation of it. Two things w
 cause while building it: "open quotations" existed twice, once in SQL and once in the query
 builder, and the strip's phone grid left an empty cell beside an odd last figure — the same defect
 as the half-empty two-figure strip in P9.6g, one width down, and now a rule in DESIGN §5.
+
+**A model change, at P10c's gate.** Fable 5.1 took over from Opus 5 with the P10c slice built
+and its suite running. The charter's rule for this applies: the previous model's work is
+another developer's, and P11A is where it is read as such before anything is built on it.
+The ordering change the founder asked for — lists capped before any volume testing — was
+already the shape of P10c, so P10d runs on a floor whose lists say what they left out.
+
+**P10c is done, and with it the carried list.** Every list on the app asks for what its
+screen will draw and says what it left out (D80): two hundred on a list screen, twenty-five
+in a band of the day, twenty in a group of the stuck list, with the true total beside it and
+the search box named as the way to the rest. The one list deliberately left whole is a
+company's own activity, because that history is the record and the export does not carry it.
+The same sentence fixed the form dialogs: a body with more below the fold now says so, in
+four lines of CSS on `FormBody` and therefore in every dialog at once. And a dispatch starts
+from the last one raised against its quotation — the site, the terms and the method, with
+the quantities left empty (D81).
 
 **P10b is done.** A notice says what it is ABOUT rather than only where the screen is, and every
 kind answers one question the compiler asks of it: what takes this off the screen (D79). Work is
@@ -458,7 +501,8 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 4. She opens it, reads how many are going against how many were quoted, and approves it with SMAC dispatch number 8810.
 5. Faisal is told; it reads Approved with the number; the approved m² is on this Riyadh month, by the approval's own date (S41, S43).
 6. The quotation now has that much less left to send.
-7. Second test: a request for more than a line has left is refused at the field as it is typed, and refused again by the action — the second one is the enforcement that counts.
+7. Raising a second dispatch against the same quotation opens on the first one's destination, terms and shipment method, with every quantity box empty (D81).
+8. Second test: a request for more than a line has left is refused at the field as it is typed, and refused again by the action — the second one is the enforcement that counts.
 
 Faisal's Home target card (the old step 4) lands with P6, which is where the card exists.
 
@@ -544,6 +588,15 @@ day says so, and the arrows never land on a Friday (D58). Rawan's own card carri
 four figures and none of a rep's. And every sentence on the screen is measured for direction:
 both languages are on it whichever locale is running, so some paragraphs must compute `ltr` and
 some `rtl` on one page, or `dir="auto"` has stopped working.
+
+**What a list is not showing** — `tests/lists.spec.ts`
+The seventh spec that is not a walk through a screen, for the reason the others give: the
+seeded floor is twelve companies and the caps bite at twenty, twenty-five and two hundred,
+so no walk can reach one. What it holds is the arithmetic underneath them — a list shorter
+than its cap is the whole list, a list exactly at it is not truncated, and a longer one
+keeps its OWN length rather than the length of what was drawn, which is the defect that
+would put "20" above twenty rows and mean forty. The three caps are also held in the order
+the screens read them, so a band can never show more than the list it summarises (D80).
 
 **Reading a screen** — `tests/reading.spec.ts`
 Not a walk either: a sweep of every screen a rep reads, in both locales, for the rules DESIGN §5

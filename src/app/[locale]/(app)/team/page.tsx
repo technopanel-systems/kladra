@@ -81,31 +81,31 @@ export default async function TeamPage() {
             label: t("team.stuckRequests"),
             value: (
               <span dir="ltr" className="num">
-                {stuck.requests.length}
+                {stuck.requests.total}
               </span>
             ),
             caption: t("team.stuckRequestsMeans", { days: STUCK_REQUEST_WORKING_DAYS }),
-            tone: stuck.requests.length > 0 ? "bad" : null,
+            tone: stuck.requests.total > 0 ? "bad" : null,
           },
           {
             label: t("team.stuckFollowUps"),
             value: (
               <span dir="ltr" className="num">
-                {stuck.followUps.length}
+                {stuck.followUps.total}
               </span>
             ),
             caption: t("team.stuckFollowUpsMeans", { days: STUCK_FOLLOW_UP_DAYS }),
-            tone: stuck.followUps.length > 0 ? "bad" : null,
+            tone: stuck.followUps.total > 0 ? "bad" : null,
           },
           {
             label: t("team.stuckNever"),
             value: (
               <span dir="ltr" className="num">
-                {stuck.neverContacted.length}
+                {stuck.neverContacted.total}
               </span>
             ),
             caption: t("team.stuckNeverMeans", { days: NEVER_CONTACTED_DAYS }),
-            tone: stuck.neverContacted.length > 0 ? "open" : null,
+            tone: stuck.neverContacted.total > 0 ? "open" : null,
           },
         ]}
       />

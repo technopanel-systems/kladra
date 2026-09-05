@@ -26,6 +26,12 @@ npm run dev                   # http://localhost:3100
 `/` redirects to `/en`; `/ar` is the same product right-to-left. Dark is the default
 theme. `npm run db:clear` empties every table; `npm run seed:demo` fills it again.
 
+`npm run seed:volume` runs AFTER the demo seed and puts eight hundred more companies
+behind it, with the projects, quotations and dispatches to match. It is for looking at
+the app at the size it will actually be used at — every list caps at twenty, twenty-five
+or two hundred rows and says what it left out (D80), and none of that shows on a demo of
+twelve. It is development only, it takes about a minute, and `seed:demo` clears it away.
+
 Both of those empty the `sessions` table with everything else, so **anyone signed in at
 the time is signed out** and the next click lands on the login screen. That is correct —
 a session names a row in the database, and the row is gone — but it looks exactly like a

@@ -5,8 +5,10 @@ import { DispatchDrawer } from "@/components/dispatches/dispatch-drawer";
 import { DispatchSheetSkeleton, DispatchesTable } from "@/components/dispatches/dispatches-table";
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { Button } from "@/components/ui/button";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { requireUser } from "@/lib/authz";
-import { listDispatches, type DispatchStatus } from "@/lib/dispatches";
+import { countDispatches, listDispatches, type DispatchStatus } from "@/lib/dispatches";
+import { LIST_LIMIT } from "@/lib/list-size";
 import { dispatchableQuotationOptions } from "@/lib/pickers";
 import { viewCookie, viewFor } from "@/lib/view";
 
@@ -44,16 +46,21 @@ export default async function DispatchesPage({
   const open = params.open?.trim() || null;
   const view = viewFor(params.view, jar.get(viewCookie("dispatches"))?.value);
 
+  const narrowing = {
+    user,
+    q: q || undefined,
+    status: view === "board" ? undefined : (status ?? undefined),
+    locale,
+  };
+
   const [t, rows, quotations] = await Promise.all([
     getTranslations(),
-    listDispatches({
-      user,
-      q: q || undefined,
-      status: view === "board" ? undefined : (status ?? undefined),
-      locale,
-    }),
+    listDispatches({ ...narrowing, limit: LIST_LIMIT }),
     dispatchableQuotationOptions(user),
   ]);
+
+  // Only when it came back full (D80).
+  const total = rows.length === LIST_LIMIT ? await countDispatches(narrowing) : rows.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,6 +86,8 @@ export default async function DispatchesPage({
         openId={open}
         view={view}
       />
+
+      <ListTail shown={rows.length} total={total} />
 
       <Suspense key={open ?? "closed"} fallback={open ? <DispatchSheetSkeleton /> : null}>
         <DispatchDrawer dispatchId={open} />

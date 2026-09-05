@@ -19,7 +19,12 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { requireActor } from "@/lib/authz";
 import { findPossibleDuplicates } from "@/lib/companies";
-import { remainingOnQuotation, type RemainingItem } from "@/lib/dispatches";
+import {
+  lastDispatchForQuotation,
+  remainingOnQuotation,
+  type LastDispatch,
+  type RemainingItem,
+} from "@/lib/dispatches";
 import {
   type CityOption,
   type CountryOption,
@@ -251,6 +256,39 @@ export async function lastQuotationAction(
 
   try {
     const last = await lastQuotationForCompany(actor, parsed.data);
+    return last ? { ok: true, data: last } : { ok: true };
+  } catch {
+    return { ok: false, error: t("notAllowed") };
+  }
+}
+
+/**
+ * The last dispatch raised against one quotation, for the next one to start
+ * from (D81).
+ *
+ * The same shape as the offer one screen back, and the same reason: on the
+ * Dispatches screen the quotation is picked inside the form, so the answer has
+ * to follow what he picked rather than be handed down when the dialog is built.
+ *
+ * Nothing to copy is not an error — the first dispatch against a job has no
+ * previous one, which is most of them.
+ */
+export async function lastDispatchAction(
+  quotationId: unknown,
+): Promise<ActionResult<LastDispatch>> {
+  const t = await getTranslations("common");
+  let actor;
+  try {
+    actor = await requireActor();
+  } catch {
+    return { ok: false, error: t("notAllowed") };
+  }
+
+  const parsed = z.uuid().safeParse(quotationId);
+  if (!parsed.success) return { ok: false, error: t("invalid") };
+
+  try {
+    const last = await lastDispatchForQuotation(actor, parsed.data);
     return last ? { ok: true, data: last } : { ok: true };
   } catch {
     return { ok: false, error: t("notAllowed") };

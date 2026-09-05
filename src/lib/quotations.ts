@@ -52,6 +52,7 @@ import { quotationLabel } from "@/lib/labels";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
 import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotation-diff";
 import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
+import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 
 export type QuotationStatus =
@@ -109,6 +110,8 @@ export type ListQuotationsInput = {
   status?: QuotationStatus | QuotationStatus[];
   /** Defaults to the reader's saved language; scripts and tests pass one. */
   locale?: string;
+  /** How many rows the screen will draw (D80). */
+  limit?: number;
 };
 
 /** She runs both chains, so she sees every quotation on them (S9). */
@@ -280,6 +283,26 @@ function toRow(row: Selected): QuotationRow {
  * typed with or without its prefix.
  */
 export async function listQuotations(input: ListQuotationsInput): Promise<QuotationRow[]> {
+  const conditions = narrowTo(input);
+
+  const rows = await db
+    .select(selection(await getLocale()))
+    .from(quotations)
+    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .innerJoin(users, eq(users.id, quotations.repId))
+    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
+    .where(and(...conditions))
+    .orderBy(desc(quotations.createdAt))
+    // Newest first and capped: this list is years long on a real floor, and
+    // what anybody reads on it is the top (D80).
+    .limit(input.limit ?? LIST_LIMIT);
+
+  return rows.map(toRow);
+}
+
+/** The one place this list's narrowing is written — rows and count alike. */
+function narrowTo(input: ListQuotationsInput): (SQL | undefined)[] {
   const { user } = input;
   const term = (input.q ?? "").trim();
 
@@ -307,17 +330,18 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
     );
   }
 
-  const rows = await db
-    .select(selection(await getLocale()))
+  return conditions;
+}
+
+/** How many there are, asked only when the list came back full (D80). */
+export async function countQuotations(input: ListQuotationsInput): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .innerJoin(users, eq(users.id, quotations.repId))
     .leftJoin(projects, eq(projects.id, quotations.projectId))
-    .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
-    .where(and(...conditions))
-    .orderBy(desc(quotations.createdAt));
-
-  return rows.map(toRow);
+    .where(and(...narrowTo(input)));
+  return Number(row?.total ?? 0);
 }
 
 export type QuotationItemRow = {

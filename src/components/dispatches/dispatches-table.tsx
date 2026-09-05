@@ -451,7 +451,7 @@ export function DispatchSheet({
         // Radix's sides are physical; in Arabic the drawer comes from the other
         // edge so it still slides in from the end of the line.
         side={locale === "ar" ? "left" : "right"}
-        className="w-full gap-0 overflow-y-auto overscroll-contain p-0 data-[side=left]:sm:max-w-2xl data-[side=right]:sm:max-w-2xl"
+        className="w-full gap-0 scroller p-0 data-[side=left]:sm:max-w-2xl data-[side=right]:sm:max-w-2xl"
       >
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-col gap-2">
@@ -604,7 +604,7 @@ export function DispatchSheetSkeleton() {
   const t = useTranslations();
   return (
     <Sheet open>
-      <SheetContent onOpenAutoFocus={focusTheDrawerItself} side="right" className="w-full gap-0 overflow-y-auto p-0 sm:max-w-2xl">
+      <SheetContent onOpenAutoFocus={focusTheDrawerItself} side="right" className="w-full gap-0 scroller p-0 sm:max-w-2xl">
         <div aria-busy="true" className="flex flex-col gap-4 p-4">
           <SheetTitle className="sr-only">{t("dispatches.loading")}</SheetTitle>
           <SheetDescription className="sr-only">{t("dispatches.requestHint")}</SheetDescription>

@@ -108,7 +108,7 @@ export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
           side === "left" && "border-s",
         )}
       >
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+        <div className="flex min-h-0 flex-1 flex-col scroller">
           {children}
         </div>
       </SheetContent>

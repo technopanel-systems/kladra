@@ -49,6 +49,7 @@ import {
 import { personName } from "@/lib/people";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import { companyStanding, type CompanyStanding } from "@/lib/standing";
+import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
@@ -81,7 +82,14 @@ export type ListCompaniesInput = {
   repId?: string;
   /** Defaults to the reader's saved language; scripts and tests pass one. */
   locale?: string;
+  /**
+   * How many rows the caller can actually use (D80). A screen asks for what it
+   * will draw; nothing asks for a floor of two thousand and then renders it.
+   */
+  limit?: number;
 };
+
+
 
 /** `%` and `_` are ILIKE wildcards; a rep typing them means the characters. */
 function escapeLike(value: string): string {
@@ -159,12 +167,54 @@ function ownedBy(user: SessionUser): SQL | undefined {
  * phone — the strongest sign two records are the same company (S14).
  */
 export async function listCompanies(input: ListCompaniesInput): Promise<CompanyRow[]> {
-  const { user, filter } = input;
+  const { user } = input;
   const locale = input.locale ?? user.locale;
-  const term = (input.q ?? "").trim();
 
   const cityLabel = locale.startsWith("ar") ? cities.nameAr : cities.nameEn;
   const lastActivity = lastActivitySql();
+  const effective = effectiveFollowUpSql();
+  const conditions = narrowTo(input);
+
+  const rows = await db
+    .select({
+      id: companies.id,
+      name: companies.name,
+      cityName: sql<string | null>`coalesce(${cityLabel}, ${companies.cityText})`,
+      mainContactName: mainContact("name"),
+      mainContactPhone: mainContact("phone_normalized"),
+      lastActivityOn: lastActivity,
+      nextFollowUp: effective,
+      followUpState: followUpStateSql(effective),
+    })
+    .from(companies)
+    .leftJoin(cities, eq(cities.id, companies.cityId))
+    .where(and(...conditions))
+    .orderBy(sql`${lastActivity} desc nulls last`, asc(companies.name))
+    // A screen that draws 25 rows asks for 25. Without this the list was the
+    // whole floor at every width, twice over — the phone's cards and the desk's
+    // table are both rendered and one is hidden by CSS (D80).
+    .limit(input.limit ?? LIST_LIMIT);
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    cityName: row.cityName ?? null,
+    mainContactName: row.mainContactName ?? null,
+    mainContactPhone: row.mainContactPhone ? storedE164(row.mainContactPhone) : null,
+    lastActivityOn: row.lastActivityOn ?? null,
+    nextFollowUp: row.nextFollowUp ?? null,
+    followUpState: row.followUpState ?? null,
+  }));
+}
+
+/**
+ * Which companies this reader is asking about — the one place the narrowing is
+ * written, so the count below and the rows above can never be about two
+ * different sets (rules/data.md).
+ */
+function narrowTo(input: ListCompaniesInput): (SQL | undefined)[] {
+  const { user, filter } = input;
+  const term = (input.q ?? "").trim();
   const effective = effectiveFollowUpSql();
 
   const conditions: (SQL | undefined)[] = [
@@ -202,32 +252,21 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
     );
   }
 
-  const rows = await db
-    .select({
-      id: companies.id,
-      name: companies.name,
-      cityName: sql<string | null>`coalesce(${cityLabel}, ${companies.cityText})`,
-      mainContactName: mainContact("name"),
-      mainContactPhone: mainContact("phone_normalized"),
-      lastActivityOn: lastActivity,
-      nextFollowUp: effective,
-      followUpState: followUpStateSql(effective),
-    })
-    .from(companies)
-    .leftJoin(cities, eq(cities.id, companies.cityId))
-    .where(and(...conditions))
-    .orderBy(sql`${lastActivity} desc nulls last`, asc(companies.name));
+  return conditions;
+}
 
-  return rows.map((row) => ({
-    id: row.id,
-    name: row.name,
-    cityName: row.cityName ?? null,
-    mainContactName: row.mainContactName ?? null,
-    mainContactPhone: row.mainContactPhone ? storedE164(row.mainContactPhone) : null,
-    lastActivityOn: row.lastActivityOn ?? null,
-    nextFollowUp: row.nextFollowUp ?? null,
-    followUpState: row.followUpState ?? null,
-  }));
+/**
+ * How many there are altogether, asked only when the list came back full.
+ *
+ * A screen that shows the first two hundred of something has to say how many
+ * there are, or the number it shows is a number it made up (D80).
+ */
+export async function countCompanies(input: ListCompaniesInput): Promise<number> {
+  const [row] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(companies)
+    .where(and(...narrowTo(input)));
+  return Number(row?.total ?? 0);
 }
 
 // ---- the drawer -------------------------------------------------------------

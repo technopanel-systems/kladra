@@ -4,7 +4,14 @@ import { Truck } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { remainingItemsAction, type DispatchLookups } from "@/actions/forms";
+import {
+  lastDispatchAction,
+  remainingItemsAction,
+  type DispatchLookups,
+} from "@/actions/forms";
+// A type, never a value: importing anything runnable from a server lib into a
+// client component drags @/db into the browser bundle (rules/data.md).
+import type { LastDispatch } from "@/lib/dispatches";
 import { requestDispatchAction, updateDispatchAction } from "@/actions/dispatches";
 import {
   DispatchItems,
@@ -85,6 +92,17 @@ export function RequestDispatchDialog({
   const [items, setItems] = useState<RemainingItem[] | null>(null);
   const [itemsFailed, setItemsFailed] = useState(false);
   const [chosen, setChosen] = useState("");
+  /**
+   * The dispatch before this one on the same quotation, which is where the
+   * destination and the terms come from (D81).
+   *
+   * Three states, and the third one is the whole reason this is not a boolean:
+   * `undefined` is "not answered yet". The form below reads this ONCE, when it
+   * mounts, so mounting it while the answer is still in flight fills the fields
+   * with nothing and never fills them again — which is exactly what happened on
+   * the first pass, and it looked like a query that had found nothing.
+   */
+  const [last, setLast] = useState<LastDispatch | null | undefined>(undefined);
 
   // The quotation the form is being built for: the caller's, or the one picked
   // in the field above it.
@@ -99,6 +117,7 @@ export function RequestDispatchDialog({
       setItems(null);
       setItemsFailed(false);
       setChosen("");
+      setLast(undefined);
     }
   }, []);
 
@@ -110,10 +129,19 @@ export function RequestDispatchDialog({
       if (outcome.ok && outcome.data) setItems(outcome.data);
       else setItemsFailed(true);
     });
+    // Only for a NEW one: an edit opens on what it already says. A failure here
+    // is not an error the rep should see — the fields are simply empty, which
+    // is what they were before this existed (D81).
+    if (mode === "request") {
+      lastDispatchAction(active).then((outcome) => {
+        if (cancelled) return;
+        setLast(outcome.ok ? (outcome.data ?? null) : null);
+      });
+    }
     return () => {
       cancelled = true;
     };
-  }, [open, active, existing?.dispatchId]);
+  }, [open, active, existing?.dispatchId, mode]);
 
   const onSaved = useCallback(
     (dispatchId: string | undefined) => {
@@ -160,6 +188,7 @@ export function RequestDispatchDialog({
             onChange={(next) => {
               setItems(null);
               setItemsFailed(false);
+              setLast(undefined);
               setChosen(next);
             }}
             placeholder={t("dispatches.pickQuotation")}
@@ -177,11 +206,12 @@ export function RequestDispatchDialog({
         <p className="px-4 pb-4 text-sm text-muted-foreground">
           {t("dispatches.pickQuotationFirst")}
         </p>
-      ) : lookups && items ? (
+      ) : lookups && items && (mode !== "request" || last !== undefined) ? (
         <DispatchForm
           quotationId={active}
           mode={mode}
           existing={existing}
+          last={last ?? null}
           lookups={lookups}
           items={items}
           onSaved={onSaved}
@@ -198,6 +228,7 @@ function DispatchForm({
   quotationId,
   mode,
   existing,
+  last,
   lookups,
   items,
   onSaved,
@@ -206,6 +237,8 @@ function DispatchForm({
   quotationId: string;
   mode: DispatchMode;
   existing?: DispatchDraft;
+  /** The last dispatch on this quotation, where there is one (D81). */
+  last: LastDispatch | null;
   lookups: DispatchLookups;
   items: RemainingItem[];
   onSaved: (dispatchId: string | undefined) => void;
@@ -229,11 +262,26 @@ function DispatchForm({
       qty: already.has(item.quotationItemId) ? String(already.get(item.quotationItemId)) : "",
     }));
   });
+  /*
+   * What this dispatch is FOR is typed every time; where it goes and how it is
+   * paid for are the job's, and the job is the quotation (D81). So the second
+   * dispatch against Q-12 opens on the first one's site and terms, filled in
+   * and editable — the same sentence as the quotation line one screen back
+   * (D74), and the same limit: the quantities are not carried, because the
+   * quantity is the whole of what he came here to say.
+   *
+   * `existing` wins, because an edit opens on what it already says. The form is
+   * remounted when the quotation changes (the items are cleared to null and
+   * this whole subtree goes), so these initial values are never the last
+   * quotation's.
+   */
   const [method, setMethod] = useState(
-    existing?.shipmentMethodId ?? lookups.defaultMethod ?? "",
+    existing?.shipmentMethodId ?? last?.shipmentMethodId ?? lookups.defaultMethod ?? "",
   );
-  const [destination, setDestination] = useState(existing?.destination ?? "");
-  const [paymentTerms, setPaymentTerms] = useState(existing?.paymentTerms ?? "");
+  const [destination, setDestination] = useState(existing?.destination ?? last?.destination ?? "");
+  const [paymentTerms, setPaymentTerms] = useState(
+    existing?.paymentTerms ?? last?.paymentTerms ?? "",
+  );
 
   const sqm = useMemo(() => sendingSqm(items, lines), [items, lines]);
 

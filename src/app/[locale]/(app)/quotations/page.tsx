@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import {
   QuotationSheetSkeleton,
@@ -11,7 +12,8 @@ import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { projectOptions } from "@/lib/pickers";
 import { viewCookie, viewFor } from "@/lib/view";
-import { listQuotations, type QuotationStatus } from "@/lib/quotations";
+import { countQuotations, listQuotations, type QuotationStatus } from "@/lib/quotations";
+import { LIST_LIMIT } from "@/lib/list-size";
 
 /**
  * Every quotation this person may see, newest first (SPEC S28–S36).
@@ -60,18 +62,23 @@ export default async function QuotationsPage({
   // The URL wins, the cookie remembers, the list is the default (src/lib/view.ts).
   const view = viewFor(params.view, jar.get(viewCookie("quotations"))?.value);
 
+  // A board of states shows every state: narrowing to one would leave one
+  // column standing, which is why the chips are hidden in that view too.
+  const narrowing = {
+    user,
+    q: q || undefined,
+    status: view === "board" ? undefined : (status ?? undefined),
+    locale,
+  };
+
   const [t, rows, projects] = await Promise.all([
     getTranslations(),
-    // A board of states shows every state: narrowing to one would leave one
-    // column standing, which is why the chips are hidden in that view too.
-    listQuotations({
-      user,
-      q: q || undefined,
-      status: view === "board" ? undefined : (status ?? undefined),
-      locale,
-    }),
+    listQuotations({ ...narrowing, limit: LIST_LIMIT }),
     projectOptions(user),
   ]);
+
+  // Only when it came back full (D80). This list is years long on a real floor.
+  const total = rows.length === LIST_LIMIT ? await countQuotations(narrowing) : rows.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -97,6 +104,8 @@ export default async function QuotationsPage({
         openId={open}
         view={view}
       />
+
+      <ListTail shown={rows.length} total={total} />
 
       <Suspense key={open ?? "closed"} fallback={open ? <QuotationSheetSkeleton /> : null}>
         <QuotationDrawer quotationId={open} />

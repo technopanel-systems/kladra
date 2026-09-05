@@ -230,6 +230,25 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   columns as it has figures; on the phone grid an odd last figure takes the whole row. The
   rule generalises past this component: a grid whose item count is not a multiple of its
   column count either fills the gap or says why the gap is there.
+- **A surface with more below it says so, and a list says how much it left out.** Two
+  shapes of one defect. A dialog whose body scrolls looked exactly like one that ended at
+  the fold — the overlay scrollbar fades, the footer stays visible above the part nobody
+  can see, and the request form read as though it finished at Add item. And every list
+  rendered every row it was given, at both widths at once, so a floor of a thousand was a
+  thousand cards and a thousand table rows in one document. A scroller carries the hint
+  (`scroll-hint`, four backgrounds and no JavaScript, on `FormBody` so every dialog has it
+  at once); a capped list carries `ListTail`, which says how many are here, how many there
+  are, and that the search box is how to reach the rest. The figure above a list is never
+  the length of what was drawn.
+- **A flex column that scrolls shrinks its children before it overflows, and a card hides
+  what it cannot fit.** The worse half of the same pass, and invisible: at 375 the totals
+  block on the request form computed to 26 pixels high with `overflow: hidden` from
+  `card-face`, so the m² line showed and "Total excl. VAT", "VAT 15%" and "Total" were
+  simply not on the screen, with the notes box painted where they had been. At 1366 the
+  same block was 122 pixels and perfect. Nothing was clipped in the sense anybody would
+  report — the numbers were gone, and the form still looked like a form. Every scroller in
+  the app is `scroller` now, which is the overflow and the rule together: `& > * {
+  flex-shrink: 0 }`, so a scroller scrolls rather than squeezing what is inside it.
 - **A control that would replace what somebody typed either asks first, or is only there
   while there is nothing to lose.** "Copy the items from Q-12" fills a whole form from an
   earlier quotation, which is the point of it — and pressing it after ten minutes of typing

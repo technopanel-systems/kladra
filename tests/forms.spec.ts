@@ -138,9 +138,17 @@ test("a refused field is marked, on the forms a rep does not own either", async 
     await request.first().click();
 
     const form = page.getByRole("dialog", { name: t("dispatches.request") });
-    await expect(form.getByLabel(t("common.destination"))).toBeVisible();
+    const destination = form.getByLabel(t("common.destination"));
+    await expect(destination).toBeVisible();
 
-    // Quantities, shipment and terms all empty: the boxes carry the answer.
+    // Since D81 the form opens on the LAST dispatch's destination and terms
+    // where the quotation has one, so on a floor that has already raised a
+    // dispatch this box is not empty — and the test is about a box that is.
+    // Emptying it first keeps the question the same: a required field left
+    // blank is refused at the field, in the app's words.
+    await destination.fill("");
+
+    // A blank required box: the box carries the answer.
     await form.getByRole("button", { name: t("common.save") }).click();
     await expect(form.getByLabel(t("common.destination"))).toHaveAttribute(
       "aria-invalid",
@@ -163,4 +171,54 @@ test("the sign-in screen answers an empty form itself", async ({ page, locale, t
   const said = page.locator("form").getByRole("alert");
   await expect(said).toHaveText(t("auth.wrongCredentials"));
   await expect(page).toHaveURL(new RegExp(`/${locale}/login`));
+});
+
+/**
+ * A form that scrolls shows all of itself (D80, DESIGN §5).
+ *
+ * Not a rule about scrolling: a rule about a flex column, which SHRINKS its
+ * children before it overflows. The totals block on this form carries
+ * `overflow: hidden` with every card in the app, so at 375 it was squeezed to
+ * 26 pixels and three of its four rows stopped existing on screen — the m²
+ * figure showed, "Total excl. VAT", "VAT 15%" and "Total" did not, and the
+ * notes box was painted where they had been. At 1366 the same block was fine.
+ * Nothing looked broken, which is why it needs a measurement rather than a
+ * screenshot: a box shorter than what is inside it is the defect itself.
+ */
+test("no card in a scrolling form is shorter than what is inside it", async ({
+  page,
+  locale,
+  t,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/quotations`);
+
+  await page.getByRole("button", { name: t("quotations.request") }).first().click();
+  const form = page.getByRole("dialog", { name: t("quotations.request") });
+  await expect(form.getByLabel(t("common.colourCode")).first()).toBeVisible({ timeout: 30_000 });
+
+  const body = form.locator('[data-slot="form-body"]');
+  await expect(body).toBeVisible();
+
+  // Every card the scroller holds, measured against its own content. One pixel
+  // of slack for sub-pixel rounding; the defect was ninety-six.
+  const squeezed = await body.evaluate((node) =>
+    [...node.children]
+      .map((child) => ({
+        slot: child.getAttribute("data-slot") ?? child.tagName.toLowerCase(),
+        clientHeight: child.clientHeight,
+        scrollHeight: child.scrollHeight,
+      }))
+      .filter((box) => box.scrollHeight > box.clientHeight + 1),
+  );
+  expect(squeezed, "a card in the scroller is hiding part of itself").toEqual([]);
+
+  // And the figures a rep checks before he saves are on the screen, by name.
+  const totals = form.locator('[data-slot="totals"]');
+  await totals.scrollIntoViewIfNeeded();
+  await expect(totals.getByText(t("common.totalExclVat"), { exact: true })).toBeVisible();
+  await expect(totals.getByText(t("common.grandTotal"), { exact: true })).toBeVisible();
+
+  await page.setViewportSize({ width: 1280, height: 900 });
 });

@@ -67,11 +67,15 @@ async function nameOfTheOpenDispatch(page: Page): Promise<string> {
 }
 
 /** Fills the shipment, destination and terms every request needs. */
+/** Where it is going and how it is paid for — the job's, not this dispatch's. */
+const DESTINATION = "Riyadh — King Fahd Road, site gate";
+const TERMS = "50% advance, balance on delivery";
+
 async function fillTheDetails(form: Locator, t: Translate) {
   await form.getByRole("combobox", { name: t("common.shipment") }).click();
   await form.page().getByRole("option").first().click();
-  await form.getByLabel(t("common.destination")).fill("Riyadh — King Fahd Road, site gate");
-  await form.getByLabel(t("common.paymentTerms")).fill("50% advance, balance on delivery");
+  await form.getByLabel(t("common.destination")).fill(DESTINATION);
+  await form.getByLabel(t("common.paymentTerms")).fill(TERMS);
 }
 
 /**
@@ -275,7 +279,7 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     expect(Number(row.sqm)).toBe(expectedSqm);
   });
 
-  await test.step("6 · and the quotation now has that much less left to send", async () => {
+  await test.step("6 · the next one starts from this one, and knows what is left", async () => {
     await page.goto(`/${locale}/quotations?open=${quotation.id}`);
     const drawer = page.getByRole("dialog", { name: `Q-${quotation.number}` });
     await drawer.getByRole("button", { name: t("dispatches.request") }).click();
@@ -292,6 +296,19 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
       .locator("xpath=..")
       .getByText(String(first.remaining - sending), { exact: true });
     await expect(left).toBeVisible();
+
+    // And it opens on the last one's site and terms (D81). A second dispatch
+    // against a job goes to the same gate on the same terms, and both were
+    // typed from nothing every time — the same complaint as the quotation line
+    // one screen back (D74).
+    await expect(form.getByLabel(t("common.destination"))).toHaveValue(DESTINATION);
+    await expect(form.getByLabel(t("common.paymentTerms"))).toHaveValue(TERMS);
+
+    // What is NOT carried is the quantity, which is the whole of what this
+    // dispatch is: every box starts empty, however many the last one sent.
+    for (const box of await form.getByLabel(t("dispatches.sending")).all()) {
+      await expect(box).toHaveValue("");
+    }
 
     await page.keyboard.press("Escape");
   });

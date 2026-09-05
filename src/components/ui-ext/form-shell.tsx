@@ -18,7 +18,16 @@ export function FormBody({ children }: { children: ReactNode }) {
   return (
     <div
       data-slot="form-body"
-      className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-4 pb-4"
+      // `scroll-hint` is the second thing this file exists for: a form with
+      // more below the fold looked exactly like one that ended there, because
+      // the overlay scrollbar fades and the footer stays visible above the part
+      // nobody could see. Four backgrounds, no JavaScript, on every dialog in
+      // the app at once (D80, globals.css).
+      // `scroller` is the overflow AND the rule that comes with it: a flex
+      // column shrinks its children before it scrolls, and a card carries
+      // `overflow: hidden`, so the totals block here was squeezed to 26px at
+      // 375 and silently ate three of its four rows (globals.css, DESIGN §5).
+      className="scroll-hint scroller flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4"
     >
       {children}
     </div>

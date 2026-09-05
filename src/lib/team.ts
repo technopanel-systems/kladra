@@ -31,6 +31,7 @@ import { quotationLabel } from "@/lib/labels";
 import { awayOn, type Away } from "@/lib/leave";
 import { personName, personNameOf } from "@/lib/people";
 import { openQuotationsForRep, pipelineByRep, pipelineSqm } from "@/lib/standing";
+import { STUCK_SHOWN, topOf, type Group } from "@/lib/list-size";
 import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
 import type { Role } from "@/lib/types";
@@ -383,23 +384,29 @@ export type StuckCompany = {
  */
 export type UncoveredFollowUp = StuckFollowUp & { backOn: Day };
 
+/** One group of the stuck list: what is drawn, and how many there are. */
+export type StuckGroup<Row> = Group<Row>;
+
+/** This screen's share of the one rule (src/lib/list-size.ts). */
+const top = <Row,>(rows: Row[]): StuckGroup<Row> => topOf(rows, STUCK_SHOWN);
+
 export type Stuck = {
-  requests: StuckRequest[];
-  followUps: StuckFollowUp[];
+  requests: StuckGroup<StuckRequest>;
+  followUps: StuckGroup<StuckFollowUp>;
   /**
    * Due today or already past, and the rep is on leave. First on the screen
    * because it is the only group on it that is about TODAY: the others have
    * been waiting days and will still be there tomorrow.
    */
-  uncovered: UncoveredFollowUp[];
-  neverContacted: StuckCompany[];
+  uncovered: StuckGroup<UncoveredFollowUp>;
+  neverContacted: StuckGroup<StuckCompany>;
   /**
    * Contacted, then dropped: no next step anywhere on the customer and nothing
    * logged for a fortnight (D63). The other half of `neverContacted`, and the
    * bigger half — a company nobody ever called is a lead that went nowhere, and
    * this is a customer somebody was already talking to.
    */
-  goneQuiet: StuckCompany[];
+  goneQuiet: StuckGroup<StuckCompany>;
 };
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
@@ -525,28 +532,34 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   }
 
   return {
-    requests,
-    uncovered: await uncoveredFollowUps(away, locale),
-    followUps: followUps.rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      companyName: row.company_name,
-      repName: row.rep_name,
-      day: row.day,
-      daysOverdue: Number(row.days_overdue),
-      kind: row.kind,
-    })),
-    goneQuiet: quiet.rows.map((row) => ({
-      id: String(row.id),
-      name: row.name,
-      repName: row.rep_name,
-      days: Number(row.days),
-    })),
-    neverContacted: never.rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      repName: row.rep_name,
-      days: Number(row.days),
-    })),
+    requests: top(requests),
+    uncovered: top(await uncoveredFollowUps(away, locale)),
+    followUps: top(
+      followUps.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        companyName: row.company_name,
+        repName: row.rep_name,
+        day: row.day,
+        daysOverdue: Number(row.days_overdue),
+        kind: row.kind,
+      })),
+    ),
+    goneQuiet: top(
+      quiet.rows.map((row) => ({
+        id: String(row.id),
+        name: row.name,
+        repName: row.rep_name,
+        days: Number(row.days),
+      })),
+    ),
+    neverContacted: top(
+      never.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        repName: row.rep_name,
+        days: Number(row.days),
+      })),
+    ),
   };
 }

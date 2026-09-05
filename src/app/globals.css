@@ -122,6 +122,8 @@
   --surface: rgba(255, 255, 255, 0.85);
   --surface-2: rgba(26, 22, 20, 0.05);
   --surface-solid: #ffffff;
+  /* The shade under a scroll hint, dark on a light ground (D80). */
+  --scroll-shadow: rgba(26, 22, 20, 0.16);
   --surface-2-solid: #f3efeb;
   --line: rgba(26, 22, 20, 0.13);
   --line-strong: rgba(26, 22, 20, 0.24);
@@ -191,6 +193,13 @@
   --surface: rgba(30, 26, 24, 0.72);
   --surface-2: rgba(40, 35, 32, 0.6);
   --surface-solid: #1b1816;
+  /*
+   * LIGHT on a dark ground. A black shadow on a near-black surface is four
+   * levels out of 255 and invisible — measured, not guessed — so on this theme
+   * the edge is a faint light one, which is the same thing a card's own
+   * hairline highlight does one component along.
+   */
+  --scroll-shadow: rgba(255, 255, 255, 0.14);
   --surface-2-solid: #232120;
   --line: rgba(255, 255, 255, 0.07);
   --line-strong: rgba(255, 255, 255, 0.12);
@@ -258,6 +267,55 @@
 /* Frosted surface — cards, the rail, the top bar. Nothing else. */
 @utility glass {
   backdrop-filter: var(--blur);
+}
+
+/*
+ * A flex column that scrolls, and whose children keep their own height (D80).
+ *
+ * A flex column SHRINKS its children before it overflows, and a card in this
+ * app carries `overflow: hidden`, so the totals block on the request form was
+ * squeezed to 26px at 375 and quietly ate three of its four rows: the m² line
+ * showed, and "Total excl. VAT", "VAT 15%" and "Total" were not on the screen
+ * at all, with the notes box painted over where they had been. Nothing looked
+ * broken. The numbers were simply gone.
+ *
+ * Every scroller in the app is one of these, so the rule lives with the
+ * scrolling rather than being remembered at each one.
+ */
+@utility scroller {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  & > * {
+    flex-shrink: 0;
+  }
+}
+
+/*
+ * A scroller that says it scrolls (D80).
+ *
+ * The request form fits one item and not two, so the totals and the note to the
+ * coordinator sat below the fold with the footer still visible above them, and
+ * the form read as though it ended at "Add item". Nothing was broken — the
+ * scroller worked, and Chromium's overlay scrollbar had faded — which is the
+ * whole problem: a surface with more below it looked identical to one without.
+ *
+ * Four backgrounds and no JavaScript. Two of them are the dialog's own colour,
+ * pinned to the top and bottom of the CONTENT (`local`), so they slide away as
+ * it scrolls; two are shadows pinned to the BOX (`scroll`), so they stay. Where
+ * there is nothing to scroll the covers sit exactly on the shadows and hide
+ * them. It costs nothing when the form fits, and says "there is more" the
+ * moment it does not.
+ */
+@utility scroll-hint {
+  background:
+    linear-gradient(var(--surface-solid) 30%, rgba(0, 0, 0, 0)) center top / 100% 1.5rem no-repeat
+      local,
+    linear-gradient(rgba(0, 0, 0, 0), var(--surface-solid) 70%) center bottom / 100% 1.5rem
+      no-repeat local,
+    linear-gradient(var(--scroll-shadow), rgba(0, 0, 0, 0)) center top / 100% 0.75rem no-repeat
+      scroll,
+    linear-gradient(rgba(0, 0, 0, 0), var(--scroll-shadow)) center bottom / 100% 0.75rem no-repeat
+      scroll;
 }
 
 /* Card texture: 1px line, hairline highlight on top, shadow lift on hover. */

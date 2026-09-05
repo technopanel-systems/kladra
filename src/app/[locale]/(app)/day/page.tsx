@@ -8,8 +8,10 @@ import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
+import { BAND_LIMIT } from "@/lib/list-size";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import { awayOn } from "@/lib/leave";
+import { followUpCounts } from "@/lib/followups";
 import { logTargetsFor } from "@/lib/log-targets";
 import { waitingOnRep } from "@/lib/day";
 import { monthsBack } from "@/lib/months";
@@ -44,19 +46,27 @@ export default async function DayPage() {
   const hasMonth = carriesMetres(user.role);
   const hasChain = sells(user.role);
 
-  const [t, month, months, waiting, overdue, today, never, quiet, away] = await Promise.all([
-    getTranslations(),
-    hasMonth ? repMonth(user.id) : null,
-    // Only where there is a target to read them against — marketing carries
-    // none, so six bars with no line on any of them would say nothing (D44).
-    hasMonth ? monthsBack(user.id) : null,
-    hasChain ? waitingOnRep(user.id) : [],
-    listCompanies({ user, filter: "overdue", locale }),
-    listCompanies({ user, filter: "today", locale }),
-    listCompanies({ user, filter: "never", locale }),
-    listCompanies({ user, filter: "quiet", locale }),
-    awayOn(todayRiyadh()),
-  ]);
+  // Each band asks for what it will draw and the counts come from the one
+  // follow-up definition, so a band that is longer than the screen says how
+  // many there are rather than printing all of them (D80).
+  const band = (filter: "overdue" | "today" | "never" | "quiet") =>
+    listCompanies({ user, filter, locale, limit: BAND_LIMIT });
+
+  const [t, month, months, waiting, overdue, today, never, quiet, counts, away] =
+    await Promise.all([
+      getTranslations(),
+      hasMonth ? repMonth(user.id) : null,
+      // Only where there is a target to read them against — marketing carries
+      // none, so six bars with no line on any of them would say nothing (D44).
+      hasMonth ? monthsBack(user.id) : null,
+      hasChain ? waitingOnRep(user.id) : [],
+      band("overdue"),
+      band("today"),
+      band("never"),
+      band("quiet"),
+      followUpCounts(user),
+      awayOn(todayRiyadh()),
+    ]);
 
   // One pair of queries for the whole screen, after the bands are known (D71).
   const targets = await logTargetsFor(
@@ -98,6 +108,7 @@ export default async function DayPage() {
         today={today}
         never={never}
         quiet={quiet}
+        totals={counts}
         targets={targets}
       />
 

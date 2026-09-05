@@ -15,6 +15,7 @@
     "db:clear": "tsx scripts/db-clear.ts",
     "db:studio": "drizzle-kit studio",
     "seed:demo": "tsx scripts/seed-demo.ts",
+    "seed:volume": "tsx scripts/seed-volume.ts",
     "test": "playwright test",
     "test:ui": "playwright test --ui",
     "backup": "tsx scripts/backup.ts",

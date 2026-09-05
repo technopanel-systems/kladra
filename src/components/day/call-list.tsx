@@ -6,7 +6,7 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { NO_TARGETS, type LogTargets } from "@/lib/log-targets";
 import { Link } from "@/i18n/navigation";
 import type { CompanyRow } from "@/lib/companies";
-import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
+import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
 import { formatPhone, whatsappHref } from "@/lib/phone";
 import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,10 @@ type Band = {
   key: string;
   tone: StateTone;
   rows: CompanyRow[];
+  /** How many there are, which is not how many are drawn on a long floor (D80). */
+  total: number;
+  /** Where the rest of them are, when there are more than fit here. */
+  filter: string;
   /** What the band means, in words, where the name alone does not say it (D59). */
   means?: string;
 };
@@ -41,12 +45,20 @@ export async function CallList({
   today,
   never,
   quiet,
+  totals,
   targets,
 }: {
   overdue: CompanyRow[];
   today: CompanyRow[];
   never: CompanyRow[];
   quiet: CompanyRow[];
+  /**
+   * How many each band has altogether. The rows are capped at what a person can
+   * read standing up; the heading is the figure, and it comes from the same
+   * follow-up definition the strip on his list uses, so the two cannot disagree
+   * (rules/data.md, D80).
+   */
+  totals: FollowUpCounts;
   /**
    * What the log dialog needs, per company (D71). The whole point of this
    * screen is that the next thing he does is press the phone number; the thing
@@ -59,10 +71,23 @@ export async function CallList({
 
   const bands: Band[] = (
     [
-      { key: "common.overdue", tone: "bad", rows: overdue },
-      { key: "common.dueToday", tone: "wait", rows: today },
-      { key: "common.neverContacted", tone: "open", rows: never },
-      { key: "common.goneQuiet", tone: "over", rows: quiet, means: "common.quietMeans" },
+      { key: "common.overdue", tone: "bad", rows: overdue, total: totals.overdue, filter: "overdue" },
+      { key: "common.dueToday", tone: "wait", rows: today, total: totals.today, filter: "today" },
+      {
+        key: "common.neverContacted",
+        tone: "open",
+        rows: never,
+        total: totals.neverContacted,
+        filter: "never",
+      },
+      {
+        key: "common.goneQuiet",
+        tone: "over",
+        rows: quiet,
+        total: totals.goneQuiet,
+        filter: "quiet",
+        means: "common.quietMeans",
+      },
     ] satisfies Band[]
   ).filter((band) => band.rows.length > 0);
 
@@ -83,7 +108,7 @@ export async function CallList({
               >
                 {t(band.key)}{" "}
                 <span dir="ltr" className="num">
-                  {band.rows.length}
+                  {band.total}
                 </span>
               </h3>
               {/* "Overdue" and "Due today" say what they are; "Gone quiet" is a
@@ -170,6 +195,19 @@ export async function CallList({
                 </li>
               ))}
             </ul>
+
+            {/* The rest of them are one press away, on the list that narrows to
+                this same band — the count above says how many there are, and
+                this says where they are (D80). Printing all ninety on a phone
+                is not showing them, it is burying the first one. */}
+            {band.total > band.rows.length ? (
+              <Link
+                href={`/companies?filter=${band.filter}`}
+                className="text-xs text-muted-foreground underline underline-offset-2"
+              >
+                {t("common.andMore", { count: band.total - band.rows.length })}
+              </Link>
+            ) : null}
           </div>
         ))
       )}

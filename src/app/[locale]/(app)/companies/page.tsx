@@ -5,13 +5,15 @@ import { CompaniesTable } from "@/components/companies/companies-table";
 import { CompanyDrawer } from "@/components/companies/company-drawer";
 import { FollowUpStrip } from "@/components/companies/follow-up-strip";
 import { ListSearch } from "@/components/companies/list-search";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
 import { PersonStrip } from "@/components/team/person-strip";
 import { requireUser, seesAll } from "@/lib/authz";
 import { ownsCompanies, sells } from "@/lib/floor";
-import { listCompanies } from "@/lib/companies";
+import { countCompanies, listCompanies } from "@/lib/companies";
+import { LIST_LIMIT } from "@/lib/list-size";
 import { todayRiyadh } from "@/lib/dates";
 import { followUpCounts, followUpCountsForRep, parseFollowUpFilter } from "@/lib/followups";
 import { personStanding } from "@/lib/standing";
@@ -71,9 +73,11 @@ export default async function CompaniesPage({
    */
   const mayAdd = ownsCompanies(user.role);
 
+  const narrowing = { user, q: q || undefined, filter, repId: repId ?? undefined, locale };
+
   const [t, rows, counts, viewed, month] = await Promise.all([
     getTranslations(),
-    listCompanies({ user, q: q || undefined, filter, repId: repId ?? undefined, locale }),
+    listCompanies({ ...narrowing, limit: LIST_LIMIT }),
     // The strip counts what the list shows: drilling into one rep's floor and
     // reading the whole team's overdue count above it would be two answers to
     // one question (rules/data.md).
@@ -85,6 +89,15 @@ export default async function CompaniesPage({
   ]);
 
   const viewedName = viewed?.name ?? null;
+
+  /*
+   * How many there are, asked only when the list came back full (D80). A floor
+   * of two thousand used to be two thousand rows in the HTML, twice over — the
+   * phone's cards and the desk's table are both rendered and one is hidden by
+   * CSS — and the screen said nothing about it. The seeded floor is twelve, so
+   * nothing here has ever been seen at the size it will be used at.
+   */
+  const total = rows.length === LIST_LIMIT ? await countCompanies(narrowing) : rows.length;
 
   /*
    * Whose floor this is, and whether that person quotes. Marketing owns
@@ -158,6 +171,8 @@ export default async function CompaniesPage({
           today={todayRiyadh()}
         />
       )}
+
+      <ListTail shown={rows.length} total={total} />
 
       {/* Keyed by the company so switching rows renders a fresh drawer rather
           than animating one company's header into another's. */}

@@ -3,13 +3,15 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { ProjectDrawer } from "@/components/projects/project-drawer";
 import { ProjectSheetSkeleton, ProjectsTable } from "@/components/projects/projects-table";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/authz";
 import { ownsCompanies } from "@/lib/floor";
 import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
 import { companyOptions } from "@/lib/pickers";
-import { listProjects } from "@/lib/projects";
+import { countProjects, listProjects } from "@/lib/projects";
+import { LIST_LIMIT } from "@/lib/list-size";
 
 /**
  * My projects, in the shape of the rep's home: the follow-up strip, a search
@@ -43,12 +45,18 @@ export default async function ProjectsPage({
   const filter = parseFollowUpFilter(params.filter);
   const open = params.open?.trim() || null;
 
+  const narrowing = { user, q: q || undefined, filter, locale };
+
   const [t, rows, counts, companies] = await Promise.all([
     getTranslations(),
-    listProjects({ user, q: q || undefined, filter, locale }),
+    listProjects({ ...narrowing, limit: LIST_LIMIT }),
     followUpCounts(user),
     companyOptions(user),
   ]);
+
+  // Only when the list came back full: on a floor this size the count is a
+  // query nobody needs to run (D80).
+  const total = rows.length === LIST_LIMIT ? await countProjects(narrowing) : rows.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,6 +73,8 @@ export default async function ProjectsPage({
       </div>
 
       <ProjectsTable rows={rows} counts={counts} q={q} filter={filter ?? null} openId={open} />
+
+      <ListTail shown={rows.length} total={total} />
 
       <Suspense key={open ?? "closed"} fallback={open ? <ProjectSheetSkeleton /> : null}>
         <ProjectDrawer projectId={open} />
