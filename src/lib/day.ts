@@ -18,7 +18,15 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, dispatches, projects, quotations } from "@/db/schema";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
-import type { SessionUser } from "@/lib/types";
+
+/**
+ * Why a row is here, as the message key that names it — three values and no
+ * fourth. It is typed rather than left a string because the screen and the
+ * person strip both split this list on it: the badge colour on his day, and the
+ * two figures on his floor (D78). A `string` there would have made
+ * `=== "day.withCustomer"` a comparison nothing checks.
+ */
+export type WaitingReason = "day.sentBack" | "day.refused" | "day.withCustomer";
 
 /** One thing that has stopped and is waiting on this person. */
 export type Waiting = {
@@ -29,7 +37,7 @@ export type Waiting = {
   companyName: string;
   projectName: string | null;
   /** Why it is here, as a message key the screen renders. */
-  reasonKey: string;
+  reasonKey: WaitingReason;
   /** The coordinator's or the customer's own words, when there are any. */
   reason: string | null;
 };
@@ -46,7 +54,7 @@ export type Waiting = {
  * Only the live revision, because a number quoted three times is one thing
  * waiting, not three (S34, S35).
  */
-export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
+export async function waitingOnRep(repId: string): Promise<Waiting[]> {
   const live = sql`not exists (
     select 1 from quotations later
      where later.number = quotations.number
@@ -68,7 +76,7 @@ export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
       .leftJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
-          eq(companies.repId, user.id),
+          eq(companies.repId, repId),
           isNull(companies.archivedAt),
           eq(quotations.status, "returned"),
           live,
@@ -90,7 +98,7 @@ export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
       .leftJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
-          eq(companies.repId, user.id),
+          eq(companies.repId, repId),
           isNull(companies.archivedAt),
           eq(dispatches.status, "refused"),
         ),
@@ -110,7 +118,7 @@ export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
       .leftJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
-          eq(companies.repId, user.id),
+          eq(companies.repId, repId),
           isNull(companies.archivedAt),
           eq(quotations.status, "issued"),
           live,
@@ -126,7 +134,7 @@ export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
       label: quotationLabel(row.number, row.revision),
       companyName: row.companyName,
       projectName: row.projectName,
-      reasonKey: "day.sentBack",
+      reasonKey: "day.sentBack" as const,
       reason: row.reason,
     })),
     ...refused.map((row) => ({
@@ -135,7 +143,7 @@ export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
       label: dispatchLabel(row.number),
       companyName: row.companyName,
       projectName: row.projectName,
-      reasonKey: "day.refused",
+      reasonKey: "day.refused" as const,
       reason: row.reason,
     })),
     ...issued.map((row) => ({
@@ -144,7 +152,7 @@ export async function waitingOnRep(user: SessionUser): Promise<Waiting[]> {
       label: quotationLabel(row.number, row.revision),
       companyName: row.companyName,
       projectName: row.projectName,
-      reasonKey: "day.withCustomer",
+      reasonKey: "day.withCustomer" as const,
       reason: null,
     })),
   ];

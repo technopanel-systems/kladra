@@ -553,7 +553,12 @@ for the phone and a table for the desk, and counting DOM nodes counts each row t
 Then Abdulrahman's four, for the collision the inventory found: the strip's follow-up figure and the
 table's column beneath it are two different numbers, and the spec holds their names apart and holds
 the strip to saying its own threshold. Drilling into a rep lands on a card that says whose month and
-when (D60). Then the months card: six of them, oldest first, each carrying its figure as TEXT — the
+when (D60), and on a band that says what is in play on his floor — open quotations, how many of
+them the customer is holding, and what has stopped on him — every figure read back out of the
+database rather than off the row it was opened from. A second test walks the same band from the
+other end: what the strip on his floor calls stopped is the rows his own day lists as sent back or
+refused, so the manager's count and the rep's list cannot be two lists (D78).
+Then the months card: six of them, oldest first, each carrying its figure as TEXT — the
 bars are aria-hidden because nothing is in the picture that is not in the number above it — and one
 sentence saying which way the last finished month went (D61). Then the chain cohort: six endings,
 each named, and the six adding up to the number the sentence above them claims was raised — a cohort

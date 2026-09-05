@@ -50,7 +50,7 @@ export default async function DayPage() {
     // Only where there is a target to read them against — marketing carries
     // none, so six bars with no line on any of them would say nothing (D44).
     hasMonth ? monthsBack(user.id) : null,
-    hasChain ? waitingOnRep(user) : [],
+    hasChain ? waitingOnRep(user.id) : [],
     listCompanies({ user, filter: "overdue", locale }),
     listCompanies({ user, filter: "today", locale }),
     listCompanies({ user, filter: "never", locale }),

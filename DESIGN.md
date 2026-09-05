@@ -222,6 +222,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   row is FOR. Stack below `sm:` and keep the one-line row above it, which is what the
   tables on this app already do. Where a row's pieces cannot all shrink, the one carrying
   the subject must not be the one that gives way.
+- **A band of figures has a cell for every figure and no cell for none.** The strip was
+  written as four columns on a desk and two on a phone, whatever it was given, so a strip of
+  two sat in the left half of a full-width card with the right half bare, and a strip of
+  three left a hole under the second figure at 375 — both read as a tile that failed to
+  load rather than as a band with two or three figures on it. Above `sm:` it takes as many
+  columns as it has figures; on the phone grid an odd last figure takes the whole row. The
+  rule generalises past this component: a grid whose item count is not a multiple of its
+  column count either fills the gap or says why the gap is there.
 - **A control that would replace what somebody typed either asks first, or is only there
   while there is nothing to lose.** "Copy the items from Q-12" fills a whole form from an
   earlier quotation, which is the point of it — and pressing it after ten minutes of typing

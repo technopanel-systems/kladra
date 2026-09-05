@@ -52,5 +52,8 @@
     "rejected": "The customer rejected"
   },
   "stuckQuiet": "Gone quiet",
-  "quietDays": "{count, plural, one {no activity for # day} other {no activity for # days}}"
+  "quietDays": "{count, plural, one {no activity for # day} other {no activity for # days}}",
+  "openWithCustomer": "{count, plural, =0 {none with a customer} one {# with the customer} other {# with the customer}}",
+  "sentBackOrRefused": "Sent back or refused",
+  "sentBackOrRefusedMeans": "waiting on the rep, not on the customer"
 }

@@ -30,7 +30,7 @@ import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
 import { awayOn, type Away } from "@/lib/leave";
 import { personName, personNameOf } from "@/lib/people";
-import { pipelineByRep, pipelineSqm } from "@/lib/standing";
+import { openQuotationsForRep, pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
 import type { Role } from "@/lib/types";
@@ -168,7 +168,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
     people.map(async (person) => {
       const [counts, open] = await Promise.all([
         followUpCountsForRep(person.id),
-        openQuotationsFor(person.id),
+        openQuotationsForRep(person.id),
       ]);
       return {
         userId: person.id,
@@ -318,33 +318,6 @@ export async function repMonth(
     achieved: achieved.get(userId) ?? "0",
     pace: paceFor(day, nonWorking, userId),
   };
-}
-
-/**
- * Quotations still waiting on somebody at this rep's companies.
- *
- * Asked, sent back, or issued and out with the customer. Accepted, rejected and
- * withdrawn are finished, and only the live revision counts — a number quoted
- * three times is one open quotation, not three (S34, S35).
- */
-async function openQuotationsFor(repId: string): Promise<number> {
-  const [row] = await db
-    .select({ open: sql<number>`count(*)::int` })
-    .from(quotations)
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .where(
-      and(
-        eq(companies.repId, repId),
-        isNull(companies.archivedAt),
-        sql`quotations.status in ('requested', 'returned', 'issued')`,
-        sql`not exists (
-          select 1 from quotations later
-           where later.number = quotations.number
-             and later.revision > quotations.revision
-        )`,
-      ),
-    );
-  return Number(row?.open ?? 0);
 }
 
 /**

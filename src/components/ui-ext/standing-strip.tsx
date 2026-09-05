@@ -65,7 +65,19 @@ export function StandingStrip({
       {items.map((item, index) => (
         // The index, not the label: two figures may legitimately share a word,
         // and a duplicate key silently drops one of them.
-        <div key={index} className="flex min-w-0 flex-col gap-0.5">
+        <div
+          key={index}
+          className={cn(
+            "flex min-w-0 flex-col gap-0.5",
+            // An odd figure last on a two-column phone grid leaves the cell
+            // beside it empty, which reads as a tile that failed to load rather
+            // than as a strip with three figures on it — the same defect the
+            // column count above fixes one width up. It takes the whole row
+            // instead, and above `sm:` the grid has a column per figure and
+            // nothing to span.
+            items.length % 2 === 1 && index === items.length - 1 && "col-span-2 sm:col-span-1",
+          )}
+        >
           <dt
             data-slot="figure-label"
             className="text-[0.6875rem] leading-tight font-medium tracking-wide text-balance text-muted-foreground uppercase"

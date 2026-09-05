@@ -15,6 +15,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import type { Day } from "@/lib/dates";
+import { waitingOnRep } from "@/lib/day";
 
 export type CompanyStanding = {
   /** SPEC S45: expected m² on live projects — not lost, not archived. */
@@ -77,6 +78,74 @@ export function openQuotationsSql(scope: SQL): SQL<number> {
        )
        and ${scope}
   )`;
+}
+
+/**
+ * Open quotations on one rep's floor, from the one definition above.
+ *
+ * This lived in `src/lib/team.ts` as a second copy written with the query
+ * builder — same three statuses, same live-revision test, both correct, and
+ * exactly the pair that drifts the day somebody adds a status (rules/data.md).
+ * The team table and the person strip read this one now.
+ *
+ * An archived company is off the floor, so its quotations are off this figure:
+ * the list below the strip does not show them either.
+ */
+export async function openQuotationsForRep(repId: string): Promise<number> {
+  const id = sql`${repId}::uuid`;
+  const result = await db.execute<{ open: number }>(sql`
+    select ${openQuotationsSql(sql`exists (
+      select 1 from companies c
+       where c.id = q.company_id and c.rep_id = ${id} and c.archived_at is null
+    )`)} as open
+  `);
+  return Number(result.rows[0]?.open ?? 0);
+}
+
+export type PersonStanding = {
+  /** Expected m² on this person's live projects (S45). */
+  pipelineSqm: string;
+  /** Quotations still moving on his floor: asked, sent back, or with the customer. */
+  openQuotations: number;
+  /** Of those, the ones the customer is holding — a call, not a form. */
+  withCustomer: number;
+  /**
+   * Sent back or refused: stopped, and stopped on HIM. The one figure here that
+   * is nobody else's fault and nobody else's to fix.
+   */
+  sentBack: number;
+};
+
+/**
+ * How a person's floor is standing (D78) — the strip a company and a project
+ * have had since P8.5 and a person never did.
+ *
+ * Every figure is scoped to the floor rather than to the account: the companies
+ * whose rep he is, not the rows he happens to have typed. That is what makes it
+ * the same question as the company strip one level up, and it is why a floor
+ * somebody covered while he was away still reads as his.
+ *
+ * The two counts come from `waitingOnRep` — the list his own day renders — so
+ * the manager's reading of "2 sent back" and the two rows the rep sees on his
+ * day cannot be two different twos (rules/data.md).
+ *
+ * Who may ask this about whom is the caller's question, as it is for every read
+ * helper here: the companies screen takes a rep from the URL only for somebody
+ * who sees every floor, and otherwise asks about the reader himself (authz).
+ */
+export async function personStanding(repId: string): Promise<PersonStanding> {
+  const [pipelineSqmValue, openQuotations, waiting] = await Promise.all([
+    pipelineSqm(sql`c.rep_id = ${repId}::uuid`),
+    openQuotationsForRep(repId),
+    waitingOnRep(repId),
+  ]);
+
+  return {
+    pipelineSqm: pipelineSqmValue,
+    openQuotations,
+    withCustomer: waiting.filter((row) => row.reasonKey === "day.withCustomer").length,
+    sentBack: waiting.filter((row) => row.reasonKey !== "day.withCustomer").length,
+  };
 }
 
 /** The four figures at the top of a company drawer. */

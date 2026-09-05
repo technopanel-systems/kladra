@@ -1,5 +1,5 @@
 import { login } from "./helpers/auth";
-import { query } from "./helpers/db";
+import { query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -126,6 +126,59 @@ test("the manager's four figures each say which number they are", async ({ page,
     await expect(
       page.getByRole("heading", { name: t("team.monthOf", { name }) }),
     ).toBeVisible(COLD);
+  });
+
+  await test.step("4 · and his floor says what is in play on it", async () => {
+    // The band a company and a project have had since P8.5, for the person in
+    // between them (D78). Checked against the database rather than against the
+    // team row it was opened from: a figure derived twice is two figures, which
+    // is the defect this whole file exists to catch.
+    // Faisal by name, not whichever row sorts first: the table's first row is
+    // the manager himself, whose floor is empty by definition, and a spec that
+    // checks nought against nought passes for ever without proving anything
+    // (rules/data.md).
+    const repId = await userId("faisal@technopanel.com.sa");
+    await page.goto(`/${locale}/companies?rep=${repId}`);
+
+    const floor = page.locator('[data-slot="standing"]').first();
+    await expect(floor.locator("> div")).toHaveCount(3, COLD);
+    await expect(floor.locator('[data-slot="figure-caption"]')).toHaveCount(3);
+
+    const live = `not exists (
+      select 1 from quotations later
+       where later.number = q.number and later.revision > q.revision)`;
+    const mine = `exists (
+      select 1 from companies c
+       where c.id = q.company_id and c.rep_id = $1::uuid and c.archived_at is null)`;
+
+    const [counts] = await query<{ open: number; with_customer: number; stopped: number }>(
+      `select
+         (select count(*)::int from quotations q
+           where q.status in ('requested', 'returned', 'issued') and ${live} and ${mine}) as open,
+         (select count(*)::int from quotations q
+           where q.status = 'issued' and ${live} and ${mine}) as with_customer,
+         (select count(*)::int from quotations q
+           where q.status = 'returned' and ${live} and ${mine})
+         + (select count(*)::int from dispatches d
+              join quotations q on q.id = d.quotation_id
+             where d.status = 'refused' and ${mine}) as stopped`,
+      [repId],
+    );
+    expect(counts.open, "nothing is open on the seeded floor").toBeGreaterThan(0);
+
+    const figure = (label: string) =>
+      floor.locator("> div").filter({ hasText: label }).locator("dd").first();
+    await expect(figure(t("team.openQuotations"))).toHaveText(String(counts.open));
+    await expect(figure(t("team.sentBackOrRefused"))).toHaveText(String(counts.stopped));
+
+    // And the caption is the part of the open figure nobody here can move by
+    // working harder: the ones the customer is holding (D59).
+    await expect(
+      floor
+        .locator("> div")
+        .filter({ hasText: t("team.openQuotations") })
+        .locator('[data-slot="figure-caption"]'),
+    ).toHaveText(t("team.openWithCustomer", { count: counts.with_customer }));
   });
 });
 
@@ -285,4 +338,47 @@ test("a customer nobody has a next step for is on a band at last", async ({ page
     const rows = page.getByRole("table").first().getByRole("row");
     await expect(rows).toHaveCount(quiet.length + 1, COLD);
   });
+});
+
+test("a rep's floor and his day cannot disagree about what is waiting", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  // Two screens, one list. The strip on his floor counts the rows his day
+  // renders — sent back and refused on one figure, the ones with the customer on
+  // the caption beside the open ones — so the manager reading "2 stopped" and the
+  // rep reading two rows are reading the same two (rules/data.md, D78).
+  await login(page, locale, "faisal");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/day`), COLD);
+
+  const waiting = page
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: t("day.waitingOnYou") }) });
+  await expect(waiting.getByRole("listitem").first()).toBeVisible(COLD);
+  const rows = await waiting.getByRole("listitem").count();
+  const withCustomer = await waiting
+    .getByRole("listitem")
+    .filter({ hasText: t("day.withCustomer") })
+    .count();
+
+  await page.goto(`/${locale}/companies`);
+  const floor = page.locator('[data-slot="standing"]').first();
+  await expect(floor).toBeVisible(COLD);
+
+  await expect(
+    floor
+      .locator("> div")
+      .filter({ hasText: t("team.sentBackOrRefused") })
+      .locator("dd")
+      .first(),
+  ).toHaveText(String(rows - withCustomer));
+  await expect(
+    floor
+      .locator("> div")
+      .filter({ hasText: t("team.openQuotations") })
+      .locator('[data-slot="figure-caption"]'),
+  ).toHaveText(t("team.openWithCustomer", { count: withCustomer }));
 });

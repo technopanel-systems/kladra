@@ -8,16 +8,19 @@ import { ListSearch } from "@/components/companies/list-search";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
+import { PersonStrip } from "@/components/team/person-strip";
 import { requireUser, seesAll } from "@/lib/authz";
-import { ownsCompanies } from "@/lib/floor";
+import { ownsCompanies, sells } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
 import { todayRiyadh } from "@/lib/dates";
 import { followUpCounts, followUpCountsForRep, parseFollowUpFilter } from "@/lib/followups";
+import { personStanding } from "@/lib/standing";
 import { repMonth } from "@/lib/team";
 import { db } from "@/db";
 import { personName } from "@/lib/people";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import type { Role } from "@/lib/types";
 
 /**
  * The rep's home (SPEC §3): the follow-up strip first, because it is the
@@ -68,18 +71,30 @@ export default async function CompaniesPage({
    */
   const mayAdd = ownsCompanies(user.role);
 
-  const [t, rows, counts, viewedName, month] = await Promise.all([
+  const [t, rows, counts, viewed, month] = await Promise.all([
     getTranslations(),
     listCompanies({ user, q: q || undefined, filter, repId: repId ?? undefined, locale }),
     // The strip counts what the list shows: drilling into one rep's floor and
     // reading the whole team's overdue count above it would be two answers to
     // one question (rules/data.md).
     repId ? followUpCountsForRep(repId) : followUpCounts(user),
-    repId ? repName(repId) : Promise.resolve(null),
+    repId ? viewedPerson(repId) : Promise.resolve(null),
     // The month card, for whoever's floor this is. A manager reading his own
     // screen has no personal target and no card (§3); he has the team screen.
     viewing ? repMonth(viewing) : Promise.resolve(null),
   ]);
+
+  const viewedName = viewed?.name ?? null;
+
+  /*
+   * Whose floor this is, and whether that person quotes. Marketing owns
+   * companies and raises nothing, so two of the strip's three figures would be
+   * nought on every screen for ever — the same sentence that takes the month
+   * card off its day (D44). Its follow-up strip below is its own standing.
+   */
+  const viewedRole: Role | null = repId ? (viewed?.role ?? null) : user.role;
+  const standing =
+    viewing && viewedRole && sells(viewedRole) ? await personStanding(viewing) : null;
 
   // The table shows words, so it is given words: the picked city or the free
   // text, and the main contact already resolved by the query.
@@ -122,6 +137,11 @@ export default async function CompaniesPage({
           pace={month.pace}
         />
       ) : null}
+
+      {/* How this floor is standing, between the month above it and the calls
+          due below it (D78). The month says what has moved; this says what is
+          still in play and what has stopped on the way. */}
+      {standing ? <PersonStrip standing={standing} /> : null}
 
       <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} />
 
@@ -207,12 +227,18 @@ function Panel({ sentence, action, href }: { sentence: string; action: string; h
   );
 }
 
-/** The name behind `?rep=` — a heading says who, never an id (DESIGN §2). */
-async function repName(repId: string): Promise<string | null> {
+/**
+ * Who is behind `?rep=` — a heading says who, never an id (DESIGN §2).
+ *
+ * The role comes back with the name because the standing strip depends on it,
+ * and a second query for one column of the row already fetched is how a screen
+ * gets slow one line at a time.
+ */
+async function viewedPerson(repId: string): Promise<{ name: string; role: Role } | null> {
   const [row] = await db
-    .select({ name: personName(await getLocale()) })
+    .select({ name: personName(await getLocale()), role: users.role })
     .from(users)
     .where(eq(users.id, repId))
     .limit(1);
-  return row?.name ?? null;
+  return row ? { name: row.name, role: row.role as Role } : null;
 }
