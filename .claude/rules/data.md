@@ -183,3 +183,14 @@ A client component may `import type` anything. Importing a VALUE from a module i
 the browser bundle and the build fails naming the Pages Router. Put the shared pure
 helper and its type in their own file (`src/lib/picker-option.ts` is the pattern).
 
+## A write holds its row before it decides
+Under READ COMMITTED a SELECT sees the world as it was when it started, and two
+transactions that each SELECT "still waiting" and then UPDATE by id both succeed. That
+was every transition in the quotation and dispatch chain, and the dispatch quantity
+check, until P11A (D85). Inside a transaction that moves a record, the first statement
+is `SELECT … FOR UPDATE` on that record — `holdQuotation(tx, id)` / `holdDispatch(tx, id)`
+in `src/lib/hold.ts` return the status as it is NOW and hold the row until commit — and
+the expected-state check comes after it. A dispatch request holds the QUOTATION row, so
+the quantity sum it reads is the one the previous request wrote. A comment that says
+"the transaction makes this impossible" is not a lock; `tests/two-hands.spec.ts` presses
+Save in two tabs at once and reads the table afterwards.

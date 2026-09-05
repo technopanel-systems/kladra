@@ -292,6 +292,17 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   Gzip hides most of it on the wire — the two-hundred-row customer list is 67 KB compressed —
   which is why the measure that matters is the server's render time and the browser's
   hydration, not the raw byte count.
+- **A write holds its row, then decides.** The first thing the stranger read found (P11A, D85):
+  every transition in the quotation and dispatch chain checked "still waiting?" before its
+  transaction and wrote by id alone, and the dispatch quantity check was a plain SELECT whose
+  comment promised what READ COMMITTED does not give. Two hands on one row is not a rare
+  case in a fourteen-person office — it is the coordinator and a rep with the same drawer
+  open, or one person with two tabs. The rule: a transaction that moves a record begins with
+  `SELECT … FOR UPDATE` on that record (`holdQuotation`, `holdDispatch` in `src/lib/hold.ts`),
+  asks the state inside the hold, and returns the sentence the app already has for that state
+  when somebody else got there first. A check at the door is not a lock on the door; write
+  the hold first and the check after it, and never claim in a comment what the isolation
+  level does not do.
 
 ## §4 Not built until asked
 

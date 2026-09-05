@@ -27,6 +27,7 @@ import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { clearNotifications, createNotification } from "@/lib/notify";
+import { holdQuotation } from "@/lib/hold";
 import { quotationLabel } from "@/lib/labels";
 import { quotationEvent } from "@/lib/quotation-events";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
@@ -321,7 +322,11 @@ export async function updateQuotationAction(
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
     const notes = field(formData, "notes") ?? null;
 
-    await db.transaction(async (tx) => {
+    const held = await db.transaction(async (tx) => {
+      // Held for the rest of the transaction; issued meanwhile is not ours to edit (D85).
+      const status = await holdQuotation(tx, quotation.id);
+      if (status !== "requested" && status !== "returned") return false;
+
       await tx.delete(quotationItems).where(eq(quotationItems.quotationId, quotation.id));
       await insertItems(tx, quotation.id, items);
       // The reason dies with the state it explained. It was left on the row, so
@@ -369,7 +374,9 @@ export async function updateQuotationAction(
         number: quotation.label,
         status: "requested",
       });
+      return true;
     });
+    if (!held) return { ok: false, error: tq("alreadyIssued") };
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
@@ -406,7 +413,11 @@ export async function issueQuotationAction(
     if (!quotation) return { ok: false, error: tq("notFound") };
     if (quotation.status !== "requested") return { ok: false, error: tq("notWaiting") };
 
-    await db.transaction(async (tx) => {
+    const held = await db.transaction(async (tx) => {
+      // Held, and still waiting: a second tab that issued it a moment ago wins (D85).
+      const status = await holdQuotation(tx, quotation.id);
+      if (status !== "requested") return false;
+
       await tx
         .update(quotations)
         .set({ status: "issued", smacNumber: parsed.data.smacNumber, issuedAt: new Date() })
@@ -438,7 +449,9 @@ export async function issueQuotationAction(
         await liveAudienceFor(quotation.companyRepId, actor.id, ["coordinator"]),
         { type: "quotation", id: quotation.id, number: quotation.label, status: "issued" },
       );
+      return true;
     });
+    if (!held) return { ok: false, error: tq("notWaiting") };
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
@@ -476,7 +489,11 @@ export async function sendBackQuotationAction(
     if (!quotation) return { ok: false, error: tq("notFound") };
     if (quotation.status !== "requested") return { ok: false, error: tq("notWaiting") };
 
-    await db.transaction(async (tx) => {
+    const held = await db.transaction(async (tx) => {
+      // Held, and still waiting (D85).
+      const status = await holdQuotation(tx, quotation.id);
+      if (status !== "requested") return false;
+
       await tx
         .update(quotations)
         .set({ status: "returned", returnReason: parsed.data.reason })
@@ -509,7 +526,9 @@ export async function sendBackQuotationAction(
         await liveAudienceFor(quotation.companyRepId, actor.id, ["coordinator"]),
         { type: "quotation", id: quotation.id, number: quotation.label, status: "returned" },
       );
+      return true;
     });
+    if (!held) return { ok: false, error: tq("notWaiting") };
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
@@ -555,7 +574,11 @@ export async function decideQuotationAction(
     if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
     if (quotation.status !== "issued") return { ok: false, error: tq("notIssued") };
 
-    await db.transaction(async (tx) => {
+    const held = await db.transaction(async (tx) => {
+      // Held, and still with the customer: an answer already recorded stands (D85).
+      const status = await holdQuotation(tx, quotation.id);
+      if (status !== "issued") return false;
+
       await tx
         .update(quotations)
         .set({ status: decision, decisionReason: reason ?? null, decidedAt: new Date() })
@@ -591,7 +614,9 @@ export async function decideQuotationAction(
         number: quotation.label,
         status: decision,
       });
+      return true;
     });
+    if (!held) return { ok: false, error: tq("notIssued") };
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
@@ -627,6 +652,9 @@ export async function reviseQuotationAction(
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
 
     const created = await db.transaction(async (tx) => {
+      // Held: two revisions raised at once take consecutive numbers rather
+      // than colliding on the unique index and crashing the second (D85).
+      await holdQuotation(tx, quotation.id);
       // The newest revision of this number decides the next one, not the row
       // this was raised from: two revisions raised at once would otherwise
       // collide on the (number, revision) key.
@@ -716,7 +744,11 @@ export async function cancelQuotationAction(
       return { ok: false, error: tq("alreadyIssued") };
     }
 
-    await db.transaction(async (tx) => {
+    const held = await db.transaction(async (tx) => {
+      // Held, and still his to withdraw: issued meanwhile is the coordinator's work (D85).
+      const status = await holdQuotation(tx, quotation.id);
+      if (status !== "requested" && status !== "returned") return false;
+
       // Same rule as the edit above: he took it back, so her reason for sending
       // it back is not the reason it is closed, and it does not survive (D72).
       await tx
@@ -759,7 +791,9 @@ export async function cancelQuotationAction(
         number: quotation.label,
         status: "cancelled",
       });
+      return true;
     });
+    if (!held) return { ok: false, error: tq("notWaiting") };
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };

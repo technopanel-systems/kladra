@@ -41,6 +41,7 @@ import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import { holdDispatch, holdQuotation, isLiveRevision } from "@/lib/hold";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { clearNotifications, createNotification } from "@/lib/notify";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
@@ -311,6 +312,12 @@ export async function requestDispatchAction(
     if (asked.length === 0) return { ok: false, error: td("needsItems") };
 
     const outcome = await db.transaction(async (tx) => {
+      // The quotation row is held for the rest of the transaction, so two
+      // requests against it run one after the other and the second reads the
+      // lines the first wrote (D85). A revision raised meanwhile holds the
+      // same row, which is why "still live" is asked after the hold.
+      await holdQuotation(tx, quotation.id);
+      if (!(await isLiveRevision(tx, quotation.id))) return { failure: "superseded" } as const;
       // Checked before anything is written, so a refusal is a sentence rather
       // than a rolled-back transaction wearing "something went wrong".
       const check = await checkQuantities(tx, quotation.id, asked, null);
@@ -361,7 +368,12 @@ export async function requestDispatchAction(
     if ("failure" in outcome) {
       return {
         ok: false,
-        error: outcome.failure === "tooMuch" ? td("tooMuch") : td("notOnQuotation"),
+        error:
+          outcome.failure === "tooMuch"
+            ? td("tooMuch")
+            : outcome.failure === "superseded"
+              ? td("supersededQuotation")
+              : td("notOnQuotation"),
       };
     }
 
@@ -413,6 +425,10 @@ export async function updateDispatchAction(
     if (asked.length === 0) return { ok: false, error: td("needsItems") };
 
     const failure = await db.transaction(async (tx) => {
+      // Held: the dispatch must still be waiting, and the lines of the
+      // quotation are read after the hold, as for a new request (D85).
+      if ((await holdDispatch(tx, dispatch.id)) !== "submitted") return "answered";
+      await holdQuotation(tx, dispatch.quotationId);
       const check = await checkQuantities(tx, dispatch.quotationId, asked, dispatch.id);
       if (check !== "ok") return check;
       await replaceItems(tx, dispatch.id, asked);
@@ -443,6 +459,7 @@ export async function updateDispatchAction(
       return null;
     });
 
+    if (failure === "answered") return { ok: false, error: td("notWaiting") };
     if (failure === "tooMuch") return { ok: false, error: td("tooMuch") };
     if (failure === "notOnQuotation") return { ok: false, error: td("notOnQuotation") };
 
@@ -483,7 +500,13 @@ export async function approveDispatchAction(
     if (!dispatch) return { ok: false, error: td("notFound") };
     if (dispatch.status !== "submitted") return { ok: false, error: td("notWaiting") };
 
-    await db.transaction(async (tx) => {
+    const outcome = await db.transaction(async (tx) => {
+      // Held, and still waiting (D85). And still against the live revision:
+      // D36 was asked when the dispatch was raised and never again, so a
+      // quotation revised while it sat in the queue could be approved on a
+      // price the customer no longer holds.
+      if ((await holdDispatch(tx, dispatch.id)) !== "submitted") return "answered" as const;
+      if (!(await isLiveRevision(tx, dispatch.quotationId))) return "superseded" as const;
       await tx
         .update(dispatches)
         .set({
@@ -520,7 +543,10 @@ export async function approveDispatchAction(
         await liveAudienceFor(dispatch.companyRepId, actor.id, ["coordinator", "manager"]),
         { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "approved" },
       );
+      return "ok" as const;
     });
+    if (outcome === "answered") return { ok: false, error: td("notWaiting") };
+    if (outcome === "superseded") return { ok: false, error: td("supersededQuotation") };
 
     revalidateChain();
     return { ok: true, data: { dispatchId: dispatch.id } };
@@ -560,7 +586,9 @@ export async function refuseDispatchAction(
     if (!dispatch) return { ok: false, error: td("notFound") };
     if (dispatch.status !== "submitted") return { ok: false, error: td("notWaiting") };
 
-    await db.transaction(async (tx) => {
+    const held = await db.transaction(async (tx) => {
+      // Held, and still waiting (D85).
+      if ((await holdDispatch(tx, dispatch.id)) !== "submitted") return false;
       await tx
         .update(dispatches)
         .set({ status: "refused", refuseReason: parsed.data.reason })
@@ -593,7 +621,9 @@ export async function refuseDispatchAction(
         await liveAudienceFor(dispatch.companyRepId, actor.id, ["coordinator"]),
         { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "refused" },
       );
+      return true;
     });
+    if (!held) return { ok: false, error: td("notWaiting") };
 
     revalidateChain();
     return { ok: true, data: { dispatchId: dispatch.id } };

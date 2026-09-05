@@ -60,7 +60,8 @@
       - [ ] A Read it as a stranger, build nothing yet: schema, actions, screens, seed,
             tests, a full day for each of the five people; a ranked findings list in §5
             with the cause of each, not the symptom; then fixed worst first in slices
-            — the list is written (§5, sixty-seven entries, unverified); the fixing has begun
+            — the list is written (§5, sixty-seven entries, unverified); fixed so far:
+            1, 2, 6, 57 (a write holds its row, D85)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -672,6 +673,20 @@ held under the list screen's, so a person following "and 30 more" never lands on
 rows than he left (D80); the band and the group are not ordered against each other, because
 they summarise different screens for different people.
 
+**Two hands on one row** — `tests/two-hands.spec.ts`
+Rawan issues a request in one tab and again in a second tab that still shows it waiting:
+the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
+last panels of a quotation from two tabs at the same instant: one dispatch exists
+afterwards and no line is oversold. He raises a dispatch, revises the quotation under it,
+and Rawan's approval is refused with the sentence for a superseded one (D85).
+The tabs have the live channel cut off for the test's duration: a coordinator watches every
+quotation, so the loser's own refusal and the winner's news would otherwise land in one paint.
+The third test refused to pass until it did — the live-revision check had lost its table
+qualifier (rules/data.md) and never refused anything. And each test takes back what it wrote before the
+next spec runs — the issued request goes back to waiting, the dispatch and the revision are
+removed — because both locale projects share one seeded floor and the Arabic dispatch chain
+expects it as the seed left it.
+
 **The waiting list at volume** — `tests/waiting-cap.spec.ts`
 The one cap the seeded floor can be pushed past from a test: thirty-one quotations are sent
 back to Faisal, the oldest a year ago, and his day is read. Twenty-five cards, the true
@@ -765,12 +780,12 @@ entry says that too. Fixed items are ticked and dated in place; the list is not 
 Rank is by consequence to the people: wrong metres or money, silent loss, a screen that
 lies, a write that can corrupt, then a screen that confuses, then hygiene.
 
-- [ ] 1 **Two dispatches can spend the same panels.** `src/actions/dispatches.ts:173-212`
+- [x] 1 **Two dispatches can spend the same panels.** Verified and fixed in P11A-1 (D85). `src/actions/dispatches.ts:173-212`
   `checkQuantities` is a plain SELECT under READ COMMITTED with no row lock; two Saves at once
   both pass and both commit. Cause: the check is at the door and the door is not locked. Fix:
   lock the quotation row for the transaction, and a test that races two requests. Two readers
   cited the code; a third called the same function "correctly re-verified" — verify first.
-- [ ] 2 **A dispatch already waiting is never re-checked against a later revision.**
+- [x] 2 **A dispatch already waiting is never re-checked against a later revision.** Verified; approval refuses a superseded one now (P11A-1, D85); the queue badge waits for 11E.
   `src/actions/dispatches.ts:461-528`. D36's rule runs only when a dispatch is raised; Rawan
   can approve one against a price the customer no longer holds. Fix: re-check the live revision
   at approval and say so in the queue. Reader cites code.
@@ -788,7 +803,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   461-528`; contrast the phone-duplicate handling in `src/actions/contacts.ts:27-31`. The one
   value the spec itself calls error-prone has no named error and no way out of a typo. Fix: a
   named 23505 check that says which record holds the number, and a correction path. Two readers.
-- [ ] 6 **Six status transitions have no compare-and-swap.** `src/actions/quotations.ts:409-413,
+- [x] 6 **Six status transitions have no compare-and-swap.** Verified — seven, with withdraw — and every one holds its row now (P11A-1, D85). `src/actions/quotations.ts:409-413,
   479-484, 558-562`, `src/actions/dispatches.ts:486-495, 563-567`; contrast `companies.ts:
   460-466` which guards its UPDATE with the expected prior state. A second tab overwrites a
   decision silently. Fix: `where status = expected`, check the returned count, say "somebody
@@ -906,7 +921,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   ts:407-448` vs `505-509`. Unreachable through the app today. (11C.)
 - [ ] 56 **A target's month is normalised in Zod only, never in the database.** `admin.ts:
   297-300`, `schema.ts:516-542`. (11C.)
-- [ ] 57 **Two revisions at once collide on the unique index and crash generically.**
+- [x] 57 **Two revisions at once collide on the unique index and crash generically.** Verified; the parent row is held, so the second takes the next number (P11A-1, D85).
   `quotations.ts:629-651`. Fix: name the collision. Reader cites code.
 - [ ] 58 **`unused-messages` exempts all of `common.*` off one dynamic call**, hiding a dead
   and wrong key. `unused-messages.mts:28-46`. Reader cites code.
