@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
-import { test, expect, type Translate } from "./helpers/i18n";
+import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 
 /**
  * P5 — the dispatch chain, end to end (WORKFLOW §3, Rawan-2).
@@ -22,7 +22,21 @@ import { test, expect, type Translate } from "./helpers/i18n";
 
 /** Enough of the first line to leave some behind, so "left to send" moves. */
 const AT_MOST = 30;
-const SMAC_NUMBER = "8810";
+
+/**
+ * SMAC's number for the dispatch, and it carries the locale.
+ *
+ * Both locale projects run against ONE seeded database (playwright.config.ts),
+ * and from P9 the same SMAC number cannot be typed twice — it is the only link
+ * to the system that holds the money, so a unique index refuses the second
+ * (D53). A fixed fixture here meant the English run typed it first and the
+ * Arabic run was refused by Postgres, three assertions later and nowhere near
+ * the cause. This is the same rule the company names in tests/rep.spec.ts
+ * already follow.
+ */
+function smacNumber(locale: Locale): string {
+  return locale === "en" ? "8810" : "8811";
+}
 
 /** A number as the screen shows it, read back. Thousands separators go. */
 async function figure(scope: Locator, slot: string): Promise<number> {
@@ -222,7 +236,7 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
 
     await sheet.getByRole("button", { name: t("dispatches.approve") }).click();
     const ask = page.getByRole("dialog", { name: t("dispatches.approveTitle", { label }) });
-    await ask.getByLabel(t("common.smacDispatchNumber")).fill(SMAC_NUMBER);
+    await ask.getByLabel(t("common.smacDispatchNumber")).fill(smacNumber(locale));
     await ask.getByRole("button", { name: t("dispatches.approve") }).click();
 
     await expect(page.getByText(t("dispatches.approved", { label }))).toBeVisible(COLD);
@@ -233,7 +247,7 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     await page.goto(`/${locale}/notifications`);
 
     const notice = page.getByText(
-      t("notifications.dispatchApproved", { label, smacNumber: SMAC_NUMBER }),
+      t("notifications.dispatchApproved", { label, smacNumber: smacNumber(locale) }),
     );
     await expect(notice).toBeVisible(COLD);
     await notice.click();
@@ -241,7 +255,7 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
 
     const sheet = sheetFor(page, label);
     await expect(sheet.getByText(t("dispatches.statusApproved"), { exact: true })).toBeVisible();
-    await expect(sheet.getByText(SMAC_NUMBER, { exact: true })).toBeVisible();
+    await expect(sheet.getByText(smacNumber(locale), { exact: true })).toBeVisible();
   });
 
   await test.step("5 · approval is what counts toward the month (S41, S43)", async () => {

@@ -6,6 +6,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   date,
   index,
   integer,
@@ -221,6 +222,9 @@ export const companies = pgTable(
     index("companies_name_idx").on(t.name),
     index("companies_follow_up_idx").on(t.nextFollowUp),
     index("companies_updated_idx").on(t.updatedAt),
+    // Saudi picks a city, everywhere else types one (S3). Both or neither is a
+    // company with no readable address, and the form is not the only way in.
+    check("companies_city_check", sql`num_nonnulls(${t.cityId}, ${t.cityText}) = 1`),
   ],
 );
 
@@ -245,6 +249,11 @@ export const contacts = pgTable(
     index("contacts_company_idx").on(t.companyId),
     index("contacts_phone_idx").on(t.phoneNormalized),
     uniqueIndex("contacts_company_phone_idx").on(t.companyId, t.phoneNormalized),
+    // One main per company (D18): two would make "the number to call" depend on
+    // which row came back first.
+    uniqueIndex("contacts_one_main_idx")
+      .on(t.companyId)
+      .where(sql`${t.isMain} and ${t.archivedAt} is null`),
   ],
 );
 
@@ -267,6 +276,7 @@ export const projects = pgTable(
   (t) => [
     index("projects_company_idx").on(t.companyId),
     index("projects_follow_up_idx").on(t.nextFollowUp),
+    check("projects_expected_sqm_check", sql`${t.expectedSqm} is null or ${t.expectedSqm} >= 0`),
   ],
 );
 
@@ -292,6 +302,9 @@ export const activities = pgTable(
   (t) => [
     index("activities_company_happened_idx").on(t.companyId, t.happenedOn),
     index("activities_user_happened_idx").on(t.userId, t.happenedOn),
+    // The whole team's day, read by day rather than by company or by person —
+    // the daily report's own query, and the only one with no other index to use.
+    index("activities_happened_idx").on(t.happenedOn),
   ],
 );
 
@@ -303,7 +316,10 @@ export const quotations = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     number: integer("number").notNull(), // Q-{number}
     revision: integer("revision").notNull().default(1), // Q-12/2 when > 1
-    revisionOf: uuid("revision_of"), // the quotation this one copies (self-reference)
+    // The quotation this one copies. The foreign key is added in migration 0002
+    // and not declared here: Drizzle cannot express a self-reference inline
+    // without a circular type, and a bare uuid pointed at nothing in particular.
+    revisionOf: uuid("revision_of"),
     companyId: uuid("company_id")
       .notNull()
       .references(() => companies.id),
@@ -325,6 +341,24 @@ export const quotations = pgTable(
     index("quotations_company_idx").on(t.companyId),
     index("quotations_rep_status_idx").on(t.repId, t.status),
     index("quotations_status_idx").on(t.status),
+    // The SMAC number is the only link to the system that holds the money (S3).
+    // It is typed by a person and can be wrong; it cannot be the SAME wrong twice.
+    uniqueIndex("quotations_smac_number_idx").on(t.smacNumber).where(sql`${t.smacNumber} is not null`),
+    // A status and the instants that belong to it agree. An issued quotation
+    // with no issued_at is not an error anybody sees: it is one that has waited
+    // zero days for ever, on the screen that says what is stuck.
+    check(
+      "quotations_issued_check",
+      sql`(${t.issuedAt} is not null) = (${t.status} in ('issued','accepted','rejected'))`,
+    ),
+    check(
+      "quotations_decided_check",
+      sql`(${t.decidedAt} is not null) = (${t.status} in ('accepted','rejected','cancelled'))`,
+    ),
+    check(
+      "quotations_smac_check",
+      sql`(${t.smacNumber} is not null) = (${t.status} in ('issued','accepted','rejected'))`,
+    ),
   ],
 );
 
@@ -360,7 +394,16 @@ export const quotationItems = pgTable(
     ),
     ...stamps,
   },
-  (t) => [index("quotation_items_quotation_idx").on(t.quotationId)],
+  (t) => [
+    index("quotation_items_quotation_idx").on(t.quotationId),
+    // Every figure on every screen is width x length x qty x price. A zero or a
+    // minus in any of them is a wrong number nobody would question, because it
+    // would look like arithmetic.
+    check("quotation_items_qty_check", sql`${t.qty} > 0`),
+    check("quotation_items_width_check", sql`${t.width} > 0`),
+    check("quotation_items_length_check", sql`${t.length} > 0`),
+    check("quotation_items_price_check", sql`${t.pricePerSqm} >= 0`),
+  ],
 );
 
 // ---- dispatches -------------------------------------------------------------
@@ -392,6 +435,15 @@ export const dispatches = pgTable(
     index("dispatches_rep_status_idx").on(t.repId, t.status),
     index("dispatches_status_idx").on(t.status),
     index("dispatches_approved_idx").on(t.approvedAt),
+    uniqueIndex("dispatches_smac_number_idx")
+      .on(t.smacDispatchNumber)
+      .where(sql`${t.smacDispatchNumber} is not null`),
+    check("dispatches_approved_check", sql`(${t.approvedAt} is not null) = (${t.status} = 'approved')`),
+    check(
+      "dispatches_smac_check",
+      sql`(${t.smacDispatchNumber} is not null) = (${t.status} = 'approved')`,
+    ),
+    check("dispatches_refused_check", sql`(${t.refuseReason} is not null) = (${t.status} = 'refused')`),
   ],
 );
 
@@ -408,7 +460,13 @@ export const dispatchItems = pgTable(
     qty: integer("qty").notNull(),
     ...stamps,
   },
-  (t) => [index("dispatch_items_dispatch_idx").on(t.dispatchId)],
+  (t) => [
+    index("dispatch_items_dispatch_idx").on(t.dispatchId),
+    // One line of a quotation appears once on a dispatch. Twice would double the
+    // m2 it moved, in the one figure the whole month is measured by (S43).
+    uniqueIndex("dispatch_items_line_idx").on(t.dispatchId, t.quotationItemId),
+    check("dispatch_items_qty_check", sql`${t.qty} > 0`),
+  ],
 );
 
 // ---- targets ----------------------------------------------------------------
@@ -425,15 +483,22 @@ export const targets = pgTable(
     sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
     ...stamps,
   },
-  (t) => [uniqueIndex("targets_user_month_idx").on(t.userId, t.month)],
+  (t) => [
+    uniqueIndex("targets_user_month_idx").on(t.userId, t.month),
+    check("targets_sqm_check", sql`${t.sqm} >= 0`),
+  ],
 );
 
-export const companyTargets = pgTable("company_targets", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  month: date("month").notNull().unique(),
-  sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
-  ...stamps,
-});
+export const companyTargets = pgTable(
+  "company_targets",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    month: date("month").notNull().unique(),
+    sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
+    ...stamps,
+  },
+  (t) => [check("company_targets_sqm_check", sql`${t.sqm} >= 0`)],
+);
 
 // ---- notifications and audit -------------------------------------------------
 // `kind` + `params` render in the reader's language ("Q-12 issued" / "تم إصدار Q-12").
@@ -466,7 +531,13 @@ export const auditLog = pgTable(
     details: jsonb("details").$type<Record<string, unknown>>(),
     ...stamps,
   },
-  (t) => [index("audit_log_record_idx").on(t.recordType, t.recordId)],
+  (t) => [
+    index("audit_log_record_idx").on(t.recordType, t.recordId),
+    // "How many times did this come back?" is answered from here — every
+    // transition is already an audit row with who and when, so a second history
+    // table beside it would be a second answer to one question (rules/data.md).
+    index("audit_log_action_at_idx").on(t.action, t.at),
+  ],
 );
 
 // ---- relations (for db.query) ----------------------------------------------

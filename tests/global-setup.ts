@@ -66,7 +66,14 @@ function run(command: string): void {
  */
 export default async function globalSetup(): Promise<void> {
   await assertServerIsOnTheTestDatabase();
-  run("npm run db:migrate");
+  // Clear BEFORE migrate. A migration never meets residue — there is no
+  // production data (rules/migrations.md) — and the old order handed it the
+  // previous run's rows: the day a migration added a unique index on the SMAC
+  // number, it met two quotations that two acceptance runs had issued with the
+  // same typed number, and the whole suite failed in global setup with a
+  // Postgres error about an index. `db:clear` says so and stops politely when
+  // there are no tables yet, so this order works on a virgin database too.
   run("npm run db:clear");
+  run("npm run db:migrate");
   run("npm run seed:demo");
 }

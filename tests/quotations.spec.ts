@@ -304,7 +304,9 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
 
     await sheet.getByRole("button", { name: t("quotations.issue") }).click();
     const ask = page.getByRole("dialog", { name: t("quotations.issueTitle", { label }) });
-    await ask.getByLabel(t("common.smacNumber")).fill("SMAC-2026-0442");
+    // The locale is in the number: one database, two projects, and from P9 the
+    // same SMAC number cannot be typed twice (D53).
+    await ask.getByLabel(t("common.smacNumber")).fill(`SMAC-2026-0442-${locale.toUpperCase()}`);
     await ask.getByRole("button", { name: t("quotations.issue") }).click();
 
     await expect(page.getByText(t("quotations.issued", { label }))).toBeVisible(COLD);

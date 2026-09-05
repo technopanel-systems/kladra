@@ -24,6 +24,13 @@
       - [x] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
       - [x] P8.8 View as: the admin checks the app as any role or any person, marked
       - [x] P8.9 Roles beyond the four, if the business needs them — propose, record, build
+- [ ] P9 Think, then deepen — Jerom's second pass after using it (adds to SPEC §3, replaces nothing)
+      - [x] P9.1 Five days walked end to end, judged against the sheet, ranked list written here (9A)
+      - [x] P9.2 The schema read as a critic and fixed while the data is still fake (9D)
+      - [ ] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
+      - [ ] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
+      - [ ] P9.5 The login screen, and the identity audited as a whole (9E)
+      - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
@@ -140,6 +147,102 @@ Dead code swept: `companyOwner`, `formatInstant`, `isSaudi`, `defaultLocation`, 
 `ROLES`. `defaultLocation` was a second definition of a figure `src/actions/forms.ts` already
 owned — the exact drift trap. `src/lib/money.ts` and `src/lib/workdays.ts` keep their unwired
 arithmetic: it is P4's and P6's, and rewriting it a box later is churn, not a fix.
+
+## §4 Five days, walked (P9.1)
+
+Written before any P9 code. Every claim below was checked against the running app or
+the database, not remembered. Counts come from the seeded floor, which is FACET's
+shape at a smaller size.
+
+**Faisal, a rep.** Opens on his day. The month, then what has come back to him and is
+stopped, then who is owed a call with the phone number on the row. This is the part
+that already beats the sheet: the sheet never ordered anything or aged anything. Then
+the day breaks. He presses WhatsApp, has the conversation, comes back — and to write
+one sentence about it he presses the row, waits for the companies screen, presses Log,
+and types. Two of those five steps are navigation. If the customer wants a price he
+opens the project and types a quotation line: colour, supplier, fire rating, class,
+thickness, quantity, width, length, price. Nine fields, and this business sells the
+same handful of specifications over and over, to the same customers. Nothing offers him
+the last one. If he logs against the wrong company he cannot fix it — there is one
+activity action, `log`, and no edit and no delete, so the correction is a second entry
+that every count afterwards believes. At the end of the day he writes nothing at all,
+because there is nowhere to write it. And two thirds of his floor is dark: **eight of
+his twelve companies have been contacted once and carry no next step**, which puts them
+on no band of his day, in no stuck list, and in front of nobody.
+
+**Marketing.** The same day without the chain: calls, logs, follow-ups, and a handover
+when a lead is worth a rep's time. Its day is thin and honest. The one thing it cannot
+do from the screen it lives on is add a company, which is the thing it does most.
+
+**Rawan, the coordinator.** Opens on her queue with her four figures, including the one
+nobody else has — how many she has answered today. She issues in SMAC and types the
+number back. Two things are missing at the point of action. The row does not say how
+long that request has waited; only the strip at the top names the oldest, and she is
+the person who can fix it. And **nothing stops her typing the same SMAC number twice**
+— not the database, which has no unique index on it, and not the action, which never
+looks. That number is the only link between Kladra and the system that holds the money.
+
+**Abdulrahman, the manager.** Opens on the team: the company month, a row per person
+with target, achieved, pace and pipeline, then what is stuck. This is the screen that
+made the sheet redundant for him. What he cannot do is read a **day** — the screen only
+knows months — so "what happened yesterday" is still a WhatsApp question. He cannot see
+last month beside this one. He cannot see where quotations die, because the history is
+not kept: a quotation carries only the instants it was created, issued and decided, so
+how many times it was sent back, when, and by whom is gone, and the return reason is
+never cleared once the rep has fixed it. And a rep on leave still shows red overdue
+follow-ups on his screen; the pace arithmetic already knows about leave, the rest of the
+screen does not.
+
+**Jerom, the admin.** The manager's screen plus the admin menu, and viewing as anybody.
+Nothing on it tells him whether the app is being used. Adoption is what kills a CRM, and
+the one number that would say so — who has not opened it this week — is not there.
+
+### The ranked list
+
+Ordered by minutes saved per person per day, times how often the day contains it.
+
+1. **The daily report.** Nothing replaces the one line a day, which is the single
+   reason the sheet is still open. There is not even a query for "what did this person
+   do today": activities are readable by company and by project and by nothing else.
+2. **Companies with no next step are invisible.** Contacted once, no follow-up, on no
+   band of anybody's screen. Eight of Faisal's twelve. This is the leak the sheet also
+   had, and the one a CRM has no excuse for.
+3. **A log entry cannot be corrected.** One action, no edit, no delete. A visit against
+   the wrong company is wrong for ever and every figure built on it inherits the error.
+4. **Logging costs a page load.** The day screen lists who to call and then sends him
+   somewhere else to say what happened.
+5. **A quotation's history is not kept.** Sent back twice or five times reads the same,
+   the return reason outlives the fix, and "where do quotations die" cannot be answered
+   at all.
+6. **The same SMAC number can be typed twice**, on two quotations or two dispatches,
+   with nothing objecting anywhere.
+7. **Every quotation line is typed from nothing.** Nine fields, repeat customers,
+   repeat specifications, and no way to start from the last one.
+8. **The queue row does not say how long it has waited.**
+9. **Leave is invisible everywhere except the pace arithmetic.** Nobody covers a floor.
+10. **A revision does not say what changed**, so the coordinator re-issues blind.
+11. **No month before this one, anywhere.**
+12. **Nothing says whether the team is using the app.**
+
+Half-built rather than missing: the standing strips answer "how is this going" for a
+company and a project but for no person; notifications are created and never expire.
+
+### Not building
+
+Each of these was considered and dropped because it shortens nobody's day here.
+
+- **Lead scores and win probabilities.** Fourteen people who know their customers by
+  name do not need a machine's guess, and S46 already forbids one number that mixes
+  target with activity.
+- **A forecast.** Pipeline plus the rep's own judgement is what a manager acts on. A
+  forecast is a number with nobody's name on it.
+- **Email integration.** This team sells by visit and by WhatsApp. There is no inbox to
+  integrate.
+- **Territory maps.** Three reps, three regions, and everybody knows which is whose.
+- **A store-built mobile app.** The PWA installs and works; a store build is months of
+  work for the same screens.
+- **More activity types.** Four channels is the right number. A longer dropdown is the
+  failure mode the daily report has to avoid, not one to copy.
 
 ## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
 
@@ -273,6 +376,16 @@ The mapping from a status to one of the five tones is asked directly, and then t
 quotations and dispatches lists are filtered to one status at a time and every badge on
 screen is read back through `data-tone`. Two chains, one meaning: a dispatch waiting on
 Rawan is the same amber as a quotation waiting on her (DESIGN §6).
+
+**What a row may contain** — `tests/schema.spec.ts`
+The third spec that is not a walk through a screen, and it earns the exception the same way:
+a quotation line with a zero quantity does not look broken, it looks like arithmetic. Six
+attempts are made against the DATABASE with the app nowhere in the picture — a zero and a
+minus in every measurement, the same quotation line twice on one dispatch, a SMAC number
+typed onto a second quotation, a second main contact, a company given both a picked city and
+a typed one, an issued quotation stripped of its instant and of its number, and a revision
+pointing at a quotation that does not exist. Each must be refused (D52, D53). Nothing is ever
+written, so there is nothing to clean up.
 
 **Marketing** — `tests/marketing.spec.ts`
 Marketing signs in and lands on a day with no month card, sees Companies and Projects in the
