@@ -1,5 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { MonthCard } from "@/components/team/month-card";
+import { ChainCard } from "@/components/team/chain-card";
+import { MonthsCard } from "@/components/team/months-card";
 import { StuckList } from "@/components/team/stuck-list";
 import { Sqm } from "@/components/ui-ext/figures";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
@@ -13,6 +15,8 @@ import {
   teamMonth,
 } from "@/lib/team";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
+import { chainCohort } from "@/lib/chain";
+import { monthsBack } from "@/lib/months";
 
 /**
  * The manager's home (SPEC §3, D15): the company's month, everybody's month
@@ -33,7 +37,13 @@ export default async function TeamPage() {
   // nothing here for him to be told off about (S8).
   if (!seesAll(user)) redirect({ href: homeFor(user.role), locale });
 
-  const [t, month, stuck] = await Promise.all([getTranslations(), teamMonth(), stuckList()]);
+  const [t, month, stuck, months, cohort] = await Promise.all([
+    getTranslations(),
+    teamMonth(),
+    stuckList(),
+    monthsBack(null),
+    chainCohort(null),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -45,6 +55,11 @@ export default async function TeamPage() {
         achieved={month.company.achieved}
         pace={month.pace}
       />
+
+      {/* And the months behind it. "3,524 against 4,500" is a fact with nothing
+          to be measured against; the question a manager asks in the second week
+          is whether the company is going up or down (D61). */}
+      <MonthsCard months={months} />
 
       {/* What the month has already moved is above; this is what is still out
           there to move (S45), and how much of it has stopped (D14). Both are
@@ -102,6 +117,12 @@ export default async function TeamPage() {
       ) : (
         <TeamTable members={month.members} />
       )}
+
+      {/* What is stuck is above, one row at a time; this is the same chain read
+          as a population — of everything raised in a quarter, where did each one
+          end up (D62). One is a list to work through today, the other is a
+          number to think about. */}
+      <ChainCard cohort={cohort} />
 
       <StuckList stuck={stuck} />
     </div>

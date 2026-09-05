@@ -1,4 +1,5 @@
 import { login } from "./helpers/auth";
+import { query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -68,6 +69,20 @@ test("the coordinator's four figures each say what they mean", async ({ page, lo
     );
     expect(await counted, "the strip and the rows disagree about what is late").toBe(lateRows);
   });
+
+  await test.step("4 · and a late row says so in a word, not only in red", async () => {
+    // "3 working days" red and "3 working days" grey are the same sentence in
+    // the same shape. Colour may carry a state; it may never be the only thing
+    // carrying it (DESIGN §5).
+    const late = page.locator('[data-slot="waited"][data-late="true"]:visible');
+    for (const row of await late.all()) {
+      await expect(row).toContainText(t("queue.late"));
+    }
+    await expect(
+      page.locator('[data-slot="waited"]:visible').filter({ hasNotText: t("queue.late") }).first(),
+      "every row on the queue reads as late",
+    ).toBeVisible();
+  });
 });
 
 test("the manager's four figures each say which number they are", async ({ page, locale, t }) => {
@@ -111,5 +126,163 @@ test("the manager's four figures each say which number they are", async ({ page,
     await expect(
       page.getByRole("heading", { name: t("team.monthOf", { name }) }),
     ).toBeVisible(COLD);
+  });
+});
+
+test("there is a month before this one, and it says which way it went", async ({
+  page,
+  locale,
+}) => {
+  test.slow();
+
+  await login(page, locale, "abdulrahman");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+
+  const months = page.locator("[data-month]");
+
+  await test.step("1 · six of them, oldest first, this one last", async () => {
+    await expect(months).toHaveCount(6, COLD);
+
+    const order = await months.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute("data-month") ?? ""),
+    );
+    expect([...order].sort()).toEqual(order);
+  });
+
+  await test.step("2 · every one of them carries its figure as text, not as a shape", async () => {
+    // The bars are aria-hidden on purpose: there is nothing in the picture that
+    // is not in the number above it, so a reader who cannot see the shape has
+    // lost nothing (D61).
+    const figures = await page.locator('[data-slot="month-sqm"]').allInnerTexts();
+    expect(figures).toHaveLength(6);
+    for (const figure of figures) expect(figure.trim()).not.toBe("");
+  });
+
+  await test.step("3 · no label is cut, at the width where labels get cut", async () => {
+    // «سبتمبر 2026» truncated from the end reads as a different year, which is
+    // the one thing an axis label may never do (D65). Measured, not eyeballed:
+    // a label whose text is wider than its box is a label being cut.
+    await page.setViewportSize({ width: 375, height: 900 });
+    const cut = await page
+      .locator('[data-month] [data-slot="month-label"]')
+      .evaluateAll((nodes) =>
+        nodes.filter((n) => n.scrollWidth > n.clientWidth + 1).map((n) => n.textContent ?? ""),
+      );
+    expect(cut).toEqual([]);
+
+    // And the bars still stand on one baseline, which the second line would
+    // break if it were only rendered on the columns that show a year.
+    const bottoms = await page
+      .locator("[data-month]")
+      .evaluateAll((nodes) => nodes.map((n) => Math.round(n.getBoundingClientRect().bottom)));
+    expect(new Set(bottoms).size).toBe(1);
+    await page.setViewportSize({ width: 1280, height: 900 });
+  });
+
+  await test.step("4 · and one sentence says which way the last finished month went", async () => {
+    // Against the month before it, never against this one — this one is a few
+    // days old and would read as a collapse on the third of every month.
+    const card = page.locator("[data-month]").first().locator("xpath=ancestor::section[1]");
+    await expect(card).toContainText(/%/);
+  });
+});
+
+test("where quotations go is a cohort, and every ending is named", async ({ page, locale, t }) => {
+  test.slow();
+
+  await login(page, locale, "abdulrahman");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+
+  const stages = page.locator("[data-stage]");
+  const card = stages.first().locator("xpath=ancestor::section[1]");
+
+  await test.step("1 · six endings, each with a word for it", async () => {
+    await expect(stages).toHaveCount(6, COLD);
+    for (const stage of [
+      "waiting",
+      "returned",
+      "withdrawn",
+      "withCustomer",
+      "accepted",
+      "rejected",
+    ]) {
+      await expect(
+        page.locator(`[data-stage="${stage}"]`),
+        `${stage} has no row`,
+      ).toContainText(t(`team.chain.${stage}`));
+    }
+  });
+
+  await test.step("2 · the endings add up to the number the sentence names", async () => {
+    // Every quotation is counted once, at the furthest point it reached, so the
+    // six add up to what was raised. A cohort whose parts do not sum to its
+    // whole has lost some on the way (rules/data.md).
+    const counts = await stages.evaluateAll((nodes) =>
+      nodes.map((node) => Number(node.querySelector(".num")?.textContent?.trim() ?? "0")),
+    );
+    const total = counts.reduce((sum, n) => sum + n, 0);
+    expect(total, "nothing was raised in the window").toBeGreaterThan(0);
+
+    await expect(card).toContainText(t("team.chainMeans", { raised: total, days: 90 }));
+  });
+
+  await test.step("3 · every stage of the seeded chain has something in it", async () => {
+    // A funnel where five rows are nought is a funnel nobody has seen work
+    // (rules/data.md), so the demo puts a quotation at every ending.
+    const counts = await stages.evaluateAll((nodes) =>
+      nodes.map((node) => Number(node.querySelector(".num")?.textContent?.trim() ?? "0")),
+    );
+    expect(counts.filter((n) => n > 0).length, "the seeded funnel has empty stages").toBe(6);
+  });
+});
+
+test("a customer nobody has a next step for is on a band at last", async ({ page, locale, t }) => {
+  test.slow();
+
+  // The leak the five-day walk found: contacted once, no follow-up on him or on
+  // any of his live projects, and therefore on no band of any screen. Every band
+  // this app had was keyed on a date, and these have none (D63).
+  const quiet = await query<{ id: string; name: string }>(
+    `select companies.id, companies.name
+       from companies
+       join users u on u.id = companies.rep_id
+      where u.email = 'faisal@technopanel.com.sa'
+        and companies.archived_at is null
+        and least(companies.next_follow_up, (
+          select min(p.next_follow_up) from projects p
+           where p.company_id = companies.id
+             and p.archived_at is null
+             and p.lost_at is null
+        )) is null
+        and exists (select 1 from activities where activities.company_id = companies.id)
+        and (select max(a.happened_on) from activities a where a.company_id = companies.id)
+            <= (now() at time zone 'Asia/Riyadh')::date - 14`,
+  );
+  expect(quiet.length, "the seed has nobody who went quiet").toBeGreaterThan(0);
+
+  await login(page, locale, "faisal");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/day`), COLD);
+
+  await test.step("1 · the band is on his day, with the rule written under it", async () => {
+    const heading = page.getByRole("heading", { name: new RegExp(t("common.goneQuiet")) });
+    await expect(heading).toBeVisible(COLD);
+    await expect(page.getByText(t("common.quietMeans", { days: 14 }))).toBeVisible();
+
+    for (const company of quiet) {
+      await expect(page.getByRole("link", { name: company.name }).first()).toBeVisible();
+    }
+  });
+
+  await test.step("2 · and the pill on his list opens exactly the same set", async () => {
+    await page.goto(`/${locale}/companies`);
+    await page
+      .getByRole("link", { name: t("companies.quietCount", { count: quiet.length }) })
+      .click();
+
+    await expect(page).toHaveURL(/filter=quiet/, COLD);
+    // One definition, two screens: the count on the pill is the number of rows
+    // the filter behind it returns (rules/data.md).
+    const rows = page.getByRole("table").first().getByRole("row");
+    await expect(rows).toHaveCount(quiet.length + 1, COLD);
   });
 });

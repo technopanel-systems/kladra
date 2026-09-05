@@ -32,7 +32,7 @@ import {
 import { startViewingAction } from "@/actions/view-as";
 import { useRouter } from "@/i18n/navigation";
 import type { AdminUser } from "@/lib/admin";
-import type { ActionResult, Role } from "@/lib/types";
+import { ROLES, type ActionResult } from "@/lib/types";
 
 /**
  * The people who use Kladra (SPEC S7, §3).
@@ -52,7 +52,6 @@ import type { ActionResult, Role } from "@/lib/types";
  * on screen said there was anything to scroll to.
  */
 
-const ROLES: Role[] = ["rep", "marketing", "coordinator", "manager", "admin"];
 
 export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }) {
   const t = useTranslations();

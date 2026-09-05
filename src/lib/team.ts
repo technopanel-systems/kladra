@@ -284,17 +284,30 @@ export type StuckCompany = {
   id: string;
   name: string;
   repName: string;
-  daysSinceAdded: number;
+  /**
+   * How long it has been in the state its own group names: since it was added,
+   * for one nobody has ever contacted; since the last thing logged, for one
+   * that went quiet. Not `daysSinceAdded`, which is what it was called when
+   * there was one group — and which the gone-quiet rows would have made a lie.
+   */
+  days: number;
 };
 
 export type Stuck = {
   requests: StuckRequest[];
   followUps: StuckFollowUp[];
   neverContacted: StuckCompany[];
+  /**
+   * Contacted, then dropped: no next step anywhere on the customer and nothing
+   * logged for a fortnight (D63). The other half of `neverContacted`, and the
+   * bigger half — a company nobody ever called is a lead that went nowhere, and
+   * this is a customer somebody was already talking to.
+   */
+  goneQuiet: StuckCompany[];
 };
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
-  const [waiting, followUps, never, nonWorking] = await Promise.all([
+  const [waiting, followUps, never, quiet, nonWorking] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -367,6 +380,28 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
        order by days desc
     `),
 
+    db.execute<{ id: string; name: string; rep_name: string; days: number }>(sql`
+      select companies.id::text as id,
+             companies.name as name,
+             u.name as rep_name,
+             ((now() at time zone 'Asia/Riyadh')::date
+               - (select max(a.happened_on) from activities a
+                   where a.company_id = companies.id))::int as days
+        from companies
+        join users u on u.id = companies.rep_id
+       where companies.archived_at is null
+         and least(companies.next_follow_up, (
+           select min(p.next_follow_up) from projects p
+            where p.company_id = companies.id
+              and p.archived_at is null
+              and p.lost_at is null
+         )) is null
+         and exists (select 1 from activities where activities.company_id = companies.id)
+         and (select max(a.happened_on) from activities a where a.company_id = companies.id)
+             <= (now() at time zone 'Asia/Riyadh')::date - ${NEVER_CONTACTED_DAYS}::int
+       order by days desc
+    `),
+
     listNonWorkingDays(firstOfMonth(day), day),
   ]);
 
@@ -395,11 +430,17 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
       daysOverdue: Number(row.days_overdue),
       kind: row.kind,
     })),
+    goneQuiet: quiet.rows.map((row) => ({
+      id: String(row.id),
+      name: row.name,
+      repName: row.rep_name,
+      days: Number(row.days),
+    })),
     neverContacted: never.rows.map((row) => ({
       id: row.id,
       name: row.name,
       repName: row.rep_name,
-      daysSinceAdded: Number(row.days),
+      days: Number(row.days),
     })),
   };
 }

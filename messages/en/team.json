@@ -28,5 +28,25 @@
   "stuckFollowUpsMeans": "{days, plural, one {more than # day past its date} other {more than # days past its date}}",
   "stuckNeverMeans": "{days, plural, one {added more than # day ago} other {added more than # days ago}}",
   "achievedOfTarget": "Achieved of target",
-  "monthOf": "{name} · this month"
+  "monthOf": "{name} · this month",
+  "lastMonths": "{count, plural, one {The latest month} other {The last # months}}",
+  "monthUp": "{month} was {percent}% up on {previous}",
+  "monthDown": "{month} was {percent}% down on {previous}",
+  "monthFirst": "{month} is the first month with anything in it",
+  "monthsMeans": "Approved m² per month, against that month's target.",
+  "chainMeans": "Of the {raised} raised in the last {days} days, this is where each one got to.",
+  "chainEmpty": "Nothing has been raised in the last {days} days.",
+  "chainShare": "{percent}%",
+  "chainAnswered": "{reached} of them reached a customer, and {answered} came back with an answer.",
+  "chainTitle": "Where quotations go",
+  "chain": {
+    "waiting": "Still on the coordinator's desk",
+    "returned": "Sent back and never asked again",
+    "withdrawn": "Withdrawn by the rep",
+    "withCustomer": "With the customer, no answer yet",
+    "accepted": "The customer accepted",
+    "rejected": "The customer rejected"
+  },
+  "stuckQuiet": "Gone quiet",
+  "quietDays": "{count, plural, one {no activity for # day} other {no activity for # days}}"
 }

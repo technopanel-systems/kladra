@@ -103,6 +103,13 @@ broken at least once in FACET, Kladra's predecessor.
   every threshold gets a row in `scripts/seed/demo-data.ts` that lands on the
   wrong side of it.**
 
+  The same defect, one step along: **a colour the demo never shows is a colour
+  nobody has seen work.** The company's monthly target was 4,500 m² against
+  months that ran 1,942 to 3,524, so every finished bar on the manager's
+  six-month card was the identical red — three pace bands in the code, tested,
+  and only one of them ever on a screen. A threshold needs a row on each side of
+  it; a band of three needs a row in each of the three.
+
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.
 

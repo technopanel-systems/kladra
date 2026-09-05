@@ -23,7 +23,11 @@ import {
 
 // ---- enums -----------------------------------------------------------------
 
-export const roleEnum = pgEnum("role", ["rep", "marketing", "coordinator", "manager", "admin"]);
+// Relative, not "@/lib/types": drizzle-kit reads this file outside Next and
+// does not know the alias. types.ts imports nothing, so nothing follows it in.
+import { ROLES } from "../lib/types";
+
+export const roleEnum = pgEnum("role", ROLES);
 export const nonWorkingKindEnum = pgEnum("non_working_kind", ["holiday", "leave"]);
 export const channelEnum = pgEnum("channel", ["visit", "call", "whatsapp", "other"]);
 export const quotationStatusEnum = pgEnum("quotation_status", [

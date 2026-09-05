@@ -30,6 +30,12 @@ export function WaitedFor({ waited, className }: { waited: Waited; className?: s
       className={cn("text-xs", waited.late ? TONE_TEXT.bad : "text-muted-foreground", className)}
     >
       {t("workingDays", { days: waited.days })}
+      {/* The word, not only the red. Red was the whole of "this one is late" —
+          the same sentence in the same shape either way — so a reader who
+          cannot separate red from grey, on a phone in Riyadh sun or otherwise,
+          read a stuck row as an ordinary one. Colour may carry a state; it may
+          never be the only thing carrying it (DESIGN §5). */}
+      {waited.late ? <span className="font-medium"> · {t("late")}</span> : null}
     </span>
   );
 }

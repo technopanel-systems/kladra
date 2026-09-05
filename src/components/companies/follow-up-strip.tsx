@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
  * rows under it can never mean different things. (`followups`, the fourth, is
  * the combined "everything waiting" the manager screens use.)
  */
-type Pill = Extract<FollowUpFilter, "overdue" | "today" | "never">;
+type Pill = Extract<FollowUpFilter, "overdue" | "today" | "never" | "quiet">;
 
 const PILL =
   "inline-flex h-7 items-center rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
@@ -76,7 +76,13 @@ export async function FollowUpStrip({
     );
   }
 
-  const quiet = counts.overdue === 0 && counts.today === 0 && counts.neverContacted === 0;
+  // Renamed from `quiet`, which now means something else on this screen: a
+  // customer who has gone quiet is the opposite of a day with nothing due.
+  const nothingDue =
+    counts.overdue === 0 &&
+    counts.today === 0 &&
+    counts.neverContacted === 0 &&
+    counts.goneQuiet === 0;
 
   return (
     // A named group: the pills are one set of choices about one thing, and
@@ -90,7 +96,7 @@ export async function FollowUpStrip({
         {t("common.followUps")}
       </span>
 
-      {quiet ? (
+      {nothingDue ? (
         <span className="text-xs text-faint">{t("companies.nothingDue")}</span>
       ) : (
         <>
@@ -99,10 +105,14 @@ export async function FollowUpStrip({
           {counts.neverContacted > 0
             ? pill("never", counts.neverContacted, TONE_CLASS.open)
             : null}
+          {/* Last, because nobody is expecting a call from these today — and
+              first in importance, because they are the ones that get lost
+              (D63). Hidden when there are none, like the band beside it. */}
+          {counts.goneQuiet > 0 ? pill("quiet", counts.goneQuiet, TONE_CLASS.over) : null}
         </>
       )}
 
-      {quiet && filter === null ? null : (
+      {nothingDue && filter === null ? null : (
         <Link
           href={href(null)}
           aria-current={filter === null ? "true" : undefined}

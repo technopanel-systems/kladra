@@ -34,6 +34,25 @@ export const TONE_CLASS: Record<StateTone, string> = {
   over: "bg-state-over text-state-over-fg",
 };
 
+/**
+ * The solid fill of a bar, which is not the pill background.
+ *
+ * `TONE_CLASS` is a tint behind text — nine to fourteen per cent alpha — and
+ * `--color-state-over` is `--surface-2` exactly, which is also what every bar
+ * in this app uses for its empty track. So the withdrawn bar on the chain card
+ * was painted in the colour of the track it sat in and could not be seen at
+ * all, and the six-month card had hand-written its own four `-fg` conditionals
+ * to avoid the same trap. A bar is a shape, not a pill: it takes the FOREGROUND
+ * colour of its tone, and there is now one map that says so.
+ */
+export const TONE_BAR: Record<StateTone, string> = {
+  wait: "bg-state-wait-fg",
+  open: "bg-state-open-fg",
+  good: "bg-state-good-fg",
+  bad: "bg-state-bad-fg",
+  over: "bg-state-over-fg",
+};
+
 /** Just the text colour, for a figure or a line that carries no pill. */
 export const TONE_TEXT: Record<StateTone, string> = {
   wait: "text-state-wait-fg",

@@ -21,6 +21,7 @@
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { seesAll } from "@/lib/authz";
+import type { Day } from "@/lib/dates";
 import type { SessionUser } from "@/lib/types";
 
 /** How a pending follow-up reads on a row. `null` means none is set. */
@@ -31,9 +32,15 @@ export type FollowUpState = "overdue" | "today" | "future";
  * strip's own click — everything waiting today or earlier. `never` is SPEC S51:
  * added, never contacted, old enough to nag.
  */
-export type FollowUpFilter = "overdue" | "today" | "followups" | "never";
+const FILTERS = ["overdue", "today", "followups", "never", "quiet"] as const;
 
-const FILTERS: readonly FollowUpFilter[] = ["overdue", "today", "followups", "never"] as const;
+/**
+ * Derived from the list, never written twice. The union and the runtime list
+ * were two copies for one afternoon, `quiet` reached only the union, and
+ * `?filter=quiet` parsed to undefined — so the pill opened the WHOLE list and
+ * called it the quiet ones (D64).
+ */
+export type FollowUpFilter = (typeof FILTERS)[number];
 
 /** Narrow a `?filter=` search param without trusting it. */
 export function parseFollowUpFilter(value: unknown): FollowUpFilter | undefined {
@@ -66,12 +73,37 @@ export function followUpStateSql(day: SQL): SQL<FollowUpState | null> {
 }
 
 /**
+ * The soonest pending date on the customer.
+ *
+ * It lived in src/lib/companies.ts, private, until the gone-quiet count needed
+ * it too — and "the customer has no next step" is a follow-up question, so it
+ * belongs beside the other follow-up fragments rather than being copied
+ * (rules/data.md: one definition per figure): the company's own, or the earliest
+ * of its open projects'. `least` ignores NULLs in Postgres, so a company with
+ * no date of its own still surfaces through its project, and vice versa.
+ */
+export function effectiveFollowUpSql(): SQL<Day | null> {
+  return sql`least(companies.next_follow_up, (
+    select min(p.next_follow_up)
+      from projects p
+     where p.company_id = companies.id
+       and p.archived_at is null
+       and p.lost_at is null
+  ))`;
+}
+
+/**
  * The WHERE clause for a `?filter=`, resolved in SQL so the ordering and any
  * limit apply to the rows that actually match (rules/data.md: filtering a
  * fetched page returns silently empty screens). `never` is not about a day, so
  * the caller passes the predicate it built for its own table.
  */
-export function followUpFilterSql(day: SQL, filter: FollowUpFilter, never: SQL): SQL {
+export function followUpFilterSql(
+  day: SQL,
+  filter: FollowUpFilter,
+  never: SQL,
+  quiet?: SQL,
+): SQL {
   switch (filter) {
     case "overdue":
       return sql`(${day}) < ${riyadhTodaySql()}`;
@@ -81,7 +113,40 @@ export function followUpFilterSql(day: SQL, filter: FollowUpFilter, never: SQL):
       return sql`(${day}) <= ${riyadhTodaySql()}`;
     case "never":
       return never;
+    case "quiet":
+      // Only the company list has a `quiet` predicate to give; a caller that
+      // does not is asking for a band it cannot fill, and an unfiltered list
+      // would be the worst possible answer (rules/data.md).
+      if (!quiet) throw new Error("the `quiet` filter needs its predicate");
+      return quiet;
   }
+}
+
+/**
+ * Companies that went quiet (SPEC D63, WORKFLOW §4 item 2).
+ *
+ * The leak the five-day walk found and the one a CRM has no excuse for: a
+ * customer who was contacted, has no next step on him or on any of his live
+ * projects, and therefore appears on no band of any screen. Eight of Faisal's
+ * twelve were in exactly this state, invisible, on the day it was measured.
+ *
+ * "Never contacted" already has a band, so this one is deliberately the other
+ * half: it requires at least one log entry. A company nobody has ever called and
+ * a company somebody called once and dropped are two different failures with two
+ * different next actions.
+ *
+ * The same fourteen days as `NEVER_CONTACTED_DAYS`, and for the same reason: it
+ * is the point at which silence is a habit rather than a gap in the week. One
+ * number, one meaning, and the screen says it out loud.
+ */
+export function goneQuietCompanySql(followUp: SQL): SQL {
+  return sql`(
+    (${followUp}) is null
+    and exists (select 1 from activities where activities.company_id = companies.id)
+    and (
+      select max(a.happened_on) from activities a where a.company_id = companies.id
+    ) <= ${riyadhTodaySql()} - ${NEVER_CONTACTED_DAYS}::int
+  )`;
 }
 
 /**
@@ -114,6 +179,8 @@ export type FollowUpCounts = {
   overdue: number;
   today: number;
   neverContacted: number;
+  /** Contacted, no next step, silent for a fortnight (D63). */
+  goneQuiet: number;
 };
 
 /**
@@ -144,6 +211,7 @@ async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
     overdue: number;
     due_today: number;
     never_contacted: number;
+    gone_quiet: number;
   }>(sql`
     with riyadh as (select ${riyadhTodaySql()} as d),
     due as (
@@ -168,7 +236,13 @@ async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
       (select count(*) from companies
         where companies.archived_at is null
           and ${mine}
-          and ${neverContactedCompanySql()})::int as never_contacted
+          and ${neverContactedCompanySql()})::int as never_contacted,
+      -- The same predicate the list filters by, so the pill and the rows it
+      -- opens cannot disagree about how many there are (rules/data.md).
+      (select count(*) from companies
+        where companies.archived_at is null
+          and ${mine}
+          and ${goneQuietCompanySql(effectiveFollowUpSql())})::int as gone_quiet
   `);
 
   const row = result.rows[0];
@@ -176,5 +250,6 @@ async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
     overdue: Number(row?.overdue ?? 0),
     today: Number(row?.due_today ?? 0),
     neverContacted: Number(row?.never_contacted ?? 0),
+    goneQuiet: Number(row?.gone_quiet ?? 0),
   };
 }

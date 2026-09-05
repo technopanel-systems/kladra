@@ -22,6 +22,10 @@ import { cn } from "@/lib/utils";
  * goes left, on either locale's page, with nothing to remember.
  *
  * `break-words` because it is user content and somebody will paste a URL.
+ *
+ * Nothing at all renders nothing at all: `whitespace-pre-line` would turn a note
+ * of newlines into visible empty lines, and every caller would otherwise have to
+ * remember to check.
  */
 export function Prose({
   text,
@@ -33,6 +37,8 @@ export function Prose({
   /** A hook for the specs, where one of these is the thing under test. */
   slot?: string;
 }) {
+  if (text.trim() === "") return null;
+
   return (
     <p data-slot={slot} dir="auto" className={cn("break-words whitespace-pre-line", className)}>
       {text}

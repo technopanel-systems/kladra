@@ -40,7 +40,9 @@ import {
   type FollowUpFilter,
   type FollowUpState,
   followUpFilterSql,
+  effectiveFollowUpSql,
   followUpStateSql,
+  goneQuietCompanySql,
   neverContactedCompanySql,
 } from "@/lib/followups";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
@@ -140,20 +142,6 @@ function lastActivitySql(): SQL<Day | null> {
   )`;
 }
 
-/**
- * The soonest pending date on the customer: the company's own, or the earliest
- * of its open projects'. `least` ignores NULLs in Postgres, so a company with
- * no date of its own still surfaces through its project, and vice versa.
- */
-function effectiveFollowUpSql(): SQL<Day | null> {
-  return sql`least(companies.next_follow_up, (
-    select min(p.next_follow_up)
-      from projects p
-     where p.company_id = companies.id
-       and p.archived_at is null
-       and p.lost_at is null
-  ))`;
-}
 
 /** A rep sees only his own; manager and admin see all (S8, authz.seesAll). */
 function ownedBy(user: SessionUser): SQL | undefined {
@@ -201,7 +189,14 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
   }
 
   if (filter) {
-    conditions.push(followUpFilterSql(effective, filter, neverContactedCompanySql()));
+    conditions.push(
+      followUpFilterSql(
+        effective,
+        filter,
+        neverContactedCompanySql(),
+        goneQuietCompanySql(effective),
+      ),
+    );
   }
 
   const rows = await db

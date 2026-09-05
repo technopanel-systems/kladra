@@ -28,19 +28,42 @@
       - [x] P9.1 Five days walked end to end, judged against the sheet, ranked list written here (9A)
       - [x] P9.2 The schema read as a critic and fixed while the data is still fake (9D)
       - [x] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
-      - [~] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
+      - [x] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
             - [x] a The caption slot, and the coordinator's queue: a wait is a length, not a date
             - [x] b One figure, one name, one definition — the labels audited across every screen
-            - [ ] c m² by month, so there is a month before this one
-            - [ ] d Where quotations die
-            - [ ] e Which companies went quiet
+            - [x] c m² by month, so there is a month before this one
+            - [x] d Where quotations die
+            - [x] e Which companies went quiet
       - [ ] P9.5 The login screen, and the identity audited as a whole (9E)
       - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P9.1, P9.2 and P9.3 done; P9.4 (the numbers) is next.
+**Where I stopped:** P9.1–P9.4 done. 9C ended with four causes fixed rather than four
+figures added: a URL filter that parsed to nothing because the vocabulary lived in two
+lists (D64), a chart label truncated into a wrong year in Arabic (D65), a demo whose
+company target hid two of the three pace colours (D66), and the gone-quiet band itself
+(D63). P9.5 — the login screen and the identity as a whole — is next, and it starts
+with one thing to confirm: during the 9C screenshot pass a signed-in manager was thrown
+back to /en/login mid-session, once, with no action of his own. Sessions last thirty days,
+so this was almost certainly `seed:demo` truncating the `sessions` table under a live
+browser — which is correct behaviour and worth SAYING somewhere, because it looks exactly
+like a session bug. P9.5 confirms it and writes it down.
+
+**Carried out of 9C, not dropped:** two findings from the interface-guidelines pass that
+belong to later boxes rather than to this one. Every list in the app still renders every
+row it is given — `listCompanies`, `stuckList` and the four call-list bands have no LIMIT
+— which is item 7 on the 9A list (caps for ten thousand rows) and stays there. And no
+English message in the app uses a typographic apostrophe; "coordinator's" is a straight
+quote in all of them. That is a whole-identity question about type, so it goes into P9.5
+with the login screen rather than being half-done here.
+
+A third, from the Arabic review: every person's name renders in Latin on the Arabic
+screens — Faisal Al-Harbi, Saad Al-Qahtani, and an account literally called Marketing —
+because `users.name` is one column. On an Arabic screen read by Arabic speakers about
+Arabic colleagues that is visibly wrong, and it is a schema and SPEC question (does a
+person have one name or two?) rather than a translation one. It goes to Jerom with P9.5.
 
 The five days were walked before any P9 code and the ranked list is §4 below. Its first item was
 the daily report, and it is built: the system assembles the day — log entries, companies, quotation
@@ -471,7 +494,12 @@ for the phone and a table for the desk, and counting DOM nodes counts each row t
 Then Abdulrahman's four, for the collision the inventory found: the strip's follow-up figure and the
 table's column beneath it are two different numbers, and the spec holds their names apart and holds
 the strip to saying its own threshold. Drilling into a rep lands on a card that says whose month and
-when (D60).
+when (D60). Then the months card: six of them, oldest first, each carrying its figure as TEXT — the
+bars are aria-hidden because nothing is in the picture that is not in the number above it — and one
+sentence saying which way the last finished month went (D61). Then the chain cohort: six endings,
+each named, and the six adding up to the number the sentence above them claims was raised — a cohort
+whose parts do not sum to its whole has lost some on the way. Every ending has something in it on
+the seeded data, which is the rule about figures the demo always shows as zero (D62).
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

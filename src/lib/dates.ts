@@ -96,9 +96,13 @@ export function formatDay(day: Day | null | undefined, locale: string = "en"): s
   return `${dd}/${mon}/${y}`;
 }
 
+/** "Aug" / "أغسطس" — the month alone, for an axis that writes the year once. */
+export function formatMonthName(day: Day, locale: string = "en"): string {
+  const { m } = parseDay(day);
+  return locale.startsWith("ar") ? MONTHS_AR[m - 1] : MONTHS_EN[m - 1];
+}
+
 /** "Aug 2026" / "أغسطس 2026" for month headings. */
 export function formatMonth(day: Day, locale: string = "en"): string {
-  const { y, m } = parseDay(day);
-  const mon = locale.startsWith("ar") ? MONTHS_AR[m - 1] : MONTHS_EN[m - 1];
-  return `${mon} ${y}`;
+  return `${formatMonthName(day, locale)} ${parseDay(day).y}`;
 }

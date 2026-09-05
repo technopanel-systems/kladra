@@ -31,6 +31,7 @@ import {
 } from "../src/lib/dates";
 import { normalizePhone } from "../src/lib/phone";
 import { isWeekend, nextWorkingDay } from "../src/lib/workdays";
+import { MONTHS_SHOWN } from "../src/lib/months";
 import {
   CITIES,
   COMPANY_CATEGORIES,
@@ -53,6 +54,9 @@ import {
   COMPANY_TARGET_THIS_MONTH,
   DISPATCHES,
   FOLLOW_UPS,
+  HISTORY,
+  HISTORY_ITEM,
+  HISTORY_LOST,
   HOLIDAY_DAY_OF_MONTH,
   HOLIDAY_NOTE,
   LEAVE_DAYS_AHEAD,
@@ -684,25 +688,201 @@ async function seedDispatches(
 }
 
 // ============================================================================
+// Phase 9a — the months before this one
+// ============================================================================
+
+/**
+ * Business that already happened (D61).
+ *
+ * One accepted quotation and one approved dispatch per entry, both dated inside
+ * the month they belong to, so a month before this one is made of the same
+ * records the current month is made of. Every screen reads it with the same
+ * query it reads today with — there is no second definition of "achieved, but
+ * historically", which is how a figure ends up with two answers (rules/data.md).
+ *
+ * It runs AFTER the current quotations so those keep the numbers the seeded
+ * notifications name (Q-1, Q-3). A dataset whose links point at the wrong paper
+ * is worse than one with no history in it.
+ */
+async function seedHistory(
+  companyIds: Map<string, string>,
+  userIds: Map<string, string>,
+  lk: Lookups,
+): Promise<number> {
+  let smac = 4000;
+
+  await db.transaction(async (tx) => {
+    for (const h of HISTORY) {
+      // The 12th, the 18th and the 25th of that month: raised, issued and
+      // approved, in that order, all of them safely inside it.
+      const month = addMonths(TODAY, -h.monthsBack);
+      const on = (dayOfMonth: number): Day =>
+        month.slice(0, 8) + String(dayOfMonth).padStart(2, "0");
+
+      const res = await tx.execute(sql.raw(`select nextval('quotation_numbers')::int as n`));
+      const number = Number((res.rows[0] as { n: number }).n);
+      smac += 1;
+
+      const created = instant(on(12), 10, 20);
+      const [quotation] = await tx
+        .insert(quotations)
+        .values({
+          number,
+          revision: 1,
+          companyId: must(companyIds, h.company, "company"),
+          projectId: null,
+          repId: must(userIds, h.rep, "user"),
+          status: "accepted" as const,
+          smacNumber: String(smac),
+          issuedAt: instant(on(18), 13, 5),
+          decidedAt: instant(on(20), 15, 40),
+          createdAt: created,
+          updatedAt: instant(on(20), 15, 40),
+        })
+        .returning({ id: quotations.id });
+
+      const [item] = await tx
+        .insert(quotationItems)
+        .values({
+          quotationId: quotation.id,
+          position: 1,
+          colourCode: HISTORY_ITEM.colourCode,
+          supplierId: must(lk.supplierByCode, HISTORY_ITEM.supplier, "supplier"),
+          fireRatingId: must(lk.fireRatingByName, HISTORY_ITEM.fireRating, "fire rating"),
+          classId: must(lk.classByName, HISTORY_ITEM.className, "class"),
+          qty: h.sheets,
+          thicknessId: must(lk.thicknessByMm, HISTORY_ITEM.thickness, "thickness"),
+          width: HISTORY_ITEM.width,
+          length: HISTORY_ITEM.length,
+          pricePerSqm: HISTORY_ITEM.pricePerSqm,
+          createdAt: created,
+          updatedAt: created,
+        })
+        .returning({ id: quotationItems.id });
+
+      const dispatchRes = await tx.execute(sql.raw(`select nextval('dispatch_numbers')::int as n`));
+      const dispatchNumber = Number((dispatchRes.rows[0] as { n: number }).n);
+      const approved = instant(on(25), 14, 30);
+
+      const [dispatch] = await tx
+        .insert(dispatches)
+        .values({
+          number: dispatchNumber,
+          quotationId: quotation.id,
+          repId: must(userIds, h.rep, "user"),
+          status: "approved" as const,
+          shipmentMethodId: must(lk.shipmentByCode, "ct", "shipment method"),
+          destination: "موقع المشروع",
+          paymentTerms: "تحويل بنكي",
+          smacDispatchNumber: String(8000 + dispatchNumber),
+          approvedAt: approved,
+          createdAt: instant(on(24), 12, 15),
+          updatedAt: approved,
+        })
+        .returning({ id: dispatches.id });
+
+      await tx.insert(dispatchItems).values({
+        dispatchId: dispatch.id,
+        quotationItemId: item.id,
+        qty: h.sheets,
+        createdAt: instant(on(24), 12, 15),
+        updatedAt: approved,
+      });
+    }
+
+    // And the ones that did not land. No dispatch on any of them, so they move
+    // no metres and change no month — what they change is the denominator the
+    // chain cohort is read against (D62).
+    for (const l of HISTORY_LOST) {
+      const month = addMonths(TODAY, -l.monthsBack);
+      const on = (dayOfMonth: number): Day =>
+        month.slice(0, 8) + String(dayOfMonth).padStart(2, "0");
+
+      const res = await tx.execute(sql.raw(`select nextval('quotation_numbers')::int as n`));
+      const number = Number((res.rows[0] as { n: number }).n);
+      smac += 1;
+
+      // A request the rep took back and one the coordinator sent back never
+      // reached a customer, so neither carries an issue date or a SMAC number —
+      // which is also what the schema insists on (D52).
+      const issued = l.status === "rejected" || l.status === "issued";
+      const created = instant(on(9), 9, 40);
+
+      const [quotation] = await tx
+        .insert(quotations)
+        .values({
+          number,
+          revision: 1,
+          companyId: must(companyIds, l.company, "company"),
+          projectId: null,
+          repId: must(userIds, l.rep, "user"),
+          status: l.status,
+          smacNumber: issued ? String(smac) : null,
+          returnReason: l.status === "returned" ? (l.reason ?? null) : null,
+          decisionReason: l.status === "rejected" ? (l.reason ?? null) : null,
+          issuedAt: issued ? instant(on(14), 11, 10) : null,
+          // A withdrawal is a decision too — the rep's own — and the schema
+          // says so: `quotations_decided_check` requires an instant on
+          // cancelled as well as on accepted and rejected (D52).
+          decidedAt:
+            l.status === "rejected" || l.status === "cancelled"
+              ? instant(on(21), 16, 5)
+              : null,
+          createdAt: created,
+          updatedAt: instant(on(21), 16, 5),
+        })
+        .returning({ id: quotations.id });
+
+      await tx.insert(quotationItems).values({
+        quotationId: quotation.id,
+        position: 1,
+        colourCode: HISTORY_ITEM.colourCode,
+        supplierId: must(lk.supplierByCode, HISTORY_ITEM.supplier, "supplier"),
+        fireRatingId: must(lk.fireRatingByName, HISTORY_ITEM.fireRating, "fire rating"),
+        classId: must(lk.classByName, HISTORY_ITEM.className, "class"),
+        qty: l.sheets,
+        thicknessId: must(lk.thicknessByMm, HISTORY_ITEM.thickness, "thickness"),
+        width: HISTORY_ITEM.width,
+        length: HISTORY_ITEM.length,
+        pricePerSqm: HISTORY_ITEM.pricePerSqm,
+        createdAt: created,
+        updatedAt: created,
+      });
+    }
+  });
+
+  return HISTORY.length + HISTORY_LOST.length;
+}
+
+// ============================================================================
 // Phase 9 — targets
 // ============================================================================
 
 async function seedTargets(userIds: Map<string, string>): Promise<void> {
   const thisMonth = firstOfMonth(TODAY);
-  const lastMonth = addMonths(TODAY, -1);
   const reps = USERS.filter((u) => u.role === "rep");
+
+  // Every month a bar is drawn for, not only this one and last: a month with
+  // metres on it and no target is a bar with nothing to be measured against,
+  // which is the thing the months card exists to fix (D61).
+  const months = Array.from({ length: MONTHS_SHOWN }, (_, i) => addMonths(TODAY, -i));
 
   await db.transaction(async (tx) => {
     await tx.insert(targets).values(
-      reps.flatMap((u) => [
-        { userId: must(userIds, u.key, "user"), month: thisMonth, sqm: REP_TARGET_THIS_MONTH },
-        { userId: must(userIds, u.key, "user"), month: lastMonth, sqm: REP_TARGET_LAST_MONTH },
-      ]),
+      reps.flatMap((u) =>
+        months.map((month) => ({
+          userId: must(userIds, u.key, "user"),
+          month,
+          sqm: month === thisMonth ? REP_TARGET_THIS_MONTH : REP_TARGET_LAST_MONTH,
+        })),
+      ),
     );
-    await tx.insert(companyTargets).values([
-      { month: thisMonth, sqm: COMPANY_TARGET_THIS_MONTH },
-      { month: lastMonth, sqm: COMPANY_TARGET_LAST_MONTH },
-    ]);
+    await tx.insert(companyTargets).values(
+      months.map((month) => ({
+        month,
+        sqm: month === thisMonth ? COMPANY_TARGET_THIS_MONTH : COMPANY_TARGET_LAST_MONTH,
+      })),
+    );
   });
 }
 
@@ -870,6 +1050,9 @@ try {
 
   const dispatchItemCount = await seedDispatches(quotationIds, itemIds, userIds, lk);
   console.log(`  dispatches       ${DISPATCHES.length} (${dispatchItemCount} items)`);
+
+  const historyCount = await seedHistory(companyIds, userIds, lk);
+  console.log(`  history          ${historyCount} quotations of business already done`);
 
   await seedTargets(userIds);
   await seedNotifications(userIds, quotationIds);

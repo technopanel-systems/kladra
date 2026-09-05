@@ -124,8 +124,12 @@ for (const [k, v] of ar) {
   const e = en.get(k);
   if (e === undefined) continue;
   if (args(e) !== args(v)) problems.push(`placeholders differ: ${k} — en(${args(e)}) ar(${args(v)})`);
-  // Allowed identical values: brand words, codes, numbers, units.
-  if (e === v && /[a-z]{3,}/i.test(v) && !/^(Kladra|SMAC|VAT|WhatsApp|SAR|English|Q-|D-|N|K|C|D|B1|A2|CT|TT|Cargo|m²)$/.test(v)) {
+  // Allowed identical values: brand words, codes, numbers, units — and a
+  // message whose only letters are the NAMES of its arguments. "{percent}%"
+  // is the same string in every language, and the check read `percent` as a
+  // seven-letter English word and demanded a translation of a symbol.
+  const words = v.replace(/\{[^}]*\}/g, "");
+  if (e === v && /[a-z]{3,}/i.test(words) && !/^(Kladra|SMAC|VAT|WhatsApp|SAR|English|Q-|D-|N|K|C|D|B1|A2|CT|TT|Cargo|m²)$/.test(v)) {
     problems.push(`untranslated in ar: ${k} = "${v}"`);
   }
 }
@@ -175,14 +179,37 @@ function tableKeys(file: string): string[] {
 }
 
 const families: [string, string[]][] = [
-  ["common", union("src/lib/types.ts", "Role")],
+  ["common", union("src/lib/types.ts", "ROLES")],
   ["common", union("src/db/schema.ts", "channelEnum")],
   ["reports", tableKeys("src/lib/report-figures.ts")],
+  ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
 ];
 for (const [namespace, members] of families) {
   for (const member of members) {
     const key = `${namespace}.${member}`;
     if (!en.has(key)) problems.push(`no word for ${key} (a screen renders this key without writing it)`);
+  }
+}
+
+/**
+ * A key a SPEC names, which nothing else does.
+ *
+ * `day.quietMeans` moved into `common` and the specs kept asking for it by its
+ * old name; every one of them still passed its own assertions and then threw
+ * MISSING_MESSAGE inside a `t()` call, ten minutes into a suite that had
+ * already rebuilt the database. The specs read the same message files the app
+ * does — that is the point of them — so a name they use is a name that has to
+ * exist, and this says so in two seconds instead.
+ *
+ * Only literal `t("a.b")` calls: a spec that computes a key is doing what a
+ * component does, and the families list above is where that gets declared.
+ */
+const specDir = resolve(import.meta.dirname, "..", "tests");
+for (const file of readdirSync(specDir).filter((f) => f.endsWith(".spec.ts")).sort()) {
+  const source = readFileSync(resolve(specDir, file), "utf8");
+  for (const call of source.matchAll(/(?<![A-Za-z0-9_$])t\(\s*"([a-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)+)"/g)) {
+    const key = call[1];
+    if (!en.has(key)) problems.push(`${file} asks for ${key}, which no locale has`);
   }
 }
 

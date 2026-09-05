@@ -132,6 +132,29 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   offered no action row at all, could ever have found it. The rule generalises: a row of
   buttons is for work done TO a record; a control that edits one stated fact belongs
   against that fact.
+- **A bar takes the FOREGROUND colour of its tone, never the pill tint.** `TONE_CLASS`
+  is a background for a pill with text on it — nine to fourteen per cent alpha — and
+  `--color-state-over` is `--surface-2` exactly, which is also the empty track every bar
+  in this app draws itself on. So the withdrawn bar on the chain card was painted in the
+  colour of the track it sat in and could not be seen, while the six-month card had
+  hand-written four `-fg` conditionals to dodge the same trap. `TONE_BAR` is the third
+  map beside `TONE_CLASS` and `TONE_TEXT`, and a bar uses it.
+- **Colour may carry a state; it may never be the only thing carrying it.** The
+  coordinator's queue said "3 working days" in red for a request that was late and "3
+  working days" in grey for one that was not — the same words in the same shape, the
+  whole difference in a hue. It says the word "late" now. The six-month card passes this
+  on a different carrier: the dashed target rule is drawn across every column, so a bar
+  that fell short is visibly under its own line whether or not its colour is legible.
+- **A label is never truncated; a label that has to be cut is carrying something it
+  does not need.** The six-month card wrote "Sep 2026" into a column 47px wide on a
+  phone and let CSS cut it. In English that read "Sep 20…", ugly and harmless. In
+  Arabic the cut fell the other way and «سبتمبر 2026» came out «سبتمبر 6…» — a year
+  that reads as a DIFFERENT year, on a chart axis, where the label's whole job is to
+  say which month this bar is. A smaller font and a wider column only move the width
+  at which it breaks. The year is the same on five of the six columns, so the name
+  goes on one line and the year on a second, inked on the first column and wherever
+  the year turns over, with the slot kept empty on the others so the bars keep one
+  baseline. `truncate` belongs on a name somebody typed, never on a label we chose.
 - **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
   three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
   dead controls. Every spec now fails on the exception itself and names it.

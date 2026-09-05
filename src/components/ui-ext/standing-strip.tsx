@@ -49,8 +49,10 @@ export function StandingStrip({
         className,
       )}
     >
-      {items.map((item) => (
-        <div key={item.label} className="flex min-w-0 flex-col gap-0.5">
+      {items.map((item, index) => (
+        // The index, not the label: two figures may legitimately share a word,
+        // and a duplicate key silently drops one of them.
+        <div key={index} className="flex min-w-0 flex-col gap-0.5">
           <dt
             data-slot="figure-label"
             className="text-[0.6875rem] leading-tight font-medium tracking-wide text-balance text-muted-foreground uppercase"

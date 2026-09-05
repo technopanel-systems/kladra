@@ -48,6 +48,26 @@ list whenever a component renders a key from an enum**, and never write the
 members out beside the union — a list beside a union is the second copy that
 drifts.
 
+**And that is not only a words rule.** `FollowUpFilter` gained `"quiet"`;
+`FILTERS`, the runtime list `parseFollowUpFilter` tests a URL against, did not.
+Both copies were legal TypeScript, so `?filter=quiet` parsed to undefined, the
+filter was dropped, and the customer list opened WHOLE under a heading that said
+these were the quiet ones — a screen lying about what it is showing, from one
+word missing in a second list. **The list is the source and the union is derived
+from it**: `const FILTERS = [...] as const;` then
+`type FollowUpFilter = (typeof FILTERS)[number];`, so adding a member to the
+list is the only way there is to add one. `ROLES` in `src/lib/types.ts` is the
+same shape, and the pgEnum in the schema and the picker in the admin panel read
+it rather than repeat it.
+
+## A key a SPEC names is a key
+The specs read the same message files the app does — that is what makes them
+worth running — so a name they use has to exist. `day.quietMeans` moved into
+`common`, three specs kept asking for the old name, and every one of them passed
+its own assertions and then threw MISSING_MESSAGE inside `t()`, ten minutes into
+a suite that had already rebuilt the database. `check-messages` reads every
+literal `t("a.b")` in `tests/*.spec.ts` now and fails in two seconds instead.
+
 ## A block somebody TYPED runs in their direction, not the page's
 Every other string on a screen came out of `messages/<locale>/` and runs the way
 the page runs. A log entry, a coordinator's reason and a daily report did not:
@@ -74,6 +94,19 @@ The corollary, from the same audit: a word may mean one thing. "Quoted" was
 sheets on a dispatch line and square metres on a project, in English only —
 the Arabic had said في عرض السعر against المعروض all along. When one locale
 distinguishes two things and the other does not, the one that does is right.
+
+## A family is a nested OBJECT, and its parent cannot also be a string
+next-intl refuses a flat key with a dot in it — `"chain.waiting"` throws
+INVALID_KEY at render, not at build — so a family of keys is a nested object,
+the way `projects.lossReason` and `admin.lookup` already are. And the parent
+name is then taken: `team.chain` cannot be both the heading and the family, so
+the heading is `team.chainTitle`.
+
+Two things follow for the checks. Write the call site as the FULL path —
+`` t(`team.chain.${stage}`) `` under a root `getTranslations()`, not
+`` t(`chain.${stage}`) `` under a namespaced one — or `unused-messages` cannot
+see the prefix and reports every member as dead. And register the family in
+`check-messages.ts` so a new member without a word fails the build.
 
 ## Digits are Western, everywhere (D6)
 The locale tag is `"ar"`, never `"ar-SA"` — `ar-SA` gives Arabic-Indic

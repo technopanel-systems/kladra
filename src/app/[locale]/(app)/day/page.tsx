@@ -2,12 +2,14 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { CallList } from "@/components/day/call-list";
 import { CloseTheDay } from "@/components/reports/close-the-day";
 import { MonthCard } from "@/components/team/month-card";
+import { MonthsCard } from "@/components/team/months-card";
 import { WaitingList } from "@/components/day/waiting-list";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
 import { listCompanies } from "@/lib/companies";
 import { waitingOnRep } from "@/lib/day";
+import { monthsBack } from "@/lib/months";
 import { repMonth } from "@/lib/team";
 
 /**
@@ -39,13 +41,17 @@ export default async function DayPage() {
   const hasMonth = carriesMetres(user.role);
   const hasChain = sells(user.role);
 
-  const [t, month, waiting, overdue, today, never] = await Promise.all([
+  const [t, month, months, waiting, overdue, today, never, quiet] = await Promise.all([
     getTranslations(),
     hasMonth ? repMonth(user.id) : null,
+    // Only where there is a target to read them against — marketing carries
+    // none, so six bars with no line on any of them would say nothing (D44).
+    hasMonth ? monthsBack(user.id) : null,
     hasChain ? waitingOnRep(user) : [],
     listCompanies({ user, filter: "overdue", locale }),
     listCompanies({ user, filter: "today", locale }),
     listCompanies({ user, filter: "never", locale }),
+    listCompanies({ user, filter: "quiet", locale }),
   ]);
 
   return (
@@ -63,8 +69,9 @@ export default async function DayPage() {
           pace={month.pace}
         />
       ) : null}
+      {months ? <MonthsCard months={months} /> : null}
       {hasChain ? <WaitingList rows={waiting} /> : null}
-      <CallList overdue={overdue} today={today} never={never} />
+      <CallList overdue={overdue} today={today} never={never} quiet={quiet} />
 
       {/* Last, because it is the last thing done: the report is written when
           the day is finished, not while it is being worked (D55). */}

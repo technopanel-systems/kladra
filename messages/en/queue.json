@@ -7,5 +7,6 @@
   "answeredToday": "Answered today",
   "arrivedToday": "{arrived, plural, =0 {nothing arrived today} one {# arrived today} other {# arrived today}}",
   "waited": "Waiting",
-  "clear": "Nothing is waiting on you. The desk is clear."
+  "clear": "Nothing is waiting on you. The desk is clear.",
+  "late": "late"
 }

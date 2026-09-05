@@ -10,8 +10,9 @@
   "whatsappContact": "WhatsApp {name}",
   "overdueCount": "{count} overdue",
   "todayCount": "{count} today",
-  "neverCount": "{count} never contacted",
+  "neverCount": "{count, plural, one {# company never contacted} other {# companies never contacted}}",
   "nothingDue": "Nothing due — you are up to date.",
   "emptyFilter": "Nothing matches this filter.",
-  "clearFilter": "Show all companies"
+  "clearFilter": "Show all companies",
+  "quietCount": "{count, plural, one {# company gone quiet} other {# companies gone quiet}}"
 }

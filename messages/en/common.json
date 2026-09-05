@@ -130,5 +130,7 @@
   "view": "View",
   "viewList": "List",
   "viewBoard": "Board",
-  "boardEmpty": "Nothing here."
+  "boardEmpty": "Nothing here.",
+  "goneQuiet": "Gone quiet",
+  "quietMeans": "{days, plural, one {Contacted before, no next step, and no activity for # day} other {Contacted before, no next step, and no activity for # days}}"
 }

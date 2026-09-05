@@ -367,14 +367,19 @@ function EmptyProjects({
   }
 
   if (filter) {
-    const sentence = {
+    // `quiet` is a COMPANY band and never reaches a project list — a project
+    // with no follow-up is not a customer who has gone silent, it is a job
+    // waiting on something else (D63). The record is exhaustive so the day a
+    // sixth filter lands this stops compiling rather than rendering a key.
+    const sentence: Record<FollowUpFilter, string> = {
       overdue: "projects.emptyOverdue",
       today: "projects.emptyToday",
       followups: "projects.emptyFollowups",
       never: "projects.emptyNever",
-    }[filter];
+      quiet: "projects.emptyFollowups",
+    };
     return (
-      <EmptyCard sentence={t(sentence)}>
+      <EmptyCard sentence={t(sentence[filter])}>
         <Button asChild variant="outline">
           <Link href="/projects">{t("common.all")}</Link>
         </Button>

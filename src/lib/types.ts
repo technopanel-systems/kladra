@@ -6,7 +6,14 @@
  * carries a monthly m² target he can never meet and sits on the manager's team
  * table as a permanent row of dashes.
  */
-export type Role = "rep" | "marketing" | "coordinator" | "manager" | "admin";
+export const ROLES = ["rep", "marketing", "coordinator", "manager", "admin"] as const;
+
+/**
+ * Derived, and the one list every other role list is built from: the pgEnum in
+ * the schema, the picker in the admin panel, the words check. A union beside a
+ * list is a second copy, and the second copy is the one that drifts (D64).
+ */
+export type Role = (typeof ROLES)[number];
 
 /** What every server component and action gets from `requireUser()`. */
 export type SessionUser = {

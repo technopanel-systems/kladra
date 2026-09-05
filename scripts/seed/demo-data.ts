@@ -231,6 +231,20 @@ export const COMPANIES: CompanySeed[] = [
     ],
   },
 
+  // A card off a stand, typed in and never called — Faisal's own copy of the
+  // band that had existed on his screen since P8 with nothing in it. Marketing
+  // and Saad each had one, so the band was exercised somewhere and invisible
+  // where anybody looks: a rep's day is demonstrated on Faisal (D66).
+  {
+    key: "f13",
+    name: "شركة الواجهة الذهبية للتجارة",
+    rep: "faisal",
+    category: "Contractor",
+    source: "Exhibition",
+    city: "Riyadh",
+    contacts: [{ name: "بدر العتيبي", phone: "0556612094", position: "Owner" }],
+  },
+
   // ---- Saad Al-Qahtani — the West (8) ----------------------------------------
   {
     key: "s1",
@@ -807,13 +821,131 @@ export const DISPATCHES: DispatchSeed[] = [
   },
 ];
 
+// ---- the months before this one ------------------------------------------------
+
+/*
+ * Business that already happened (D61).
+ *
+ * Every month before the current one was empty in this dataset, so the moment a
+ * screen showed a month before this one it showed five empty bars and one full
+ * one — and nobody would ever have seen the feature work (rules/data.md). These
+ * are the metres each rep actually moved in each of the five months behind us.
+ *
+ * One accepted quotation and one approved dispatch per entry, all of it inside
+ * that month, so the history is made of the same records the current month is
+ * made of rather than of numbers written into a table. Every figure on every
+ * screen reads it the same way it reads today's.
+ *
+ * The shape says something on purpose: Faisal and Saad trade the lead month to
+ * month, and Turki appears only in the last two — he is the newest rep, and a
+ * bar chart that starts him at zero is telling the truth about that.
+ */
+export type HistorySeed = {
+  /** Calendar months back from this one. 1 is last month. */
+  monthsBack: number;
+  rep: RepKey;
+  company: string;
+  /** Sheets of 1.24 × 5.80 m. The m² is computed the way the app computes it. */
+  sheets: number;
+};
+
+export const HISTORY: HistorySeed[] = [
+  { monthsBack: 5, rep: "faisal", company: "f2", sheets: 150 },
+  { monthsBack: 5, rep: "saad", company: "s1", sheets: 120 },
+  { monthsBack: 4, rep: "faisal", company: "f6", sheets: 170 },
+  { monthsBack: 4, rep: "saad", company: "s5", sheets: 140 },
+  { monthsBack: 3, rep: "faisal", company: "f2", sheets: 120 },
+  { monthsBack: 3, rep: "saad", company: "s1", sheets: 190 },
+  { monthsBack: 2, rep: "faisal", company: "f6", sheets: 200 },
+  { monthsBack: 2, rep: "saad", company: "s5", sheets: 160 },
+  { monthsBack: 2, rep: "turki", company: "t2", sheets: 60 },
+  { monthsBack: 1, rep: "faisal", company: "f2", sheets: 185 },
+  { monthsBack: 1, rep: "saad", company: "s1", sheets: 210 },
+  { monthsBack: 1, rep: "turki", company: "t2", sheets: 95 },
+];
+
+/*
+ * And the ones that did not land (D62).
+ *
+ * The history above is twelve quotations that were all accepted, which made the
+ * "where do quotations die" cohort read 63% won — a number no cladding business
+ * has ever had, and a funnel with one fat stage is a funnel nobody learns
+ * anything from. These raise the denominator the way real ones do: a customer
+ * who said no, one who never answered, a request the rep took back, and one the
+ * coordinator sent back that was never asked again. None of them carries a
+ * dispatch, so none of them moves a metre and the month bars are unchanged.
+ */
+export type LostSeed = {
+  monthsBack: number;
+  rep: RepKey;
+  company: string;
+  sheets: number;
+  status: "rejected" | "cancelled" | "returned" | "issued";
+  reason?: string;
+};
+
+export const HISTORY_LOST: LostSeed[] = [
+  {
+    monthsBack: 4,
+    rep: "faisal",
+    company: "f5",
+    sheets: 90,
+    status: "rejected",
+    reason: "السعر أعلى من عرض منافس بحوالي 8%",
+  },
+  {
+    monthsBack: 3,
+    rep: "saad",
+    company: "s4",
+    sheets: 130,
+    status: "rejected",
+    reason: "أجّل العميل المشروع إلى السنة القادمة",
+  },
+  { monthsBack: 3, rep: "faisal", company: "f11", sheets: 60, status: "cancelled" },
+  { monthsBack: 2, rep: "turki", company: "t5", sheets: 110, status: "issued" },
+  {
+    monthsBack: 2,
+    rep: "saad",
+    company: "s8",
+    sheets: 75,
+    status: "returned",
+    reason: "المقاسات غير مكتملة — أحتاج الطول والعرض لكل بند",
+  },
+  {
+    monthsBack: 1,
+    rep: "faisal",
+    company: "f9",
+    sheets: 140,
+    status: "rejected",
+    reason: "اختار العميل مورّدًا آخر بمدة تسليم أقصر",
+  },
+  { monthsBack: 1, rep: "turki", company: "t1", sheets: 80, status: "issued" },
+  { monthsBack: 1, rep: "saad", company: "s6", sheets: 45, status: "cancelled" },
+];
+
+/** The one line every history quotation carries. */
+export const HISTORY_ITEM = {
+  colourCode: "RAL 9006",
+  supplier: "N",
+  fireRating: "B1",
+  className: "A",
+  thickness: "4.0",
+  width: "1.24",
+  length: "5.8",
+  pricePerSqm: "108.00",
+};
+
 // ---- targets ------------------------------------------------------------------
 
 /** m² per rep, this month and last (SPEC §1: no personal target above rep). */
 export const REP_TARGET_THIS_MONTH = "1500.00";
 export const REP_TARGET_LAST_MONTH = "1200.00";
-export const COMPANY_TARGET_THIS_MONTH = "5000.00";
-export const COMPANY_TARGET_LAST_MONTH = "4500.00";
+// Near what the floor actually approves, and not above all six months of it.
+// At 4,500 every finished month on the manager's card was the same red, so the
+// amber and the green bands existed in the code and nowhere a person could see
+// them — the same defect as a figure that is always zero (D66).
+export const COMPANY_TARGET_THIS_MONTH = "3200.00";
+export const COMPANY_TARGET_LAST_MONTH = "2600.00";
 
 // ---- daily reports ------------------------------------------------------------
 
