@@ -93,8 +93,15 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
   /** From `?open=` after the save — the only place the test learns an id. */
   let companyId = "";
 
-  await test.step("1 · Faisal signs in and Companies is home, follow-up strip on top", async () => {
+  await test.step("1 · Faisal signs in, his day is home, then Companies with the strip on top", async () => {
     await login(page, locale, "faisal");
+    // His day is home from P8 (D49): it answers what to do now, which is the
+    // question he opens the app with. The list is one press away and is still
+    // where the rest of this walk happens.
+    await expect(page).toHaveURL(new RegExp(`/${locale}/day(?:$|[/?#])`));
+    await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
+
+    await page.getByRole("link", { name: t("common.companies"), exact: true }).first().click();
     await expect(page).toHaveURL(new RegExp(`/${locale}/companies(?:$|[/?#])`));
     await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible();
 

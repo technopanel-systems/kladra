@@ -21,5 +21,6 @@
   "overdueDays": "{count, plural, one {# day overdue} other {# days overdue}}",
   "addedDays": "{count, plural, one {added # day ago} other {added # days ago}}",
   "companiesOf": "Companies · {name}",
-  "backToTeam": "Back to the team"
+  "backToTeam": "Back to the team",
+  "pipeline": "Pipeline"
 }

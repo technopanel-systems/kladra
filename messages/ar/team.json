@@ -21,5 +21,6 @@
   "overdueDays": "{count, plural, zero {غير متأخرة} one {متأخرة يومًا واحدًا} two {متأخرة يومين} few {متأخرة # أيام} many {متأخرة # يومًا} other {متأخرة # يوم}}",
   "addedDays": "{count, plural, zero {أُضيفت اليوم} one {أُضيفت قبل يوم} two {أُضيفت قبل يومين} few {أُضيفت قبل # أيام} many {أُضيفت قبل # يومًا} other {أُضيفت قبل # يوم}}",
   "companiesOf": "الشركات · {name}",
-  "backToTeam": "العودة إلى الفريق"
+  "backToTeam": "العودة إلى الفريق",
+  "pipeline": "إجمالي الفرص"
 }

@@ -141,10 +141,10 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
   await test.step("3 · Majed signs in with the password Jerom read out", async () => {
     await trySignIn(page, locale, t, email, NEW_PASSWORD);
-    // A rep's home is his companies (D15) — which is how the test knows the
+    // A rep's home is his day (D15, D49) — which is how the test knows the
     // account is not merely a row but a working sign-in.
-    await expect(page).toHaveURL(/\/companies/, COLD);
-    await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible();
+    await expect(page).toHaveURL(/\/day/, COLD);
+    await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
 
     const majed = await one<{ id: string }>("select id from users where email = $1::text", [email]);
     const open = await query("select 1 from sessions where user_id = $1::uuid", [majed.id]);
@@ -179,7 +179,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await expect(page.getByText(t("auth.wrongCredentials"))).toBeVisible(COLD);
 
     await trySignIn(page, locale, t, email, RESET_PASSWORD);
-    await expect(page).toHaveURL(/\/companies/, COLD);
+    await expect(page).toHaveURL(/\/day/, COLD);
   });
 
   await test.step("5 · deactivating keeps the person and closes the door", async () => {
@@ -301,7 +301,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     );
     await page.goto(`/${locale}/team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
-    const before = paceOf(await row(page, faisal.name).getByRole("cell").nth(3).innerText());
+    const before = paceOf(await row(page, faisal.name).locator("[data-slot='figure-pace']").innerText());
 
     await openAdmin(page, locale, "holidays", t("common.holidays"));
     await page.getByRole("button", { name: t("admin.addDay") }).click();
@@ -326,7 +326,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
     await page.goto(`/${locale}/team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
-    const after = paceOf(await row(page, faisal.name).getByRole("cell").nth(3).innerText());
+    const after = paceOf(await row(page, faisal.name).locator("[data-slot='figure-pace']").innerText());
 
     // The month got one working day shorter and the days already worked did
     // not move — a rep is not behind because of a holiday nobody worked (S48).
@@ -424,9 +424,9 @@ test("a rep who types an admin URL lands on his own home, and cannot download th
 
   for (const path of ["users", "targets", "lookups", "holidays", "export", "archive"]) {
     await page.goto(`/${locale}/admin/${path}`);
-    await expect(page, `/admin/${path} let a rep in`).toHaveURL(/\/companies/, COLD);
+    await expect(page, `/admin/${path} let a rep in`).toHaveURL(/\/day/, COLD);
   }
-  await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible();
+  await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
 
   // The export is a URL, not a menu item, so the refusal has to live on the
   // route and not only in the rail.
@@ -442,6 +442,9 @@ test("a rep who types an admin URL lands on his own home, and cannot download th
       [locale],
     );
 
+    // Add company is on his company list, and his home is his day (D49).
+    await page.goto(`/${locale}/companies`);
+    await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
     await page.getByRole("button", { name: t("forms.addCompany") }).first().click();
     const form = page.getByRole("dialog", { name: t("forms.addCompany") });
     await form.getByRole("combobox", { name: t("common.category") }).click();

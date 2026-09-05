@@ -19,8 +19,8 @@
       - [x] P8.2 Every list creates from itself; the missing-primary-action sweep
       - [x] P8.3 Semantic colour: state, overdue, stuck, ahead — one small set, both themes
       - [x] P8.4 m² is the headline on quotations and dispatches; price is the quiet one
-      - [ ] P8.5 The drawers reworked: what a person needs first, at the top
-      - [ ] P8.6 A dashboard per role, each answering that person's daily question
+      - [x] P8.5 The drawers reworked: what a person needs first, at the top
+      - [x] P8.6 A dashboard per role, each answering that person's daily question
       - [ ] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
       - [ ] P8.8 View as: the admin checks the app as any role or any person, marked
       - [ ] P8.9 Roles beyond the four, if the business needs them — propose, record, build

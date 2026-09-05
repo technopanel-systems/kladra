@@ -27,6 +27,7 @@ import { firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
+import { pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
 import type { Role } from "@/lib/types";
 
@@ -55,6 +56,8 @@ export type MonthFigures = {
 
 export type TeamMember = MonthFigures & {
   userId: string;
+  /** Expected m² on this rep's live projects (S45). */
+  pipeline: string;
   name: string;
   role: Role;
   /**
@@ -73,6 +76,8 @@ export type TeamMember = MonthFigures & {
 export type TeamMonth = {
   month: Day;
   pace: Pace;
+  /** The whole company's pipeline, from the same definition (S45). */
+  pipeline: string;
   /** One figure the admin sets, never a sum of the reps' (S44). */
   company: MonthFigures;
   members: TeamMember[];
@@ -131,6 +136,14 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
       listNonWorkingDays(firstOfMonth(day), lastOfMonth(day)),
     ]);
 
+  // One statement for everybody's pipeline, and the company's is the same rows
+  // read without a group — never a sum of the reps', which is how two screens
+  // start disagreeing about one figure (S44, rules/data.md).
+  const [pipelines, companyPipeline] = await Promise.all([
+    pipelineByRep(),
+    pipelineSqm(sql`true`),
+  ]);
+
   const targetByUser = new Map(targetRows.map((row) => [row.userId, String(row.sqm)]));
 
   // One round trip per person for the counts rather than a second derivation of
@@ -149,6 +162,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
         pace: paceFor(day, nonWorking, person.id),
         target: targetByUser.get(person.id) ?? null,
         achieved: achieved.get(person.id) ?? "0",
+        pipeline: pipelines.get(person.id) ?? "0",
         openQuotations: open,
         overdueFollowUps: counts.overdue,
         neverContacted: counts.neverContacted,
@@ -159,6 +173,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
   return {
     month,
     pace: paceFor(day, nonWorking),
+    pipeline: companyPipeline,
     company: {
       target: companyTargetRow[0] ? String(companyTargetRow[0].sqm) : null,
       achieved: companyAchieved,

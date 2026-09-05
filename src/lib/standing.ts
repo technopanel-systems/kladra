@@ -163,3 +163,109 @@ export async function projectStanding(projectId: string): Promise<ProjectStandin
   };
 }
 
+export type QuotationStanding = {
+  /** Quoted m² still available to send: quoted minus everything committed (D12). */
+  remainingSqm: string;
+};
+
+/**
+ * The figures at the top of a quotation drawer.
+ *
+ * "Left to send" is the glossary's المتبقي للإرسال and the one figure a rep and
+ * the coordinator both act on. It counts a waiting request as spent, the same
+ * as the dispatch form does, so the two cannot disagree about what is available
+ * (D12).
+ */
+export async function quotationStanding(quotationId: string): Promise<QuotationStanding> {
+  const id = sql`${quotationId}::uuid`;
+  const result = await db.execute<{ remaining_sqm: string }>(sql`
+    select round(coalesce(sum(
+             round(qi.width * qi.length * greatest(qi.qty - (
+               select coalesce(sum(di.qty), 0)::int
+                 from dispatch_items di
+                 join dispatches d on d.id = di.dispatch_id
+                where di.quotation_item_id = qi.id
+                  and d.status in ('submitted', 'approved')
+             ), 0), 2)
+           ), 0), 2)::text as remaining_sqm
+      from quotation_items qi
+     where qi.quotation_id = ${id}
+  `);
+  return { remainingSqm: String(result.rows[0]?.remaining_sqm ?? "0") };
+}
+
+/**
+ * The pipeline for a scope, read on its own (SPEC S45, glossary "Pipeline").
+ *
+ * `scope` is the same fragment `pipelineSqmSql` takes, so one company, one rep
+ * or everybody all go through the one definition.
+ */
+export async function pipelineSqm(scope: SQL): Promise<string> {
+  const result = await db.execute<{ sqm: string }>(sql`select ${pipelineSqmSql(scope)} as sqm`);
+  return String(result.rows[0]?.sqm ?? "0");
+}
+
+/** Every rep's pipeline in one statement, keyed by the rep who owns the company. */
+export async function pipelineByRep(): Promise<Map<string, string>> {
+  const result = await db.execute<{ rep_id: string; sqm: string }>(sql`
+    select c.rep_id, coalesce(sum(p.expected_sqm), 0)::text as sqm
+      from projects p
+      join companies c on c.id = p.company_id
+     where p.archived_at is null
+       and p.lost_at is null
+       and c.archived_at is null
+     group by c.rep_id
+  `);
+  return new Map(result.rows.map((row) => [String(row.rep_id), String(row.sqm)]));
+}
+
+export type QueueStanding = {
+  /** The day the longest-waiting request on her desk was raised. */
+  oldestWaitingOn: Day | null;
+  /** What she has answered today, both chains: issued, sent back, approved, refused. */
+  answeredToday: number;
+};
+
+/**
+ * The coordinator's own two figures (P8.6).
+ *
+ * Her screen already lists what is waiting; what it never said is how long the
+ * worst one has been there, or how much she has got through — and both are
+ * questions she asks herself, not questions about her. The counts beside them
+ * come from the rows already on the page rather than from a second query, so
+ * the strip and the list cannot disagree.
+ */
+export async function queueStanding(): Promise<QueueStanding> {
+  const result = await db.execute<{ oldest: string | null; answered: number }>(sql`
+    select
+      (
+        select to_char(min(raised), 'YYYY-MM-DD') from (
+          select (q.created_at at time zone 'Asia/Riyadh')::date as raised
+            from quotations q where q.status = 'requested'
+          union all
+          select (d.created_at at time zone 'Asia/Riyadh')::date
+            from dispatches d where d.status = 'submitted'
+        ) waiting
+      ) as oldest,
+      (
+        select count(*)::int from (
+          select 1 from quotations q
+           where q.status in ('issued', 'returned')
+             and (q.updated_at at time zone 'Asia/Riyadh')::date
+                 = (now() at time zone 'Asia/Riyadh')::date
+          union all
+          select 1 from dispatches d
+           where d.status in ('approved', 'refused')
+             and (d.updated_at at time zone 'Asia/Riyadh')::date
+                 = (now() at time zone 'Asia/Riyadh')::date
+        ) answered
+      ) as answered
+  `);
+  const row = result.rows[0];
+
+  return {
+    oldestWaitingOn: (row?.oldest as Day | null) ?? null,
+    answeredToday: Number(row?.answered ?? 0),
+  };
+}
+

@@ -65,6 +65,10 @@ export function homeFor(role: Role): string {
     case "admin":
       return "/team";
     default:
-      return "/companies";
+      // A rep's home is his day, not his company list (P8). The list is still
+      // one press away and is still where he searches; what it never was is an
+      // answer to "what do I do now", which is the question he opens the app
+      // with.
+      return "/day";
   }
 }

@@ -9,7 +9,9 @@ import {
 } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import { formatSqmWhole } from "@/lib/money";
+import { paceTone, TONE_TEXT } from "@/lib/state-tone";
 import type { TeamMember } from "@/lib/team";
+import { cn } from "@/lib/utils";
 
 /**
  * Everybody, with their month and their habits beside it (SPEC §3, D14).
@@ -33,6 +35,18 @@ import type { TeamMember } from "@/lib/team";
 export async function TeamTable({ members }: { members: TeamMember[] }) {
   const t = await getTranslations();
 
+  /**
+   * How a rep is going against the calendar, as a colour on his achieved figure
+   * (DESIGN §6, D48). It is the same rule the month card's bar uses, and it is
+   * still not a score: the row shows target, achieved and pace side by side and
+   * the colour only says which side of the pace line the achieved figure is on
+   * (S46). In the first five working days it says nothing at all (S49).
+   */
+  const toneFor = (member: TeamMember) =>
+    member.pace.justStarted || member.target === null
+      ? null
+      : paceTone(Number(member.achieved), Number(member.target), member.pace.ratio);
+
   return (
     <>
       <div className="flex flex-col gap-2 md:hidden">
@@ -45,7 +59,10 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
             <span className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="font-medium">{member.name}</span>
               <span className="text-sm">
-                <span dir="ltr" className="num">
+                <span
+                  dir="ltr"
+                  className={cn("num", toneFor(member) && TONE_TEXT[toneFor(member)!])}
+                >
                   {formatSqmWhole(member.achieved)}
                 </span>
                 {" / "}
@@ -60,6 +77,12 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
               </span>
             </span>
             <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              <span>
+                {t("team.pipeline")}{" "}
+                <span dir="ltr" className="num text-foreground">
+                  {formatSqmWhole(member.pipeline)}
+                </span>
+              </span>
               <span>
                 {t("team.pace")}{" "}
                 <span dir="ltr" className="num text-foreground">
@@ -79,6 +102,7 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="p-3">{t("team.member")}</TableHead>
+              <TableHead className="p-3 text-end">{t("team.pipeline")}</TableHead>
               <TableHead className="p-3 text-end">{t("team.target")}</TableHead>
               <TableHead className="p-3 text-end">{t("team.achieved")}</TableHead>
               <TableHead className="p-3 text-end">{t("team.pace")}</TableHead>
@@ -96,6 +120,14 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                   </Link>
                 </TableCell>
                 <TableCell className="p-3 text-end">
+                  {/* What is still out there to win (S45), beside what has
+                      already gone out — the two questions a manager asks in
+                      one row. */}
+                  <span dir="ltr" className="num">
+                    {formatSqmWhole(member.pipeline)}
+                  </span>
+                </TableCell>
+                <TableCell className="p-3 text-end">
                   {/* A dash, and every other figure on the row still real (S45). */}
                   {member.target === null ? (
                     <span className="text-muted-foreground">—</span>
@@ -106,13 +138,19 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                   )}
                 </TableCell>
                 <TableCell className="p-3 text-end">
-                  <span dir="ltr" className="num">
+                  <span
+                    dir="ltr"
+                    className={cn("num", toneFor(member) && TONE_TEXT[toneFor(member)!])}
+                  >
                     {formatSqmWhole(member.achieved)}
                   </span>
                 </TableCell>
                 <TableCell className="p-3 text-end whitespace-nowrap">
-                  {/* His own working days, so leave shortens his month (S48). */}
-                  <span dir="ltr" className="num">
+                  {/* His own working days, so leave shortens his month (S48).
+                      `data-slot` names the figure so a spec reads it by name
+                      rather than by column number — inserting Pipeline in front
+                      of it broke three assertions that counted cells. */}
+                  <span data-slot="figure-pace" dir="ltr" className="num">
                     {member.pace.elapsed} / {member.pace.total}
                   </span>
                 </TableCell>

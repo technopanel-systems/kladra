@@ -1,6 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { MonthCard } from "@/components/team/month-card";
 import { StuckList } from "@/components/team/stuck-list";
+import { Sqm } from "@/components/ui-ext/figures";
+import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { TeamTable } from "@/components/team/team-table";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser, seesAll } from "@/lib/authz";
@@ -36,6 +38,42 @@ export default async function TeamPage() {
         target={month.company.target}
         achieved={month.company.achieved}
         pace={month.pace}
+      />
+
+      {/* What the month has already moved is above; this is what is still out
+          there to move (S45), and how much of it has stopped (D14). Both are
+          derived, like everything else on this screen — nobody types them. */}
+      <StandingStrip
+        items={[
+          { label: t("team.pipeline"), value: <Sqm value={month.pipeline} /> },
+          {
+            label: t("team.stuckRequests"),
+            value: (
+              <span dir="ltr" className="num">
+                {stuck.requests.length}
+              </span>
+            ),
+            tone: stuck.requests.length > 0 ? "bad" : null,
+          },
+          {
+            label: t("team.stuckFollowUps"),
+            value: (
+              <span dir="ltr" className="num">
+                {stuck.followUps.length}
+              </span>
+            ),
+            tone: stuck.followUps.length > 0 ? "bad" : null,
+          },
+          {
+            label: t("team.stuckNever"),
+            value: (
+              <span dir="ltr" className="num">
+                {stuck.neverContacted.length}
+              </span>
+            ),
+            tone: stuck.neverContacted.length > 0 ? "open" : null,
+          },
+        ]}
       />
 
       {month.members.length === 0 ? (

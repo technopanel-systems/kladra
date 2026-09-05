@@ -1,6 +1,7 @@
 import {
   Archive,
   Building2,
+  CalendarCheck,
   CalendarDays,
   Download,
   FileText,
@@ -22,9 +23,10 @@ import type { Role } from "@/lib/types";
  *
  * The first item of a role's first group IS that role's home (src/lib/authz.ts
  * `homeFor`), named by what it shows rather than by the word "Home": for a rep
- * home is Companies, for the coordinator the Queue, for a manager the Team. A
- * separate "Home" entry pointing at a screen already in the list would light
- * two rows at once and teach the rep nothing.
+ * his Day, for the coordinator the Queue, for a manager the Team. A separate
+ * "Home" entry pointing at a screen already in the list would light two rows at
+ * once and teach the rep nothing — which is also why Your day is a screen of
+ * its own rather than a second name for Companies.
  */
 
 export type NavItem = {
@@ -40,6 +42,12 @@ export type NavGroup = {
   /** Message key for a group heading; the main group has none. */
   labelKey?: string;
   items: NavItem[];
+};
+
+const day: NavItem = {
+  href: "/day",
+  labelKey: "day.title",
+  icon: CalendarCheck,
 };
 
 const companies: NavItem = {
@@ -101,7 +109,7 @@ export function navFor(role: Role): NavGroup[] {
         { labelKey: "shell.adminSection", items: adminItems },
       ];
     default:
-      return [{ items: [companies, projects, quotations, dispatches] }];
+      return [{ items: [day, companies, projects, quotations, dispatches] }];
   }
 }
 

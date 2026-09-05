@@ -8,6 +8,7 @@ import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayWrite } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { getQuotation } from "@/lib/quotations";
+import { quotationStanding } from "@/lib/standing";
 
 /**
  * The quotation drawer (DESIGN §2: work happens in a drawer over the list).
@@ -44,7 +45,10 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   if (!quotation) return null;
 
   const owner = mayWrite(user, quotation.companyRepId);
-  const dispatches = await listDispatchesForQuotation(user, quotation.id, locale);
+  const [dispatches, standing] = await Promise.all([
+    listDispatchesForQuotation(user, quotation.id, locale),
+    quotationStanding(quotation.id),
+  ]);
 
   // S38: goods move against paper that exists. Before it is issued there is
   // nothing to send against, so the button is absent rather than present and
@@ -84,6 +88,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         ) : null
       }
       quotation={quotation}
+      standing={standing}
       items={quotation.items}
       revisions={quotation.revisions}
       // What Edit and Revise open on: the lines as they are, by id rather than

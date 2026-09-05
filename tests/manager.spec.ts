@@ -201,6 +201,6 @@ test("a rep who follows a link to the team screen lands on his own home", async 
   await login(page, locale, "faisal");
   await page.goto(`/${locale}/team`);
 
-  await expect(page).toHaveURL(/\/companies/, COLD);
-  await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible();
+  await expect(page).toHaveURL(/\/day/, COLD);
+  await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
 });

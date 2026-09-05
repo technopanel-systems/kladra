@@ -25,9 +25,11 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { Money, Sqm } from "@/components/ui-ext/figures";
+import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { formatMoney } from "@/lib/money";
 import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
+import type { QuotationStanding } from "@/lib/standing";
 import { quotationTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
@@ -355,6 +357,8 @@ export type QuotationSheetProps = {
   revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
   draft: QuotationDraft;
   scope: ActionScope;
+  /** The figures under the title (P8.5). */
+  standing: QuotationStanding;
   /**
    * What has gone out against this quotation, and the button that sends more —
    * built on the server, because both need the reader's own scope (S38).
@@ -368,6 +372,7 @@ export function QuotationSheet({
   revisions,
   draft,
   scope,
+  standing,
   dispatches,
 }: QuotationSheetProps) {
   const t = useTranslations();
@@ -408,18 +413,34 @@ export function QuotationSheet({
                 : quotation.companyName}
             </SheetDescription>
 
+            {/* What this drawer is opened to check, before who typed it
+                (DESIGN §6): how big it is, how much of it is still available to
+                send (D12), when it went out, and SMAC's number for it. */}
+            <StandingStrip
+              items={[
+                { label: t("common.sqm"), value: <Sqm value={quotation.totalSqm} /> },
+                { label: t("dispatches.remaining"), value: <Sqm value={standing.remainingSqm} /> },
+                {
+                  label: t("common.date"),
+                  value: (
+                    <DayText day={quotation.issuedOn ?? quotation.createdOn} locale={locale} />
+                  ),
+                },
+                {
+                  label: t("common.smacNumber"),
+                  value: quotation.smacNumber ? (
+                    <span dir="ltr" className="num">
+                      {quotation.smacNumber}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  ),
+                },
+              ]}
+            />
+
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Fact label={t("common.rep")}>{quotation.repName}</Fact>
-              <Fact label={t("common.date")}>
-                <DayText day={quotation.createdOn} locale={locale} />
-              </Fact>
-              {quotation.smacNumber ? (
-                <Fact label={t("common.smacNumber")}>
-                  <span dir="ltr" className="num">
-                    {quotation.smacNumber}
-                  </span>
-                </Fact>
-              ) : null}
             </dl>
           </div>
 

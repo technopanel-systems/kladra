@@ -15,8 +15,9 @@ test("scaffold smoke: sign-in, role homes, health, and the auth redirect", async
 }) => {
   await test.step(`Faisal signs in and lands on Companies, in ${locale}`, async () => {
     await login(page, locale, "faisal");
-    await expect(page).toHaveURL(new RegExp(`/${locale}/companies(?:$|[/?#])`));
-    await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible();
+    // A rep's home is his day from P8, not his company list (D15, D49).
+    await expect(page).toHaveURL(new RegExp(`/${locale}/day(?:$|[/?#])`));
+    await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
     const html = page.locator("html");
     await expect(html).toHaveAttribute("lang", locale);
     await expect(html).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
