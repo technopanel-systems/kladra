@@ -33,6 +33,7 @@ import { normalizePhone } from "../src/lib/phone";
 import { type QuotationEventName, quotationEvent } from "../src/lib/quotation-events";
 import { isWeekend, nextWorkingDay } from "../src/lib/workdays";
 import { MONTHS_SHOWN } from "../src/lib/months";
+import { clearedByReading } from "../src/lib/notify";
 import {
   CITIES,
   COMPANY_CATEGORIES,
@@ -1055,15 +1056,39 @@ async function seedNotifications(
   userIds: Map<string, string>,
   quotationIds: Map<string, string>,
 ): Promise<void> {
+  /*
+   * The seed is the one writer that stamps `read_at` itself, so it is the one
+   * that could produce a row the app cannot: a finished fact somebody has read
+   * is deleted the moment it is read (D79), so a demo carrying one would be
+   * showing a state this rule makes impossible. Same shape as the trail's
+   * out-of-order guard — the dataset is held to the app's own sentences.
+   */
+  for (const n of NOTIFICATIONS) {
+    if (n.read && clearedByReading(n.kind)) {
+      throw new Error(
+        `seed: ${n.kind} is cleared by reading, so it cannot be seeded as read (${n.quotation})`,
+      );
+    }
+  }
+
   await db.transaction(async (tx) => {
     await tx.insert(notifications).values(
       NOTIFICATIONS.map((n) => {
         const created = instant(back(n.back), 11, 45);
+        const quotationId = must(quotationIds, n.quotation, "quotation");
         return {
           userId: must(userIds, n.user, "user"),
           kind: n.kind,
-          params: n.params,
-          link: `${n.linkBase}?open=${must(quotationIds, n.quotation, "quotation")}`,
+          // The person in the sentence travels as an id, and the screen names
+          // him in the reader's script (D68, D79).
+          params: n.rep ? { ...n.params, repId: must(userIds, n.rep, "user") } : n.params,
+          link: `${n.linkBase}?open=${quotationId}`,
+          // What it is about, which is what decides whether it is still true
+          // (D79). Every seeded notice is about a quotation; the seed's own
+          // list is checked against the chain below, so a notice about a
+          // request the rep has already fixed cannot be written here either.
+          subjectType: "quotation" as const,
+          subjectId: quotationId,
           readAt: n.read ? instant(back(Math.max(n.back - 1, 0)), 8, 10) : null,
           createdAt: created,
           updatedAt: created,

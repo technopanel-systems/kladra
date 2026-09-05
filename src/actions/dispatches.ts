@@ -42,7 +42,7 @@ import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
-import { createNotification } from "@/lib/notify";
+import { clearNotifications, createNotification } from "@/lib/notify";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
 async function guard<T>(
@@ -343,8 +343,9 @@ export async function requestDispatchAction(
         await createNotification(tx, {
           userId,
           kind: "dispatchRequested",
-          params: { label, rep: actor.name },
+          params: { label, repId: actor.id },
           link: `/queue?dispatch=${row.id}`,
+          subject: { type: "dispatch", id: row.id },
         });
       }
 
@@ -501,11 +502,17 @@ export async function approveDispatchAction(
         details: { smacDispatchNumber: parsed.data.smacDispatchNumber },
       });
 
+      // Answered, so it is off her queue and off her bell (D79).
+      await clearNotifications(tx, { type: "dispatch", id: dispatch.id }, [
+        "dispatchRequested",
+      ]);
+
       await createNotification(tx, {
         userId: dispatch.companyRepId,
         kind: "dispatchApproved",
         params: { label: dispatch.label, smacNumber: parsed.data.smacDispatchNumber },
         link: `/dispatches?open=${dispatch.id}`,
+        subject: { type: "dispatch", id: dispatch.id },
       });
 
       await notifyLive(
@@ -567,11 +574,18 @@ export async function refuseDispatchAction(
         details: { reason: parsed.data.reason },
       });
 
+      // Refusing it is answering it too; what happens next is a new dispatch,
+      // which is a new row and a new notice (D79).
+      await clearNotifications(tx, { type: "dispatch", id: dispatch.id }, [
+        "dispatchRequested",
+      ]);
+
       await createNotification(tx, {
         userId: dispatch.companyRepId,
         kind: "dispatchRefused",
         params: { label: dispatch.label, reason: parsed.data.reason },
         link: `/dispatches?open=${dispatch.id}`,
+        subject: { type: "dispatch", id: dispatch.id },
       });
 
       await notifyLive(

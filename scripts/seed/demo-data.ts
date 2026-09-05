@@ -1124,9 +1124,15 @@ export type NotificationSeed = {
   user: string;
   /** One of the real kinds — the vocabulary is src/lib/notify.ts, not a string. */
   kind: NotificationKind;
-  /** The quotation whose id goes into the link and whose label goes into params. */
+  /** The quotation whose id goes into the link and whose subject column it is. */
   quotation: string;
   params: Record<string, string | number>;
+  /**
+   * Whose name goes in the sentence, as a person rather than as a word: the
+   * screen names him in the reader's script at read time (D68, D79), so the row
+   * carries the key and never the name.
+   */
+  rep?: string;
   /** `?open=` is appended with the quotation's id. */
   linkBase: string;
   read: boolean;
@@ -1135,11 +1141,20 @@ export type NotificationSeed = {
 };
 
 export const NOTIFICATIONS: NotificationSeed[] = [
+  /*
+   * Every one of these is still TRUE of the quotation it is about, and that is
+   * now a rule rather than a coincidence: a notice is cleared by the transition
+   * that settles it, so a dataset carrying one about a request already answered
+   * would be showing a row the app promises cannot exist (D79). There was one —
+   * "Q-4 is issued" against a quotation the customer had accepted two days
+   * earlier — and it is the acceptance below instead.
+   */
   {
     user: "rawan",
     kind: "quotationRequested",
     quotation: "q1",
-    params: { label: "Q-1", rep: "Faisal Al-Harbi" },
+    params: { label: "Q-1" },
+    rep: "faisal",
     linkBase: "/queue",
     read: false,
     // The same four working days as the request it is about: a notice dated
@@ -1150,7 +1165,8 @@ export const NOTIFICATIONS: NotificationSeed[] = [
     user: "rawan",
     kind: "quotationRequested",
     quotation: "q3r2",
-    params: { label: "Q-3/2", rep: "Faisal Al-Harbi" },
+    params: { label: "Q-3/2" },
+    rep: "faisal",
     linkBase: "/queue",
     read: false,
     back: 0,
@@ -1161,17 +1177,36 @@ export const NOTIFICATIONS: NotificationSeed[] = [
     quotation: "q3",
     params: { label: "Q-3", smacNumber: "4512" },
     linkBase: "/quotations",
+    // Read, and still on his screen: it is waiting on the customer, and work
+    // that is still open does not leave because somebody has looked at it (D79).
     read: true,
     back: 6,
   },
   {
+    // The other half of the same rule. Q-2 is sent back and still sent back, so
+    // this is the row the rep clears by fixing it rather than by reading it —
+    // the case the demo had no example of at all.
     user: "faisal",
-    kind: "quotationIssued",
-    quotation: "q4",
-    params: { label: "Q-4", smacNumber: "4519" },
+    kind: "quotationReturned",
+    quotation: "q2",
+    params: {
+      label: "Q-2",
+      reason: "الكمية لا تغطي الواجهة في المخطط — راجع الكشف مع الاستشاري",
+    },
     linkBase: "/quotations",
     read: false,
-    back: 8,
+    back: 3,
+  },
+  {
+    // A finished fact, which is the kind that goes when it is read: there is
+    // nothing at the end of it to do, and the quotation it names is accepted.
+    user: "rawan",
+    kind: "quotationAccepted",
+    quotation: "q4",
+    params: { label: "Q-4" },
+    linkBase: "/quotations",
+    read: false,
+    back: 6,
   },
 ];
 

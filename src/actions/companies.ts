@@ -423,8 +423,9 @@ export async function handOverCompanyAction(
         await createNotification(tx, {
           userId: target.id,
           kind: "companyHandedOver",
-          params: { label: company.name, rep: actor.name },
+          params: { label: company.name, repId: actor.id },
           link: `/companies?open=${company.id}`,
+          subject: { type: "company", id: company.id },
         });
       }
 

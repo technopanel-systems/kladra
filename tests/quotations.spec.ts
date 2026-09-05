@@ -289,13 +289,17 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
 
     // The notice is a sentence in his language, built from the kind and its
     // params — the row stores no English (D13).
-    const notice = page.getByText(
-      t("notifications.quotationReturned", {
-        label,
-        reason: "Price is below the floor for this class.",
-      }),
-    );
+    const notice = page.getByText(t("notifications.quotationReturned", { label }));
     await expect(notice).toBeVisible();
+
+    // And HER words are a block of their own under it, not a clause inside a
+    // sentence built from the message file: what a person typed runs in that
+    // person's direction, on either locale's page (words.md, DESIGN §5). Read
+    // from THIS notice's row — the seeded floor has a sent-back quotation of
+    // its own, so the reason block is not unique on the screen.
+    await expect(
+      notice.locator('xpath=ancestor::li[1]').locator('[data-slot="notice-reason"]'),
+    ).toHaveText("Price is below the floor for this class.");
     await notice.click();
     await expect(page).toHaveURL(new RegExp(`/quotations\\?open=${quotationId}`));
 
@@ -330,6 +334,16 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
       t("quotations.event.update"),
     ]);
     await expect(fixed.getByText(t("quotations.sentBackTimes", { count: 1 }))).toBeVisible();
+
+    // And the notice that brought him here has stopped being a row (D79). He
+    // did what it asked, which is the only thing that clears a notice about
+    // work — reading it never was. Before this it stayed on his screen and in
+    // his bell describing a request he had already corrected.
+    await page.goto(`/${locale}/notifications`);
+    await expect(
+      page.getByText(t("notifications.quotationReturned", { label })),
+      "the notice about a request he has already fixed is still on his screen",
+    ).toHaveCount(0);
   });
 
   await test.step("6 · Rawan gives it SMAC's number, which is what issues it", async () => {
@@ -411,6 +425,39 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
       t("quotations.event.issue"),
       t("quotations.event.accepted"),
     ]);
+  });
+
+  await test.step("9 · what is finished leaves her screen when she reads it; what is open stays", async () => {
+    // The other half of D79. Her two notices from this walk are of the two
+    // kinds there are: the customer's answer, which is finished and has nothing
+    // at the end of it to do, and the revision he has just raised, which is
+    // work still sitting in her queue. Marking everything read takes the first
+    // one away for ever and leaves the second exactly where it is.
+    await login(page, locale, "rawan");
+    await page.goto(`/${locale}/notifications`);
+
+    const accepted = page.getByText(t("notifications.quotationAccepted", { label }));
+    // The rep is named in the reader's script, because the row stores his id
+    // and the screen resolves it (D68): in Arabic this locator is his Arabic
+    // name, and it used to be his Latin one on every screen.
+    const asked = page.getByText(
+      t("notifications.quotationRequested", {
+        label: `${label}/2`,
+        rep: await personName("faisal@technopanel.com.sa", locale),
+      }),
+    );
+    await expect(accepted).toBeVisible(COLD);
+    await expect(asked).toBeVisible();
+
+    const markAll = page.getByRole("button", { name: t("common.markAllRead") });
+    await markAll.click();
+    // The button goes when nothing is unread, and it goes on the refresh the
+    // action asks for — which is also when the deleted rows leave the screen.
+    // Navigating before that lands would cancel the write in flight.
+    await expect(markAll).toHaveCount(0, COLD);
+
+    await expect(accepted, "a finished fact she has read is still a row").toHaveCount(0);
+    await expect(asked, "the revision waiting in her queue left her screen").toBeVisible();
   });
 });
 

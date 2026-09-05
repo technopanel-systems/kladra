@@ -78,6 +78,13 @@ allowlist naming the files that may use the Latin name and the reason each may:
 the CSV export, the audit log, the admin's own list, the session, the schema.
 A new query that forgets is caught by the check, not by an Arabic screen.
 
+And a name STORED is the same defect one step further out, where the check cannot
+see it: the notification row kept `actor.name` in its params, so Rawan read
+«طلب Faisal Al-Harbi عرض السعر Q-1» on the one screen in the app whose whole design is
+that the row holds no words and the sentence is built in the reader's language at read
+time (D13). `one-name` never fired, because that is not a query. A row that has to name
+a person carries the person's ID, and the reader resolves it.
+
 ## A block somebody TYPED runs in their direction, not the page's
 Every other string on a screen came out of `messages/<locale>/` and runs the way
 the page runs. A log entry, a coordinator's reason and a daily report did not:

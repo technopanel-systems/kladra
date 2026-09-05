@@ -87,6 +87,10 @@ try {
         link: flags.get("link") ?? "/",
         params: { from: "live-ping" },
         userId: user.id,
+        // A ping points at nothing, so it gets an id nothing else has: the
+        // column is not nullable, because a notice with no subject is the row
+        // that can never be cleared (D79).
+        subject: { type: "quotation", id: crypto.randomUUID() },
       }),
     );
     const unread = await unreadCount(db, user.id);

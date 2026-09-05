@@ -584,6 +584,13 @@ export const dailyReports = pgTable(
 // ---- notifications and audit -------------------------------------------------
 // `kind` + `params` render in the reader's language ("Q-12 issued" / "تم إصدار Q-12").
 
+/**
+ * The three kinds of record a notice can be about. Here rather than in
+ * `src/lib/notify.ts` because the column is what enforces it: a fourth one
+ * would need a column value, and this is where a reader looks for the list.
+ */
+export type NotificationSubjectType = "quotation" | "dispatch" | "company";
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -594,10 +601,24 @@ export const notifications = pgTable(
     kind: text("kind").notNull(),
     params: jsonb("params").$type<Record<string, string | number>>().notNull().default({}),
     link: text("link").notNull(),
+    /**
+     * What this notice is ABOUT — the record its link points at, named rather
+     * than parsed out of the link (D79). A notice is a pointer, and until this
+     * column existed the only copy of what it pointed at was a URL: nothing
+     * could ask "is this still true?", so a notice about a request the rep
+     * fixed a week ago stayed on his screen and in his bell for ever.
+     */
+    subjectType: text("subject_type").$type<NotificationSubjectType>().notNull(),
+    subjectId: uuid("subject_id").notNull(),
     readAt: timestamp("read_at", { withTimezone: true }),
     ...stamps,
   },
-  (t) => [index("notifications_user_unread_idx").on(t.userId, t.readAt)],
+  (t) => [
+    index("notifications_user_unread_idx").on(t.userId, t.readAt),
+    // How the clearing finds them: every transition asks for one subject's
+    // notices and deletes the kinds that transition has just made untrue.
+    index("notifications_subject_idx").on(t.subjectType, t.subjectId),
+  ],
 );
 
 export const auditLog = pgTable(

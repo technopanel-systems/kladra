@@ -1,13 +1,13 @@
 {
   "quotationRequested": "طلب {rep} عرض السعر {label}.",
   "quotationIssued": "صدر عرض السعر {label} برقم سماك {smacNumber}.",
-  "quotationReturned": "أُعيد عرض السعر {label} للتعديل: {reason}",
+  "quotationReturned": "أُعيد عرض السعر {label} للتعديل.",
   "quotationAccepted": "قبل العميل عرض السعر {label}.",
-  "quotationRejected": "رفض العميل عرض السعر {label}: {reason}",
+  "quotationRejected": "رفض العميل عرض السعر {label}.",
   "quotationCancelled": "سحب {rep} طلب عرض السعر {label}.",
   "dispatchRequested": "طلب {rep} التوريد {label}.",
   "dispatchApproved": "تم اعتماد التوريد {label} برقم سماك {smacNumber}.",
-  "dispatchRefused": "رُفض التوريد {label}: {reason}",
+  "dispatchRefused": "رُفض التوريد {label}.",
   "companyHandedOver": "سلّمك {rep} {label}.",
   "unreadMark": "غير مقروء"
 }

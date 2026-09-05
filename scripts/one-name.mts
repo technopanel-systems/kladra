@@ -49,7 +49,14 @@ function walk(dir: string): void {
       // Arabic one and are never the problem.
       const drizzle = /\busers\.name\b(?!Ar)/.test(line);
       const raw = /\bu\.name\b(?!_ar)/.test(line);
-      if (drizzle || raw) found.push(`${rel}:${i + 1} — ${line.trim()}`);
+      // And the third shape, which is not a query at all and so was invisible to
+      // both checks above: the Latin name taken off the SESSION and then stored
+      // or rendered. The notification row kept `actor.name` in its params, and
+      // Rawan read a Latin name inside an Arabic sentence — on the one screen
+      // whose whole design is that the row holds no words (D68, D79). The
+      // session carries both names; anything that needs one asks people.ts.
+      const session = /\b(actor|viewer|sessionUser)\.name\b(?!Ar)/.test(line);
+      if (drizzle || raw || session) found.push(`${rel}:${i + 1} — ${line.trim()}`);
     });
   }
 }

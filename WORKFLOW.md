@@ -49,7 +49,7 @@
 - [ ] P10 The half-built and the carried, then a pilot on real volumes
       - [x] a A person has a standing strip of his own — the one thing "how is this going"
             is not asked about anywhere
-      - [ ] b A notification that has been read and acted on stops being a row for ever
+      - [x] b A notification that has been read and acted on stops being a row for ever
       - [ ] c The carried three: every list renders every row it is given, a form dialog
             that scrolls does not say so, and a dispatch is typed from nothing too
 
@@ -91,6 +91,18 @@ his day already renders rather than from a second derivation of it. Two things w
 cause while building it: "open quotations" existed twice, once in SQL and once in the query
 builder, and the strip's phone grid left an empty cell beside an odd last figure — the same defect
 as the half-empty two-figure strip in P9.6g, one width down, and now a rule in DESIGN §5.
+
+**P10b is done.** A notice says what it is ABOUT rather than only where the screen is, and every
+kind answers one question the compiler asks of it: what takes this off the screen (D79). Work is
+cleared by the transition that settles it, inside the same transaction, so the bell drops when the
+thing it described stops being the case; a finished fact is cleared by being read, because there is
+nothing else to do with it. What is left after "Mark all read" is the work still open. Two more
+causes went with it. The notification row was the one place in the app that stored a person's NAME
+rather than joining for it, so an Arabic screen read «طلب Faisal Al-Harbi» — the row carries his id
+now and `one-name` fails on a Latin name taken off the session, which is the shape neither of its
+first two checks could see. And the coordinator's typed reason was a clause inside a sentence built
+from the message file; it is a block of its own under it, in the direction of whoever typed it,
+which is the rule DESIGN §5 already carried for every other screen.
 
 **P9 is finished, and with it every item on the ranked list the five days produced.** What
 is next is P10, and it is the three things this phase deliberately did not do, in this
@@ -431,12 +443,13 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 1. Faisal opens a project and requests a quotation with two items; the totals add up as he types; he saves.
 2. The drawer that opens shows the same four figures, worked out again in SQL.
 3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
-4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again.
+4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again — and the notice that brought him there is gone from his screen, because he did what it asked (D79).
 5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2, the first is Superseded, and the revision says which one line it changed and what the price was before.
 6. The drawer says what happened to it, in order and in his language — requested, sent back, lines edited, issued, accepted — and her reason left the screen the moment he fixed it.
-7. Second test: a request the seed sent back twice says so, both her reasons are readable, and each line names her.
-8. Third test: a repeat ask at a customer already quoted opens on that quotation's items in one press, the offer leaves once there is work to lose, and a new item opens on the sheet above it.
-9. Fourth test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
+7. Rawan's own screen then holds one of each kind of notice: the customer's answer, which is finished, and the revision he has just raised, which is not. She marks everything read; the first stops being a row for ever and the second stays exactly where it is. The rep in that sentence is named in the script she is reading, because the row carries his id and never his name (D68, D79).
+8. Second test: a request the seed sent back twice says so, both her reasons are readable, and each line names her.
+9. Third test: a repeat ask at a customer already quoted opens on that quotation's items in one press, the offer leaves once there is work to lose, and a new item opens on the sheet above it.
+10. Fourth test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
 
 **Rawan-2 (coordinator, dispatches)** — `tests/dispatches.spec.ts`
 1. Faisal opens an issued quotation and sends part of item 1, with a shipment method, a destination and payment terms. The m² adds up as he types.

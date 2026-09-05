@@ -144,6 +144,18 @@ broken at least once in FACET, Kladra's predecessor.
   and only one of them ever on a screen. A threshold needs a row on each side of
   it; a band of three needs a row in each of the three.
 
+- **A row that points at something says WHAT it points at, not only where the
+  screen is.** A notification carried a sentence and a link, and a link is a
+  route: `/queue?open=<id>` is where a person goes, and nothing in it can be
+  asked "is this still true?". So a notice about a request the rep fixed a week
+  ago stayed in his bell for ever, and the only thing that cleared it was
+  reading it — the one act with no relation to the work. The row names its
+  subject now (`subject_type`, `subject_id`), the transition that settles the
+  work deletes the notices about it inside its own transaction, and the bell
+  drops at the instant the thing it described stopped being the case. The rule
+  generalises: any row whose truth depends on another row's state must hold that
+  row's identity as a column, never parsed out of a string built for a browser.
+
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.
 

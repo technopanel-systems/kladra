@@ -7,6 +7,7 @@ import { markReadAction } from "@/actions/notifications";
 import { Button } from "@/components/ui/button";
 import { Link, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Prose } from "@/components/ui-ext/prose";
 import type { NotificationRow } from "@/lib/notifications";
 
 /**
@@ -74,19 +75,42 @@ export function NotificationsList({ rows }: { rows: NotificationRow[] }) {
                   row.read ? "mt-2 size-2 shrink-0 rounded-full" : "mt-2 size-2 shrink-0 rounded-full bg-brand"
                 }
               />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-sm">
                   {t(`notifications.${row.kind}`, row.params)}
                   {row.read ? null : (
                     <span className="sr-only"> · {t("notifications.unreadMark")}</span>
                   )}
                 </span>
-                <DayText day={row.day} locale={locale} className="text-xs text-muted-foreground" />
-              </span>
+                {/* Her words, in her direction. The reason used to be dropped
+                    into the sentence itself — "Q-2 came back for edits: …" —
+                    which put a paragraph somebody TYPED inside a line built
+                    from the message file, running the way the page runs. A
+                    block a person wrote takes its direction from the text
+                    (words.md, DESIGN §5), so it is a block, under the sentence
+                    that says what happened. */}
+                <Prose
+                  text={reasonOf(row)}
+                  slot="notice-reason"
+                  className="text-sm text-muted-foreground"
+                />
+                {/* Three things on the row and three weights, now that her
+                    words are one of them: what happened, then what she wrote
+                    about it, then when. The day was muted like the reason above
+                    it and told apart only by being two pixels smaller, which is
+                    not a difference anybody reads (DESIGN §1's three steps). */}
+                <DayText day={row.day} locale={locale} className="text-xs text-faint" />
+              </div>
             </Link>
           </li>
         ))}
       </ul>
     </div>
   );
+}
+
+/** What somebody wrote about it, if anybody wrote anything. */
+function reasonOf(row: NotificationRow): string {
+  const reason = row.params.reason;
+  return typeof reason === "string" ? reason : "";
 }

@@ -26,7 +26,7 @@ import { NotAllowed, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
-import { createNotification } from "@/lib/notify";
+import { clearNotifications, createNotification } from "@/lib/notify";
 import { quotationLabel } from "@/lib/labels";
 import { quotationEvent } from "@/lib/quotation-events";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
@@ -272,8 +272,9 @@ export async function requestQuotationAction(
         await createNotification(tx, {
           userId,
           kind: "quotationRequested",
-          params: { label, rep: actor.name },
+          params: { label, repId: actor.id },
           link: `/queue?open=${row.id}`,
+          subject: { type: "quotation", id: row.id },
         });
       }
 
@@ -343,12 +344,21 @@ export async function updateQuotationAction(
       // Only news to her if it had been sent back: an edit to something already
       // in her queue is the same request with different lines.
       if (quotation.status === "returned") {
+        // He has done what it asked, so it stops being a row for ever (D79).
+        // This is the case the whole thing was built for: before it, a rep who
+        // fixed a quotation from the quotations screen kept a bold notice about
+        // work he had already finished, and clearing it meant reading it.
+        await clearNotifications(tx, { type: "quotation", id: quotation.id }, [
+          "quotationReturned",
+        ]);
+
         for (const userId of await coordinators()) {
           await createNotification(tx, {
             userId,
             kind: "quotationRequested",
-            params: { label: quotation.label, rep: actor.name },
+            params: { label: quotation.label, repId: actor.id },
             link: `/queue?open=${quotation.id}`,
+            subject: { type: "quotation", id: quotation.id },
           });
         }
       }
@@ -410,11 +420,17 @@ export async function issueQuotationAction(
         details: { smacNumber: parsed.data.smacNumber },
       });
 
+      // She has answered it, so the request on her own bell is done (D79).
+      await clearNotifications(tx, { type: "quotation", id: quotation.id }, [
+        "quotationRequested",
+      ]);
+
       await createNotification(tx, {
         userId: quotation.companyRepId,
         kind: "quotationIssued",
         params: { label: quotation.label, smacNumber: parsed.data.smacNumber },
         link: `/quotations?open=${quotation.id}`,
+        subject: { type: "quotation", id: quotation.id },
       });
 
       await notifyLive(
@@ -474,11 +490,18 @@ export async function sendBackQuotationAction(
         details: { reason: parsed.data.reason },
       });
 
+      // Sending it back is answering it too: what is open now is the rep's
+      // correction, and that is the notice being written below (D79).
+      await clearNotifications(tx, { type: "quotation", id: quotation.id }, [
+        "quotationRequested",
+      ]);
+
       await createNotification(tx, {
         userId: quotation.companyRepId,
         kind: "quotationReturned",
         params: { label: quotation.label, reason: parsed.data.reason },
         link: `/quotations?open=${quotation.id}`,
+        subject: { type: "quotation", id: quotation.id },
       });
 
       await notifyLive(
@@ -546,12 +569,19 @@ export async function decideQuotationAction(
         details: reason ? { reason } : {},
       });
 
+      // The customer has answered, which is what "issued" was telling him to
+      // chase (D79).
+      await clearNotifications(tx, { type: "quotation", id: quotation.id }, [
+        "quotationIssued",
+      ]);
+
       for (const userId of await coordinators()) {
         await createNotification(tx, {
           userId,
           kind: decision === "accepted" ? "quotationAccepted" : "quotationRejected",
           params: { label: quotation.label, reason: reason ?? "" },
           link: `/quotations?open=${quotation.id}`,
+          subject: { type: "quotation", id: quotation.id },
         });
       }
 
@@ -630,13 +660,20 @@ export async function reviseQuotationAction(
         details: { revisionOf: quotation.id, lines: items.length },
       });
 
+      // The one it replaces is superseded, so "Q-12 issued" is now about a
+      // document nobody will act on: what is live is the revision below (D79).
+      await clearNotifications(tx, { type: "quotation", id: quotation.id }, [
+        "quotationIssued",
+      ]);
+
       const label = quotationLabel(quotation.number, row.revision);
       for (const userId of await coordinators()) {
         await createNotification(tx, {
           userId,
           kind: "quotationRequested",
-          params: { label, rep: actor.name },
+          params: { label, repId: actor.id },
           link: `/queue?open=${row.id}`,
+          subject: { type: "quotation", id: row.id },
         });
       }
 
@@ -695,12 +732,24 @@ export async function cancelQuotationAction(
         details: {},
       });
 
+      // Withdrawn: whatever it was waiting for, it is not waiting for it now —
+      // hers if it was in her queue, his if it had come back to him (D79).
+      await clearNotifications(tx, { type: "quotation", id: quotation.id }, [
+        "quotationRequested",
+        "quotationReturned",
+        "quotationIssued",
+      ]);
+
       for (const userId of await coordinators()) {
         await createNotification(tx, {
           userId,
           kind: "quotationCancelled",
-          params: { label: quotation.label, rep: actor.name },
+          params: { label: quotation.label, repId: actor.id },
           link: `/queue`,
+          // The request is gone from her queue, so the link is the queue itself —
+          // but the notice is still ABOUT that quotation, and that is what says
+          // when it stops being true (D79).
+          subject: { type: "quotation", id: quotation.id },
         });
       }
 
