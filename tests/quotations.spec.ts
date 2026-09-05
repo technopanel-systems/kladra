@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, personName, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
+import { quotationLabel } from "@/lib/labels";
 
 /**
  * P4 — the quotation chain, end to end (WORKFLOW §3).
@@ -402,6 +403,90 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
       t("quotations.event.accepted"),
     ]);
   });
+});
+
+/**
+ * The second line, and the second quotation, both start from the last one.
+ *
+ * Nine fields, four of them dropdowns with no default, and this floor sells the
+ * same specification to the same customers over and over — item 7 on the
+ * five-day list, and the plainest sentence in it: "nothing offers him the last
+ * one" (D74). Two offers now do, and this walks both of them.
+ */
+test("a repeat request opens on the last quotation, and a second line on the first one's sheet", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const faisal = await userId("faisal@technopanel.com.sa");
+
+  // The newest quotation on any of Faisal's companies that also has a project to
+  // raise the next one from — so it IS what the offer will name, computed the
+  // way the app computes it rather than hard-coded to a seeded row.
+  const previous = await one<{
+    projectId: string;
+    projectName: string;
+    number: number;
+    revision: number;
+    colourCode: string;
+    lines: number;
+  }>(
+    `select p.id as "projectId",
+            p.name as "projectName",
+            q.number,
+            q.revision,
+            first_value(i.colour_code) over (partition by q.id order by i.position) as "colourCode",
+            count(*) over (partition by q.id)::int as lines
+       from projects p
+       join companies c on c.id = p.company_id
+       join quotations q on q.company_id = c.id
+       join quotation_items i on i.quotation_id = q.id
+      where c.rep_id = $1::uuid
+        and c.archived_at is null
+        and p.archived_at is null
+        and p.lost_at is null
+      order by q.created_at desc, i.position
+      limit 1`,
+    [faisal],
+  );
+  const label = quotationLabel(previous.number, previous.revision);
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/projects?open=${previous.projectId}`);
+  const drawer = page.getByRole("dialog", { name: previous.projectName });
+  await drawer.getByRole("tab", { name: t("common.quotations") }).click();
+  await drawer.getByRole("button", { name: t("quotations.request") }).first().click();
+
+  const form = page.getByRole("dialog", {
+    name: t("quotations.requestFor", { project: previous.projectName }),
+  });
+  await expect(form.getByLabel(t("common.colourCode"))).toBeVisible(COLD);
+
+  const copy = form.getByRole("button", { name: t("quotations.copyItemsFrom", { label }) });
+  await expect(copy, "the offer names the last quotation at this customer").toBeVisible(COLD);
+  await copy.click();
+
+  // Every line of it, as it was typed, ready to be changed.
+  const colours = form.getByLabel(t("common.colourCode"));
+  await expect(colours).toHaveCount(previous.lines);
+  await expect(colours.first()).toHaveValue(previous.colourCode);
+
+  // And the offer is gone, because there is now something to lose.
+  await expect(copy).toHaveCount(0);
+
+  // A new line opens on the sheet above it: same supplier, rating, class and
+  // thickness, and nothing that identifies the line or prices it.
+  const suppliers = form.getByRole("combobox", { name: t("common.supplier") });
+  const before = await suppliers.count();
+  const sheet = await suppliers.nth(before - 1).innerText();
+
+  await form.getByRole("button", { name: t("quotations.addItem") }).click();
+  await expect(suppliers).toHaveCount(before + 1);
+  await expect(suppliers.nth(before)).toHaveText(sheet);
+  await expect(colours.nth(before)).toHaveValue("");
+  await expect(form.getByLabel(t("common.pricePerSqm")).nth(before)).toHaveValue("");
 });
 
 /**

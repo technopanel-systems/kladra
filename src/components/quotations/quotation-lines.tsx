@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatMoney, formatSqm, lineSqm, lineTotal } from "@/lib/money";
+import type { DraftLine } from "@/lib/quotation-draft";
 
 /**
  * The lines of a quotation, as a rep fills them in (SPEC §3, S32).
@@ -27,19 +28,15 @@ import { formatMoney, formatSqm, lineSqm, lineTotal } from "@/lib/money";
  * new line opens on, because that is the standard sheet.
  */
 
-export type LineDraft = {
-  /** React's key. Never sent: the server numbers the lines by their order. */
-  key: string;
-  colourCode: string;
-  supplierId: string;
-  fireRatingId: string;
-  classId: string;
-  thicknessId: string;
-  qty: string;
-  width: string;
-  length: string;
-  pricePerSqm: string;
-};
+/**
+ * One line in the form: the nine fields, plus React's key.
+ *
+ * The nine are `DraftLine`, which the server side of this also speaks — the
+ * lines Edit opens on, the lines Revise copies, and the lines a repeat request
+ * starts from all arrive in that shape. The key never leaves the browser: the
+ * server numbers the lines by their order.
+ */
+export type LineDraft = DraftLine & { key: string };
 
 /** The standard sheet: 1.24 × 5.8 m, 4 mm (S32). */
 const STANDARD_WIDTH = "1.24";
@@ -62,6 +59,54 @@ export function blankLine(lookups: QuotationLookups): LineDraft {
     length: STANDARD_LENGTH,
     pricePerSqm: "",
   };
+}
+
+/**
+ * The line after the one above it: the same sheet, and nothing else.
+ *
+ * This business sells the same specification over and over — supplier N, B1,
+ * class A, 4 mm, on the standard 1.24 x 5.8 sheet — and every line of one
+ * quotation is usually that same sheet in a different colour. Nine fields typed
+ * from nothing, four of them dropdowns with no default, was the second thing
+ * the rep's day turned up (9A item 7): Add item handed him an empty card and he
+ * chose supplier, rating and class again, identically, every time.
+ *
+ * What the SHEET is carries over. What this LINE asks for does not: the colour
+ * code is the identity of a line and the price is the number the whole
+ * quotation is measured by, so neither is ever filled in for him. A number a
+ * screen writes into a form is a number nobody checks.
+ */
+export function nextLine(lookups: QuotationLookups, previous?: LineDraft): LineDraft {
+  const blank = blankLine(lookups);
+  if (!previous) return blank;
+  return {
+    ...blank,
+    supplierId: previous.supplierId,
+    fireRatingId: previous.fireRatingId,
+    classId: previous.classId,
+    thicknessId: previous.thicknessId,
+    width: previous.width,
+    length: previous.length,
+  };
+}
+
+/**
+ * Nothing has been typed into this line yet.
+ *
+ * Asked by the one offer that would otherwise throw work away — "copy the lines
+ * from Q-12" replaces what is in the form, so it is only offered while there is
+ * nothing in the form to lose. The four fields it asks about are the four a
+ * blank line leaves empty; the rest open on the standard sheet and say nothing
+ * about whether anybody has been here.
+ */
+export function isBlankLine(line: LineDraft): boolean {
+  return (
+    line.colourCode.trim() === "" &&
+    line.supplierId === "" &&
+    line.fireRatingId === "" &&
+    line.classId === "" &&
+    line.pricePerSqm.trim() === ""
+  );
 }
 
 /**
@@ -106,7 +151,7 @@ export function QuotationLines({
   }
 
   function add() {
-    onChange([...lines, blankLine(lookups)]);
+    onChange([...lines, nextLine(lookups, lines.at(-1))]);
   }
 
   function remove(key: string) {

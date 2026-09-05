@@ -42,7 +42,7 @@
             - [x] a A log entry can be corrected, and unfiled (item 3)
             - [x] b The rep logs the call without leaving his day (item 4)
             - [x] c A quotation's history, and the reason that outlived it (item 5)
-            - [ ] d Every quotation line is typed from nothing (item 7)
+            - [x] d Every quotation line is typed from nothing (item 7)
             - [ ] e Leave is invisible everywhere except the pace arithmetic (item 9)
             - [ ] f A revision does not say what changed (item 10)
             - [ ] g Nothing says whether the team is using the app (item 12)
@@ -62,12 +62,29 @@ border (D69). The mid-session sign-out seen during the 9C screenshots was confir
 `seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
 looks exactly like a bug, so the README says so now.
 
-P9.6 is the 9A list itself, best first, and three of it are done. A log entry can be
+P9.6 is the 9A list itself, best first, and four of it are done. A log entry can be
 corrected by its author and unfiled onto the audit line (D70), he logs the call from the
 row he called from (D71), and a quotation now remembers what happened to it (D72). The
 third one found the defect underneath it: a reason that outlived the state it explained,
 on a column whose twin on the dispatch table had been guarded by a constraint since the
-schema was written. **P9.6d is next: item 7, every quotation line typed from nothing.**
+schema was written. Item 7 is done too: Add item opens on the sheet above it, and a
+customer who has been quoted before is offered his last quotation to start from (D74).
+**P9.6e is next: item 9, leave invisible everywhere except the pace arithmetic.**
+
+**Carried, new in P9.6d:** a form dialog that scrolls does not say so. Measured on the
+request form: one item fits exactly, two do not, and the totals and the note to the
+coordinator go below the fold with the footer still visible above them — so it reads as if
+the form ends at Add item. Nothing is lost and the scroller works; Chromium's overlay
+scrollbar simply fades, and every dialog in the app and every one of them at 375 has the
+same shape. The fix is one scroll affordance on `FormBody`, which is four lines of CSS and
+a visual change to every dialog in the app — a forms pass, not a line inside item 7.
+
+A dispatch is typed from nothing too. The destination and the
+payment terms are free text on every one, and a second dispatch against the same quotation
+goes to the same site on the same terms — the identical complaint one screen along from
+item 7. It is NOT on the ranked list and no user named it, so it is written here rather
+than built: the five days found it at the quotation, and the dispatch form has not been
+walked with a rep.
 
 **Carried, and still carried:** every list in the app renders every row it is given —
 `listCompanies`, `stuckList` and the four call-list bands have no LIMIT. It is NOT on the
@@ -387,9 +404,10 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
 4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again.
 5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2 and the first is Superseded.
-6. The drawer says what happened to it, in order and in his language — asked, sent back, lines changed, issued, accepted — and her reason left the screen the moment he fixed it.
+6. The drawer says what happened to it, in order and in his language — requested, sent back, lines edited, issued, accepted — and her reason left the screen the moment he fixed it.
 7. Second test: a request the seed sent back twice says so, both her reasons are readable, and each line names her.
-8. Third test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
+8. Third test: a repeat ask at a customer already quoted opens on that quotation's items in one press, the offer leaves once there is work to lose, and a new item opens on the sheet above it.
+9. Fourth test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
 
 **Rawan-2 (coordinator, dispatches)** — `tests/dispatches.spec.ts`
 1. Faisal opens an issued quotation and sends part of item 1, with a shipment method, a destination and payment terms. The m² adds up as he types.

@@ -207,6 +207,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   blames the app. Wait for the form to close, then assert inside the panel that should have
   changed. Scope the assertion too: `page.getByText(x)` sees the whole document, including
   the form.
+- **A control that would replace what somebody typed either asks first, or is only there
+  while there is nothing to lose.** "Copy the items from Q-12" fills a whole form from an
+  earlier quotation, which is the point of it — and pressing it after ten minutes of typing
+  would be a confirm dialog nobody wants on the ninety-nine per cent of presses that happen
+  on an empty form. So the offer is rendered only while the form is untouched: one item,
+  with nothing typed into the fields a blank one leaves empty. It leaves the moment he
+  starts, which is also the moment it stops being what he wants. A control that disappears
+  is not a control that lies about what it does.
 - **The same words may say two things on one screen; a spec then names the ELEMENT, not
   the words.** The quotation drawer says "Sent back" twice over — once as the badge under
   its name, which is where it is now, and once in the trail, which is what happened on the

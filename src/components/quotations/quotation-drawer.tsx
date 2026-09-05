@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayQuote } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
+import { draftLinesFrom } from "@/lib/quotation-draft";
 import { getQuotation, quotationHistory } from "@/lib/quotations";
 import { quotationStanding } from "@/lib/standing";
 
@@ -99,17 +100,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       draft={{
         quotationId: quotation.id,
         notes: quotation.notes ?? "",
-        lines: quotation.items.map((item) => ({
-          colourCode: item.colourCode,
-          supplierId: String(item.supplierId),
-          fireRatingId: String(item.fireRatingId),
-          classId: String(item.classId),
-          thicknessId: String(item.thicknessId),
-          qty: String(item.qty),
-          width: item.width,
-          length: item.length,
-          pricePerSqm: item.pricePerSqm,
-        })),
+        lines: draftLinesFrom(quotation.items),
       }}
       scope={{
         coordinator: user.role === "coordinator",

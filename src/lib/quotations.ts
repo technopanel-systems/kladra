@@ -50,6 +50,7 @@ import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { quotationLabel } from "@/lib/labels";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
+import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
 import type { SessionUser } from "@/lib/types";
 
 export type QuotationStatus =
@@ -498,6 +499,50 @@ export async function listQuotationsForCompany(
     .orderBy(desc(quotations.createdAt));
 
   return rows.map(toRow);
+}
+
+/**
+ * The last thing this customer was quoted, for the form to start from
+ * (SPEC D74, 9A item 7).
+ *
+ * Nine fields a line, four of them dropdowns with no default, and this business
+ * sells the same specifications to the same customers over and over — the rep's
+ * day said it plainly: "nothing offers him the last one". This is the last one.
+ *
+ * Any status, deliberately. A quotation the customer rejected on price, or one
+ * the rep withdrew, describes the same panel he is about to quote again; what
+ * the offer copies is the specification, not the outcome. Newest first by when
+ * it was RAISED, which is the order he thinks of them in.
+ *
+ * Scoped by the same floor as the list it comes from, and then again by
+ * `getQuotation` when the lines are read: a rep sees his own companies (S8).
+ */
+export async function lastQuotationForCompany(
+  user: SessionUser,
+  companyId: string,
+): Promise<LastQuotation | null> {
+  const [newest] = await db
+    .select({ id: quotations.id })
+    .from(quotations)
+    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .where(
+      and(
+        eq(quotations.companyId, companyId),
+        isNull(companies.archivedAt),
+        seesEveryQuotation(user) ? undefined : eq(companies.repId, user.id),
+      ),
+    )
+    .orderBy(desc(quotations.createdAt))
+    .limit(1);
+  if (!newest) return null;
+
+  // Read through getQuotation rather than beside it: one gate decides who may
+  // see a quotation's lines, whether they are being read on the drawer or
+  // copied into a form (rules/data.md).
+  const quotation = await getQuotation(user, newest.id);
+  if (!quotation) return null;
+
+  return { label: quotation.label, lines: draftLinesFrom(quotation.items) };
 }
 
 /** One thing that happened to a quotation, for the trail on its drawer. */

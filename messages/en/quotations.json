@@ -50,6 +50,7 @@
   "itemNumber": "Item {number}",
   "addItem": "Add item",
   "removeItem": "Remove",
+  "copyItemsFrom": "Copy the items from {label}",
   "colourPlaceholder": "168",
   "widthOther": "1.24, 1.5, 2.0 or type one",
   "sheet": "Sheet (m)",
