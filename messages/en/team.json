@@ -15,12 +15,18 @@
   "stuck": "Stuck",
   "stuckNothing": "Nothing is stuck. Everything waiting is still inside its window.",
   "stuckRequests": "Requests waiting",
-  "stuckFollowUps": "Follow-ups overdue",
+  "stuckFollowUps": "Follow-ups long overdue",
   "stuckNever": "Added and never contacted",
   "waitingDays": "{count, plural, one {# working day} other {# working days}}",
   "overdueDays": "{count, plural, one {# day overdue} other {# days overdue}}",
   "addedDays": "{count, plural, one {added # day ago} other {added # days ago}}",
   "companiesOf": "Companies · {name}",
   "backToTeam": "Back to the team",
-  "pipeline": "Pipeline"
+  "pipeline": "Pipeline",
+  "pipelineMeans": "expected m² on live projects",
+  "stuckRequestsMeans": "{days, plural, one {more than # working day on the desk} other {more than # working days on the desk}}",
+  "stuckFollowUpsMeans": "{days, plural, one {more than # day past its date} other {more than # days past its date}}",
+  "stuckNeverMeans": "{days, plural, one {added more than # day ago} other {added more than # days ago}}",
+  "achievedOfTarget": "Achieved of target",
+  "monthOf": "{name} · this month"
 }

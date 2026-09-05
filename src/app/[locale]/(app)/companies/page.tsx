@@ -110,8 +110,12 @@ export default async function CompaniesPage({
       ) : null}
 
       {month ? (
+        /* A manager who drills into a rep's floor used to get the rep's bare
+           NAME over Achieved / Target / Pace, with no month anywhere on the
+           card — three figures whose whole meaning is the month they are in
+           (D59). His own card says "My month"; this one says whose and when. */
         <MonthCard
-          title={viewedName ?? t("team.myMonth")}
+          title={viewedName ? t("team.monthOf", { name: viewedName }) : t("team.myMonth")}
           target={month.target}
           achieved={month.achieved}
           pace={month.pace}

@@ -6,7 +6,13 @@ import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { TeamTable } from "@/components/team/team-table";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser, seesAll } from "@/lib/authz";
-import { stuckList, teamMonth } from "@/lib/team";
+import {
+  STUCK_FOLLOW_UP_DAYS,
+  STUCK_REQUEST_WORKING_DAYS,
+  stuckList,
+  teamMonth,
+} from "@/lib/team";
+import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 
 /**
  * The manager's home (SPEC §3, D15): the company's month, everybody's month
@@ -42,10 +48,20 @@ export default async function TeamPage() {
 
       {/* What the month has already moved is above; this is what is still out
           there to move (S45), and how much of it has stopped (D14). Both are
-          derived, like everything else on this screen — nobody types them. */}
+          derived, like everything else on this screen — nobody types them.
+
+          Each carries its threshold in words (D59), and the middle one is why:
+          "Follow-ups overdue" here counted the ones more than three days past,
+          while the column of nearly the same name in the table below counted
+          every overdue one. Two numbers, side by side, a letter apart in the
+          reading. The names differ now and the captions say which is which. */}
       <StandingStrip
         items={[
-          { label: t("team.pipeline"), value: <Sqm value={month.pipeline} /> },
+          {
+            label: t("team.pipeline"),
+            value: <Sqm value={month.pipeline} />,
+            caption: t("team.pipelineMeans"),
+          },
           {
             label: t("team.stuckRequests"),
             value: (
@@ -53,6 +69,7 @@ export default async function TeamPage() {
                 {stuck.requests.length}
               </span>
             ),
+            caption: t("team.stuckRequestsMeans", { days: STUCK_REQUEST_WORKING_DAYS }),
             tone: stuck.requests.length > 0 ? "bad" : null,
           },
           {
@@ -62,6 +79,7 @@ export default async function TeamPage() {
                 {stuck.followUps.length}
               </span>
             ),
+            caption: t("team.stuckFollowUpsMeans", { days: STUCK_FOLLOW_UP_DAYS }),
             tone: stuck.followUps.length > 0 ? "bad" : null,
           },
           {
@@ -71,6 +89,7 @@ export default async function TeamPage() {
                 {stuck.neverContacted.length}
               </span>
             ),
+            caption: t("team.stuckNeverMeans", { days: NEVER_CONTACTED_DAYS }),
             tone: stuck.neverContacted.length > 0 ? "open" : null,
           },
         ]}

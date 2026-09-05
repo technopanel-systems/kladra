@@ -69,3 +69,47 @@ test("the coordinator's four figures each say what they mean", async ({ page, lo
     expect(await counted, "the strip and the rows disagree about what is late").toBe(lateRows);
   });
 });
+
+test("the manager's four figures each say which number they are", async ({ page, locale, t }) => {
+  test.slow();
+
+  await login(page, locale, "abdulrahman");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+
+  const strip = page.locator('[data-slot="standing"]').first();
+
+  await test.step("1 · four figures, four lines of words", async () => {
+    await expect(strip.locator("> div")).toHaveCount(4, COLD);
+    await expect(strip.locator('[data-slot="figure-caption"]')).toHaveCount(4);
+  });
+
+  await test.step("2 · the two follow-up figures cannot be read as the same one", async () => {
+    // The strip counts follow-ups more than three days past their date; the
+    // column in the table below counts every overdue one. Two numbers, and
+    // until P9.4 their names were a letter apart — "Follow-ups overdue" over
+    // "Overdue follow-ups" (rules/data.md: one definition per figure).
+    const stripLabel = t("team.stuckFollowUps");
+    const columnLabel = t("team.overdueFollowUps");
+    expect(stripLabel, "the two follow-up figures share a name again").not.toBe(columnLabel);
+
+    // And the strip says its threshold out loud, so a reader knows which is
+    // which without being told twice.
+    const followUps = strip.locator("> div").filter({ hasText: stripLabel });
+    await expect(followUps.locator('[data-slot="figure-caption"]')).toHaveText(
+      t("team.stuckFollowUpsMeans", { days: 3 }),
+    );
+  });
+
+  await test.step("3 · a rep's month card says whose month and when", async () => {
+    // Drilling into a rep from the team table used to title the card with his
+    // bare name, so Achieved / Target / Pace sat under it with no month.
+    const row = page.getByRole("table").first().getByRole("link").first();
+    const name = ((await row.innerText()) || "").split(/\r?\n/)[0].trim();
+    await row.click();
+
+    await expect(page).toHaveURL(/\?rep=/, COLD);
+    await expect(
+      page.getByRole("heading", { name: t("team.monthOf", { name }) }),
+    ).toBeVisible(COLD);
+  });
+});

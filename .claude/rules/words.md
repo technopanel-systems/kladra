@@ -62,6 +62,19 @@ what the message loader uses it for, and leaves the BLOCK aligned to the page �
 so an English paragraph in an Arabic card read left-to-right and sat flush right,
 ragged down its left. Legible, and wrong.
 
+## Two figures with almost the same name are one figure with a bug
+"Follow-ups overdue" (more than three days past) sat two inches above "Overdue
+follow-ups" (any day past) on the manager's own screen, and both were correct.
+A reader cannot tell them apart and neither can the person who adds the third
+one. **A figure with a threshold in it says the threshold**, in the caption slot
+`StandingStrip` has for exactly this (D59, D60) — and if two figures still read
+alike after that, one of them is named wrong.
+
+The corollary, from the same audit: a word may mean one thing. "Quoted" was
+sheets on a dispatch line and square metres on a project, in English only —
+the Arabic had said في عرض السعر against المعروض all along. When one locale
+distinguishes two things and the other does not, the one that does is right.
+
 ## Digits are Western, everywhere (D6)
 The locale tag is `"ar"`, never `"ar-SA"` — `ar-SA` gives Arabic-Indic
 numerals and Jerom wants ٠٤ nowhere. When asking `Intl` for something

@@ -56,8 +56,16 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
             href={`/companies?rep=${member.userId}`}
             className="card-face flex flex-col gap-2 p-3"
           >
-            <span className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="font-medium">{member.name}</span>
+            <span className="font-medium">{member.name}</span>
+
+            {/* Two figures joined by a slash and no word for either was the
+                phone card until P9.4: a reader had to know which side was
+                which (D59). The label is the sentence the slash was standing
+                in for. */}
+            <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <span className="text-xs text-muted-foreground">
+                {t("team.achievedOfTarget")}
+              </span>
               <span className="text-sm">
                 <span
                   dir="ltr"
@@ -84,9 +92,15 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                 </span>
               </span>
               <span>
+                {/* The desk table says "3 of 21 working days"; this said "3 / 21"
+                    and dropped the unit, so the same figure read as two
+                    different things on two widths. */}
                 {t("team.pace")}{" "}
-                <span dir="ltr" className="num text-foreground">
-                  {member.pace.elapsed} / {member.pace.total}
+                <span className="text-foreground">
+                  {t("team.paceLine", {
+                    elapsed: member.pace.elapsed,
+                    total: member.pace.total,
+                  })}
                 </span>
               </span>
               <Habit label={t("team.openQuotations")} value={member.openQuotations} />

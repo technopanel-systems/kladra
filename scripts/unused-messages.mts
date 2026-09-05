@@ -42,7 +42,14 @@ for (const file of readdirSync("messages/en").filter((f) => f.endsWith(".json"))
         continue;
       }
       // Either the full path, or the bare key inside a namespaced translator.
-      if (code.includes(full)) continue;
+      const escaped = full.replace(/\./g, "\\.");
+      // The full path has to END where the key does. A plain `includes` counts
+      // `common.targets` as a use of `common.target`, and three dead keys —
+      // target, achieved and pace, a second copy of words the team screen
+      // already had — sat in common.json for four phases because of it.
+      // Anything that could continue the key means it is a different key that
+      // merely starts the same way.
+      if (new RegExp(escaped + "(?![A-Za-z0-9_.])").test(code)) continue;
       if (new RegExp(`["'\`]${key.replace(/\./g, "\\.")}["'\`]`).test(code)) continue;
       unused.push(full);
     }

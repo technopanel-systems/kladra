@@ -30,7 +30,7 @@
       - [x] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
       - [~] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
             - [x] a The caption slot, and the coordinator's queue: a wait is a length, not a date
-            - [ ] b One figure, one name, one definition — the labels audited across every screen
+            - [x] b One figure, one name, one definition — the labels audited across every screen
             - [ ] c m² by month, so there is a month before this one
             - [ ] d Where quotations die
             - [ ] e Which companies went quiet
@@ -468,6 +468,10 @@ cannot drift from the rows. The count is read off the element rather than out of
 because the sentence has two numbers in it — how many are late, and what late means — which is
 right for a person and useless for a test. Locators are `:visible`: every row renders twice, a card
 for the phone and a table for the desk, and counting DOM nodes counts each row twice and passes.
+Then Abdulrahman's four, for the collision the inventory found: the strip's follow-up figure and the
+table's column beneath it are two different numbers, and the spec holds their names apart and holds
+the strip to saying its own threshold. Drilling into a rep lands on a card that says whose month and
+when (D60).
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.
