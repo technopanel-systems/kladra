@@ -95,6 +95,18 @@ export function ownsCompanies(role: Role): boolean {
 }
 
 /**
+ * Who writes a daily report, and therefore has a row on the day the team reads
+ * (SPEC D55, D56).
+ *
+ * The people whose day is customer work: the reps, marketing and the
+ * coordinator. The manager and the admin read it — a manager's day IS the team,
+ * and a report he wrote about himself would be a report he also marks.
+ */
+export function writesReports(role: Role): boolean {
+  return ownsCompanies(role) || role === "coordinator";
+}
+
+/**
  * The same two sentences as role LISTS, for the action guards.
  *
  * A guard takes roles, not a predicate, and a hand-written list beside a
@@ -105,6 +117,7 @@ export function ownsCompanies(role: Role): boolean {
  */
 export const FLOOR_ROLES: Role[] = ["rep", "marketing"];
 export const SELLING_ROLES: Role[] = ["rep", "manager"];
+export const REPORTING_ROLES: Role[] = ["rep", "marketing", "coordinator"];
 
 /**
  * On whose floor may a company SIT.

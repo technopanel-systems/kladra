@@ -807,6 +807,70 @@ export const REP_TARGET_LAST_MONTH = "1200.00";
 export const COMPANY_TARGET_THIS_MONTH = "5000.00";
 export const COMPANY_TARGET_LAST_MONTH = "4500.00";
 
+// ---- daily reports ------------------------------------------------------------
+
+/*
+ * A report is a person's own sentence about his own day, so the demo writes it
+ * in the language that person actually uses — the same reasoning as the note on
+ * a day off below. Rawan and marketing read Arabic; the reps read English. The
+ * app shows a report exactly as it was typed and never translates it.
+ *
+ * The shape matters as much as the words. On the latest working day everybody
+ * has written except Faisal, so the rep who signs in has an empty box waiting
+ * for him and four sentences to read; on the day before, everybody has written
+ * except Turki, so a finished day carries exactly one card with a blank in it,
+ * which is the thing the design has to get right (D57).
+ */
+export type ReportSeed = {
+  user: string;
+  /** Working days back; 0 is the latest working day. */
+  back: number;
+  note: string;
+};
+
+export const REPORTS: ReportSeed[] = [
+  {
+    user: "saad",
+    back: 0,
+    note: "Visited Rowaa Al-Omran and Al-Hisn. Rowaa want a mock-up panel before they commit, so I need one sample sheet in white 4mm. Al-Waha have gone quiet on the revised price — third week now.",
+  },
+  {
+    user: "turki",
+    back: 0,
+    note: "Al-Rowad confirmed they take the shipment next week. Two follow-ups moved to Sunday because their consultant is away.",
+  },
+  {
+    user: "rawan",
+    back: 0,
+    note: "أصدرت ثلاثة عروض أسعار وأعدت واحدًا إلى فيصل لتصحيح المقاسات. اعتمدت التوريد بعد مطابقة الكميات مع سماك.",
+  },
+  {
+    user: "marketing",
+    back: 0,
+    note: "متابعة مع واجهات الرياض ودرع الخليج. واجهات الرياض تحتاج زيارة مندوب، وأرسلت التفاصيل إلى عبدالرحمن.",
+  },
+  {
+    user: "faisal",
+    back: 1,
+    note: "Sidra finally have the drawings, so the request is with Rawan. Delta Rock have not called me back for the third time — I think they went to the other supplier.",
+  },
+  {
+    user: "saad",
+    back: 1,
+    note: "Chased Al-Waha on the revised price all morning. They are comparing us with an imported panel; we lose this one unless we can shorten the lead time.",
+  },
+  {
+    user: "rawan",
+    back: 1,
+    note: "يوم هادئ في الطلبات. راجعت أرقام سماك للعروض المعلقة، ورقمان لم يصلاني بعد.",
+  },
+  {
+    user: "marketing",
+    back: 1,
+    note: "أربعة عملاء محتملين من معرض البناء؛ اثنان منهم جاهزان للتسليم إلى المندوبين.",
+  },
+];
+
 // ---- notifications ------------------------------------------------------------
 
 export type NotificationSeed = {

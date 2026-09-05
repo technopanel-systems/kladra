@@ -58,6 +58,7 @@ import {
   LEAVE_DAYS_AHEAD,
   LEAVE_NOTE,
   NOTIFICATIONS,
+  REPORTS,
   PROJECTS,
   QUOTATIONS,
   REP_TARGET_LAST_MONTH,
@@ -89,6 +90,7 @@ const {
   companyTargets,
   contacts,
   countries,
+  dailyReports,
   dispatchItems,
   dispatches,
   fireRatings,
@@ -730,6 +732,32 @@ async function seedNotifications(
   });
 }
 
+/**
+ * The daily reports (D55).
+ *
+ * Written at twenty to six in the evening, which is when a rep actually closes
+ * his day, and clamped a minute behind now by `instant` so nothing in the
+ * dataset claims to have been typed in the future.
+ */
+async function seedReports(userIds: Map<string, string>): Promise<number> {
+  await db.transaction(async (tx) => {
+    await tx.insert(dailyReports).values(
+      REPORTS.map((r) => {
+        const day = back(r.back);
+        const written = instant(day, 17, 40);
+        return {
+          userId: must(userIds, r.user, "user"),
+          day,
+          note: r.note,
+          createdAt: written,
+          updatedAt: written,
+        };
+      }),
+    );
+  });
+  return REPORTS.length;
+}
+
 // ============================================================================
 // Phase 11 — holidays and leave
 // ============================================================================
@@ -846,6 +874,9 @@ try {
   await seedTargets(userIds);
   await seedNotifications(userIds, quotationIds);
   await seedNonWorkingDays(userIds);
+
+  const reportCount = await seedReports(userIds);
+  console.log(`  daily reports     ${reportCount}`);
 
   await printCounts();
   await printFaisalFollowUps();

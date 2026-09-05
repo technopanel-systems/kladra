@@ -347,7 +347,15 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                         {row.lostAt ? (
                           <span className={cn("text-xs", TONE_TEXT.bad)}>
                             {t("drawer.lostOn", { date: formatDay(dayOf(row.lostAt), locale) })}
-                            {row.lostReason ? ` — ${row.lostReason}` : ""}
+                            {/* The reason is somebody's own words: joined by a
+                                neutral dash it settled against the paragraph
+                                rather than against itself (rules/words.md). */}
+                            {row.lostReason ? (
+                              <>
+                                {" — "}
+                                <bdi>{row.lostReason}</bdi>
+                              </>
+                            ) : null}
                           </span>
                         ) : null}
                       </span>

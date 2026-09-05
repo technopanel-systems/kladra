@@ -59,7 +59,9 @@ from mark-grad; the K there is paths, not type, so no machine's font list can ch
 shadcn/ui via CLI (Radix, RTL on): Dialog, Sheet, Drawer (phone bottom sheet), Command
 (searchable dropdowns), Popover + Calendar (date pickers), Sonner (toasts), Skeleton, Tabs,
 Badge, Table, Field (forms), Select, Tooltip, plus Button, Input, Textarea, Card,
-Dropdown-menu, Switch, Checkbox, Scroll-area, Avatar. Logical utilities only (`ms-`, `pe-`,
+Dropdown-menu, Switch, Checkbox, Scroll-area, Avatar. On top of them, the app's own
+small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, and `Prose`
+— one `<p dir="auto">` for any block a PERSON typed. Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
@@ -73,6 +75,16 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   the control reads `04/2026/سبتمبر` while the label beside it is correct. Use `dir="auto"`.
   `dir="ltr"` is for runs with no letters in them at all — a phone number, a quantity, a
   keycap.
+- **A block somebody TYPED takes its direction from the text, not from the page.** The rule
+  above is about a run inside a sentence, and `<bdi>` is the tool for that. It does not set
+  the base direction of a paragraph: an English log entry inside an Arabic card read
+  left-to-right internally and still sat flush against the right margin, ragged down its
+  left. Both languages are on every screen — Saad writes English, Rawan writes Arabic, each
+  reads the other's — so every such block goes through `<Prose>`.
+- **The brand red and the "it went wrong" red are the same colour.** `--brand` and
+  `--a-red-fg` are both `#c8102e` in light mode, so a brand-tinted ring drawn round a card
+  to mean "this one is yours" said "alert" in the app's own vocabulary. Colour carries one
+  meaning here (§6). Say "yours" with a heading, not with a hue.
 - **An effect that reacts to a server action's answer must fire once per answer.**
   next-intl's `useRouter()` returns a new object every render, so anything closing over it
   changes identity every render and the effect runs again. Use `useActionOutcome`, which keys

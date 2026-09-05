@@ -9,6 +9,7 @@ import {
   Inbox,
   ListTree,
   type LucideIcon,
+  NotebookPen,
   Target,
   Truck,
   Users,
@@ -48,6 +49,20 @@ const day: NavItem = {
   href: "/day",
   labelKey: "day.title",
   icon: CalendarCheck,
+};
+
+/**
+ * The daily report sits second for every role — right after whatever that role
+ * calls home — and is therefore always on the phone's bottom bar. It is the one
+ * screen somebody opens at six in the evening, on a phone, having decided to
+ * spend one minute on it; a screen that costs two taps to find is a screen that
+ * loses to WhatsApp (SPEC D55).
+ */
+const reports: NavItem = {
+  href: "/reports",
+  labelKey: "reports.title",
+  shortKey: "shell.shortReports",
+  icon: NotebookPen,
 };
 
 const companies: NavItem = {
@@ -102,18 +117,18 @@ export function navFor(role: Role): NavGroup[] {
     case "marketing":
       // No quotations and no dispatches: marketing finds customers and hands
       // them on, and a screen it can only read is a screen it stops opening.
-      return [{ items: [day, companies, projects] }];
+      return [{ items: [day, reports, companies, projects] }];
     case "coordinator":
-      return [{ items: [queue, quotations, dispatches] }];
+      return [{ items: [queue, reports, quotations, dispatches] }];
     case "manager":
-      return [{ items: [team, companies, projects, quotations, dispatches] }];
+      return [{ items: [team, reports, companies, projects, quotations, dispatches] }];
     case "admin":
       return [
-        { items: [team, companies, projects, quotations, dispatches] },
+        { items: [team, reports, companies, projects, quotations, dispatches] },
         { labelKey: "shell.adminSection", items: adminItems },
       ];
     default:
-      return [{ items: [day, companies, projects, quotations, dispatches] }];
+      return [{ items: [day, reports, companies, projects, quotations, dispatches] }];
   }
 }
 

@@ -27,7 +27,7 @@
 - [ ] P9 Think, then deepen — Jerom's second pass after using it (adds to SPEC §3, replaces nothing)
       - [x] P9.1 Five days walked end to end, judged against the sheet, ranked list written here (9A)
       - [x] P9.2 The schema read as a critic and fixed while the data is still fake (9D)
-      - [ ] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
+      - [x] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
       - [ ] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
       - [ ] P9.5 The login screen, and the identity audited as a whole (9E)
       - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
@@ -35,7 +35,30 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P8 done. Jerom used Kladra himself and asked for depth rather than
+**Where I stopped:** P9.1, P9.2 and P9.3 done; P9.4 (the numbers) is next.
+
+The five days were walked before any P9 code and the ranked list is §4 below. Its first item was
+the daily report, and it is built: the system assembles the day — log entries, companies, quotation
+and dispatch requests, what came back, the customer's answers, dispatches approved, m² moved, calls
+due against calls followed up — and the only thing a person types is one box of free text. One
+screen for the whole floor, alphabetically, the manager reading the same page everybody else does.
+A missed day is one dashed empty box with no colour on it, and a day nobody worked is not a missed
+day (D55-D57).
+
+Three causes were fixed rather than their symptoms. The write window was "today and yesterday",
+which in a Fri-Sat week meant that on a Saturday nobody on the floor could write anything at all —
+it is the last WORKING day now (D58), and the rule is in `.claude/rules/data.md`. A block of text
+somebody TYPED was being laid out in the page's direction rather than its own, so an English log
+entry sat flush against the right margin of an Arabic card; `<Prose>` owns that everywhere now, and
+it was three older screens as well as this one. And the labels this screen builds from a table were
+invisible to the both-locales check, the same blindness that printed `common.marketing` on every
+screen in P8 — `check:messages` reads that table too now, and was proved to bite.
+
+`tests/reading.spec.ts` sweeps `/reports` as of this phase, and caught the date navigator on its
+first run: a date carries a month NAME, and it had been written with `dir="ltr"` and the mono figure
+face. A new screen goes on that list the day it lands.
+
+**Where P8 stopped.** P8 done. Jerom used Kladra himself and asked for depth rather than
 features, and his seven notes were all one complaint said seven ways: the app told him what
 records exist and not how anything is going. Every list creates from itself now and asks for
 the parent when it needs one; colour carries state from one five-tone map with the raw hues
@@ -359,9 +382,10 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 
 **The floor rule** — `tests/floor.spec.ts`
 One of two specs that are not a walk through a screen, because this rule has no appearance when it is wrong: `mayOpen` and `mayWrite` are asked directly, once per role, on a floor that is theirs and one that is not (D42). The five roles are asked the same way about
-the four sentences that separate them — who owns companies, who may price one, who carries a
-month, whose floor a company may sit on — and the role LISTS the action guards take are held to
-those same sentences, so a screen and the server cannot answer differently (D50).
+the five sentences that separate them — who owns companies, who may price one, who carries a
+month, whose floor a company may sit on, and who files a daily report rather than only reading one
+— and the role LISTS the action guards take are held to those same sentences, so a screen and the
+server cannot answer differently (D50, D56).
 
 **Creating from a list** — `tests/create.spec.ts`
 Faisal adds a project from the Projects screen, requests a quotation from the Quotations
@@ -384,8 +408,12 @@ attempts are made against the DATABASE with the app nowhere in the picture — a
 minus in every measurement, the same quotation line twice on one dispatch, a SMAC number
 typed onto a second quotation, a second main contact, a company given both a picked city and
 a typed one, an issued quotation stripped of its instant and of its number, and a revision
-pointing at a quotation that does not exist. Each must be refused (D52, D53). Nothing is ever
-written, so there is nothing to clean up.
+pointing at a quotation that does not exist, a daily report of nothing but whitespace, and a second
+report for one person on one day. Each must be refused (D52, D53, D55). Nothing is ever written,
+so there is nothing to clean up — and the whitespace case is why that sentence is checked rather
+than trusted: `length(btrim(note)) > 0` accepted a note of tabs and newlines, because `btrim`
+with no second argument trims spaces only, and the row it let through was the only row this
+spec has ever left behind.
 
 **Marketing** — `tests/marketing.spec.ts`
 Marketing signs in and lands on a day with no month card, sees Companies and Projects in the
@@ -393,6 +421,29 @@ rail and neither chain screen, opens one of its own leads and is offered every p
 work on it except the price — on the drawer and on the Quotations screen both. Then it hands the
 lead to Faisal: the dialog asks who, says what travels with the company, and the move is checked
 in the database and in the audit log (D50, D51).
+
+**The daily report** — `tests/reports.spec.ts`
+Faisal's own day is assembled for him and he adds the line it cannot know: the rail carries the
+report second, his day screen says today's is not written, the eight figures on his own card are
+each asserted against the same records the app read them from, one box and one press closes the
+day, the write is on the audit log against the report's own id, and a second press replaces
+rather than adds. Then the nudge is gone. Abdulrahman reads the
+day before: no box of his own, a participation line whose arithmetic is checked in SQL, and
+exactly one dashed blank where a report is missing — with no badge, no tone and no colour on that
+card (D55-D57). A weekend is nobody's missed day, and nothing on it reports that nothing was recorded. Two working days back the box is gone and the
+day says so, and the arrows never land on a Friday (D58). Rawan's own card carries the desk's
+four figures and none of a rep's. And every sentence on the screen is measured for direction:
+both languages are on it whichever locale is running, so some paragraphs must compute `ltr` and
+some `rtl` on one page, or `dir="auto"` has stopped working.
+
+**Reading a screen** — `tests/reading.spec.ts`
+Not a walk either: a sweep of every screen a rep reads, in both locales, for the rules DESIGN §5
+earned the hard way. Nothing with an Arabic letter in it is forced left-to-right, every date reads
+the same way round measured with `document.createRange()`, a value and its unit read the way the
+language does, no label the app wrote is cut off mid-word at 375, 768, 1024 or 1366, and every
+figure is in Western digits. **A new screen goes on its list the day it lands** — `/reports` was
+added with P9.3 and immediately caught the date navigator, which had been written with `dir="ltr"`
+and the mono figure face round a date that carries a month name.
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

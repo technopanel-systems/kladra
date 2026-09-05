@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Link } from "@/i18n/navigation";
 import type { Waiting } from "@/lib/day";
@@ -65,7 +66,7 @@ export async function WaitingList({ rows }: { rows: Waiting[] }) {
                 ) : null}
               </span>
               {row.reason ? (
-                <span className="text-xs text-muted-foreground">{row.reason}</span>
+                <Prose text={row.reason} className="text-xs text-muted-foreground" />
               ) : null}
             </Link>
           </li>

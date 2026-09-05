@@ -500,6 +500,46 @@ export const companyTargets = pgTable(
   (t) => [check("company_targets_sqm_check", sql`${t.sqm} >= 0`)],
 );
 
+// ---- the daily report --------------------------------------------------------
+
+/**
+ * One line a day, from the person whose day it was (SPEC D55).
+ *
+ * Only the sentence is stored. Everything a machine can know — visits logged,
+ * quotations raised and sent back, dispatches approved, the m² they moved, the
+ * calls that were due — is assembled from the records every time it is read, so
+ * a visit logged late lands on the day it happened and the report changes with
+ * it. Storing those figures here would be a second answer to every one of them
+ * (rules/data.md, one definition per figure).
+ *
+ * `note` is never empty: an empty report is not a report, and a row that exists
+ * to say nothing would make "who wrote today" a lie.
+ */
+export const dailyReports = pgTable(
+  "daily_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** The Riyadh day it is about, not the instant it was written. */
+    day: date("day").notNull(),
+    note: text("note").notNull(),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("daily_reports_user_day_idx").on(t.userId, t.day),
+    index("daily_reports_day_idx").on(t.day),
+    // At least one character that is not whitespace. It was `length(btrim(note))
+    // > 0`, and `btrim` with no second argument strips SPACES only — so a report
+    // of newlines and tabs passed a check written to refuse an empty one, and
+    // `tests/schema.spec.ts` caught it by trying exactly that. The app's own Zod
+    // `.trim()` was stricter than the column, which is the wrong way round: the
+    // column is the guard for the ways in that are not the app.
+    check("daily_reports_note_check", sql`${t.note} ~ '[^[:space:]]'`),
+  ],
+);
+
 // ---- notifications and audit -------------------------------------------------
 // `kind` + `params` render in the reader's language ("Q-12 issued" / "تم إصدار Q-12").
 

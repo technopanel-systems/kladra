@@ -42,6 +42,13 @@ broken at least once in FACET, Kladra's predecessor.
   (`src/lib/workdays.ts`) owns Riyadh today, the Fri–Sat weekend and the
   non-working-day table; nothing else does date math.
 
+- **A window measured in calendar days is wrong in a Fri–Sat week.** "Today and
+  yesterday" for writing a daily report meant that on a Saturday the last working
+  day was two days back and nobody could write anything — the screen shipped,
+  seeded, and had no box on it. Any rule of the form "the last N days" is a rule
+  about **working** days here: ask `isWorkingDay` and walk, cap the walk, and test
+  the rule on a Saturday before believing it.
+
 - **A figure the browser shows while somebody types is computed by the
   function the database uses.** Round once, at the end, on both sides:
   `round(width * length * qty, 2)`, never `round(width * length, 2) * qty`.
@@ -77,6 +84,15 @@ broken at least once in FACET, Kladra's predecessor.
   dev then answers 500 on every route, not just the one that imports it, and
   the overlay points at the comment rather than at the backtick. Write names
   in those comments bare, and run `npx tsc --noEmit` after touching one.
+
+- **A constraint is only worth what it actually refuses — try it.**
+  `length(btrim(note)) > 0` was written to refuse an empty daily report and
+  refused a run of spaces only: **`btrim` with no second argument trims SPACES,
+  not tabs or newlines**, so a note of `\n\t` satisfied it while the app's own
+  Zod `.trim()` rejected the same string. A column looser than the form is the
+  wrong way round — the column is the guard for the ways in that are not the
+  app. It is `note ~ '[^[:space:]]'` now. Every CHECK gets a row in
+  `tests/schema.spec.ts` that it must refuse.
 
 - **Never land a column, flag or table without its writer in the same
   slice.** An unused column is a lie about what the system does.

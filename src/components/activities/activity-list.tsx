@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Prose } from "@/components/ui-ext/prose";
 
 /**
  * The log, newest first (SPEC S24/S27 — a company's history is the manager's
@@ -73,7 +74,8 @@ export function ActivityList({
               </span>
             </div>
 
-            <p className="text-sm whitespace-pre-line">{entry.text}</p>
+            {/* His words, in his direction, whichever page it is on. */}
+            <Prose text={entry.text} className="text-sm" />
 
             {named ? (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">

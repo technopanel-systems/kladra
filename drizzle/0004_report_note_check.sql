@@ -1,0 +1,2 @@
+ALTER TABLE "daily_reports" DROP CONSTRAINT "daily_reports_note_check";--> statement-breakpoint
+ALTER TABLE "daily_reports" ADD CONSTRAINT "daily_reports_note_check" CHECK ("daily_reports"."note" ~ '[^[:space:]]');

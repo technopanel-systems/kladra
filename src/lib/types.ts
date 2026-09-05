@@ -34,4 +34,8 @@ export type LiveEvent =
   | { type: "dispatch"; id: string; number: string; status: string }
   | { type: "notification"; id: string; unread: number }
   | { type: "company"; id: string }
-  | { type: "project"; id: string };
+  | { type: "project"; id: string }
+  // A daily report landing. The manager reads the screen while the floor is still
+  // writing on it, and a participation count that has gone stale reads exactly
+  // like a missed day (D57) — which is the one thing it must never do.
+  | { type: "report"; id: string; day: string };

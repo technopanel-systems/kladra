@@ -11,8 +11,15 @@ import { test, expect } from "./helpers/i18n";
 /** Any character from the Arabic script, wherever it sits in a run. */
 const ARABIC = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
 
-/** The screens a rep actually reads, plus a drawer, which is where dates live. */
-const SCREENS = ["", "companies", "projects", "notifications"];
+/**
+ * The screens a rep actually reads, plus a drawer, which is where dates live.
+ *
+ * `reports` is on the list because the date navigator on it was written with
+ * `dir="ltr"` and the mono figure face round a date that carries a month NAME —
+ * both of them the exact defect this file exists for, in a screen this file did
+ * not sweep. A new screen goes on this list the day it lands.
+ */
+const SCREENS = ["", "companies", "projects", "notifications", "reports"];
 
 /**
  * Direction follows the first strong character, never a forced `ltr`.

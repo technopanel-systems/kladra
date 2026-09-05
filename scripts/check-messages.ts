@@ -92,14 +92,32 @@ function union(file: string, name: string): string[] {
   return members;
 }
 
+/**
+ * The same blindness, one shape along: a table of `{ key: "x" }` rows that a
+ * component turns into `t(row.key)`. `src/lib/report-figures.ts` is one — the
+ * report screen renders ten labels out of it and not one of them is written at
+ * a call site — so the keys are read back out of the table itself rather than
+ * listed here, because a list beside the table is the copy that drifts.
+ */
+function tableKeys(file: string): string[] {
+  const source = readFileSync(resolve(import.meta.dirname, "..", file), "utf8");
+  const members = [...source.matchAll(/key: "([a-z][A-Za-z0-9]*)"/g)].map((m) => m[1]);
+  if (members.length === 0) {
+    console.error(`check:messages — no keys in ${file}; the families check is blind`);
+    process.exit(1);
+  }
+  return [...new Set(members)];
+}
+
 const families: [string, string[]][] = [
   ["common", union("src/lib/types.ts", "Role")],
   ["common", union("src/db/schema.ts", "channelEnum")],
+  ["reports", tableKeys("src/lib/report-figures.ts")],
 ];
 for (const [namespace, members] of families) {
   for (const member of members) {
     const key = `${namespace}.${member}`;
-    if (!en.has(key)) problems.push(`no word for ${key} (a screen renders this key from a union)`);
+    if (!en.has(key)) problems.push(`no word for ${key} (a screen renders this key without writing it)`);
   }
 }
 

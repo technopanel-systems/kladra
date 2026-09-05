@@ -3,7 +3,9 @@
 The CRM and operations tool for Technopanel — a Riyadh company selling aluminium composite
 panel (ACP) cladding, fourteen people. Reps log what happened with customers and ask for
 quotations and dispatches; the coordinator issues them in SMAC and types the numbers back;
-the manager sees targets, pace and what is stuck. SMAC stays the financial record.
+the manager sees targets, pace and what is stuck. Everybody adds one line to a day the
+system has already assembled, and the whole team reads that day on one screen. SMAC stays
+the financial record.
 
 What it is for, and what the founder decided, is in [SPEC.md](SPEC.md). How it looks is
 [DESIGN.md](DESIGN.md). How it is built is [WORKFLOW.md](WORKFLOW.md) and [CLAUDE.md](CLAUDE.md).
@@ -17,7 +19,7 @@ cp .env.example .env          # set POSTGRES_PASSWORD and AUTH_SECRET (npx auth 
 docker compose up -d db       # PostgreSQL 17 on 127.0.0.1:5433
 npm install
 npm run db:migrate            # applies drizzle/ and lists the tables as proof
-npm run seed:demo             # six users, lookups, 25 companies, quotations, dispatches
+npm run seed:demo             # seven users, lookups, 27 companies, quotations, dispatches, reports
 npm run dev                   # http://localhost:3100
 ```
 

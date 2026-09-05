@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { CallList } from "@/components/day/call-list";
+import { CloseTheDay } from "@/components/reports/close-the-day";
 import { MonthCard } from "@/components/team/month-card";
 import { WaitingList } from "@/components/day/waiting-list";
 import { redirect } from "@/i18n/navigation";
@@ -64,6 +65,10 @@ export default async function DayPage() {
       ) : null}
       {hasChain ? <WaitingList rows={waiting} /> : null}
       <CallList overdue={overdue} today={today} never={never} />
+
+      {/* Last, because it is the last thing done: the report is written when
+          the day is finished, not while it is being worked (D55). */}
+      <CloseTheDay userId={user.id} role={user.role} />
     </div>
   );
 }

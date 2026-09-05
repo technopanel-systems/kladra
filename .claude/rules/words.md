@@ -48,6 +48,20 @@ list whenever a component renders a key from an enum**, and never write the
 members out beside the union — a list beside a union is the second copy that
 drifts.
 
+## A block somebody TYPED runs in their direction, not the page's
+Every other string on a screen came out of `messages/<locale>/` and runs the way
+the page runs. A log entry, a coordinator's reason and a daily report did not:
+they were typed by whoever typed them, and both languages are on every screen —
+Saad writes English, Rawan writes Arabic, and each reads the other's on their own
+page. **Render them through `<Prose>`** (`src/components/ui-ext/prose.tsx`),
+which is a `<p dir="auto">`: the base direction comes from the first strong
+character in the text itself.
+
+`<bdi>` does not do this. It settles an inline RUN inside a sentence, which is
+what the message loader uses it for, and leaves the BLOCK aligned to the page —
+so an English paragraph in an Arabic card read left-to-right and sat flush right,
+ragged down its left. Legible, and wrong.
+
 ## Digits are Western, everywhere (D6)
 The locale tag is `"ar"`, never `"ar-SA"` — `ar-SA` gives Arabic-Indic
 numerals and Jerom wants ٠٤ nowhere. When asking `Intl` for something

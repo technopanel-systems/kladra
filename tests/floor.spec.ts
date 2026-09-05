@@ -8,9 +8,11 @@ import {
   mayQuote,
   mayWrite,
   ownsCompanies,
+  REPORTING_ROLES,
   seesAllRoles,
   SELLING_ROLES,
   sells,
+  writesReports,
 } from "@/lib/floor";
 import type { Role, SessionUser } from "@/lib/types";
 
@@ -119,7 +121,23 @@ test("the role lists say exactly what the rules say", () => {
       ownsCompanies(role),
     );
     expect(SELLING_ROLES.includes(role), `SELLING_ROLES disagrees about ${role}`).toBe(sells(role));
+    expect(REPORTING_ROLES.includes(role), `REPORTING_ROLES disagrees about ${role}`).toBe(
+      writesReports(role),
+    );
   }
+});
+
+/**
+ * Who files a daily report and who only reads it (D55, D56). The manager and the
+ * admin read: a manager's day IS the team, and the habit this replaces was reps
+ * writing a line for a manager to read in the evening.
+ */
+test("the three roles that face the work write a report; the two that read it do not", () => {
+  expect(writesReports("rep")).toBe(true);
+  expect(writesReports("marketing")).toBe(true);
+  expect(writesReports("coordinator")).toBe(true);
+  expect(writesReports("manager")).toBe(false);
+  expect(writesReports("admin")).toBe(false);
 });
 
 test("a company can sit on a floor, or there is nobody to hand it to", () => {
