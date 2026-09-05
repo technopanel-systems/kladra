@@ -18,7 +18,9 @@ const ERROR_ID = "login-error";
  * by their label in either language.
  *
  * The error is one line under the fields and never says which half was wrong;
- * `signInAction` decides that, and it answers the same way every time.
+ * `signInAction` decides that, and it answers the same way every time. Its line
+ * is always in the layout, empty until there is something to say, so that the
+ * answer arriving does not move the screen.
  *
  * The email is a controlled value on purpose: React resets an uncontrolled
  * form once its action returns, so after a refused attempt the address a rep
@@ -68,17 +70,30 @@ export function LoginForm() {
           type="password"
           autoComplete="current-password"
           required
+          // A password is typed in Latin, like the address above it. Left to
+          // the page it inherited RTL and started its dots from the right.
+          dir="ltr"
           aria-invalid={failed || undefined}
           aria-describedby={failed ? ERROR_ID : undefined}
           className="h-9"
         />
       </div>
 
-      {failed ? (
-        <p id={ERROR_ID} role="alert" className="text-sm text-destructive">
-          {state.error}
-        </p>
-      ) : null}
+      {/* The slot is here whether or not there is anything in it. The card
+          grew by a line when the answer came back, and because the whole block
+          is centred on the canvas the wordmark jumped UP eighteen pixels and
+          the language link jumped DOWN eighteen — the page moving under
+          somebody at the exact moment they are reading why they were refused
+          (D67). One line is enough: the sentence is the same one every time
+          and fits on one at 375. */}
+      <p
+        id={ERROR_ID}
+        role="alert"
+        className="min-h-5 text-sm leading-5 text-destructive"
+        dir="auto"
+      >
+        {failed ? state.error : null}
+      </p>
 
       <Button
         type="submit"

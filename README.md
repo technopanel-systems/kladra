@@ -19,12 +19,18 @@ cp .env.example .env          # set POSTGRES_PASSWORD and AUTH_SECRET (npx auth 
 docker compose up -d db       # PostgreSQL 17 on 127.0.0.1:5433
 npm install
 npm run db:migrate            # applies drizzle/ and lists the tables as proof
-npm run seed:demo             # seven users, lookups, 27 companies, quotations, dispatches, reports
+npm run seed:demo             # seven users, lookups, 28 companies, quotations, dispatches, reports
 npm run dev                   # http://localhost:3100
 ```
 
 `/` redirects to `/en`; `/ar` is the same product right-to-left. Dark is the default
 theme. `npm run db:clear` empties every table; `npm run seed:demo` fills it again.
+
+Both of those empty the `sessions` table with everything else, so **anyone signed in at
+the time is signed out** and the next click lands on the login screen. That is correct —
+a session names a row in the database, and the row is gone — but it looks exactly like a
+session expiring on its own, so it is worth knowing before chasing it. Sessions otherwise
+last thirty days.
 
 ## Seed logins
 

@@ -53,7 +53,7 @@
   "archivedOn": "Archived",
   "restore": "Restore",
   "restoreTitle": "Restore {name}?",
-  "restoreHint": "It goes back on its rep's floor with all of its history.",
+  "restoreHint": "It goes back on its rep’s floor with all of its history.",
   "restoreHintInside": "Its company comes back with it — a contact on an archived company would sit on a row that appears on no list.",
   "restored": "{name} is back.",
   "exportHint": "Three files. Excel opens them with the Arabic names intact.",

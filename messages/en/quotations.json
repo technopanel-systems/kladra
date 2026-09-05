@@ -25,11 +25,11 @@
   "sentBackReason": "Sent back because",
   "cancel": "Withdraw",
   "cancelTitle": "Withdraw {label}?",
-  "cancelHint": "It leaves the coordinator's queue. Nothing is deleted.",
+  "cancelHint": "It leaves the coordinator’s queue. Nothing is deleted.",
   "cancelled": "{label} withdrawn",
   "accepted": "Customer accepted",
   "acceptTitle": "Customer accepted {label}?",
-  "acceptHint": "Records the customer's answer on the quotation. It does not change the project.",
+  "acceptHint": "Records the customer’s answer on the quotation. It does not change the project.",
   "acceptedDone": "{label} accepted",
   "rejected": "Customer rejected",
   "rejectTitle": "Customer rejected {label}?",
@@ -59,6 +59,6 @@
   "notFound": "That quotation is not there any more.",
   "alreadyIssued": "This quotation has already been issued — a change to it is a revision now.",
   "notWaiting": "This request is not waiting any more.",
-  "notIssued": "The customer's answer is recorded once the quotation has been issued.",
+  "notIssued": "The customer’s answer is recorded once the quotation has been issued.",
   "notIssuedYet": "This one has not been issued yet — edit the request instead of revising it."
 }

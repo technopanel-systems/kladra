@@ -499,7 +499,20 @@ bars are aria-hidden because nothing is in the picture that is not in the number
 sentence saying which way the last finished month went (D61). Then the chain cohort: six endings,
 each named, and the six adding up to the number the sentence above them claims was raised — a cohort
 whose parts do not sum to its whole has lost some on the way. Every ending has something in it on
-the seeded data, which is the rule about figures the demo always shows as zero (D62).
+the seeded data, which is the rule about figures the demo always shows as zero (D62). Three
+guards were added as the causes behind them were fixed: no month label on the axis is wider than
+its own box at 375, and the six bars stand on one baseline (D65); a row the queue calls late says
+the WORD late and not only the red (DESIGN §5); and the gone-quiet band on a rep's day and the
+pill on his customer list open the same set, counted from SQL rather than from the screen (D63).
+
+**The one screen a signed-out person can reach** — `tests/login.spec.ts`
+Three assertions, each of which would have caught one of the ways sign-in had drifted out of the
+app it opens (D67). It has exactly one level-one heading and that heading is the thing you came to
+do — it had none at all, because a CardTitle is a div. The address and the password both run left
+to right, in a page that runs right to left. And a refusal answers without moving the screen: the
+wordmark's position is measured before the wrong password and after the error, and the two must be
+the same number, because the card grows by a line and the whole block is centred on the canvas. The
+alert is located by its id, not its role: Next keeps its own route announcer, which is also an alert.
 
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.

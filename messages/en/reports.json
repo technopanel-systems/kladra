@@ -3,7 +3,7 @@
   "yourDay": "Your day",
   "placeholder": "What moved, what is stuck, what you need. Three lines is plenty.",
   "sayWhat": "Write something — an empty report is not one.",
-  "dayClosed": "That day is closed. Today's report and the last working day's can still be written.",
+  "dayClosed": "That day is closed. Today’s report and the last working day’s can still be written.",
   "written": "{written} of {owed} wrote",
   "nobodyOwes": "Nobody was working on this day.",
   "notWorking": "Not a working day.",
@@ -24,7 +24,7 @@
   "quotationsIssued": "Quotations issued",
   "dispatchesRefused": "Dispatches refused",
   "quietDay": "Nothing was recorded on this day.",
-  "closeTheDay": "Write today's report",
+  "closeTheDay": "Write today’s report",
   "today": "Today",
   "previousDay": "Previous day",
   "nextDay": "Next day"

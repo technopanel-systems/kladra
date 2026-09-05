@@ -118,7 +118,12 @@ function args(message: string): string {
 const problems: string[] = [];
 for (const k of en.keys()) if (!ar.has(k)) problems.push(`missing in ar: ${k}`);
 for (const k of ar.keys()) if (!en.has(k)) problems.push(`missing in en: ${k}`);
-for (const [k, v] of en) if (v.trim() === "") problems.push(`empty in en: ${k}`);
+for (const [k, v] of en) {
+  if (v.trim() === "") problems.push(`empty in en: ${k}`);
+  // One straight quote in a card of Plex Sans is the difference between typeset
+  // and typed (DESIGN §1). English only — Arabic has no apostrophe.
+  if (v.includes("'")) problems.push(`typewriter apostrophe in en: ${k} = "${v}"`);
+}
 for (const [k, v] of ar) {
   if (v.trim() === "") problems.push(`empty in ar: ${k}`);
   const e = en.get(k);

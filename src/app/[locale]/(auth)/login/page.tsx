@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandMark } from "@/components/shell/brand-mark";
 import { Link, redirect } from "@/i18n/navigation";
 import { getUser, homeFor } from "@/lib/authz";
 
@@ -24,6 +24,16 @@ export async function generateMetadata({
  * The only screen a signed-out person can reach. One card on the canvas: the
  * wordmark, two fields, one primary button, and the language link — a rep who
  * finds English hard switches before typing anything (SPEC §2 S6).
+ *
+ * It was built before the app had its own surfaces and never came back into
+ * line, which the 9E audit found three ways at once (D67). The mark was drawn
+ * a second time here, in `bg-brand` — a token that changes between themes,
+ * against the rule that says a logo does not change colour when somebody turns
+ * the lights off. The card was the component library's, the only one left in
+ * the app: a ring where every other surface has a border, and none of the
+ * shadow or the hairline that make a Kladra card. And the screen had no
+ * heading at all, because a CardTitle is a div — so the one page a signed-out
+ * person can reach gave a screen reader nothing to land on.
  */
 export default async function LoginPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -39,24 +49,18 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
   return (
     <div className="w-full max-w-sm">
       <header className="mb-7 flex items-center gap-2.5">
-        <span
-          aria-hidden
-          className="grid size-9 place-items-center rounded-xl bg-brand text-base font-semibold text-primary-foreground shadow-[var(--brand-glow)]"
-        >
-          K
-        </span>
+        <BrandMark className="size-9 rounded-xl text-base" />
         <span className="font-heading text-2xl font-semibold tracking-tight">{t("common.app")}</span>
       </header>
 
-      <Card className="glass">
-        <CardHeader>
-          <CardTitle className="text-lg">{t("auth.signIn")}</CardTitle>
-          <CardDescription>{t("auth.subtitle")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LoginForm />
-        </CardContent>
-      </Card>
+      <div className="card-face glass flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-heading text-lg leading-snug font-medium">{t("auth.signIn")}</h1>
+          <p className="text-sm text-muted-foreground">{t("auth.subtitle")}</p>
+        </div>
+
+        <LoginForm />
+      </div>
 
       <div className="mt-6 flex items-start justify-between gap-4 text-sm">
         <p className="text-faint">{t("auth.accountsFromAdmin")}</p>
@@ -64,7 +68,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
           href="/login"
           locale={other}
           lang={other}
-          className="shrink-0 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          className="shrink-0 rounded-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {other === "ar" ? t("common.arabic") : t("common.english")}
         </Link>

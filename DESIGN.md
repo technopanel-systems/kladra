@@ -29,6 +29,11 @@ primary button only. Values carried from FACET's globals.css:
 | canvas glow | two radials under 14% (red top-start, blue top-end), on body only; mirrored in RTL | same |
 | shadow | `0 1px 0 rgba(255,255,255,.04) inset, 0 12px 40px -18px rgba(0,0,0,.8)` | `0 1px 0 rgba(255,255,255,.8) inset, 0 12px 36px -18px rgba(26,22,20,.42)` |
 
+An apostrophe in English copy is `’`, never `'`. Ten strings carried the typewriter
+mark — "the coordinator's queue", "today's report" — and one straight quote in a card of
+Plex Sans is the difference between typeset and typed. Arabic has no apostrophe, so this
+is an English-only rule; there are no quotation marks anywhere in the copy to match it.
+
 Destructive is a tint (`bg-destructive/10 text-destructive`), never a solid red. Popovers
 and dialogs take the solid surface — never blurred. Row colour means how long something has
 waited: overdue red, due today amber, otherwise faint. Status was a word and not a colour
@@ -132,6 +137,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   offered no action row at all, could ever have found it. The rule generalises: a row of
   buttons is for work done TO a record; a control that edits one stated fact belongs
   against that fact.
+- **One mark, one card surface — a screen that draws its own has already drifted.**
+  The sign-in screen painted a second K in `bg-brand`, which is a different colour in
+  each theme, while `BrandMark` (whose own comment calls itself "the one place the mark
+  gradient appears") sat one import away; and it used the component library's card, the
+  only one left in the app, with a ring instead of a border and no shadow or hairline.
+  Neither was visible to anyone reading screenshots — both were obvious the moment the
+  file was read beside the ones it should have matched. If a surface or a mark exists as
+  a component, no screen builds its own, and the first screen least of all.
 - **A bar takes the FOREGROUND colour of its tone, never the pill tint.** `TONE_CLASS`
   is a background for a pill with text on it — nine to fourteen per cent alpha — and
   `--color-state-over` is `--surface-2` exactly, which is also the empty track every bar
