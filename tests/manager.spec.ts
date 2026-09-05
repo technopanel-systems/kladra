@@ -264,7 +264,13 @@ test("a rep on leave is named on the manager's screen, and what is due on his fl
   await test.step("his row says he is away and when he is back", async () => {
     const row = page.getByRole("row").filter({ hasText: name });
     await expect(row.first()).toBeVisible();
-    await expect(page.getByText(t("team.backOn", { day: formatDay(backOn, locale) })).first()).toBeVisible();
+    await expect(page
+      // The table is on the page twice — a card per person for the phone, the
+      // table for the desk — and the phone copy comes first in the DOM, hidden
+      // above `md`. The first match by text is therefore the hidden one; the
+      // table's own copy is the one a manager reads at this width.
+      .getByRole("table")
+      .getByText(t("team.backOn", { day: formatDay(backOn, locale) }))).toBeVisible();
   });
 
   await test.step("what is due on his floor is on this screen, with his name on it", async () => {

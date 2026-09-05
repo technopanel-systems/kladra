@@ -3,7 +3,11 @@ import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList, type ActivityEntry } from "@/components/activities/activity-list";
-import type { LogContact, LogProject } from "@/components/activities/log-dialog";
+import {
+  LogDialogHost,
+  type LogContact,
+  type LogProject,
+} from "@/components/activities/log-dialog";
 import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import { ArchiveContactDialog } from "@/components/contacts/archive-contact-dialog";
@@ -156,8 +160,14 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
     </Button>
   );
 
+  // One log dialog for the whole drawer (D82): the header's Log button and
+  // the Correct button on every history entry press the same form.
   return (
-    <>
+    <LogDialogHost
+      targets={{
+        [company.id]: { companyName: company.name, contacts: logContacts, projects: logProjects },
+      }}
+    >
       <CompanyHeader
         company={{
           id: company.id,
@@ -182,8 +192,6 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             notes: company.notes,
           },
         }}
-        contacts={logContacts}
-        projects={logProjects}
         standing={company.standing}
         mine={mine}
         handOverTo={handOverTo}
@@ -207,12 +215,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             // own confirmation (see the note on EmptyPanel).
             empty={<EmptyPanel sentence={t("drawer.emptyActivity")} />}
             // What a correction needs, on the reader's own entries (D70).
-            correct={{
-              companyId: company.id,
-              companyName: company.name,
-              contacts: logContacts,
-              projects: logProjects,
-            }}
+            correct={{ companyId: company.id }}
           />
         </TabsContent>
 
@@ -389,7 +392,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           )}
         </TabsContent>
       </Tabs>
-    </>
+    </LogDialogHost>
   );
 }
 

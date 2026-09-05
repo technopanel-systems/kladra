@@ -1,13 +1,13 @@
 "use client";
 
-import { CalendarClock, NotebookPen, Pencil, Plus } from "lucide-react";
+import { CalendarClock, Pencil, Plus } from "lucide-react";
 import { useId, useState, useSyncExternalStore, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { setCompanyFollowUpAction } from "@/actions/companies";
-import { LogDialog, type LogContact, type LogProject } from "@/components/activities/log-dialog";
+import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
 import { HandOverDialog } from "@/components/companies/hand-over-dialog";
 import {
@@ -134,15 +134,11 @@ export type DrawerCompany = {
 
 export function CompanyHeader({
   company,
-  contacts,
-  projects,
   standing,
   mine,
   handOverTo,
 }: {
   company: DrawerCompany;
-  contacts: readonly LogContact[];
-  projects: readonly LogProject[];
   /** The four figures under the title (P8.5). */
   standing: CompanyStanding;
   /**
@@ -308,18 +304,9 @@ export function CompanyHeader({
         className="flex flex-wrap items-center gap-2"
       >
         {/* One primary action, and the one brand gradient with it (DESIGN §1). */}
-        <LogDialog
-          companyId={company.id}
-          companyName={company.name}
-          contacts={contacts}
-          projects={projects}
-          trigger={
-            <Button variant="brand">
-              <NotebookPen aria-hidden="true" />
-              {t("common.log")}
-            </Button>
-          }
-        />
+        <LogButton companyId={company.id} variant="brand" icon>
+          {t("common.log")}
+        </LogButton>
 
         <NewProjectDialog
           companyId={company.id}

@@ -85,7 +85,7 @@ test("the coordinator's four figures each say what they mean", async ({ page, lo
   });
 });
 
-test("the manager's four figures each say which number they are", async ({ page, locale, t }) => {
+test("the manager's five figures each say which number they are", async ({ page, locale, t }) => {
   test.slow();
 
   await login(page, locale, "abdulrahman");
@@ -93,9 +93,18 @@ test("the manager's four figures each say which number they are", async ({ page,
 
   const strip = page.locator('[data-slot="standing"]').first();
 
-  await test.step("1 · four figures, four lines of words", async () => {
-    await expect(strip.locator("> div")).toHaveCount(4, COLD);
-    await expect(strip.locator('[data-slot="figure-caption"]')).toHaveCount(4);
+  await test.step("1 · five figures, five lines of words", async () => {
+    // Four until P10d; the fifth is "gone quiet", which was a group on the
+    // list below with no figure above it, and at the founder's volume the
+    // largest group on the screen (D83).
+    await expect(strip.locator("> div")).toHaveCount(5, COLD);
+    await expect(strip.locator('[data-slot="figure-caption"]')).toHaveCount(5);
+
+    // The new one says its threshold like the others: a fortnight, in words.
+    const quiet = strip.locator("> div").filter({ hasText: t("team.stuckQuiet") });
+    await expect(quiet.locator('[data-slot="figure-caption"]')).toHaveText(
+      t("common.quietMeans", { days: 14 }),
+    );
   });
 
   await test.step("2 · the two follow-up figures cannot be read as the same one", async () => {
@@ -359,6 +368,13 @@ test("a rep's floor and his day cannot disagree about what is waiting", async ({
     .filter({ has: page.getByRole("heading", { name: t("day.waitingOnYou") }) });
   await expect(waiting.getByRole("listitem").first()).toBeVisible(COLD);
   const rows = await waiting.getByRole("listitem").count();
+  // The list is capped like the bands under it (D83), so counting rows is only
+  // counting what is waiting while the floor is under the cap. The heading
+  // carries the true figure; on the seeded floor the two are the same, and this
+  // says so rather than assuming it.
+  await expect(
+    waiting.getByRole("heading", { name: t("day.waitingOnYou") }).locator(".num"),
+  ).toHaveText(String(rows));
   const withCustomer = await waiting
     .getByRole("listitem")
     .filter({ hasText: t("day.withCustomer") })

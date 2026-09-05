@@ -1,8 +1,16 @@
 "use client";
 
 import { Ellipsis, MapPin, MessageCircle, NotebookPen, Phone } from "lucide-react";
-import { useId, useState, useTransition } from "react";
-import type { ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useId,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { editActivityAction, logActivityAction } from "@/actions/activities";
@@ -15,7 +23,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
@@ -41,12 +48,48 @@ import type { ActivityChannel } from "@/components/activities/activity-list";
  * The company is shown and not editable: the dialog is always opened from
  * somewhere that already knows which company this is (SPEC §3).
  *
+ * ONE dialog per screen, not one per row (DESIGN §5, D82). The day screen
+ * offers Log on every card and a company's history offers Correct on every
+ * entry; mounting a whole dialog behind each button put a hundred closed forms
+ * on the rep's home page and a third of its weight in props that were the same
+ * form a hundred times over. So the screen mounts a `LogDialogHost` once, and a
+ * row renders a `LogButton` that only says WHICH company — the host holds what
+ * every company on the screen can be logged against, and builds the one form
+ * when a button is pressed. There is no trigger-owning variant on purpose: a
+ * button outside a host throws, so the per-row shape cannot come back.
+ *
  * Radix rejects an empty Select value, so "no project" / "no contact" carry a
  * sentinel that is turned back into null on the way to the action.
  */
 
 export type LogContact = { id: string; name: string };
 export type LogProject = { id: string; name: string };
+
+/** What a company on the screen can be logged against, keyed by company id. */
+export type LogTarget = {
+  companyName?: string;
+  contacts: readonly LogContact[];
+  projects: readonly LogProject[];
+};
+
+/** An entry being corrected rather than written (D70). */
+export type LogEdit = {
+  id: string;
+  text: string;
+  channel: ActivityChannel;
+  contactId: string | null;
+  projectId: string | null;
+};
+
+type LogRequest = {
+  companyId: string;
+  /** Pre-picked when the button sits on a project's own screen. */
+  projectId?: string | null;
+  entry?: LogEdit;
+};
+
+/** A request with the target it was opened against, taken at the press. */
+type LogOpen = LogRequest & { target: LogTarget };
 
 const NONE = "none";
 
@@ -66,54 +109,132 @@ const CHANNELS: readonly { value: ActivityChannel; Icon: typeof MapPin }[] = [
 const BOTTOM_SHEET_AT_375 =
   "max-sm:inset-x-0! max-sm:top-auto! max-sm:bottom-0! max-sm:translate-x-0! max-sm:translate-y-0! max-sm:max-w-none! max-sm:rounded-b-none!";
 
-/** An entry being corrected rather than written (D70). */
-export type LogEdit = {
-  id: string;
-  text: string;
-  channel: ActivityChannel;
-  contactId: string | null;
-  projectId: string | null;
-};
+const LogContext = createContext<((request: LogRequest) => void) | null>(null);
 
-export function LogDialog({
-  companyId,
-  companyName,
-  projectId,
-  contacts,
-  projects,
-  trigger,
-  entry,
+/**
+ * Mounts the one log dialog for everything inside it. `targets` is the whole
+ * screen's answer to "which contacts and projects can this be against",
+ * serialised once — a server component passes it straight through.
+ */
+export function LogDialogHost({
+  targets,
+  children,
 }: {
-  companyId: string;
-  /** Shown, never editable. Omitted only where the caller has no name to hand. */
-  companyName?: string;
-  /** Preselected when the dialog is opened from a project. */
-  projectId?: string | null;
-  contacts: readonly LogContact[];
-  projects: readonly LogProject[];
-  trigger?: ReactNode;
-  /**
-   * Present when this is a correction, not a new entry (D70). The same three
-   * fields a person meant to type — the words, the channel, whose meeting it
-   * was — and neither the day nor the follow-up: the day is the entry's
-   * identity, and the follow-up is a figure two other screens read.
-   */
-  entry?: LogEdit;
+  targets: Readonly<Record<string, LogTarget>>;
+  children: ReactNode;
 }) {
+  const [request, setRequest] = useState<LogOpen | null>(null);
+  const [open, setOpen] = useState(false);
+  // A new form for every press: the panel is keyed on this, so its state is
+  // built from the request and never carried over from the last company.
+  const [generation, setGeneration] = useState(0);
+
+  const openFor = useCallback(
+    (next: LogRequest) => {
+      // The target is taken at the press and kept with the request, not read
+      // off the prop on every render: a live update refreshes the screen under
+      // an open form, and a company that slips off a capped band must not take
+      // the half-typed entry with it.
+      const target = targets[next.companyId];
+      if (!target) throw new Error("LogButton for a company its LogDialogHost was not given");
+      setRequest({ ...next, target });
+      setGeneration((count) => count + 1);
+      setOpen(true);
+    },
+    [targets],
+  );
+
+  // The panel stays mounted while it animates out, and is replaced — not
+  // reset — by the next press.
+  return (
+    <LogContext.Provider value={openFor}>
+      {children}
+      {request ? (
+        <LogPanel
+          key={generation}
+          open={open}
+          onOpenChange={setOpen}
+          request={request}
+          target={request.target}
+        />
+      ) : null}
+    </LogContext.Provider>
+  );
+}
+
+/**
+ * The button a row renders. It is an ordinary `Button` — variant, size, class
+ * and aria-label pass straight through — that asks the host above it to open
+ * the form for this company. `icon` draws the notebook here rather than taking
+ * it as a child: an SVG passed in from a server component is serialised into
+ * the page once per row, and a hundred rows carried a hundred copies of it.
+ */
+export function LogButton({
+  companyId,
+  projectId,
+  entry,
+  icon = false,
+  onClick,
+  children,
+  ...button
+}: Omit<ComponentProps<typeof Button>, "asChild"> & LogRequest & { icon?: boolean }) {
+  const openFor = useContext(LogContext);
+  if (!openFor) throw new Error("LogButton rendered outside a LogDialogHost");
+  return (
+    <Button
+      type="button"
+      {...button}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) openFor({ companyId, projectId, entry });
+      }}
+    >
+      {icon ? <NotebookPen aria-hidden="true" /> : null}
+      {children}
+    </Button>
+  );
+}
+
+function LogPanel({
+  open,
+  onOpenChange,
+  request,
+  target,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  request: LogRequest;
+  target: LogTarget;
+}) {
+  const { companyId, projectId, entry } = request;
+  const { companyName, contacts, projects } = target;
   const editing = entry !== undefined;
   const t = useTranslations();
   const router = useRouter();
   const ids = useId();
   const [pending, startTransition] = useTransition();
 
-  const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
-  const [channel, setChannel] = useState<ActivityChannel>("visit");
+  // A fresh entry every time it opens (the host remounts this per press), and
+  // today is today in Riyadh — never the browser's day (src/lib/dates.ts).
+  const [text, setText] = useState(entry?.text ?? "");
+  const [channel, setChannel] = useState<ActivityChannel>(entry?.channel ?? "visit");
   const [happenedOn, setHappenedOn] = useState<string | null>(todayRiyadh());
   const [nextFollowUp, setNextFollowUp] = useState<string | null>(null);
-  const [project, setProject] = useState<string>(projectId ?? NONE);
-  const [contact, setContact] = useState<string>(NONE);
+  const [project, setProject] = useState<string>(entry?.projectId ?? projectId ?? NONE);
+  const [contact, setContact] = useState<string>(entry?.contactId ?? NONE);
   const [textError, setTextError] = useState<string | null>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  // Anything changed from how the form opened — a word, a chip, a date, a pick
+  // — is work a tap beside the sheet must not throw away (D84).
+  const today = todayRiyadh();
+  const dirty =
+    text.trim() !== (entry?.text ?? "").trim() ||
+    channel !== (entry?.channel ?? "visit") ||
+    happenedOn !== today ||
+    nextFollowUp !== null ||
+    project !== (entry?.projectId ?? projectId ?? NONE) ||
+    contact !== (entry?.contactId ?? NONE);
 
   const textId = `${ids}-text`;
   const textErrorId = `${ids}-text-error`;
@@ -123,25 +244,13 @@ export function LogDialog({
   const happenedLabelId = `${ids}-happened`;
   const followUpLabelId = `${ids}-follow-up`;
 
-  function onOpenChange(next: boolean) {
-    setOpen(next);
-    if (!next) return;
-    // A fresh entry every time it opens, and today is today in Riyadh — never
-    // the browser's day (src/lib/dates.ts).
-    setText(entry?.text ?? "");
-    setChannel(entry?.channel ?? "visit");
-    setHappenedOn(todayRiyadh());
-    setNextFollowUp(null);
-    setProject(entry?.projectId ?? projectId ?? NONE);
-    setContact(entry?.contactId ?? NONE);
-    setTextError(null);
-  }
-
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const written = text.trim();
     if (!written || !happenedOn) {
       setTextError(t("common.required"));
+      // The message is announced; the cursor goes to the box it is about.
+      textRef.current?.focus();
       return;
     }
     setTextError(null);
@@ -169,7 +278,7 @@ export function LogDialog({
         return;
       }
       toast.success(t(entry ? "drawer.corrected" : "drawer.logged"));
-      setOpen(false);
+      onOpenChange(false);
       // The drawer's activity list and the home follow-up strip are server
       // rendered; one refresh brings both up to date (SPEC §3: no refresh
       // buttons — the screen updates itself).
@@ -179,17 +288,17 @@ export function LogDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            <NotebookPen aria-hidden="true" />
-            {t("common.log")}
-          </Button>
-        )}
-      </DialogTrigger>
-
+      {/* A sentence typed in a lobby is not lost to a thumb landing beside the
+          sheet: once something is written, a tap outside does nothing, and
+          Cancel and Escape — deliberate — still close it (D84). */}
       <DialogContent
-        className={cn("max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md", BOTTOM_SHEET_AT_375)}
+        className={cn(
+          "max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md",
+          BOTTOM_SHEET_AT_375,
+        )}
+        onInteractOutside={(event) => {
+          if (dirty) event.preventDefault();
+        }}
       >
         <DialogHeader>
           <DialogTitle>{t(editing ? "drawer.correctTitle" : "drawer.logTitle")}</DialogTitle>
@@ -216,6 +325,7 @@ export function LogDialog({
               </span>
             </Label>
             <Textarea
+              ref={textRef}
               id={textId}
               rows={3}
               required
@@ -288,9 +398,7 @@ export function LogDialog({
             <div className="flex flex-col gap-1.5">
               <span id={followUpLabelId} className="text-sm font-medium">
                 {t("common.nextFollowUp")}
-                <span className="ps-1 text-xs font-normal text-faint">
-                  {t("drawer.optional")}
-                </span>
+                <span className="ps-1 text-xs font-normal text-faint">{t("drawer.optional")}</span>
               </span>
               <div role="group" aria-labelledby={followUpLabelId}>
                 <DatePicker value={nextFollowUp} onChange={setNextFollowUp} />

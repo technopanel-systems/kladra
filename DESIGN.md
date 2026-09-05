@@ -269,6 +269,29 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 - **A browser exception is a test failure, wherever it surfaces.** This one reached a spec as
   three unlabelled disabled buttons — Next's error overlay, counted by a check looking for
   dead controls. Every spec now fails on the exception itself and names it.
+- **A list mounts one dialog, and draws its rows as data.** Found by the first walk at the
+  founder's volume (P10d), on the one screen a rep opens most. The day screen offered Log on
+  every card and mounted a whole dialog behind each button — a hundred closed forms on his
+  home page, each written into the page with its own props. And the cards themselves were a
+  server loop over client leaves: a link, a button and an icon per row, each serialised on its
+  own with its class strings, so the page carried half a megabyte of one card written a
+  hundred times. Measured on Faisal's floor of 288 (100 cards, 64 waiting rows), in
+  development, both measured before the waiting cap (D83) landed, so the difference is the
+  shape alone: 1.04 MB and 1.56 s before, 0.56 MB and 0.49 s after; the manager's stuck list
+  was the same shape and went from 292 KB to 211 KB, 0.71 s to 0.50 s; a company drawer with
+  three hundred history entries — the one list left whole on purpose (D80) — went from 1.68 MB
+  and 2.0 s to 1.09 MB and 0.6 s, because every entry's words had been travelling a second
+  time as props to the Correct button beside them. Nothing a person sees changed. Two rules follow. A dialog a ROW can open is mounted once per screen by a host
+  (`LogDialogHost`) and the row renders a button that says only which company it is about
+  (`LogButton`); there is no trigger-owning variant left to reach for, and a button outside a
+  host throws rather than silently doing nothing. And a list of more than a handful of cards
+  is drawn by ONE client component from plain rows — the server decides what each row says,
+  the client draws it — so the page carries the rows once as data and the card once as code
+  (`CallBand`, `WaitingList`, `StuckRows`, `ActivityList`). The tables had always been built
+  this way; the card lists had not, and the difference was invisible at twelve companies (D82).
+  Gzip hides most of it on the wire — the two-hundred-row customer list is 67 KB compressed —
+  which is why the measure that matters is the server's render time and the browser's
+  hydration, not the raw byte count.
 
 ## §4 Not built until asked
 

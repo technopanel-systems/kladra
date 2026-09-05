@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { LogDialogHost } from "@/components/activities/log-dialog";
 import { ActivityList } from "@/components/activities/activity-list";
 import { ProjectSheet } from "@/components/projects/projects-table";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
@@ -86,7 +87,18 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
     />
   );
 
+  // One log dialog for the whole drawer (D82): the sheet's Log button and the
+  // Correct button on every history entry press the same form.
   return (
+    <LogDialogHost
+      targets={{
+        [project.companyId]: {
+          companyName: project.companyName,
+          contacts: contacts.map((row) => ({ id: row.id, name: row.name })),
+          projects,
+        },
+      }}
+    >
     <ProjectSheet
       projectId={project.id}
       name={project.name}
@@ -100,8 +112,6 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       lostOn={toDay(project.lostAt)}
       lostReason={project.lostReason}
       notes={project.notes}
-      contacts={contacts}
-      projects={projects}
       mine={mine}
       // The request button is in ONE position, whatever the list under it says.
       // Rendered inside the empty branch it was destroyed by the save that
@@ -128,12 +138,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
           activities={project.activities}
           // The same corrections as the company drawer, on the same entries
           // (D70). The project is preselected because that is where he is.
-          correct={{
-            companyId: project.companyId,
-            companyName: project.companyName,
-            contacts: contacts.map((row) => ({ id: row.id, name: row.name })),
-            projects: [{ id: project.id, name: project.name }],
-          }}
+          correct={{ companyId: project.companyId }}
           empty={
             <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
               <p className="max-w-prose text-sm text-muted-foreground">
@@ -144,5 +149,6 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
         />
       }
     />
+    </LogDialogHost>
   );
 }

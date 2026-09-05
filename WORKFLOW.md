@@ -46,13 +46,13 @@
             - [x] e Leave is invisible everywhere except the pace arithmetic (item 9)
             - [x] f A revision does not say what changed (item 10)
             - [x] g Nothing says whether the team is using the app (item 12)
-- [ ] P10 The half-built and the carried, then a pilot on real volumes
+- [x] P10 The half-built and the carried, then a pilot on real volumes
       - [x] a A person has a standing strip of his own — the one thing "how is this going"
             is not asked about anywhere
       - [x] b A notification that has been read and acted on stops being a row for ever
       - [x] c The carried three: every list renders every row it is given, a form dialog
             that scrolls does not say so, and a dispatch is typed from nothing too
-      - [ ] d The pilot: the acceptance scripts walked at the founder's volumes
+      - [x] d The pilot: the acceptance scripts walked at the founder's volumes
             (`npm run seed:volume`), what broke fixed, what was measured written here
 - [ ] P11 Independent review and hard polish — a different model reads it as a stranger,
       owns it, and does not stop. The specs stay green; a rule that changes takes its test
@@ -83,7 +83,15 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
+**Where I stopped:** P10 done, all four boxes, at the end of the volume pilot (P10d above).
+Next is P11A: twelve stranger-read agents have been reading the app as another developer's
+work — actions, schema, the queue, the day, admin, the team figures, live updates, hand-over
+and the rest — with a refute pass behind them; their surviving findings get ranked into a
+new §5 of this file, causes named, and fixed worst first in committed slices. The dev
+database is seeded at volume (`seed:demo` then `seed:volume`, plus three hundred history
+entries on one of Faisal's companies for the drawer test); `seed:demo` alone puts it back.
+
+**Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
 lists (D64), a chart label truncated into a wrong year in Arabic (D65), a demo whose
 company target hid two of the three pace colours (D66), and the gone-quiet band itself
@@ -134,6 +142,69 @@ The same sentence fixed the form dialogs: a body with more below the fold now sa
 four lines of CSS on `FormBody` and therefore in every dialog at once. And a dispatch starts
 from the last one raised against its quotation — the site, the terms and the method, with
 the quantities left empty (D81).
+
+**P10d is done — the first walk at the founder's volume.** `seed:volume` had never been run:
+it was written against column names nobody checked (`countries.iso2`, `panel_classes`) and
+fell over on its first query. Fixed, it puts 828 companies, 432 projects, 348 quotations
+and 255 dispatches on the floor, Faisal holding 288. Every query was cheap at that size —
+nothing on the day screen took more than 6 ms warm — and the screen was still the slowest in
+the app, three times the two-hundred-row customer list beside it: 1.56 s and 1.04 MB in
+development. The cause was not data but shape. The day screen mounted a whole log dialog
+behind every one of a hundred cards, and drew the cards as a server loop over client
+leaves, so the page carried each card twice — once as HTML and once as props. The same
+shape was under the manager's stuck list and, worst, under a company's history, the one
+list left whole on purpose: three hundred entries made a 1.68 MB drawer that took two
+seconds. One dialog per screen now (`LogDialogHost` / `LogButton`; the trigger-owning
+form is gone so the per-row shape cannot return), and every long card list is one client
+component drawn from data (`CallBand`, `WaitingList`, `StuckRows`, `ActivityList`) — the
+rule is in DESIGN §5 and D82. Measured before and after, development, warm: day 1.56 s →
+0.49 s and 1.04 MB → 0.56 MB; team 0.71 s → 0.50 s; the 300-entry drawer 2.0 s → 0.6 s and
+1.68 MB → 1.09 MB. In production (`next start`, warm, three runs each) every screen at this
+volume answers in 20–60 ms and weighs 24–80 KB gzipped — day 52 KB, customer list 66 KB,
+team 33 KB, the drawer 80 KB — so nothing here is slow on a phone; the point of the change
+is what the browser has to hydrate, and that a history that grows for years stays flat.
+
+The walk itself, by shot-looker at 1366 and 375, en and ar: every capped list ends with its
+line and the figures agree — "The first 200 of 288 are here" on the customers, 347 quotations,
+255 dispatches; the bands say "Overdue 30 · and 5 more", "Never contacted 102 · and 77 more",
+"Gone quiet 87 · and 62 more", and the Arabic «و77 أخرى» reads right-to-left with Western
+digits in order; the stuck groups say "and 258 more"; no horizontal scroll at 375 anywhere;
+the scroll hint in a form is present in both themes and fades at both ends, measured in
+pixels, and the Totals card under it is whole. Two things it found were real and are fixed:
+"Waiting on you" was the one band with no cap and put sixty-four cards above the calls (D83);
+and "gone quiet" — 249 on this floor, the largest group on the manager's screen — had no
+figure in his strip, so it is the fifth (D83, the numbers spec now counts five). Two were
+not defects: Turki's Latin name on the Arabic screen is the seeded rep with no Arabic name
+(D68, on purpose); "Waiting" and "Sent back" sharing amber is DESIGN §6, both wait on
+somebody. Left for later, said here rather than hidden: the Unfile confirm on a history entry
+is still one dialog per row — it carries a closure per row and costs hydration only, not
+payload, so it waits for a phone measurement in 11H/11I; and the volume seed makes every
+project "Open" and has no lost ones, which a later walk of the projects screen should fix. The design-guidelines pass over the five new files found seven things: five fixed — Save
+moves the cursor to the refused box, a typed log form no longer closes on a tap beside it
+(D84), the waiting cards took the focus ring their siblings had, their names clip inside the
+card, and the middle dots on stuck rows are hidden from screen readers — and two declined
+with the reason in D84: virtualising the history, and an ellipsis convention on placeholders
+that the app does not follow anywhere. The critic pass then read the whole slice as a
+sceptical stranger and found four real things, all fixed before the commit: the waiting cap
+was keeping the newest twenty-five (each source listed newest-first, and the three were
+never ordered against each other), so the oldest sent-back quotation would have been the
+first hidden — it is ordered by when each stopped now, and a spec pushes the floor past the
+cap to prove it; the fifth tile broke the strip's own four-column contract and sat alone in a
+quarter of a second row — the strip takes five now, two columns to `lg`; an open log form
+read its company off a live prop, so a refresh from a live update could unmount it under a
+half-typed entry — the target is snapshotted at the press; and the drawer still mounted two
+hosts with the same contacts and projects — one host per drawer now, at the root, with the
+header's and the history's buttons pressing the same form. Smaller ones with it: the
+outside-tap guard covers every field and not only the words, the empty state of a history
+sits inside the host, the band key is a union of the four names, and the measurements in
+DESIGN say which change they measure. The gate then failed on two tests this slice never touched, and the calendar
+was the reason: every run before had fallen on a Friday or a Saturday, so the manager's leave
+test returned early with nobody away and the daily-report test counted a Thursday nothing had
+been logged on. On the first Sunday both asserted for the first time in weeks and both were
+wrong — the leave test's first text match was the phone copy of the team table, hidden above
+`md`, and the report test counted unfiled entries the figure rightly leaves out (D70). Both
+locators and the SQL are corrected; no rule changed. A test that only asserts on a working day
+is a test that is quiet five days in seven — 11I should run the suite on a pinned weekday.
 
 **P10b is done.** A notice says what it is ABOUT rather than only where the screen is, and every
 kind answers one question the compiler asks of it: what takes this off the screen (D79). Work is
@@ -595,8 +666,16 @@ seeded floor is twelve companies and the caps bite at twenty, twenty-five and tw
 so no walk can reach one. What it holds is the arithmetic underneath them — a list shorter
 than its cap is the whole list, a list exactly at it is not truncated, and a longer one
 keeps its OWN length rather than the length of what was drawn, which is the defect that
-would put "20" above twenty rows and mean forty. The three caps are also held in the order
-the screens read them, so a band can never show more than the list it summarises (D80).
+would put "20" above twenty rows and mean forty. A band's cap and a stuck group's are also
+held under the list screen's, so a person following "and 30 more" never lands on fewer
+rows than he left (D80); the band and the group are not ordered against each other, because
+they summarise different screens for different people.
+
+**The waiting list at volume** — `tests/waiting-cap.spec.ts`
+The one cap the seeded floor can be pushed past from a test: thirty-one quotations are sent
+back to Faisal, the oldest a year ago, and his day is read. Twenty-five cards, the true
+figure in the heading, "and N more" under them, and the oldest at the top — the order the
+query never had until the critic read it (D83). The rows are deleted again whatever happens.
 
 **Reading a screen** — `tests/reading.spec.ts`
 Not a walk either: a sweep of every screen a rep reads, in both locales, for the rules DESIGN §5

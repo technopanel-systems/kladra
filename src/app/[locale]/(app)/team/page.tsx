@@ -107,6 +107,20 @@ export default async function TeamPage() {
             caption: t("team.stuckNeverMeans", { days: NEVER_CONTACTED_DAYS }),
             tone: stuck.neverContacted.total > 0 ? "open" : null,
           },
+          // The fifth figure, and on a real floor the largest (D63): the walk
+          // at volume found 249 gone quiet against 38 requests waiting, listed
+          // below with no figure above (P10d). Same tone as never contacted —
+          // nobody is waiting on a call today, and it is how customers are lost.
+          {
+            label: t("team.stuckQuiet"),
+            value: (
+              <span dir="ltr" className="num">
+                {stuck.goneQuiet.total}
+              </span>
+            ),
+            caption: t("common.quietMeans", { days: NEVER_CONTACTED_DAYS }),
+            tone: stuck.goneQuiet.total > 0 ? "open" : null,
+          },
         ]}
       />
 

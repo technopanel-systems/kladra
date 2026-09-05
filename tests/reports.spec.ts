@@ -94,12 +94,18 @@ test("a rep's day is assembled for him, and he adds the one line it cannot know"
   await test.step("3 · every figure on it is read back out of his own records", async () => {
     const own = page.locator('[data-slot="report-own"]');
 
+    // An entry he unfiled stops counting (D70, tests/correct.spec.ts), so the
+    // count here leaves archived ones out as the figure does. This clause was
+    // missing and never noticed: every run before P10d fell on a Saturday,
+    // when the report day was Thursday and nothing had been logged on it.
     const counted = await one<{ logged: string; companies: string; quotationRequests: string }>(
       `select
          (select count(*)::text from activities
-           where user_id = $1::uuid and happened_on = $2::date) as logged,
+           where user_id = $1::uuid and happened_on = $2::date
+             and archived_at is null) as logged,
          (select count(distinct company_id)::text from activities
-           where user_id = $1::uuid and happened_on = $2::date) as companies,
+           where user_id = $1::uuid and happened_on = $2::date
+             and archived_at is null) as companies,
          (select count(*)::text from quotations
            where rep_id = $1::uuid
              and (created_at at time zone 'Asia/Riyadh')::date = $2::date) as "quotationRequests"`,

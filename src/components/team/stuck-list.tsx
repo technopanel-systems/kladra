@@ -1,11 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { DayText } from "@/components/ui-ext/day-text";
+import { StuckRows, type StuckRowData } from "@/components/team/stuck-rows";
 import { formatDay } from "@/lib/dates";
-import { Link } from "@/i18n/navigation";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
-import { TONE_TEXT } from "@/lib/state-tone";
 import type { Stuck } from "@/lib/team";
-import { cn } from "@/lib/utils";
 
 /**
  * What is waiting longer than it should be (SPEC D14).
@@ -31,6 +28,9 @@ import { cn } from "@/lib/utils";
  *
  * Empty is the good state and says so, rather than showing three empty
  * headings, which reads as a screen that failed to load.
+ *
+ * This file decides what each row SAYS; `StuckRows` draws them, on the client,
+ * from that data (D82).
  */
 export async function StuckList({ stuck }: { stuck: Stuck }) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
@@ -53,6 +53,60 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     );
   }
 
+  /** A company row points at the company; a project row at its project. */
+  const hrefOf = (row: { kind: "company" | "project"; id: string }) =>
+    row.kind === "company" ? `/companies?open=${row.id}` : `/projects?open=${row.id}`;
+
+  const uncovered: StuckRowData[] = stuck.uncovered.rows.map((row) => ({
+    key: `away-${row.kind}-${row.id}`,
+    href: hrefOf(row),
+    name: row.name,
+    companyName: row.kind === "company" ? undefined : row.companyName,
+    who: t("team.awayBackOn", {
+      name: row.repName,
+      day: formatDay(row.backOn, locale),
+    }),
+    note:
+      row.daysOverdue > 0
+        ? t("team.overdueDays", { count: row.daysOverdue })
+        : t("common.dueToday"),
+  }));
+
+  const requests: StuckRowData[] = stuck.requests.rows.map((row) => ({
+    key: row.id,
+    href: `/quotations?open=${row.id}`,
+    label: row.label,
+    companyName: row.companyName,
+    who: row.repName,
+    note: t("team.waitingDays", { count: row.workingDaysWaiting }),
+  }));
+
+  const followUps: StuckRowData[] = stuck.followUps.rows.map((row) => ({
+    key: `${row.kind}-${row.id}`,
+    href: hrefOf(row),
+    name: row.name,
+    companyName: row.kind === "company" ? undefined : row.companyName,
+    who: row.repName,
+    day: row.day,
+    note: t("team.overdueDays", { count: row.daysOverdue }),
+  }));
+
+  const goneQuiet: StuckRowData[] = stuck.goneQuiet.rows.map((row) => ({
+    key: row.id,
+    href: `/companies?open=${row.id}`,
+    name: row.name,
+    who: row.repName,
+    note: t("team.quietDays", { count: row.days }),
+  }));
+
+  const neverContacted: StuckRowData[] = stuck.neverContacted.rows.map((row) => ({
+    key: row.id,
+    href: `/companies?open=${row.id}`,
+    name: row.name,
+    who: row.repName,
+    note: t("team.addedDays", { count: row.days }),
+  }));
+
   return (
     <section className="flex flex-col gap-4">
       <h2 className="text-sm font-medium text-muted-foreground">{t("team.stuck")}</h2>
@@ -64,128 +118,42 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
         <Group
           title={t("team.uncovered")}
           means={t("team.uncoveredMeans")}
-          more={stuck.uncovered.total - stuck.uncovered.rows.length}
-        >
-          {stuck.uncovered.rows.map((row) => (
-            <Row
-              key={`away-${row.kind}-${row.id}`}
-              href={
-                row.kind === "company" ? `/companies?open=${row.id}` : `/projects?open=${row.id}`
-              }
-              name={
-                row.kind === "company" ? (
-                  row.name
-                ) : (
-                  <>
-                    <bdi>{row.name}</bdi> · <bdi>{row.companyName}</bdi>
-                  </>
-                )
-              }
-              who={t("team.awayBackOn", { name: row.repName, day: formatDay(row.backOn, locale) })}
-              note={
-                row.daysOverdue > 0 ? (
-                  t("team.overdueDays", { count: row.daysOverdue })
-                ) : (
-                  t("common.dueToday")
-                )
-              }
-            />
-          ))}
-        </Group>
+          rows={uncovered}
+          more={stuck.uncovered.total - uncovered.length}
+        />
       ) : null}
 
       {stuck.requests.total > 0 ? (
         <Group
           title={t("team.stuckRequests")}
-          more={stuck.requests.total - stuck.requests.rows.length}
-        >
-          {stuck.requests.rows.map((row) => (
-            <Row
-              key={row.id}
-              href={`/quotations?open=${row.id}`}
-              name={
-                <>
-                  <span dir="ltr" translate="no" className="num">
-                    {row.label}
-                  </span>{" "}
-                  · <bdi>{row.companyName}</bdi>
-                </>
-              }
-              who={row.repName}
-              note={t("team.waitingDays", { count: row.workingDaysWaiting })}
-            />
-          ))}
-        </Group>
+          rows={requests}
+          more={stuck.requests.total - requests.length}
+        />
       ) : null}
 
       {stuck.followUps.total > 0 ? (
         <Group
           title={t("team.stuckFollowUps")}
-          more={stuck.followUps.total - stuck.followUps.rows.length}
-        >
-          {stuck.followUps.rows.map((row) => (
-            <Row
-              key={`${row.kind}-${row.id}`}
-              href={
-                row.kind === "company"
-                  ? `/companies?open=${row.id}`
-                  : `/projects?open=${row.id}`
-              }
-              name={
-                row.kind === "company" ? (
-                  row.name
-                ) : (
-                  <>
-                    <bdi>{row.name}</bdi> · <bdi>{row.companyName}</bdi>
-                  </>
-                )
-              }
-              who={row.repName}
-              note={
-                <>
-                  <DayText day={row.day} locale={locale} />
-                  {" · "}
-                  {t("team.overdueDays", { count: row.daysOverdue })}
-                </>
-              }
-            />
-          ))}
-        </Group>
+          rows={followUps}
+          more={stuck.followUps.total - followUps.length}
+        />
       ) : null}
 
       {stuck.goneQuiet.total > 0 ? (
         <Group
           title={t("team.stuckQuiet")}
           means={t("common.quietMeans", { days: NEVER_CONTACTED_DAYS })}
-          more={stuck.goneQuiet.total - stuck.goneQuiet.rows.length}
-        >
-          {stuck.goneQuiet.rows.map((row) => (
-            <Row
-              key={row.id}
-              href={`/companies?open=${row.id}`}
-              name={row.name}
-              who={row.repName}
-              note={t("team.quietDays", { count: row.days })}
-            />
-          ))}
-        </Group>
+          rows={goneQuiet}
+          more={stuck.goneQuiet.total - goneQuiet.length}
+        />
       ) : null}
 
       {stuck.neverContacted.total > 0 ? (
         <Group
           title={t("team.stuckNever")}
-          more={stuck.neverContacted.total - stuck.neverContacted.rows.length}
-        >
-          {stuck.neverContacted.rows.map((row) => (
-            <Row
-              key={row.id}
-              href={`/companies?open=${row.id}`}
-              name={row.name}
-              who={row.repName}
-              note={t("team.addedDays", { count: row.days })}
-            />
-          ))}
-        </Group>
+          rows={neverContacted}
+          more={stuck.neverContacted.total - neverContacted.length}
+        />
       ) : null}
     </section>
   );
@@ -194,15 +162,15 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
 async function Group({
   title,
   means,
+  rows,
   more,
-  children,
 }: {
   title: string;
   /** The rule behind the group, where its name does not carry it (D59). */
   means?: string;
+  rows: StuckRowData[];
   /** How many are not drawn, when the group is longer than a screen (D80). */
   more: number;
-  children: React.ReactNode;
 }) {
   const t = await getTranslations();
 
@@ -212,43 +180,13 @@ async function Group({
         <h3 className="text-xs font-medium text-faint">{title}</h3>
         {means ? <p className="text-xs text-muted-foreground">{means}</p> : null}
       </div>
-      <ul className="flex flex-col gap-2">{children}</ul>
+      <StuckRows rows={rows} />
       {/* Said rather than silently dropped. Forty companies nobody has
           contacted is a real floor, and a list that shows twenty of them and
           says nothing is a screen that has decided for the reader (D80). */}
-      {more > 0 ? <p className="text-xs text-faint">{t("common.andMore", { count: more })}</p> : null}
+      {more > 0 ? (
+        <p className="text-xs text-faint">{t("common.andMore", { count: more })}</p>
+      ) : null}
     </div>
-  );
-}
-
-function Row({
-  href,
-  name,
-  who,
-  note,
-}: {
-  href: string;
-  name: React.ReactNode;
-  who: string;
-  note: React.ReactNode;
-}) {
-  /*
-   * Three things on one line where there is room, and three lines where there is
-   * not. It was one flex row at every width: the name was the only child allowed
-   * to shrink, so on a phone it gave up all its space to the rep's name and the
-   * date beside it and came out one word per line, touching the text next to it.
-   * A row about a customer whose name is unreadable is a row nobody can act on.
-   */
-  return (
-    <li>
-      <Link
-        href={href}
-        className="card-face flex flex-col gap-1 p-3 outline-none transition-colors hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4"
-      >
-        <span className="min-w-0 text-sm sm:flex-1">{name}</span>
-        <span className="text-xs text-muted-foreground">{who}</span>
-        <span className={cn("text-xs", TONE_TEXT.wait)}>{note}</span>
-      </Link>
-    </li>
   );
 }

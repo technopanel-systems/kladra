@@ -96,7 +96,7 @@ async function main(): Promise<void> {
   if (reps.length === 0) throw new Error("seed-volume: no reps — run seed:demo first");
 
   const saudi = await db.execute<{ id: number }>(
-    sql`select id from countries where iso2 = 'SA' limit 1`,
+    sql`select id from countries where code = 'SA' limit 1`,
   );
   const saudiId = Number(saudi.rows[0]?.id);
   const cityRows = await db.execute<{ id: number }>(
@@ -106,7 +106,7 @@ async function main(): Promise<void> {
   const sourceRows = await db.execute<{ id: number }>(sql`select id from lead_sources`);
   const supplierRows = await db.execute<{ id: number }>(sql`select id from suppliers limit 5`);
   const ratingRows = await db.execute<{ id: number }>(sql`select id from fire_ratings limit 5`);
-  const classRows = await db.execute<{ id: number }>(sql`select id from panel_classes limit 5`);
+  const classRows = await db.execute<{ id: number }>(sql`select id from classes limit 5`);
   const thicknessRows = await db.execute<{ id: number }>(sql`select id from thicknesses limit 5`);
   const methodRows = await db.execute<{ id: number }>(sql`select id from shipment_methods limit 5`);
 
@@ -225,7 +225,9 @@ async function main(): Promise<void> {
         projectId: project.id,
         repId: pick(reps).id,
         status,
-        smacNumber: answered ? `V${number}` : null,
+        // The ERP's own number, which is what the coordinator types: four digits
+        // that have nothing to do with ours, as on the demo floor.
+        smacNumber: answered ? String(between(1000, 9999)) : null,
         issuedAt: answered ? at(created) : null,
         decidedAt: status === "accepted" || status === "rejected" ? at(created) : null,
         returnReason: status === "returned" ? "المقاسات ناقصة" : null,
@@ -277,7 +279,7 @@ async function main(): Promise<void> {
         destination: `${pick(["الرياض", "جدة", "الدمام"])} — موقع المشروع`,
         paymentTerms: pick(["تحويل بنكي 30 يوم", "50% مقدم", "نقدًا عند التسليم"]),
         status,
-        smacDispatchNumber: status === "approved" ? `VD${number}` : null,
+        smacDispatchNumber: status === "approved" ? String(between(1000, 9999)) : null,
         approvedAt: status === "approved" ? at(created) : null,
         refuseReason: status === "refused" ? "الكمية أكبر من المتبقي" : null,
         createdAt: at(created),

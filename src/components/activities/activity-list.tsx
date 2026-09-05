@@ -1,3 +1,5 @@
+"use client";
+
 import { Ellipsis, MapPin, MessageCircle, Phone } from "lucide-react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
@@ -5,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Prose } from "@/components/ui-ext/prose";
 import { ActivityActions } from "./activity-actions";
-import type { LogContact, LogProject } from "./log-dialog";
 
 /**
  * The log, newest first (SPEC S24/S27 — a company's history is the manager's
@@ -47,6 +48,14 @@ const CHANNEL_ICON = {
   other: Ellipsis,
 } as const;
 
+/**
+ * A client list, drawn from plain entries (D82). The history is the one list
+ * deliberately left whole (D80), so it is the one most exposed to the cost of
+ * a server loop over client leaves: with three hundred entries the drawer
+ * weighed 1.7 MB and half of that was each entry's words a second time, as
+ * props to the Correct button beside it. As one client component the entries
+ * travel once, as data.
+ */
 export function ActivityList({
   activities,
   empty = null,
@@ -61,9 +70,6 @@ export function ActivityList({
    */
   correct?: {
     companyId: string;
-    companyName?: string;
-    contacts: readonly LogContact[];
-    projects: readonly LogProject[];
   };
 }) {
   const t = useTranslations();
@@ -88,9 +94,7 @@ export function ActivityList({
                 locale={locale}
                 className="text-xs text-muted-foreground"
               />
-              <span className="text-xs text-faint">
-                {t("common.by", { name: entry.userName })}
-              </span>
+              <span className="text-xs text-faint">{t("common.by", { name: entry.userName })}</span>
 
               {correct && entry.mine ? (
                 <span className="ms-auto">
@@ -103,9 +107,6 @@ export function ActivityList({
                       projectId: entry.projectId ?? null,
                     }}
                     companyId={correct.companyId}
-                    companyName={correct.companyName}
-                    contacts={correct.contacts}
-                    projects={correct.projects}
                     dayOpen={entry.dayOpen === true}
                   />
                 </span>
@@ -141,4 +142,5 @@ export function ActivityList({
       })}
     </ol>
   );
+
 }

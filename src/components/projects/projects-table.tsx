@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
-import type { ComponentProps, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Pencil, SearchIcon, XIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { setProjectFollowUpAction } from "@/actions/projects";
-import { LogDialog } from "@/components/activities/log-dialog";
+import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-lost-dialog";
@@ -413,8 +413,6 @@ function EmptyCard({ sentence, children }: { sentence: string; children: ReactNo
 /* this screen's URL handling.                                                 */
 /* -------------------------------------------------------------------------- */
 
-type LogDialogProps = ComponentProps<typeof LogDialog>;
-
 export type ProjectSheetProps = {
   projectId: string;
   name: string;
@@ -430,8 +428,6 @@ export type ProjectSheetProps = {
   lostReason: string | null;
   /** As stored, so Edit opens on the project's own notes rather than a summary. */
   notes: string | null;
-  contacts: LogDialogProps["contacts"];
-  projects: LogDialogProps["projects"];
   /**
    * Whether the person reading this owns the company the project hangs off. A
    * manager reads every project and works none (S8, D42), so he gets the dates
@@ -471,8 +467,6 @@ export function ProjectSheet({
   lostOn,
   lostReason,
   notes,
-  contacts,
-  projects,
   mine,
   activity,
   quotations,
@@ -602,18 +596,9 @@ export function ProjectSheet({
           {/* One primary action, at the top (DESIGN §2). */}
           {mine ? (
           <div className="flex flex-wrap items-center gap-2">
-            <LogDialog
-              companyId={companyId}
-              companyName={companyName}
-              projectId={projectId}
-              contacts={contacts}
-              projects={projects}
-              trigger={
-                <Button variant="brand">
-                  {t("common.log")}
-                </Button>
-              }
-            />
+            <LogButton companyId={companyId} projectId={projectId} variant="brand">
+              {t("common.log")}
+            </LogButton>
             <EditProjectDialog
               project={{ id: projectId, name, expectedSqm, nextFollowUp, notes }}
               trigger={

@@ -11,8 +11,11 @@ import { cn } from "@/lib/utils";
  * how it is GOING. This is the answer to the second question, and it comes
  * first because it is the one a person opened the drawer to ask.
  *
- * Two to four items. More than four and it stops being a glance, and on a phone
- * they wrap to two rows rather than shrink to nothing.
+ * Two to five items. Four was the limit until the manager's strip needed a
+ * fifth (D83); five fit across a desk, and below `lg` they take three rows of
+ * two — a fifth tile alone in the left quarter of a second row was the same
+ * "failed to load" defect the column count below exists to prevent. More than
+ * five and it stops being a glance.
  *
  * Each item may carry a CAPTION, and that is Jerom's phase-9C rule made into a
  * slot rather than a habit: every number must answer a question somebody asks
@@ -29,11 +32,13 @@ import { cn } from "@/lib/utils";
  * a whole figure is the right way round: the figure is what the eye came for.
  */
 /** Written out, because Tailwind reads class names and not expressions. */
-const COLUMNS: Record<1 | 2 | 3 | 4, string> = {
+const COLUMNS: Record<1 | 2 | 3 | 4 | 5, string> = {
   1: "sm:grid-cols-1",
   2: "sm:grid-cols-2",
   3: "sm:grid-cols-3",
   4: "sm:grid-cols-4",
+  // Two columns up to `lg`, so the odd fifth spans the row below it.
+  5: "lg:grid-cols-5",
 };
 
 export function StandingStrip({
@@ -58,7 +63,7 @@ export function StandingStrip({
         // so a strip of two sat in the left half of a full-width card with the
         // right half bare — which reads as two tiles that failed to load rather
         // than as a strip with two figures on it.
-        COLUMNS[Math.min(items.length, 4) as 1 | 2 | 3 | 4],
+        COLUMNS[Math.min(items.length, 5) as 1 | 2 | 3 | 4 | 5],
         className,
       )}
     >
@@ -75,7 +80,9 @@ export function StandingStrip({
             // column count above fixes one width up. It takes the whole row
             // instead, and above `sm:` the grid has a column per figure and
             // nothing to span.
-            items.length % 2 === 1 && index === items.length - 1 && "col-span-2 sm:col-span-1",
+            items.length % 2 === 1 &&
+              index === items.length - 1 &&
+              (items.length === 5 ? "col-span-2 lg:col-span-1" : "col-span-2 sm:col-span-1"),
           )}
         >
           <dt

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { archiveActivityAction } from "@/actions/activities";
-import { LogDialog, type LogContact, type LogEdit, type LogProject } from "./log-dialog";
+import { LogButton, type LogEdit } from "./log-dialog";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { Button } from "@/components/ui/button";
 
@@ -21,16 +21,10 @@ import { Button } from "@/components/ui/button";
 export function ActivityActions({
   entry,
   companyId,
-  companyName,
-  contacts,
-  projects,
   dayOpen,
 }: {
   entry: LogEdit;
   companyId: string;
-  companyName?: string;
-  contacts: readonly LogContact[];
-  projects: readonly LogProject[];
   /** Its day is still open, so the words can still be changed (D58, D70). */
   dayOpen: boolean;
 }) {
@@ -40,18 +34,15 @@ export function ActivityActions({
   return (
     <span className="flex items-center gap-1">
       {dayOpen ? (
-        <LogDialog
+        <LogButton
           companyId={companyId}
-          companyName={companyName}
-          contacts={contacts}
-          projects={projects}
           entry={entry}
-          trigger={
-            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground">
-              {t("drawer.correct")}
-            </Button>
-          }
-        />
+          variant="ghost"
+          size="sm"
+          className="text-xs text-muted-foreground"
+        >
+          {t("drawer.correct")}
+        </LogButton>
       ) : null}
 
       <ConfirmDialog

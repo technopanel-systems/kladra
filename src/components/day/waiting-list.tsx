@@ -1,4 +1,6 @@
-import { getTranslations } from "next-intl/server";
+"use client";
+
+import { useTranslations } from "next-intl";
 import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Link } from "@/i18n/navigation";
@@ -13,9 +15,21 @@ import type { Waiting } from "@/lib/day";
  * she refused, a quotation the customer is sitting on. Each row carries the
  * reason in her own words, so a rep does not have to open it to know whether
  * this is a two-minute fix or a phone call (S53).
+ *
+ * Drawn on the client from plain rows, like the call bands beside it (D82):
+ * every card here is a link with a badge and a paragraph inside it, and a
+ * server loop would serialise that whole card into the page once per row.
  */
-export async function WaitingList({ rows }: { rows: Waiting[] }) {
-  const t = await getTranslations();
+export function WaitingList({
+  rows,
+  total,
+}: {
+  /** The longest-waiting first, as many as the screen draws (D80). */
+  rows: Waiting[];
+  /** How many are waiting altogether — the heading's figure. */
+  total: number;
+}) {
+  const t = useTranslations();
 
   if (rows.length === 0) {
     return (
@@ -33,7 +47,7 @@ export async function WaitingList({ rows }: { rows: Waiting[] }) {
       <h2 className="text-sm font-medium">
         {t("day.waitingOnYou")}{" "}
         <span dir="ltr" className="num text-muted-foreground">
-          {rows.length}
+          {total}
         </span>
       </h2>
 
@@ -42,7 +56,7 @@ export async function WaitingList({ rows }: { rows: Waiting[] }) {
           <li key={`${row.reasonKey}-${row.id}`}>
             <Link
               href={row.href}
-              className="card-face flex flex-col gap-1.5 p-3 transition-colors hover:bg-surface-2"
+              className="card-face flex flex-col gap-1.5 p-3 outline-none transition-colors hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50"
             >
               <span className="flex flex-wrap items-center gap-2">
                 <span dir="ltr" className="num font-medium">
@@ -55,13 +69,13 @@ export async function WaitingList({ rows }: { rows: Waiting[] }) {
                 </StateBadge>
               </span>
               <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-                <bdi className="truncate">{row.companyName}</bdi>
+                <bdi className="max-w-full truncate">{row.companyName}</bdi>
                 {row.projectName ? (
                   <>
                     <span aria-hidden="true" className="text-faint">
                       ·
                     </span>
-                    <bdi className="truncate text-muted-foreground">{row.projectName}</bdi>
+                    <bdi className="max-w-full truncate text-muted-foreground">{row.projectName}</bdi>
                   </>
                 ) : null}
               </span>
@@ -72,6 +86,13 @@ export async function WaitingList({ rows }: { rows: Waiting[] }) {
           </li>
         ))}
       </ul>
+
+      {/* Said, not dropped (D80). There is no one screen that shows exactly
+          the rest — they are quotations and dispatches under their own status
+          on two lists — so this is a count and not a link (D83). */}
+      {total > rows.length ? (
+        <p className="text-xs text-faint">{t("common.andMore", { count: total - rows.length })}</p>
+      ) : null}
     </section>
   );
 }

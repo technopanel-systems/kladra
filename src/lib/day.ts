@@ -40,6 +40,8 @@ export type Waiting = {
   reasonKey: WaitingReason;
   /** The coordinator's or the customer's own words, when there are any. */
   reason: string | null;
+  /** When it stopped, as an ISO instant: sent back, refused, or issued. */
+  since: string;
 };
 
 /**
@@ -70,6 +72,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
         companyName: companies.name,
         projectName: projects.name,
         reason: quotations.returnReason,
+        since: quotations.updatedAt,
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -91,6 +94,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
         companyName: companies.name,
         projectName: projects.name,
         reason: dispatches.refuseReason,
+        since: dispatches.updatedAt,
       })
       .from(dispatches)
       .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
@@ -112,6 +116,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
         revision: quotations.revision,
         companyName: companies.name,
         projectName: projects.name,
+        since: quotations.issuedAt,
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -127,7 +132,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       .orderBy(desc(quotations.number)),
   ]);
 
-  return [
+  const rows: Waiting[] = [
     ...returned.map((row) => ({
       id: row.id,
       href: `/quotations?open=${row.id}`,
@@ -136,6 +141,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       projectName: row.projectName,
       reasonKey: "day.sentBack" as const,
       reason: row.reason,
+      since: row.since.toISOString(),
     })),
     ...refused.map((row) => ({
       id: row.id,
@@ -145,6 +151,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       projectName: row.projectName,
       reasonKey: "day.refused" as const,
       reason: row.reason,
+      since: row.since.toISOString(),
     })),
     ...issued.map((row) => ({
       id: row.id,
@@ -154,6 +161,15 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       projectName: row.projectName,
       reasonKey: "day.withCustomer" as const,
       reason: null,
+      // A CHECK on the table says issued_at is set exactly when the status is
+      // issued, so this is never null here; the fallback keeps the type honest.
+      since: (row.since ?? new Date(0)).toISOString(),
     })),
   ];
+
+  // Longest waiting first, across all three sources. The screen draws the top
+  // of this list and says how many it left out (D83), so the order IS the
+  // list: newest-first would hide the oldest sent-back quotation behind the
+  // count, which is the one that most needs him.
+  return rows.sort((a, b) => a.since.localeCompare(b.since));
 }

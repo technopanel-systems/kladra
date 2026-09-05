@@ -102,7 +102,11 @@ export default async function DayPage() {
         />
       ) : null}
       {months ? <MonthsCard months={months} /> : null}
-      {hasChain ? <WaitingList rows={waiting} /> : null}
+      {/* Worst first and capped like the bands below it (D80, D83): sixty-four
+          cards above the calls is the calls buried, not shown. */}
+      {hasChain ? (
+        <WaitingList rows={waiting.slice(0, BAND_LIMIT)} total={waiting.length} />
+      ) : null}
       <CallList
         overdue={overdue}
         today={today}
