@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one } from "./helpers/db";
+import { one, query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -378,5 +378,49 @@ test("every figure is in Western digits", async ({ page, locale, t }) => {
         );
       }
     }
+  });
+});
+
+test("a person is named in the reader's script, not the account's", async ({ page, locale }) => {
+  test.skip(locale !== "ar", "The whole question is what an Arabic screen calls somebody.");
+  test.slow();
+
+  // Seeded on purpose: six accounts carry an Arabic name and one does not, so
+  // both the translation and the fallback are things somebody has seen (D68).
+  const people = await query<{ name: string; name_ar: string | null }>(
+    `select name, name_ar from users where active = true`,
+  );
+  const translated = people.filter((row) => row.name_ar);
+  const untranslated = people.filter((row) => !row.name_ar);
+  expect(translated.length, "nobody in the seed has an Arabic name").toBeGreaterThan(0);
+  expect(untranslated.length, "everybody has one, so the fallback is untested").toBeGreaterThan(0);
+
+  await login(page, locale, "abdulrahman");
+  await expect(page).toHaveURL(/\/ar\/team/, { timeout: 20_000 });
+
+  await test.step("1 · the manager's team table names his reps in Arabic", async () => {
+    const table = page.getByRole("table").first();
+    for (const person of translated) {
+      // `:visible` again: every row renders twice, a card for the phone and a
+      // table for the desk, and `.first()` can land on the hidden one.
+      const shown = page.getByText(person.name_ar as string).filter({ visible: true }).first();
+      if ((await shown.count()) > 0) await expect(shown).toBeVisible();
+    }
+    // And the Latin name of anybody who HAS an Arabic one is nowhere on it.
+    for (const person of translated) {
+      await expect(table).not.toContainText(person.name);
+    }
+  });
+
+  await test.step("2 · and the one without an Arabic name keeps his own", async () => {
+    // The fallback is not a blank and not a key: it is the name he was added
+    // with, on an Arabic screen, which is what an account added in a hurry has.
+    const fallback = untranslated[0]?.name as string;
+    await expect(page.getByText(fallback).filter({ visible: true }).first()).toBeVisible();
+  });
+
+  await test.step("3 · the shell names the reader himself in Arabic", async () => {
+    const me = people.find((row) => row.name === "Abdulrahman Al-Zahrani");
+    await expect(page.getByRole("banner")).toContainText(me?.name_ar as string);
   });
 });

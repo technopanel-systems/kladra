@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one, query } from "./helpers/db";
+import { one, personName, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 
 /**
@@ -122,7 +122,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
     await page.getByRole("button", { name: t("admin.addUser") }).click();
     const form = page.getByRole("dialog", { name: t("admin.addUser") });
-    await form.getByLabel(t("common.name")).fill(person);
+    await form.getByLabel(t("common.name"), { exact: true }).fill(person);
     await form.getByLabel(t("common.email")).fill(email);
     await form.getByLabel(t("admin.newPassword")).fill(NEW_PASSWORD);
     await form.getByRole("button", { name: t("common.save") }).click();
@@ -201,9 +201,12 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
   });
 
   await test.step("6 · a target set here is the figure on the team screen", async () => {
-    const faisal = await one<{ id: string; name: string }>(
-      "select id, name from users where email = 'faisal@technopanel.com.sa'",
-    );
+    // The targets panel labels each box with the person, in the reader's own
+    // language (D68) — so the spec asks for the name the same way.
+    const faisal = {
+      id: await userId("faisal@technopanel.com.sa"),
+      name: await personName("faisal@technopanel.com.sa", locale),
+    };
     const month = todayRiyadh().slice(0, 8) + "01";
 
     await login(page, locale, "jerom");
@@ -296,9 +299,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
     if (!holiday) return; // The last working day of the month: nothing left to take.
 
-    const faisal = await one<{ name: string }>(
-      "select name from users where email = 'faisal@technopanel.com.sa'",
-    );
+    const faisal = { name: await personName("faisal@technopanel.com.sa", locale) };
     await page.goto(`/${locale}/team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
     const before = paceOf(await row(page, faisal.name).locator("[data-slot='figure-pace']").innerText());

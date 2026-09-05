@@ -95,12 +95,16 @@ export async function createUserAction(
     const parsed = z
       .object({
         name: z.string().trim().min(1).max(200),
+        // `.optional()`: `field()` reads "" as not filled in, and an account
+        // with no Arabic name is the normal case, not a refused form (D68).
+        nameAr: z.string().trim().max(200).optional(),
         email: z.email().max(200),
         role: roleSchema,
         password: passwordSchema,
       })
       .safeParse({
         name: field(formData, "name"),
+        nameAr: field(formData, "nameAr"),
         email: field(formData, "email")?.toLowerCase(),
         role: field(formData, "role"),
         password: field(formData, "password"),
@@ -129,6 +133,7 @@ export async function createUserAction(
         .insert(users)
         .values({
           name: parsed.data.name,
+          nameAr: parsed.data.nameAr || null,
           email: parsed.data.email,
           role: parsed.data.role,
           passwordHash,
@@ -158,12 +163,16 @@ export async function updateUserAction(
       .object({
         userId: z.uuid(),
         name: z.string().trim().min(1).max(200),
+        // `.optional()`: `field()` reads "" as not filled in, and an account
+        // with no Arabic name is the normal case, not a refused form (D68).
+        nameAr: z.string().trim().max(200).optional(),
         email: z.email().max(200),
         role: roleSchema,
       })
       .safeParse({
         userId: field(formData, "userId"),
         name: field(formData, "name"),
+        nameAr: field(formData, "nameAr"),
         email: field(formData, "email")?.toLowerCase(),
         role: field(formData, "role"),
       });
@@ -187,7 +196,12 @@ export async function updateUserAction(
     await db.transaction(async (tx) => {
       await tx
         .update(users)
-        .set({ name: parsed.data.name, email: parsed.data.email, role: parsed.data.role })
+        .set({
+          name: parsed.data.name,
+          nameAr: parsed.data.nameAr || null,
+          email: parsed.data.email,
+          role: parsed.data.role,
+        })
         .where(eq(users.id, parsed.data.userId));
       await record(tx, actor.id, "user.update", "user", parsed.data.userId, {
         email: parsed.data.email,

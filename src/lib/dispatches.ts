@@ -35,7 +35,9 @@
  */
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { QueryBuilder } from "drizzle-orm/pg-core";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { personName } from "@/lib/people";
 import {
   companies,
   dispatchItems,
@@ -182,32 +184,39 @@ export function projectIsWonSql(projectId: SQL): SQL<boolean> {
   )`;
 }
 
-const selection = {
-  id: dispatches.id,
-  number: dispatches.number,
-  status: dispatches.status,
-  quotationId: dispatches.quotationId,
-  quotationNumber: quotations.number,
-  quotationRevision: quotations.revision,
-  smacNumber: quotations.smacNumber,
-  companyId: quotations.companyId,
-  companyName: companies.name,
-  projectId: quotations.projectId,
-  projectName: projects.name,
-  repId: dispatches.repId,
-  repName: users.name,
-  companyRepId: companies.repId,
-  shipmentMethodId: dispatches.shipmentMethodId,
-  destination: dispatches.destination,
-  paymentTerms: dispatches.paymentTerms,
-  smacDispatchNumber: dispatches.smacDispatchNumber,
-  refuseReason: dispatches.refuseReason,
-  approvedOn: riyadhDay(sql`dispatches.approved_at`),
-  // `created_at` is NOT NULL, so this one always has a day.
-  createdOn: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
-  totalSqm: sql<string>`coalesce(${dispatchTotals.sqm}, 0)`,
-  itemCount: sql<number>`coalesce(${dispatchTotals.itemCount}, 0)`,
-};
+/**
+ * The shared column list, now a function of the reader's language: a person's
+ * name is one of its columns and Arabic screens name people in Arabic (D68).
+ * The same shape `shipmentName(locale)` already had beside it.
+ */
+function selection(locale: string) {
+  return {
+    id: dispatches.id,
+    number: dispatches.number,
+    status: dispatches.status,
+    quotationId: dispatches.quotationId,
+    quotationNumber: quotations.number,
+    quotationRevision: quotations.revision,
+    smacNumber: quotations.smacNumber,
+    companyId: quotations.companyId,
+    companyName: companies.name,
+    projectId: quotations.projectId,
+    projectName: projects.name,
+    repId: dispatches.repId,
+      repName: personName(locale),
+    companyRepId: companies.repId,
+    shipmentMethodId: dispatches.shipmentMethodId,
+    destination: dispatches.destination,
+    paymentTerms: dispatches.paymentTerms,
+    smacDispatchNumber: dispatches.smacDispatchNumber,
+    refuseReason: dispatches.refuseReason,
+    approvedOn: riyadhDay(sql`dispatches.approved_at`),
+    // `created_at` is NOT NULL, so this one always has a day.
+    createdOn: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+    totalSqm: sql<string>`coalesce(${dispatchTotals.sqm}, 0)`,
+    itemCount: sql<number>`coalesce(${dispatchTotals.itemCount}, 0)`,
+  };
+}
 
 type Selected = {
   id: string;
@@ -307,7 +316,7 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
   }
 
   const rows = await db
-    .select({ ...selection, shipmentMethod: shipmentName(input.locale) })
+    .select({ ...selection(input.locale ?? (await getLocale())), shipmentMethod: shipmentName(input.locale) })
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -351,7 +360,7 @@ export async function getDispatch(
   locale?: string,
 ): Promise<DispatchDetail | null> {
   const [row] = await db
-    .select({ ...selection, shipmentMethod: shipmentName(locale) })
+    .select({ ...selection(locale ?? (await getLocale())), shipmentMethod: shipmentName(locale) })
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -392,7 +401,7 @@ export async function listDispatchesForQuotation(
   locale?: string,
 ): Promise<DispatchRow[]> {
   const rows = await db
-    .select({ ...selection, shipmentMethod: shipmentName(locale) })
+    .select({ ...selection(locale ?? (await getLocale())), shipmentMethod: shipmentName(locale) })
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))

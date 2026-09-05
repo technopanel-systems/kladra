@@ -1,5 +1,5 @@
 import { login } from "./helpers/auth";
-import { one } from "./helpers/db";
+import { one, personName, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 import { mayWrite } from "@/lib/floor";
 import type { SessionUser } from "@/lib/types";
@@ -52,9 +52,11 @@ test("viewing is reading: the floor rule says no while it is on", () => {
 test("Jerom checks a rep's screen, changes nothing, and stops", async ({ page, locale, t }) => {
   test.slow();
 
-  const faisal = await one<{ id: string; name: string }>(
-    "select id, name from users where email = 'faisal@technopanel.com.sa'",
-  );
+  // The name this language shows him by, which is the name on the banner (D68).
+  const faisal = {
+    id: await userId("faisal@technopanel.com.sa"),
+    name: await personName("faisal@technopanel.com.sa", locale),
+  };
 
   await login(page, locale, "jerom");
 

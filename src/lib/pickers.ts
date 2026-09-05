@@ -17,7 +17,9 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { personName } from "@/lib/people";
 import { companies, projects, quotations, users } from "@/db/schema";
 import { committedQtySql } from "@/lib/dispatches";
 import { holdsFloor, sells } from "@/lib/floor";
@@ -136,11 +138,12 @@ export async function floorHolderOptions(
   exceptId: string,
   roleName: (role: Role) => string,
 ): Promise<PickerOption[]> {
+  const locale = await getLocale();
   const rows = await db
-    .select({ id: users.id, name: users.name, role: users.role })
+    .select({ id: users.id, name: personName(locale), role: users.role })
     .from(users)
     .where(eq(users.active, true))
-    .orderBy(asc(users.name));
+    .orderBy(asc(personName(locale)));
 
   return rows
     .filter((row) => row.id !== exceptId && holdsFloor(row.role as Role))

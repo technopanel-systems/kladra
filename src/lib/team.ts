@@ -20,6 +20,7 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { companies, companyTargets, quotations, targets, users } from "@/db/schema";
 import { listNonWorkingDays } from "@/lib/calendar";
@@ -27,6 +28,7 @@ import { firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
+import { personName, personNameOf } from "@/lib/people";
 import { pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
@@ -115,14 +117,18 @@ export const CARRIES_METRES = sql`users.role in ('rep', 'manager')`;
  */
 export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
   const month = monthOf(day);
+  // The reader's script, not the account's (D68). Every one of these functions
+  // is already async and already inside a request, so the page's locale is here
+  // for the asking and no caller had to change.
+  const locale = await getLocale();
 
   const [people, targetRows, companyTargetRow, achieved, companyAchieved, nonWorking] =
     await Promise.all([
       db
-        .select({ id: users.id, name: users.name, role: users.role })
+        .select({ id: users.id, name: personName(locale), role: users.role })
         .from(users)
         .where(and(eq(users.active, true), CARRIES_METRES))
-        .orderBy(asc(users.name)),
+        .orderBy(asc(personName(locale))),
       db
         .select({ userId: targets.userId, sqm: targets.sqm })
         .from(targets)
@@ -307,6 +313,7 @@ export type Stuck = {
 };
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
+  const locale = await getLocale();
   const [waiting, followUps, never, quiet, nonWorking] = await Promise.all([
     db
       .select({
@@ -314,7 +321,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
         number: quotations.number,
         revision: quotations.revision,
         companyName: companies.name,
-        repName: users.name,
+        repName: personName(locale),
         since: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
       })
       .from(quotations)
@@ -335,7 +342,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
       select companies.id::text as id,
              companies.name as name,
              companies.name as company_name,
-             u.name as rep_name,
+             ${personNameOf("u", locale)} as rep_name,
              to_char(companies.next_follow_up, 'YYYY-MM-DD') as day,
              ((now() at time zone 'Asia/Riyadh')::date - companies.next_follow_up)::int as days_overdue,
              'company' as kind
@@ -349,7 +356,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
       select projects.id::text as id,
              projects.name as name,
              c.name as company_name,
-             u.name as rep_name,
+             ${personNameOf("u", locale)} as rep_name,
              to_char(projects.next_follow_up, 'YYYY-MM-DD') as day,
              ((now() at time zone 'Asia/Riyadh')::date - projects.next_follow_up)::int as days_overdue,
              'project' as kind
@@ -368,7 +375,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     db.execute<{ id: string; name: string; rep_name: string; days: number }>(sql`
       select companies.id::text as id,
              companies.name as name,
-             u.name as rep_name,
+             ${personNameOf("u", locale)} as rep_name,
              ((now() at time zone 'Asia/Riyadh')::date
                - (companies.created_at at time zone 'Asia/Riyadh')::date)::int as days
         from companies
@@ -383,7 +390,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     db.execute<{ id: string; name: string; rep_name: string; days: number }>(sql`
       select companies.id::text as id,
              companies.name as name,
-             u.name as rep_name,
+             ${personNameOf("u", locale)} as rep_name,
              ((now() at time zone 'Asia/Riyadh')::date
                - (select max(a.happened_on) from activities a
                    where a.company_id = companies.id))::int as days

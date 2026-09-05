@@ -133,7 +133,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     await form.getByRole("combobox", { name: t("common.leadSource") }).click();
     await page.getByRole("option").first().click();
 
-    await form.getByLabel(t("common.name")).fill(fixture.contact);
+    await form.getByLabel(t("common.name"), { exact: true }).fill(fixture.contact);
     await form.getByLabel(t("common.phone")).fill(fixture.phone);
 
     await form.getByRole("button", { name: t("common.save") }).click();
@@ -226,7 +226,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     await drawer.getByRole("button", { name: t("drawer.newProject") }).first().click();
 
     const dialog = dialogNamed(page, t("projects.newProject"));
-    await dialog.getByLabel(t("common.name")).fill(fixture.project);
+    await dialog.getByLabel(t("common.name"), { exact: true }).fill(fixture.project);
     await dialog.getByLabel(t("common.expectedSqm")).fill(fixture.expectedSqm);
     await dialog.getByRole("button", { name: t("common.save") }).click();
 
@@ -330,7 +330,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     await drawer.getByRole("button", { name: t("drawer.addContact") }).first().click();
 
     const dialog = dialogNamed(page, t("forms.addContact"));
-    await dialog.getByLabel(t("common.name")).fill(fixture.secondContact);
+    await dialog.getByLabel(t("common.name"), { exact: true }).fill(fixture.secondContact);
     await dialog.getByLabel(t("common.phone")).fill(fixture.secondPhone);
     await dialog.getByRole("button", { name: t("common.save") }).click();
     await expect(page.getByText(t("forms.added", { name: fixture.secondContact }))).toBeVisible();

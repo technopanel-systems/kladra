@@ -2,6 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
 import { HolidaysPanel } from "@/components/admin/holidays-panel";
 import { db } from "@/db";
+import { personName } from "@/lib/people";
 import { users } from "@/db/schema";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
@@ -19,14 +20,15 @@ export default async function AdminHolidaysPage() {
   const user = await requireUser();
   if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
 
+  const locale = await getLocale();
   const [t, rows, people] = await Promise.all([
     getTranslations(),
     listNonWorking(firstOfMonth(todayRiyadh())),
     db
-      .select({ id: users.id, name: users.name })
+      .select({ id: users.id, name: personName(locale) })
       .from(users)
       .where(eq(users.active, true))
-      .orderBy(asc(users.name)),
+      .orderBy(asc(personName(locale))),
   ]);
 
   return (

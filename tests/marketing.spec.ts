@@ -1,5 +1,5 @@
 import { login } from "./helpers/auth";
-import { one, query } from "./helpers/db";
+import { one, personName, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -89,9 +89,10 @@ test("marketing hands a lead to the rep who will price it", async ({ page, local
       order by c.name
       limit 1`,
   );
-  const faisal = await one<{ id: string; name: string }>(
-    "select id, name from users where email = 'faisal@technopanel.com.sa'",
-  );
+  const faisal = {
+    id: await userId("faisal@technopanel.com.sa"),
+    name: await personName("faisal@technopanel.com.sa", locale),
+  };
 
   // One database, two locale projects (playwright.config.ts): the English run
   // moves the first lead and the Arabic run must not find it already gone.
@@ -108,7 +109,12 @@ test("marketing hands a lead to the rep who will price it", async ({ page, local
     await drawer.getByRole("button", { name: t("drawer.handOver") }).click();
   });
 
-  const to = before.rep_id === faisal.id ? "Marketing" : faisal.name;
+  // Both names come from the database in the reader's language (D68): the
+  // account is "Marketing" in English and التسويق in Arabic.
+  const to =
+    before.rep_id === faisal.id
+      ? await personName("marketing@technopanel.com.sa", locale)
+      : faisal.name;
 
   await test.step("2 · it asks who, and says what travels with the company", async () => {
     const dialog = page.getByRole("dialog", { name: t("drawer.handOverTitle", { name: lead.name }) });

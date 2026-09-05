@@ -15,9 +15,11 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, desc, eq } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { activities, companies, contacts, projects, users } from "@/db/schema";
 import { NotAllowed } from "@/lib/authz";
+import { personName } from "@/lib/people";
 import { mayOpen, mayWrite } from "@/lib/floor";
 import type { Day } from "@/lib/dates";
 import type { SessionUser } from "@/lib/types";
@@ -130,14 +132,14 @@ export async function assertProjectMine(
  * `created_at` breaks ties, so two entries typed on the same day read in the
  * order they were written.
  */
-function activityQuery() {
+function activityQuery(locale: string) {
   return db
     .select({
       id: activities.id,
       text: activities.text,
       channel: activities.channel,
       happenedOn: activities.happenedOn,
-      userName: users.name,
+      userName: personName(locale),
       contactName: contacts.name,
       projectId: activities.projectId,
       projectName: projects.name,
@@ -178,7 +180,7 @@ export async function listActivitiesForCompany(
   companyId: string,
 ): Promise<ActivityRow[]> {
   await assertCompanyVisible(user, companyId);
-  const rows = await activityQuery()
+  const rows = await activityQuery(await getLocale())
     .where(eq(activities.companyId, companyId))
     .orderBy(desc(activities.happenedOn), desc(activities.createdAt));
   return toRows(rows);
@@ -193,7 +195,7 @@ export async function listActivitiesForProject(
   projectId: string,
 ): Promise<ActivityRow[]> {
   const owner = await assertProjectVisible(user, projectId);
-  const rows = await activityQuery()
+  const rows = await activityQuery(await getLocale())
     .where(and(eq(activities.projectId, projectId), eq(activities.companyId, owner.companyId)))
     .orderBy(desc(activities.happenedOn), desc(activities.createdAt));
   return toRows(rows);

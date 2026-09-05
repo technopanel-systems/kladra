@@ -19,6 +19,8 @@ declare module "@auth/core/types" {
     user: {
       id: string;
       name: string;
+      /** Optional second name, in Arabic (D68). */
+      nameAr: string | null;
       email: string;
       role: Role;
       locale: "en" | "ar";
@@ -32,6 +34,8 @@ declare module "@auth/core/adapters" {
   interface AdapterUser {
     /** `users.name` is NOT NULL; Auth.js's own type leaves it optional. */
     name: string;
+    /** And the optional Arabic one beside it (D68). */
+    nameAr: string | null;
     role: Role;
     locale: "en" | "ar";
     active: boolean;

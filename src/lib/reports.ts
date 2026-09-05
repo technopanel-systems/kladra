@@ -24,7 +24,9 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { sql } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { personNameOf } from "@/lib/people";
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
 import { writesReports } from "@/lib/floor";
 import type { Role } from "@/lib/types";
@@ -325,13 +327,14 @@ export async function mayWriteFor(day: Day, today: Day = todayRiyadh()): Promise
  */
 export async function teamDay(day: Day, today: Day = todayRiyadh()): Promise<TeamDay> {
   const open = day >= today;
+  const locale = await getLocale();
 
   const [people, offDays] = await Promise.all([
     db.execute<{ id: string; name: string; role: Role }>(sql`
-      select u.id, u.name, u.role
+      select u.id, ${personNameOf("u", locale)} as name, u.role
         from users u
        where u.active = true and u.role in ('rep', 'marketing', 'coordinator')
-       order by u.name
+       order by 2
     `),
     // The company's holidays and each person's leave, for this one day (S48).
     db.execute<{ day: Day; user_id: string | null; kind: "holiday" | "leave" }>(sql`

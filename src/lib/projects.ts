@@ -18,6 +18,7 @@
  */
 import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
+import { personName } from "@/lib/people";
 import { cities, companies, projects, users } from "@/db/schema";
 import { type ActivityRow, listActivitiesForProject, mayOpen } from "@/lib/activities";
 import { NotAllowed, seesAll } from "@/lib/authz";
@@ -177,7 +178,7 @@ export async function getProject(
         ar ? cities.nameAr : cities.nameEn
       }, ${companies.cityText})`,
       companyRepId: companies.repId,
-      companyRepName: users.name,
+      companyRepName: personName(label),
       companyNextFollowUp: companies.nextFollowUp,
     })
     .from(projects)

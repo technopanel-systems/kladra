@@ -79,5 +79,6 @@
     "companies": "Companies with their main contact",
     "quotations": "Quotations with their items",
     "dispatches": "Dispatches with their items"
-  }
+  },
+  "nameAr": "Name in Arabic"
 }

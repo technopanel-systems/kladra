@@ -8,6 +8,7 @@ import { ViewingBanner } from "@/components/shell/viewing-banner";
 import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { dirOf } from "@/i18n/routing";
+import { personNameFrom } from "@/lib/people";
 import { homeFor, requireUser } from "@/lib/authz";
 import { getTheme } from "@/lib/theme";
 
@@ -52,7 +53,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Sidebar role={user.role} direction={direction} />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar name={user.name} role={user.role} theme={theme} home={homeFor(user.role)} />
+          <TopBar
+            name={personNameFrom(user, locale)}
+            role={user.role}
+            theme={theme}
+            home={homeFor(user.role)}
+          />
           {/* In the layout, so there is no screen in the app where an admin can
               forget whose eyes he is using (P8.8). */}
           <ViewingBanner user={user} />

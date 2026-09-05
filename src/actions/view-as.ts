@@ -63,6 +63,8 @@ export async function startViewingAction(
     action: "view.start",
     recordType: "user",
     recordId: target.id,
+    // The canonical name, not the reader's (D68): an audit line is a record of
+    // what happened, and it should read the same to whoever opens it later.
     details: { name: target.name, role: target.role },
   });
 

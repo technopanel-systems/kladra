@@ -57,6 +57,14 @@ const stamps = {
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
+  /**
+   * The same person's name in Arabic, optional (D68). Every lookup in this
+   * schema already has two names — a city, a category, a lead source — and the
+   * people were the one thing in the system that had one, so Rawan's screens
+   * named her colleagues in Latin all day. Null or empty falls back to `name`,
+   * which is what an account added in a hurry will have.
+   */
+  nameAr: text("name_ar"),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: roleEnum("role").notNull().default("rep"),

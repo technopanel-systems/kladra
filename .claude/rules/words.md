@@ -68,6 +68,16 @@ its own assertions and then threw MISSING_MESSAGE inside `t()`, ten minutes into
 a suite that had already rebuilt the database. `check-messages` reads every
 literal `t("a.b")` in `tests/*.spec.ts` now and fails in two seconds instead.
 
+## A person is named in the reader's script
+`users.name` is the Latin name and `users.name_ar` the Arabic one, and a query
+that selects the first straight onto a screen puts "Faisal Al-Harbi" under a
+heading that says المندوب (D68). One helper resolves it — `personName(locale)`,
+`personNameOf(alias, locale)` and `personNameFrom(row, locale)` in
+`src/lib/people.ts` — and `npm run lint` fails on anything else, with a short
+allowlist naming the files that may use the Latin name and the reason each may:
+the CSV export, the audit log, the admin's own list, the session, the schema.
+A new query that forgets is caught by the check, not by an Arabic screen.
+
 ## A block somebody TYPED runs in their direction, not the page's
 Every other string on a screen came out of `messages/<locale>/` and runs the way
 the page runs. A log entry, a coordinator's reason and a daily report did not:

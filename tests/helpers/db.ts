@@ -64,6 +64,26 @@ export async function userId(email: string): Promise<string> {
   return rows[0].id;
 }
 
+/**
+ * The name a screen in this language shows for an account (SPEC D68).
+ *
+ * A person has a Latin name and, usually, an Arabic one, and the screens resolve
+ * which by the reader's language — so a spec that hard-codes "Faisal Al-Harbi"
+ * passes in English and fails in Arabic for the right reason. Specs ask for the
+ * name the way `src/lib/people.ts` does.
+ */
+export async function personName(email: string, locale: string): Promise<string> {
+  const column = locale.startsWith("ar") ? "coalesce(nullif(name_ar, ''), name)" : "name";
+  const rows = await query<{ name: string }>(
+    `select ${column} as name from users where email = $1::text`,
+    [email],
+  );
+  if (rows.length === 0) {
+    throw new Error(`No seeded user with email ${email} — did seed:demo run?`);
+  }
+  return rows[0].name;
+}
+
 /** Closes the pool. Only a one-off script outside a Playwright run needs this. */
 export async function closePool(): Promise<void> {
   if (!pool) return;

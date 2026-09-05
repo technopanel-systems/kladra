@@ -34,7 +34,10 @@
             - [x] c m² by month, so there is a month before this one
             - [x] d Where quotations die
             - [x] e Which companies went quiet
-      - [ ] P9.5 The login screen, and the identity audited as a whole (9E)
+      - [~] P9.5 The login screen, and the identity audited as a whole (9E)
+            - [x] a The sign-in screen, built to the app it opens
+            - [x] b A person is named in the reader's script
+            - [ ] c The rest of the identity, audited screen by screen
       - [ ] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
@@ -59,11 +62,10 @@ English message in the app uses a typographic apostrophe; "coordinator's" is a s
 quote in all of them. That is a whole-identity question about type, so it goes into P9.5
 with the login screen rather than being half-done here.
 
-A third, from the Arabic review: every person's name renders in Latin on the Arabic
-screens — Faisal Al-Harbi, Saad Al-Qahtani, and an account literally called Marketing —
-because `users.name` is one column. On an Arabic screen read by Arabic speakers about
-Arabic colleagues that is visibly wrong, and it is a schema and SPEC question (does a
-person have one name or two?) rather than a translation one. It goes to Jerom with P9.5.
+A third, from the Arabic review, is now built (D68): every person's name rendered in
+Latin on the Arabic screens, because `users.name` was one column while every lookup in the
+schema has two. People have two now, the second optional, and `npm run lint` fails on a
+query that names somebody in Latin on a screen.
 
 The five days were walked before any P9 code and the ranked list is §4 below. Its first item was
 the daily report, and it is built: the system assembles the day — log entries, companies, quotation

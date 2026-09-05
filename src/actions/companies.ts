@@ -395,6 +395,7 @@ export async function handOverCompanyAction(
     // take the company back out of sight the moment it landed there, and the
     // coordinator has no floor at all (D15).
     const [target] = await db
+      // The name is not shown; only the role and the id decide anything here.
       .select({ id: users.id, name: users.name, role: users.role })
       .from(users)
       .where(and(eq(users.id, input.toUserId), eq(users.active, true)))

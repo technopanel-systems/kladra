@@ -33,7 +33,14 @@ export async function getRealUser(): Promise<SessionUser | null> {
   const session = await auth();
   const u = session?.user as (SessionUser & { active?: boolean }) | undefined;
   if (!u?.id || u.active === false) return null;
-  return { id: u.id, name: u.name, email: u.email, role: u.role, locale: u.locale ?? "en" };
+  return {
+    id: u.id,
+    name: u.name,
+    nameAr: u.nameAr ?? null,
+    email: u.email,
+    role: u.role,
+    locale: u.locale ?? "en",
+  };
 }
 
 /**
@@ -54,6 +61,7 @@ export async function getUser(): Promise<SessionUser | null> {
     .select({
       id: users.id,
       name: users.name,
+      nameAr: users.nameAr,
       email: users.email,
       role: users.role,
       locale: users.locale,
@@ -68,10 +76,11 @@ export async function getUser(): Promise<SessionUser | null> {
   return {
     id: row.id,
     name: row.name,
+    nameAr: row.nameAr,
     email: row.email,
     role: row.role as Role,
     locale: (row.locale as "en" | "ar") ?? real.locale,
-    viewedBy: { id: real.id, name: real.name },
+    viewedBy: { id: real.id, name: real.name, nameAr: real.nameAr },
   };
 }
 

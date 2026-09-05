@@ -9,7 +9,9 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { personName, personNameOf } from "@/lib/people";
 import {
   companies,
   companyTargets,
@@ -31,6 +33,8 @@ export * from "@/lib/lookup-kinds";
 export type AdminUser = {
   id: string;
   name: string;
+  /** The Arabic name, where this account has one (D68). Empty is no name. */
+  nameAr: string | null;
   email: string;
   role: Role;
   active: boolean;
@@ -46,10 +50,13 @@ export type AdminUser = {
  * reactivating somebody has to be able to find them.
  */
 export async function listUsers(): Promise<AdminUser[]> {
+  // The one list that keeps both names raw rather than resolving one: this is
+  // the screen where they are edited, and the form needs the pair (D68).
   const rows = await db
     .select({
       id: users.id,
       name: users.name,
+      nameAr: users.nameAr,
       email: users.email,
       role: users.role,
       active: users.active,
@@ -64,6 +71,7 @@ export async function listUsers(): Promise<AdminUser[]> {
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
+    nameAr: row.nameAr,
     email: row.email,
     role: row.role as Role,
     active: row.active,
@@ -94,13 +102,14 @@ export type TargetsForMonth = {
  * its own, and neither derives from the other (S44).
  */
 export async function targetsForMonth(month: Day): Promise<TargetsForMonth> {
+  const locale = await getLocale();
   const [people, rows, companyRow] = await Promise.all([
     db
-      .select({ id: users.id, name: users.name, role: users.role })
+      .select({ id: users.id, name: personName(locale), role: users.role })
       .from(users)
       // The same rule the team screen uses, said once (D44).
       .where(and(eq(users.active, true), CARRIES_METRES))
-      .orderBy(asc(users.name)),
+      .orderBy(asc(personName(locale))),
     db
       .select({ userId: targets.userId, sqm: targets.sqm })
       .from(targets)
@@ -175,13 +184,14 @@ export type NonWorkingRow = {
  * to, which is the `user_id`.
  */
 export async function listNonWorking(from: Day): Promise<NonWorkingRow[]> {
+  const locale = await getLocale();
   const rows = await db
     .select({
       id: nonWorkingDays.id,
       day: nonWorkingDays.day,
       kind: nonWorkingDays.kind,
       userId: nonWorkingDays.userId,
-      userName: users.name,
+      userName: personName(locale),
       note: nonWorkingDays.note,
     })
     .from(nonWorkingDays)
@@ -219,6 +229,7 @@ export type ArchivedRow = {
  * without it, archive IS delete with extra steps.
  */
 export async function listArchived(): Promise<ArchivedRow[]> {
+  const locale = await getLocale();
   const result = await db.execute<{
     id: string;
     kind: "company" | "contact" | "project";
@@ -228,14 +239,14 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     archived_on: string;
   }>(sql`
     select companies.id::text as id, 'company' as kind, companies.name as name,
-           companies.name as company_name, u.name as rep_name,
+           companies.name as company_name, ${personNameOf("u", locale)} as rep_name,
            to_char((companies.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on
       from companies
       join users u on u.id = companies.rep_id
      where companies.archived_at is not null
     union all
     select contacts.id::text as id, 'contact' as kind, contacts.name as name,
-           c.name as company_name, u.name as rep_name,
+           c.name as company_name, ${personNameOf("u", locale)} as rep_name,
            to_char((contacts.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on
       from contacts
       join companies c on c.id = contacts.company_id
@@ -243,7 +254,7 @@ export async function listArchived(): Promise<ArchivedRow[]> {
      where contacts.archived_at is not null
     union all
     select projects.id::text as id, 'project' as kind, projects.name as name,
-           c.name as company_name, u.name as rep_name,
+           c.name as company_name, ${personNameOf("u", locale)} as rep_name,
            to_char((projects.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on
       from projects
       join companies c on c.id = projects.company_id

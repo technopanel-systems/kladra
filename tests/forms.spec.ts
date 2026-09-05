@@ -57,7 +57,7 @@ test("an empty required field is refused in the app's own words, not the browser
     await drawer.getByRole("button", { name: t("drawer.addContact") }).first().click();
 
     const form = page.getByRole("dialog", { name: t("forms.addContact") });
-    await expect(form.getByLabel(t("common.name"))).toBeVisible();
+    await expect(form.getByLabel(t("common.name"), { exact: true })).toBeVisible();
 
     const said = await saveEmpty(page, form, t);
     await expect(said).toHaveText(t("common.required"));
@@ -87,11 +87,11 @@ test("a refused field is marked, on the forms a rep does not own either", async 
     await page.getByRole("button", { name: t("admin.addUser") }).click();
 
     const form = page.getByRole("dialog", { name: t("admin.addUser") });
-    await expect(form.getByLabel(t("common.name"))).toBeVisible();
+    await expect(form.getByLabel(t("common.name"), { exact: true })).toBeVisible();
 
     const said = await saveEmpty(page, form, t);
     await expect(said).toHaveText(t("common.required"));
-    await expect(form.getByLabel(t("common.name"))).toHaveAttribute("aria-invalid", "true");
+    await expect(form.getByLabel(t("common.name"), { exact: true })).toHaveAttribute("aria-invalid", "true");
 
     await form.getByRole("button", { name: t("common.cancel") }).click();
   });

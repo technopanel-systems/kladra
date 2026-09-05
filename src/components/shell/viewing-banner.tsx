@@ -1,7 +1,8 @@
 import { Eye } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { stopViewingFormAction } from "@/actions/view-as";
 import { Button } from "@/components/ui/button";
+import { personNameFrom } from "@/lib/people";
 import type { SessionUser } from "@/lib/types";
 
 /**
@@ -17,7 +18,7 @@ import type { SessionUser } from "@/lib/types";
  */
 export async function ViewingBanner({ user }: { user: SessionUser }) {
   if (!user.viewedBy) return null;
-  const t = await getTranslations();
+  const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
 
   return (
     <div
@@ -29,7 +30,7 @@ export async function ViewingBanner({ user }: { user: SessionUser }) {
     >
       <Eye aria-hidden="true" className="size-4 shrink-0" />
       <span className="min-w-0">
-        {t("viewAs.banner", { name: user.name, role: t(`common.${user.role}`) })}
+        {t("viewAs.banner", { name: personNameFrom(user, locale), role: t(`common.${user.role}`) })}
       </span>
       <span className="text-xs opacity-80">{t("common.readOnly")}</span>
       <form action={stopViewingFormAction} className="ms-auto">

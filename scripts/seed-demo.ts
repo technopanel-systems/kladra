@@ -209,6 +209,7 @@ async function seedUsers(): Promise<Map<string, string>> {
       .values(
         USERS.map((u) => ({
           name: u.name,
+          nameAr: u.nameAr ?? null,
           email: u.email,
           passwordHash: hashes.get(u.key)!,
           role: u.role,

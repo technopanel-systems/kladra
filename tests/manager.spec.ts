@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one, query, userId } from "./helpers/db";
+import { one, personName, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -61,18 +61,11 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
   });
 
   await test.step("2 · every person has a row with the month and the habits on it", async () => {
-    const faisal = await one<{ name: string }>(
-      "select name from users where email = 'faisal@technopanel.com.sa'",
-    );
-    const rawan = await one<{ name: string }>(
-      "select name from users where email = 'rawan@technopanel.com.sa'",
-    );
-    const jerom = await one<{ name: string }>(
-      "select name from users where email = 'jerom@technopanel.com.sa'",
-    );
-    const marketing = await one<{ name: string }>(
-      "select name from users where email = 'marketing@technopanel.com.sa'",
-    );
+    // The name this language shows, not the Latin one on the row (D68).
+    const faisal = { name: await personName("faisal@technopanel.com.sa", locale) };
+    const rawan = { name: await personName("rawan@technopanel.com.sa", locale) };
+    const jerom = { name: await personName("jerom@technopanel.com.sa", locale) };
+    const marketing = { name: await personName("marketing@technopanel.com.sa", locale) };
 
     // Every column §3 asks for, by its own heading.
     for (const key of [
@@ -132,9 +125,10 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
   });
 
   await test.step("4 · a name opens that rep's floor, and he cannot add to it", async () => {
-    const faisal = await one<{ id: string; name: string }>(
-      "select id, name from users where email = 'faisal@technopanel.com.sa'",
-    );
+    const faisal = {
+      id: await userId("faisal@technopanel.com.sa"),
+      name: await personName("faisal@technopanel.com.sa", locale),
+    };
     await page.getByRole("link", { name: faisal.name, exact: true }).first().click();
 
     await expect(page).toHaveURL(new RegExp(`rep=${faisal.id}`), COLD);

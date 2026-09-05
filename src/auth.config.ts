@@ -30,6 +30,7 @@ function toAdapterUser(row: UserRow): AdapterUser {
   return {
     id: row.id,
     name: row.name,
+    nameAr: row.nameAr,
     email: row.email,
     // Kladra has no email provider; the column does not exist and never will.
     emailVerified: null,

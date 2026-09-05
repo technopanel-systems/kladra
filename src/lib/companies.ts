@@ -22,6 +22,7 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import {
   cities,
@@ -45,6 +46,7 @@ import {
   goneQuietCompanySql,
   neverContactedCompanySql,
 } from "@/lib/followups";
+import { personName } from "@/lib/people";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import { companyStanding, type CompanyStanding } from "@/lib/standing";
 import type { SessionUser } from "@/lib/types";
@@ -312,7 +314,7 @@ export async function getCompany(
       cityName: ar ? cities.nameAr : cities.nameEn,
       cityText: companies.cityText,
       repId: companies.repId,
-      repName: users.name,
+      repName: personName(label),
       nextFollowUp: companies.nextFollowUp,
       followUpState: followUpStateSql(sql`companies.next_follow_up`),
       archivedAt: companies.archivedAt,
@@ -458,7 +460,7 @@ export async function findPossibleDuplicates(input: {
     .select({
       id: companies.id,
       name: companies.name,
-      repName: users.name,
+      repName: personName(await getLocale()),
       matchedOn: sql<"phone" | "name">`case when ${phoneMatch ?? sql`false`} then 'phone' else 'name' end`,
     })
     .from(companies)

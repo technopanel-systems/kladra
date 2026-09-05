@@ -15,6 +15,7 @@ import { todayRiyadh } from "@/lib/dates";
 import { followUpCounts, followUpCountsForRep, parseFollowUpFilter } from "@/lib/followups";
 import { repMonth } from "@/lib/team";
 import { db } from "@/db";
+import { personName } from "@/lib/people";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
@@ -208,6 +209,10 @@ function Panel({ sentence, action, href }: { sentence: string; action: string; h
 
 /** The name behind `?rep=` — a heading says who, never an id (DESIGN §2). */
 async function repName(repId: string): Promise<string | null> {
-  const [row] = await db.select({ name: users.name }).from(users).where(eq(users.id, repId)).limit(1);
+  const [row] = await db
+    .select({ name: personName(await getLocale()) })
+    .from(users)
+    .where(eq(users.id, repId))
+    .limit(1);
   return row?.name ?? null;
 }

@@ -31,7 +31,9 @@
  */
 import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm";
 import { QueryBuilder } from "drizzle-orm/pg-core";
+import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { personName } from "@/lib/people";
 import {
   classes,
   companies,
@@ -179,31 +181,38 @@ export function isLatestRevisionSql(): SQL<boolean> {
   )`;
 }
 
-const selection = {
-  id: quotations.id,
-  number: quotations.number,
-  revision: quotations.revision,
-  status: quotations.status,
-  companyId: quotations.companyId,
-  companyName: companies.name,
-  projectId: quotations.projectId,
-  projectName: projects.name,
-  repId: quotations.repId,
-  repName: users.name,
-  companyRepId: companies.repId,
-  smacNumber: quotations.smacNumber,
-  returnReason: quotations.returnReason,
-  decisionReason: quotations.decisionReason,
-  issuedOn: riyadhDay(sql`quotations.issued_at`),
-  decidedOn: riyadhDay(sql`quotations.decided_at`),
-  // `created_at` is NOT NULL, so this one always has a day.
-  createdOn: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
-  totalSqm: sql<string>`coalesce(${lineTotals.sqm}, 0)`,
-  subtotal: subtotalSql,
-  vat: vatSql,
-  total: totalSql,
-  lineCount: sql<number>`coalesce(${lineTotals.lineCount}, 0)`,
-};
+/**
+ * The shared column list, now a function of the reader's language: a person's
+ * name is one of its columns and Arabic screens name people in Arabic (D68).
+ * The same shape `shipmentName(locale)` already had beside it.
+ */
+function selection(locale: string) {
+  return {
+    id: quotations.id,
+    number: quotations.number,
+    revision: quotations.revision,
+    status: quotations.status,
+    companyId: quotations.companyId,
+    companyName: companies.name,
+    projectId: quotations.projectId,
+    projectName: projects.name,
+    repId: quotations.repId,
+      repName: personName(locale),
+    companyRepId: companies.repId,
+    smacNumber: quotations.smacNumber,
+    returnReason: quotations.returnReason,
+    decisionReason: quotations.decisionReason,
+    issuedOn: riyadhDay(sql`quotations.issued_at`),
+    decidedOn: riyadhDay(sql`quotations.decided_at`),
+    // `created_at` is NOT NULL, so this one always has a day.
+    createdOn: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+    totalSqm: sql<string>`coalesce(${lineTotals.sqm}, 0)`,
+    subtotal: subtotalSql,
+    vat: vatSql,
+    total: totalSql,
+    lineCount: sql<number>`coalesce(${lineTotals.lineCount}, 0)`,
+  };
+}
 
 /** What `selection` yields, before the label and the null-flattening. */
 type Selected = {
@@ -295,7 +304,7 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
   }
 
   const rows = await db
-    .select(selection)
+    .select(selection(await getLocale()))
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
@@ -354,7 +363,7 @@ export async function getQuotation(
   id: string,
 ): Promise<QuotationDetail | null> {
   const [row] = await db
-    .select({ ...selection, notes: quotations.notes })
+    .select({ ...selection(await getLocale()), notes: quotations.notes })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
@@ -447,7 +456,7 @@ export async function listQuotationsForProject(
   projectId: string,
 ): Promise<QuotationRow[]> {
   const rows = await db
-    .select(selection)
+    .select(selection(await getLocale()))
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
@@ -471,7 +480,7 @@ export async function listQuotationsForCompany(
   companyId: string,
 ): Promise<QuotationRow[]> {
   const rows = await db
-    .select(selection)
+    .select(selection(await getLocale()))
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))

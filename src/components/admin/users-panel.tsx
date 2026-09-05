@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   createUserAction,
@@ -32,6 +32,7 @@ import {
 import { startViewingAction } from "@/actions/view-as";
 import { useRouter } from "@/i18n/navigation";
 import type { AdminUser } from "@/lib/admin";
+import { personNameFrom } from "@/lib/person-name";
 import { ROLES, type ActionResult } from "@/lib/types";
 
 /**
@@ -55,6 +56,9 @@ import { ROLES, type ActionResult } from "@/lib/types";
 
 export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }) {
   const t = useTranslations();
+  // This list is a screen like any other: it names people in the reader's
+  // script. The FORM below keeps both names raw, because it edits the pair.
+  const locale = useLocale();
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
 
@@ -76,7 +80,7 @@ export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }
         {users.map((user) => (
           <div key={user.id} className="card-face flex flex-col gap-2 p-3">
             <span className="flex flex-wrap items-center gap-2">
-              <span className="font-medium">{user.name}</span>
+              <span className="font-medium">{personNameFrom(user, locale)}</span>
               {user.active ? null : <Badge variant="outline">{t("admin.inactive")}</Badge>}
             </span>
             <span className="flex flex-col gap-0.5 text-xs text-muted-foreground">
@@ -112,7 +116,7 @@ export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }
               <TableRow key={user.id}>
                 <TableCell className="p-3">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium">{user.name}</span>
+                    <span className="font-medium">{personNameFrom(user, locale)}</span>
                     {user.active ? null : (
                       <Badge variant="outline">{t("admin.inactive")}</Badge>
                     )}
@@ -154,6 +158,7 @@ function RowActions({
   onDone: () => void;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
 
   return (
@@ -169,10 +174,10 @@ function RowActions({
               {t("viewAs.start")}
             </Button>
           }
-          title={t("viewAs.title", { name: user.name })}
+          title={t("viewAs.title", { name: personNameFrom(user, locale) })}
           description={t("viewAs.hint")}
           confirmLabel={t("viewAs.start")}
-          successMessage={t("viewAs.started", { name: user.name })}
+          successMessage={t("viewAs.started", { name: personNameFrom(user, locale) })}
           onConfirm={() => send(startViewingAction, { userId: user.id })}
           onDone={() => router.refresh()}
         />
@@ -192,11 +197,11 @@ function RowActions({
             {t("admin.resetPassword")}
           </Button>
         }
-        title={t("admin.resetPasswordTitle", { name: user.name })}
+        title={t("admin.resetPasswordTitle", { name: personNameFrom(user, locale) })}
         description={t("admin.resetPasswordHint")}
         label={t("admin.newPassword")}
         confirmLabel={t("admin.resetPassword")}
-        successMessage={t("admin.passwordReset", { name: user.name })}
+        successMessage={t("admin.passwordReset", { name: personNameFrom(user, locale) })}
         onConfirm={(password) => send(resetPasswordAction, { userId: user.id, password })}
         onDone={onDone}
       />
@@ -208,15 +213,15 @@ function RowActions({
         }
         title={
           user.active
-            ? t("admin.deactivateTitle", { name: user.name })
-            : t("admin.activateTitle", { name: user.name })
+            ? t("admin.deactivateTitle", { name: personNameFrom(user, locale) })
+            : t("admin.activateTitle", { name: personNameFrom(user, locale) })
         }
         description={user.active ? t("admin.deactivateHint") : t("admin.activateHint")}
         confirmLabel={user.active ? t("admin.deactivate") : t("admin.activate")}
         successMessage={
           user.active
-            ? t("admin.deactivated", { name: user.name })
-            : t("admin.activated", { name: user.name })
+            ? t("admin.deactivated", { name: personNameFrom(user, locale) })
+            : t("admin.activated", { name: personNameFrom(user, locale) })
         }
         onConfirm={() =>
           send(setUserActiveAction, { userId: user.id, active: String(!user.active) })
@@ -278,6 +283,7 @@ function UserForm({
   const t = useTranslations();
   const router = useRouter();
   const [name, setName] = useState(user?.name ?? "");
+  const [nameAr, setNameAr] = useState(user?.nameAr ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<string>(user?.role ?? "rep");
@@ -320,6 +326,29 @@ function UserForm({
           {fieldErrors.name ? (
             <p id="user-name-error" role="alert" className="text-xs text-destructive">
               {fieldErrors.name}
+            </p>
+          ) : null}
+        </div>
+
+        {/* Beside the Latin one, not instead of it. Empty is allowed and is
+            what an account added in a hurry has: the Latin name then shows on
+            every screen in both languages (D68). */}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="user-name-ar">{t("admin.nameAr")}</Label>
+          <Input
+            id="user-name-ar"
+            name="nameAr"
+            dir="rtl"
+            lang="ar"
+            value={nameAr}
+            onChange={(event) => setNameAr(event.target.value)}
+            disabled={pending}
+            aria-invalid={fieldErrors.nameAr ? true : undefined}
+            aria-describedby={fieldErrors.nameAr ? "user-name-ar-error" : undefined}
+          />
+          {fieldErrors.nameAr ? (
+            <p id="user-name-ar-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.nameAr}
             </p>
           ) : null}
         </div>

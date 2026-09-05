@@ -29,6 +29,8 @@ export type Channel = "visit" | "call" | "whatsapp" | "other";
 export type UserSeed = {
   key: string;
   name: string;
+  /** The same person in Arabic; absent means the Latin name shows to everyone. */
+  nameAr?: string;
   email: string;
   role: "rep" | "marketing" | "coordinator" | "manager" | "admin";
   locale: "en" | "ar";
@@ -42,21 +44,62 @@ export type UserSeed = {
  * to do is find a customer and hand him to a rep.
  */
 export const USERS: UserSeed[] = [
-  { key: "jerom", name: "Jerom", email: "jerom@technopanel.com.sa", role: "admin", locale: "en" },
+  // Both names on every account, because the Arabic screens name people too
+  // (D68) — and one account deliberately without, so the fallback is a thing
+  // somebody has seen rather than a branch nobody exercises (rules/data.md).
+  {
+    key: "jerom",
+    name: "Jerom",
+    nameAr: "جيروم",
+    email: "jerom@technopanel.com.sa",
+    role: "admin",
+    locale: "en",
+  },
   {
     key: "abdulrahman",
     name: "Abdulrahman Al-Zahrani",
+    nameAr: "عبدالرحمن الزهراني",
     email: "abdulrahman@technopanel.com.sa",
     role: "manager",
     locale: "en",
   },
-  { key: "rawan", name: "Rawan", email: "rawan@technopanel.com.sa", role: "coordinator", locale: "ar" },
-  { key: "faisal", name: "Faisal Al-Harbi", email: "faisal@technopanel.com.sa", role: "rep", locale: "en" },
-  { key: "saad", name: "Saad Al-Qahtani", email: "saad@technopanel.com.sa", role: "rep", locale: "en" },
-  { key: "turki", name: "Turki Al-Shammari", email: "turki@technopanel.com.sa", role: "rep", locale: "en" },
+  {
+    key: "rawan",
+    name: "Rawan",
+    nameAr: "روان",
+    email: "rawan@technopanel.com.sa",
+    role: "coordinator",
+    locale: "ar",
+  },
+  {
+    key: "faisal",
+    name: "Faisal Al-Harbi",
+    nameAr: "فيصل الحربي",
+    email: "faisal@technopanel.com.sa",
+    role: "rep",
+    locale: "en",
+  },
+  {
+    key: "saad",
+    name: "Saad Al-Qahtani",
+    nameAr: "سعد القحطاني",
+    email: "saad@technopanel.com.sa",
+    role: "rep",
+    locale: "en",
+  },
+  // No Arabic name: a rep added in a hurry, whose Latin one shows on every
+  // screen in both languages.
+  {
+    key: "turki",
+    name: "Turki Al-Shammari",
+    email: "turki@technopanel.com.sa",
+    role: "rep",
+    locale: "en",
+  },
   {
     key: "marketing",
     name: "Marketing",
+    nameAr: "التسويق",
     email: "marketing@technopanel.com.sa",
     role: "marketing",
     locale: "ar",

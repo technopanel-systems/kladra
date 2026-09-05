@@ -19,6 +19,14 @@ export type Role = (typeof ROLES)[number];
 export type SessionUser = {
   id: string;
   name: string;
+  /**
+   * The same name in Arabic, where the account has one (D68). Both travel in
+   * the session because a session is made once and read on every page, and the
+   * page's language is not always the language the account prefers — an admin
+   * with `locale: "en"` reading the Arabic app is still reading Arabic. The
+   * screen picks with `personNameFrom`.
+   */
+  nameAr?: string | null;
   email: string;
   role: Role;
   locale: "en" | "ar";
@@ -27,7 +35,7 @@ export type SessionUser = {
    * presence is what makes every write refuse, so it is on the user rather than
    * in a context somebody could forget to read.
    */
-  viewedBy?: { id: string; name: string };
+  viewedBy?: { id: string; name: string; nameAr?: string | null };
 };
 
 /** Result shape every server action returns; forms read `error` and `fieldErrors`. */

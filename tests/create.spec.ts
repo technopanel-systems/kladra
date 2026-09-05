@@ -125,7 +125,7 @@ test("a project is added from the projects screen, without going to find its com
     await choose(page, picker, company.name);
     await expect(picker).toContainText(company.name);
 
-    await form.getByLabel(t("common.name")).fill(projectName);
+    await form.getByLabel(t("common.name"), { exact: true }).fill(projectName);
     await form.getByRole("button", { name: t("common.save") }).click();
   });
 
