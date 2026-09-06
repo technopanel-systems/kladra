@@ -65,7 +65,8 @@
             raiser's, the formula written once, D86); 7, 8, 44 (a terminal action
             records what it did, D87); 5 (a typed key refused by name and corrected
             in place, D88); 9, 13 (a phone read in its country, a month sentence that
-            matches its bars, D89, D90)
+            matches its bars, D89, D90); 10, 11, 12 (a role and an id, a child restored
+            onto its company, a backup held to its own counts, D91–D93)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -95,10 +96,12 @@ the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A
 metres are the raiser's and the m² formula is written once, D86), P11A-3 (a terminal action
 records what it did, D87), P11A-4 (a SMAC number refused by name and corrected in place, D88),
 P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
-D89, D90). Next is P11A-6: findings 10, 11, 12 — a permission is a role and an id, a child
-restored onto its company, a backup held to its own counts (D91–D93; the script and its
-anchors are ready). After it, down §5 in order: 14 the phone's back gesture, 15 the follow-up
-picker, 16 a quotation's project, 17–18 live updates, 19 CSV cells, 20 an error boundary. The
+D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
+backup held to its own counts, D91–D93). Next is P11A-7: findings 15, 16, 21 — a drawer says
+what it writes: the quotation it raises names a project, the follow-up picker says when a
+project's date is the one the list shows, and a corrected or unfiled entry is live news (D94;
+the script and its anchors are ready). After it, down §5 in order: 14 the phone's back
+gesture, 17–18 live updates, 19 CSV cells, 20 an error boundary, 22 the adoption headline. The
 dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it
 back. 11B–11J follow when §5 is down to entries that are not defects.
 
@@ -689,6 +692,15 @@ metres stayed with the person who raised the dispatch, as D86 says, and the quot
 under that company says "Raised by Faisal" rather than naming its new owner. The company is
 handed back by SQL afterwards, with the hand-over's own audit row and notification removed.
 
+**A floor is a role and an id; a child comes back onto its company** — `tests/floor.spec.ts`, `tests/restore.spec.ts`
+Pure: every role writes on its own floor exactly when a company can sit on that role (D91).
+Jerom tries to make Faisal a coordinator and reads how many companies are still on him;
+the new rep from earlier, who holds none, becomes one. A contact is archived, then its
+company: the archive screen shows "restore the company first" on the contact's row and no
+button; the company is restored and the contact's row offers Restore again; restored, both
+are back and the company's reason is gone (D92). `npm run backup` then `backup:verify` is
+run by hand after a working day and passes on the recorded counts (D93).
+
 **A phone in its country, a month in its row** — `tests/phone.spec.ts`, `tests/months-change.spec.ts`
 Pure. The same digits read as Saudi on a Riyadh card and as UAE on a Dubai one; a plus wins;
 a country code typed without its plus is honoured wherever the card is; eight bare digits
@@ -849,13 +861,13 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   offered. Fix: the same gate on both, and the button only while the day is open. Reader cites code.
 - [x] 9 **Phones are normalised as Saudi whatever the country.** Verified; every caller passes the company's country now, and the eight-digit fallback is gone (P11A-5, D89). `src/lib/phone.ts:34-47` and
   its three callers; the country is in scope at every one. Fix: pass it. Reader cites code.
-- [ ] 10 **A promoted account keeps its floor for ever.** `src/lib/floor.ts:51-54` `mayWrite`
+- [x] 10 **A promoted account keeps its floor for ever.** Verified; `mayWrite` asks the role too, and a floorless role is refused while companies remain (P11A-6, D91). `src/lib/floor.ts:51-54` `mayWrite`
   checks identity only; its sibling `mayQuote` checks the role too. Fix: require a floor-holding
   role, and make a role change force a hand-over. Reader cites code.
-- [ ] 11 **Restoring a stray archived contact un-archives its company as a side effect.**
+- [x] 11 **Restoring a stray archived contact un-archives its company as a side effect.** Verified; a child under an archived company gets a sentence, not a button, and the action refuses too (P11A-6, D92).
   `src/actions/admin.ts:601-630`. Fix: restore the child alone when the company was archived on
   its own, and say what the restore will do. Reader cites code.
-- [ ] 12 **`backup:verify` fails on any day the business used Kladra.** `scripts/backup-verify.ts:
+- [x] 12 **`backup:verify` fails on any day the business used Kladra.** Verified; counts are recorded with the dump and the restore is held to them (P11A-6, D93). `scripts/backup-verify.ts:
   169-196` compares the live database now against a dump from earlier. Fix: capture the counts
   when the dump is taken. Reader cites code.
 - [x] 13 **The six-month card calls a month "the first with anything" while its own bars say

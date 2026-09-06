@@ -47,10 +47,17 @@ export function mayOpen(user: SessionUser, repId: string): boolean {
  * screens would offer buttons the server then refuses — which is exactly the
  * "no work a screen offers that the action would refuse" rule (DESIGN §5).
  * One line here takes the buttons off every drawer at once.
+ *
+ * And a role that holds no floor (P11A, D91). An id on a company is not a
+ * floor: a rep promoted to coordinator or admin kept `rep_id = him` on every
+ * company he had, and this said yes to him for ever, from a role the drawer
+ * offers no floor to. The admin cannot give such a role to somebody who still
+ * has companies — they are handed over first (`updateUserAction`) — and this
+ * is the check behind that door for the ones that slip through.
  */
 export function mayWrite(user: SessionUser, repId: string): boolean {
   if (user.viewedBy) return false;
-  return repId === user.id;
+  return holdsFloor(user.role) && repId === user.id;
 }
 
 /**

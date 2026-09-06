@@ -19,9 +19,13 @@ import type { ActionResult } from "@/lib/types";
  * IS deleting with extra steps, which is the promise D24 makes to a rep who
  * presses Archive on the wrong row.
  *
- * Restoring a contact or a project brings its company back with it: putting one
- * back on an archived company would leave it on a row that appears on no list,
- * which is the same disappearance by another route.
+ * A contact or a project comes back onto its company, and only if the company
+ * is on the floor: restored under an archived company it would sit on a row
+ * that appears on no list, which is the same disappearance by another route.
+ * It used to drag the company back with it instead — a company archived on
+ * purpose was on the floor again because of a stray contact (D92). Such a row
+ * shows the sentence and no button: no work a screen offers that the action
+ * would refuse (DESIGN §5).
  */
 export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
   const t = useTranslations();
@@ -71,21 +75,33 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
             {t("admin.archivedOn")}
             <DayText day={row.archivedOn} locale={locale} />
           </span>
-          <ConfirmDialog
-            trigger={
-              <Button variant="outline" size="sm">
-                {t("admin.restore")}
-              </Button>
-            }
-            title={t("admin.restoreTitle", { name: row.name })}
-            description={
-              row.kind === "company" ? t("admin.restoreHint") : t("admin.restoreHintInside")
-            }
-            confirmLabel={t("admin.restore")}
-            successMessage={t("admin.restored", { name: row.name })}
-            onConfirm={() => send({ kind: row.kind, id: row.id })}
-            onDone={refresh}
-          />
+          {row.companyArchived ? (
+            <span className="text-xs text-muted-foreground">
+              {row.kind === "contact"
+                ? t("admin.restoreCompanyFirstContact")
+                : t("admin.restoreCompanyFirstProject")}
+            </span>
+          ) : (
+            <ConfirmDialog
+              trigger={
+                <Button variant="outline" size="sm">
+                  {t("admin.restore")}
+                </Button>
+              }
+              title={t("admin.restoreTitle", { name: row.name })}
+              description={
+                row.kind === "company"
+                  ? t("admin.restoreHint")
+                  : row.kind === "contact"
+                    ? t("admin.restoreHintContact")
+                    : t("admin.restoreHintProject")
+              }
+              confirmLabel={t("admin.restore")}
+              successMessage={t("admin.restored", { name: row.name })}
+              onConfirm={() => send({ kind: row.kind, id: row.id })}
+              onDone={refresh}
+            />
+          )}
         </li>
       ))}
     </ul>

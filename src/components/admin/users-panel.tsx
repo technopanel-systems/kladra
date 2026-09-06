@@ -377,6 +377,8 @@ function UserForm({
           <Label id="user-role-label">{t("common.role")}</Label>
           <SearchableSelect
             aria-labelledby="user-role-label"
+            aria-describedby={fieldErrors.role ? "user-role-error" : undefined}
+            invalid={fieldErrors.role ? true : undefined}
             options={options}
             value={role}
             onChange={setRole}
@@ -385,6 +387,13 @@ function UserForm({
             searchPlaceholder={t("forms.searchList")}
             emptyText={t("forms.noMatch")}
           />
+          {/* A role with no floor, refused while companies are still on the
+              account (D91): the sentence sits under the field it is about. */}
+          {fieldErrors.role ? (
+            <p id="user-role-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.role}
+            </p>
+          ) : null}
         </div>
 
         {mode === "create" ? (

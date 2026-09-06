@@ -58,11 +58,16 @@ test("nobody writes on a floor that is not theirs, whatever their role", () => {
   }
 });
 
-test("everybody writes on their own floor, including a manager who sells", () => {
+/**
+ * Changed in P11A (D91), and the reason written here as the charter asks: this
+ * used to expect TRUE for every role. An id on a company is not a floor — a rep
+ * promoted to coordinator kept `rep_id = him` on every company he had, and the
+ * old rule let him work them from a role that has no floor at all. Writing
+ * needs both now: his id on the company, and a role a company can sit on.
+ */
+test("everybody with a floor writes on their own; a role with no floor writes nowhere", () => {
   for (const role of ROLES) {
-    expect(mayWrite(who(role, FAISAL), FAISAL), `${role} could not write on his own floor`).toBe(
-      true,
-    );
+    expect(mayWrite(who(role, FAISAL), FAISAL), `${role} on his own floor`).toBe(holdsFloor(role));
   }
 });
 

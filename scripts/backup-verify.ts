@@ -35,21 +35,7 @@
  * person does by hand, and the backup is not fully proven until one has been.
  */
 
-import {
-  type Container,
-  backupDir,
-  countTables,
-  createDatabase,
-  databaseExists,
-  docker,
-  dropDatabase,
-  formatBytes,
-  ledgerLastRow,
-  listDumps,
-  loadEnv,
-  requireEnv,
-  restoreInto,
-} from "./backup-shared";
+import { backupDir, type Container, countTables, createDatabase, databaseExists, docker, dropDatabase, formatBytes, ledgerLastRow, listDumps, loadEnv, toMap, readCounts, requireEnv, restoreInto } from "./backup-shared";
 
 const THROWAWAY = "kladra-backup-verify";
 const READY_TIMEOUT_MS = 120_000;
@@ -71,10 +57,17 @@ function restoreAndCount(
   return countTables(container, database);
 }
 
+/**
+ * `earlier` is the reading taken just before pg_dump when `source` is the one
+ * taken just after (D93). Where the two differ the business was writing during
+ * the dump, and pg_dump's snapshot sits somewhere between them — so for those
+ * tables, and only those, anything between the two readings is a match.
+ */
 function compare(
   label: string,
   source: Map<string, number>,
   restored: Map<string, number>,
+  earlier?: Map<string, number>,
 ): Comparison {
   console.log(`\n--- ${label} ---`);
 
@@ -93,8 +86,15 @@ function compare(
       continue;
     }
     rows += a;
-    console.log(`  ${name}: ${a} = ${b}${a === b ? "" : "   MISMATCH"}`);
-    if (a !== b) {
+    const lo = earlier?.get(name);
+    const moved = lo !== undefined && lo !== a;
+    const within = moved && b >= Math.min(lo, a) && b <= Math.max(lo, a);
+    const ok = a === b || within;
+    console.log(
+      `  ${name}: ${a} = ${b}` +
+        (ok ? (within ? `   (moved ${lo}→${a} during the dump)` : "") : "   MISMATCH"),
+    );
+    if (!ok) {
       mismatches += 1;
     }
   }
@@ -177,8 +177,24 @@ async function main(): Promise<void> {
   );
   console.log(`source    ${liveDb} in the running db container`);
 
-  const sourceCounts = countTables(live, liveDb);
-  const sourceLedger = ledgerLastRow(live, liveDb);
+  // Held to the counts recorded when the dump was taken, not to the live
+  // database now (D93): the live one has moved on by the time anybody verifies,
+  // and this script failed on every day the business used Kladra.
+  const recorded = readCounts(newest.path);
+  const sourceCounts = recorded ? toMap(recorded.after) : countTables(live, liveDb);
+  const earlierCounts = recorded ? toMap(recorded.before) : undefined;
+  const sourceLedger = recorded ? recorded.ledger : ledgerLastRow(live, liveDb);
+  if (recorded) {
+    console.log(
+      `counts    recorded with the dump at ${recorded.takenAt}` +
+        (recorded.quietDuringDump ? ", nothing moved while it ran" : ", rows moved while it ran"),
+    );
+  } else {
+    console.log(
+      "counts    NO RECORD beside this dump (made before the record existed) — comparing with\n" +
+        "          the live database as it is now, which only matches on a day nobody used Kladra",
+    );
+  }
 
   const results: Comparison[] = [];
 
@@ -191,7 +207,7 @@ async function main(): Promise<void> {
   createDatabase(live, scratch);
   const scratchCounts = restoreAndCount(live, scratch, newest.path);
   results.push(
-    compare(`${liveDb} vs ${scratch} (same cluster)`, sourceCounts, scratchCounts),
+    compare(`${liveDb} vs ${scratch} (same cluster)`, sourceCounts, scratchCounts, earlierCounts),
   );
   console.log(`  ledger source   ${sourceLedger}`);
   console.log(`  ledger restored ${ledgerLastRow(live, scratch)}`);
@@ -228,7 +244,7 @@ async function main(): Promise<void> {
 
     const throwawayCounts = restoreAndCount(throwaway, liveDb, newest.path);
     results.push(
-      compare(`${liveDb} vs ${liveDb} (empty cluster)`, sourceCounts, throwawayCounts),
+      compare(`${liveDb} vs ${liveDb} (empty cluster)`, sourceCounts, throwawayCounts, earlierCounts),
     );
     console.log(`  ledger source   ${sourceLedger}`);
     console.log(`  ledger restored ${ledgerLastRow(throwaway, liveDb)}`);

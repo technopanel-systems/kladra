@@ -162,9 +162,12 @@ npm run restore -- <dump-file> --to <database> [--force]
 
 The office NAS sweeps files, but PostgreSQL's data directory is written while it is copied
 — a torn copy may not restore. `npm run backup` writes one **consistent** dump into a folder
-the NAS already sweeps (`BACKUP_DIR` in `.env`); `backup:verify` restores it twice (a scratch
-database beside the live one, and a throwaway container on an empty volume) and compares
-every table's exact row count, failing on a mismatch or on a comparison that read nothing.
+the NAS already sweeps (`BACKUP_DIR` in `.env`) and, beside it, `<dump>.counts.json` — every
+table's row count read with the dump; `backup:verify` restores the dump twice (a scratch
+database beside the live one, and a throwaway container on an empty volume) and holds each
+restore to those recorded counts, failing on a mismatch or on a comparison that read nothing.
+A dump from before the record existed is compared with the live database instead, which
+only matches on a day nobody used Kladra.
 `pg_dump` runs **inside** the `db` container so the client always matches the server.
 
 **A dump holds every row and every password hash — it is exactly as sensitive as the

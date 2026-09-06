@@ -15,7 +15,7 @@
  * one; nobody, admin included, can see the old one.
  */
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -32,6 +32,7 @@ import {
   targets,
   users,
 } from "@/db/schema";
+import { holdsFloor } from "@/lib/floor";
 import { isLookupKind, LOOKUP_FIELDS, tableName } from "@/lib/lookup-kinds";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
@@ -191,6 +192,20 @@ export async function updateUserAction(
       .limit(1);
     if (clash && clash.id !== parsed.data.userId) {
       return { ok: false, error: ta("emailTaken"), fieldErrors: { email: ta("emailTaken") } };
+    }
+
+    // A role that holds no floor cannot go to somebody who still has one (D91):
+    // the companies would stay on him with nobody able to work them, and the
+    // old `mayWrite` let him work them from a role with no floor at all.
+    if (!holdsFloor(parsed.data.role)) {
+      const [held] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(companies)
+        .where(and(eq(companies.repId, parsed.data.userId), isNull(companies.archivedAt)));
+      if (held && held.count > 0) {
+        const sentence = ta("roleHoldsCompanies", { count: held.count });
+        return { ok: false, error: sentence, fieldErrors: { role: sentence } };
+      }
     }
 
     const changed = await db.transaction(async (tx) => {
@@ -621,6 +636,7 @@ export async function restoreAction(
 ): Promise<ActionResult<undefined>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
+    const ta = await getTranslations("admin");
 
     const parsed = z
       .object({ kind: z.enum(["company", "contact", "project"]), id: z.uuid() })
@@ -629,41 +645,56 @@ export async function restoreAction(
 
     const { kind, id } = parsed.data;
 
-    await db.transaction(async (tx) => {
+    // A child comes back onto its company and never drags the company back
+    // with it (D92). A company archived on purpose used to stay archived only
+    // until somebody restored a stray contact under it — then it was on the
+    // floor again with nobody having decided that. If the company is archived,
+    // the company is what to restore, and the screen says so instead of
+    // offering a button (archive-panel.tsx); this is the same answer behind it.
+    const outcome = await db.transaction(async (tx) => {
       if (kind === "company") {
         // The reason lives as long as the state it explains (D87, and the note
         // on return_reason in the schema): back on the floor, it is gone.
-        await tx
+        const rows = await tx
           .update(companies)
           .set({ archivedAt: null, archiveReason: null })
-          .where(eq(companies.id, id));
+          .where(eq(companies.id, id))
+          .returning({ id: companies.id });
+        if (rows.length === 0) return "gone" as const;
       } else if (kind === "contact") {
-        const [row] = await tx
-          .update(contacts)
-          .set({ archivedAt: null })
+        const [child] = await tx
+          .select({ companyArchivedAt: companies.archivedAt })
+          .from(contacts)
+          .innerJoin(companies, eq(companies.id, contacts.companyId))
           .where(eq(contacts.id, id))
-          .returning({ companyId: contacts.companyId });
-        if (row) {
-          await tx
-            .update(companies)
-            .set({ archivedAt: null, archiveReason: null })
-            .where(eq(companies.id, row.companyId));
-        }
+          .limit(1);
+        if (!child) return "gone" as const;
+        if (child.companyArchivedAt !== null) return "companyArchived" as const;
+        await tx.update(contacts).set({ archivedAt: null }).where(eq(contacts.id, id));
       } else {
-        const [row] = await tx
-          .update(projects)
-          .set({ archivedAt: null })
+        const [child] = await tx
+          .select({ companyArchivedAt: companies.archivedAt })
+          .from(projects)
+          .innerJoin(companies, eq(companies.id, projects.companyId))
           .where(eq(projects.id, id))
-          .returning({ companyId: projects.companyId });
-        if (row) {
-          await tx
-            .update(companies)
-            .set({ archivedAt: null, archiveReason: null })
-            .where(eq(companies.id, row.companyId));
-        }
+          .limit(1);
+        if (!child) return "gone" as const;
+        if (child.companyArchivedAt !== null) return "companyArchived" as const;
+        await tx.update(projects).set({ archivedAt: null }).where(eq(projects.id, id));
       }
+      // Only for a row that came back (D87).
       await record(tx, actor.id, "restore", kind, id, {});
+      return "ok" as const;
     });
+    if (outcome === "gone") return { ok: false, error: ta("notFound") };
+    if (outcome === "companyArchived") {
+      // One sentence per kind: Arabic gives the row a gender, English does not.
+      return {
+        ok: false,
+        error:
+          kind === "contact" ? ta("restoreCompanyFirstContact") : ta("restoreCompanyFirstProject"),
+      };
+    }
 
     revalidateAdmin();
     return { ok: true, data: undefined };

@@ -33,7 +33,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { closeSync, openSync, readdirSync, readSync, statSync } from "node:fs";
+import { closeSync, openSync, readdirSync, readFileSync, readSync, statSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -307,4 +307,36 @@ export function formatBytes(bytes: number): string {
   return bytes >= 1024 * 1024
     ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
     : `${(bytes / 1024).toFixed(1)} KB`;
+}
+
+// ---- the counts a dump was taken with (D93) ----------------------------------
+
+/** Beside every dump: `<dump>.counts.json`. */
+export const COUNTS_SUFFIX = ".counts.json";
+
+export type CountsRecord = {
+  dump: string;
+  takenAt: string;
+  ledger: string;
+  /** `schema.table` → rows, read just before pg_dump and just after it. */
+  before: Record<string, number>;
+  after: Record<string, number>;
+  /** Nothing moved between the two reads, so `after` is exactly what the dump holds. */
+  quietDuringDump: boolean;
+};
+
+/**
+ * The record written beside the dump, or null for a dump made before there
+ * was one. `backup:verify` compares the restore with THIS, not with the live
+ * database at verify time: on any day the business used Kladra the live counts
+ * have moved on, and the comparison failed on every working day (D93).
+ */
+export function readCounts(dumpPath: string): CountsRecord | null {
+  const path = dumpPath + COUNTS_SUFFIX;
+  if (!existsSync(path)) return null;
+  return JSON.parse(readFileSync(path, "utf8")) as CountsRecord;
+}
+
+export function toMap(record: Record<string, number>): Map<string, number> {
+  return new Map(Object.entries(record));
 }

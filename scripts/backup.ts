@@ -30,21 +30,10 @@
  * must run in production.
  */
 
-import { statSync, mkdirSync, openSync, closeSync, unlinkSync } from "node:fs";
+import { closeSync, mkdirSync, openSync, statSync, unlinkSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-import {
-  DUMP_MAGIC,
-  DUMP_PREFIX,
-  DUMP_SUFFIX,
-  assertIsArchive,
-  backupDir,
-  docker,
-  formatBytes,
-  listDumps,
-  loadEnv,
-  requireEnv,
-} from "./backup-shared";
+import { assertIsArchive, backupDir, type Container, COUNTS_SUFFIX, countTables, docker, DUMP_MAGIC, DUMP_PREFIX, DUMP_SUFFIX, formatBytes, ledgerLastRow, listDumps, loadEnv, requireEnv } from "./backup-shared";
 
 /** Kept generations. Older files are removed after a successful dump. */
 const KEEP = 30;
@@ -70,6 +59,7 @@ function prune(directory: string): void {
   const stale = listDumps(directory).slice(KEEP);
   for (const dump of stale) {
     unlinkSync(dump.path);
+    if (existsSync(dump.path + COUNTS_SUFFIX)) unlinkSync(dump.path + COUNTS_SUFFIX);
     console.log(`  pruned ${dump.path}`);
   }
   if (stale.length > 0) {
@@ -87,6 +77,14 @@ function main(): void {
   const file = join(directory, `${DUMP_PREFIX}${stamp(new Date())}${DUMP_SUFFIX}`);
   console.log(`→ pg_dump ${process.env.POSTGRES_DB} (inside the db container)`);
   console.log(`  ${file}`);
+
+  // The counts the restore will be held to are read now, with the dump, and
+  // written beside it (D93). Read again after pg_dump returns: if the two agree
+  // the dump holds exactly these rows; if not, the business was writing, and
+  // verify accepts anything between the two for the tables that moved.
+  const live: Container = { compose: "db" };
+  const liveDb = process.env.POSTGRES_DB as string;
+  const before = countTables(live, liveDb);
 
   // The password and the database name are read from the container's own
   // environment, never passed from the host.
@@ -129,6 +127,30 @@ function main(): void {
   }
 
   console.log(`  wrote ${formatBytes(size)}, starts with ${DUMP_MAGIC}`);
+
+  const after = countTables(live, liveDb);
+  const quiet = [...before.keys(), ...after.keys()].every(
+    (name) => before.get(name) === after.get(name),
+  );
+  writeFileSync(
+    file + COUNTS_SUFFIX,
+    JSON.stringify(
+      {
+        dump: file,
+        takenAt: new Date().toISOString(),
+        ledger: ledgerLastRow(live, liveDb),
+        before: Object.fromEntries(before),
+        after: Object.fromEntries(after),
+        quietDuringDump: quiet,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log(
+    `  counts    ${after.size} tables recorded beside it` +
+      (quiet ? "" : " — rows moved while pg_dump ran, both readings kept"),
+  );
   prune(directory);
   console.log(
     "\nA dump is not a backup until it has been restored. " +
