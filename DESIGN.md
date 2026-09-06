@@ -399,6 +399,10 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   assertion behind an `if` the page decides; no click that happens only when the button is
   there; no rule retyped beside the one the app uses — a spec imports it. And a check the
   documents call part of the build is in the build.
+- **A seed obeys the business it fakes.** One from the stranger read (P11A, D104). Whatever
+  writes rows the actions would have written — a seed, an import — leaves the trail the
+  actions leave, keeps to the floor and the calendar, and checks its own output against the
+  database before it reports done.
 
 ## §4 Not built until asked
 

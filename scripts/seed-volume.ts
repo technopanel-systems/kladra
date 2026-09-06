@@ -22,6 +22,7 @@ import { sql } from "drizzle-orm";
 import { loadEnv } from "../src/lib/env";
 import { addDays, todayRiyadh, type Day } from "../src/lib/dates";
 import { normalizePhone } from "../src/lib/phone";
+import { quotationEvent } from "../src/lib/quotation-events";
 
 loadEnv();
 
@@ -34,6 +35,7 @@ let nextSmacNumber = 20000;
 let nextSmacDispatchNumber = 30000;
 const {
   activities,
+  auditLog,
   companies,
   contacts,
   dispatchItems,
@@ -99,6 +101,13 @@ async function main(): Promise<void> {
     .select({ id: users.id })
     .from(users)
     .where(sql`${users.role} = 'rep' and ${users.active} = true`);
+  const [desk] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(sql`${users.role} = 'coordinator' and ${users.active} = true`);
+  if (!desk) throw new Error("seed-volume needs the coordinator from seed:demo");
+  /** A day no later than today: the trail never runs into the future. */
+  const capped = (day: Day): Day => (day > today ? today : day);
   if (reps.length === 0) throw new Error("seed-volume: no reps — run seed:demo first");
 
   const saudi = await db.execute<{ id: number }>(
@@ -132,7 +141,7 @@ async function main(): Promise<void> {
     sql`${day}::date::timestamp at time zone 'Asia/Riyadh' + interval '9.5 hours'` as unknown as Date;
 
   console.log(`seed-volume — ${COMPANY_COUNT} companies`);
-  const companyIds: string[] = [];
+  const companyIds: { id: string; repId: string }[] = [];
   for (let i = 0; i < COMPANY_COUNT; i += 1) {
     const created = back(between(20, 420));
     // A fifth of the floor is due or overdue, a quarter is ahead of itself, and
@@ -147,11 +156,12 @@ async function main(): Promise<void> {
             ? addDays(today, between(1, 45))
             : null;
 
+    const repId = pick(reps).id;
     const [row] = await db
       .insert(companies)
       .values({
         name: `${pick(FIRST)} ${pick(MIDDLE)} ${pick(LAST)} ${i + 1}`,
-        repId: pick(reps).id,
+        repId,
         countryId: saudiId,
         cityId: pick(cityIds),
         categoryId: pick(categoryIds),
@@ -161,7 +171,7 @@ async function main(): Promise<void> {
         updatedAt: at(created),
       })
       .returning({ id: companies.id });
-    companyIds.push(row.id);
+    companyIds.push({ id: row.id, repId });
 
     const typed = `05${String(50000000 + i).slice(0, 8)}`;
     await db.insert(contacts).values({
@@ -175,12 +185,28 @@ async function main(): Promise<void> {
     // Two thirds have been spoken to; the rest are the never-contacted band.
     if (rand() < 0.66) {
       const when = back(between(1, 120));
-      await db.insert(activities).values({
+      const [logged] = await db
+        .insert(activities)
+        .values({
         companyId: row.id,
-        userId: pick(reps).id,
+        userId: repId,
         channel: pick(["visit", "call", "whatsapp", "other"] as const),
         happenedOn: when,
         text: pick(NOTES),
+        createdAt: at(when),
+        updatedAt: at(when),
+      })
+        .returning({ id: activities.id });
+      // The trail (D72, D104): the use panel and every trail panel read this
+      // table, and the volume floor wrote none of it, so at the one scale meant
+      // to be walked everybody was quiet and every history was empty.
+      await db.insert(auditLog).values({
+        userId: repId,
+        action: "activity.create",
+        recordType: "activity",
+        recordId: logged.id,
+        details: { companyId: row.id, projectId: null },
+        at: at(when),
         createdAt: at(when),
         updatedAt: at(when),
       });
@@ -188,9 +214,10 @@ async function main(): Promise<void> {
   }
 
   console.log(`seed-volume — ${PROJECT_COUNT} projects`);
-  const built: { id: string; companyId: string }[] = [];
+  const built: { id: string; companyId: string; repId: string }[] = [];
   for (let i = 0; i < PROJECT_COUNT; i += 1) {
-    const companyId = pick(companyIds);
+    const company = pick(companyIds);
+    const companyId = company.id;
     const [row] = await db
       .insert(projects)
       .values({
@@ -199,11 +226,11 @@ async function main(): Promise<void> {
         expectedSqm: `${between(200, 6000)}.00`,
       })
       .returning({ id: projects.id });
-    built.push({ id: row.id, companyId });
+    built.push({ id: row.id, companyId, repId: company.repId });
   }
 
   console.log(`seed-volume — ${QUOTATION_COUNT} quotations`);
-  const live: { id: string; itemId: string; qty: number }[] = [];
+  const live: { id: string; itemId: string; qty: number; repId: string; created: Day }[] = [];
   for (let i = 0; i < QUOTATION_COUNT; i += 1) {
     const project = pick(built);
     const created = back(between(1, 300));
@@ -217,6 +244,15 @@ async function main(): Promise<void> {
       "returned",
     ] as const);
     const answered = status !== "requested" && status !== "returned";
+    // Raised, then issued a day or three later, then answered weeks after —
+    // not all at one instant, which is what made every age on the queue and
+    // the chain card read zero at volume.
+    const issued = answered ? capped(addDays(created, between(1, 3))) : null;
+    const decided =
+      status === "accepted" || status === "rejected"
+        ? capped(addDays(issued ?? created, between(2, 20)))
+        : null;
+    const sentBack = status === "returned" ? capped(addDays(created, 1)) : null;
     const numbered = await db.execute<{ n: number }>(
       sql.raw("select nextval('quotation_numbers')::int as n"),
     );
@@ -229,7 +265,7 @@ async function main(): Promise<void> {
         revision: 1,
         companyId: project.companyId,
         projectId: project.id,
-        repId: pick(reps).id,
+        repId: project.repId,
         status,
         // The ERP's own number, which is what the coordinator types: nothing to
         // do with ours, as on the demo floor. Counted up, not drawn at random:
@@ -237,13 +273,33 @@ async function main(): Promise<void> {
         // (the unique index is right; the draw was wrong), and 20000 upward
         // sits clear of the demo floor's own numbers.
         smacNumber: answered ? String(nextSmacNumber++) : null,
-        issuedAt: answered ? at(created) : null,
-        decidedAt: status === "accepted" || status === "rejected" ? at(created) : null,
-        returnReason: status === "returned" ? "المقاسات ناقصة" : null,
+        issuedAt: issued ? at(issued) : null,
+        decidedAt: decided ? at(decided) : null,
+        returnReason: sentBack ? "المقاسات ناقصة" : null,
         createdAt: at(created),
-        updatedAt: at(created),
+        updatedAt: at(decided ?? sentBack ?? issued ?? created),
       })
       .returning({ id: quotations.id });
+
+    // Its trail, one row per thing that happened to it (D72, D104).
+    const events: { name: Parameters<typeof quotationEvent>[0]; by: string; on: Day; details?: Record<string, unknown> }[] = [
+      { name: "request", by: project.repId, on: created },
+    ];
+    if (issued) events.push({ name: "issue", by: desk.id, on: issued });
+    if (sentBack) events.push({ name: "sendBack", by: desk.id, on: sentBack, details: { reason: "المقاسات ناقصة" } });
+    if (decided) events.push({ name: status === "accepted" ? "accepted" : "rejected", by: project.repId, on: decided });
+    await db.insert(auditLog).values(
+      events.map((e) => ({
+        userId: e.by,
+        action: quotationEvent(e.name),
+        recordType: "quotation",
+        recordId: row.id,
+        details: e.details ?? {},
+        at: at(e.on),
+        createdAt: at(e.on),
+        updatedAt: at(e.on),
+      })),
+    );
 
     const qty = between(20, 200);
     const [item] = await db
@@ -264,15 +320,18 @@ async function main(): Promise<void> {
       .returning({ id: quotationItems.id });
 
     if (status === "issued" || status === "accepted") {
-      live.push({ id: row.id, itemId: item.id, qty });
+      live.push({ id: row.id, itemId: item.id, qty, repId: project.repId, created: issued ?? created });
     }
   }
 
   console.log(`seed-volume — ${DISPATCH_COUNT} dispatches`);
   for (let i = 0; i < DISPATCH_COUNT && live.length > 0; i += 1) {
     const source = live[i % live.length];
-    const created = back(between(1, 200));
+    // Raised after the quotation went out — never before it, which the old
+    // random day allowed — and decided by the desk a day later.
+    const created = capped(addDays(source.created, between(1, 30)));
     const status = pick(["submitted", "approved", "approved", "refused"] as const);
+    const decided = status === "submitted" ? null : capped(addDays(created, 1));
     const numbered = await db.execute<{ n: number }>(
       sql.raw("select nextval('dispatch_numbers')::int as n"),
     );
@@ -283,24 +342,84 @@ async function main(): Promise<void> {
       .values({
         number,
         quotationId: source.id,
-        repId: pick(reps).id,
+        repId: source.repId,
         shipmentMethodId: pick(methodIds),
         destination: `${pick(["الرياض", "جدة", "الدمام"])} — موقع المشروع`,
         paymentTerms: pick(["تحويل بنكي 30 يوم", "50% مقدم", "نقدًا عند التسليم"]),
         status,
         smacDispatchNumber: status === "approved" ? String(nextSmacDispatchNumber++) : null,
-        approvedAt: status === "approved" ? at(created) : null,
+        approvedAt: status === "approved" && decided ? at(decided) : null,
         refuseReason: status === "refused" ? "الكمية أكبر من المتبقي" : null,
         createdAt: at(created),
-        updatedAt: at(created),
+        updatedAt: at(decided ?? created),
       })
       .returning({ id: dispatches.id });
+
+    // Its trail (D72, D104): who raised it and who decided it, as the desk's
+    // day and every trail panel read them.
+    await db.insert(auditLog).values([
+      {
+        userId: source.repId,
+        action: "dispatch.request",
+        recordType: "dispatch",
+        recordId: row.id,
+        details: {},
+        at: at(created),
+        createdAt: at(created),
+        updatedAt: at(created),
+      },
+      ...(decided
+        ? [
+            {
+              userId: desk.id,
+              action: status === "approved" ? "dispatch.approve" : "dispatch.refuse",
+              recordType: "dispatch",
+              recordId: row.id,
+              details:
+                status === "approved"
+                  ? { smacDispatchNumber: String(nextSmacDispatchNumber - 1) }
+                  : { reason: "الكمية أكبر من المتبقي" },
+              at: at(decided),
+              createdAt: at(decided),
+              updatedAt: at(decided),
+            },
+          ]
+        : []),
+    ]);
 
     await db.insert(dispatchItems).values({
       dispatchId: row.id,
       quotationItemId: source.itemId,
       qty: Math.max(1, Math.floor(source.qty / 4)),
     });
+  }
+
+  // A seed that lies about its own output is the finding (D104): every
+  // quotation and dispatch has its request row, and no dispatch precedes its
+  // quotation. Asked of the database, not assumed from the loop above.
+  const holes = await db.execute<{ what: string; n: number }>(sql`
+    select 'quotations without their birth row' as what, count(*)::int as n
+      from quotations q
+     where not exists (
+       select 1 from audit_log a
+        where a.record_id = q.id::text
+          -- A first request is born as request; a revision is born as revise
+          -- on its own row, which is what the action writes (D73).
+          and a.action = case when q.revision_of is null then 'quotation.request' else 'quotation.revise' end
+     )
+    union all
+    select 'dispatches without a request row', count(*)::int
+      from dispatches d
+     where not exists (select 1 from audit_log a where a.record_id = d.id::text and a.action = 'dispatch.request')
+    union all
+    select 'dispatches raised before their quotation', count(*)::int
+      from dispatches d join quotations q on q.id = d.quotation_id
+     where d.created_at < q.created_at
+  `);
+  const broken = holes.rows.filter((h) => Number(h.n) > 0);
+  if (broken.length > 0) {
+    for (const h of broken) console.error(`seed-volume — ${h.n} ${h.what}`);
+    process.exit(1);
   }
 
   const counted = await db.execute<{ companies: number; quotations: number }>(sql`

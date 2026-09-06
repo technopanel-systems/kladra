@@ -72,7 +72,8 @@
             D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
             walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
             D100); 45, 58, 65, 67 (what it says it is, D101); 48, 59, 60 (one word for one
-            thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103)
+            thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103); 61 (the
+            volume floor has a past, D104)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -96,26 +97,22 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** inside P11A. The stranger read is done and ranked — §5 below, seventy
-entries with causes — and the worst are being fixed in committed slices, each one verified in
-the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A-2 (achieved
-metres are the raiser's and the m² formula is written once, D86), P11A-3 (a terminal action
-records what it did, D87), P11A-4 (a SMAC number refused by name and corrected in place, D88),
-P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
-D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
-backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
-figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10 (a day as it
-happened, D97), P11A-11 (a number is a call, D98), P11A-12 (derived from the source, walked in
-the spec, D99), P11A-13 (the database says what the code assumes, D100), P11A-14 (what it says
-it is, D101), P11A-15 (one word for one thing — the glossary read by the build, a revision and
-a person each one word, the months sentence with its third branch, D102). P11A-16 (a
-test that cannot pass for nothing — the message check in lint and before the build, two specs
-that asserted only when the page let them, one that retyped the day rules, D103) is in. Next is
-P11A-17: 61 (`seed:volume` writes no trail — and, read for it, credits random reps, raises
-dispatches before their quotations, and stamps raised, issued and decided at one instant; the
-script is ready). Then 27, 28, 35, 51 wait for 11H, 34, 40, 41, 53, 66 for 11G, 17–18, 54, 63–64 for 11B, 20
-for 11G, 33 is noted. The dev database is seeded at volume (`seed:demo` then `seed:volume`);
-`seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that are not defects.
+**Where I stopped:** P11A is down to the entries that belong to later boxes. The stranger read
+is done and ranked — §5 below, seventy entries with causes — and seventeen slices fixed the
+worst in order, each verified in the code before it was called a defect: D85–D104 (a write
+holds its row; achieved metres are the raiser's and the m² formula written once; a terminal
+action records what it did; a SMAC number refused by name and corrected in place; a phone in
+its company's country and the six-month sentence true of its bars; a permission is a role and
+an id, a child restored onto its company, a backup held to its own counts; a drawer says what
+it writes; a figure agrees with the figures under it; the guards; a day as it happened; a
+number is a call; derived from the source, walked in the spec; the database says what the code
+assumes; what it says it is; one word for one thing; a test that cannot pass for nothing; the
+volume floor has a past). What remains in §5 is parked on purpose: 17–18, 54, 63–64 are 11B
+(live updates), 34, 40, 41, 53, 66 are 11G (identity, motion, states), 27, 28, 35, 51 are 11H
+(the phone at 375), 20 is 11G, 33 is noted, 68 is observed. Next is box 11B: prove live
+updates end to end — two people, no reload — quotations, dispatches, the queue's arrived row,
+the bell, and the NOTIFY chunking branch under a synthetic audience. The dev database is seeded
+at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -1054,7 +1051,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `errors.json:12`. Reader cites code.
 - [x] 60 **"Person" is الموظف on the team screen and الشخص in admin.** Verified; one word, and a glossary row (P11A-15, D102). `team.json:14`,
   `admin.json:61`. Reader cites code.
-- [ ] 61 **`seed:volume` writes no audit trail**, so every trail panel is empty at the one scale
+- [x] 61 **`seed:volume` writes no audit trail**, — verified; the trail, the floor, the calendar and a self-check (P11A-17, D104) — so every trail panel is empty at the one scale
   meant to be walked. `seed-volume.ts`. Reader cites code.
 - [x] 62 **`admin.spec.ts` re-implements Riyadh-today and the weekend.** Verified; imports `@/lib/dates` and `@/lib/workdays` (P11A-16, D103). `admin.spec.ts:37-58`.
   Import the real ones. Reader cites code.
