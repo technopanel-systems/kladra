@@ -160,12 +160,22 @@ test("the manager's five figures each say which number they are", async ({ page,
       select 1 from companies c
        where c.id = q.company_id and c.rep_id = $1::uuid and c.archived_at is null)`;
 
-    const [counts] = await query<{ open: number; with_customer: number; stopped: number }>(
+    const [counts] = await query<{
+      open: number;
+      with_customer: number;
+      on_desk: number;
+      returned: number;
+      stopped: number;
+    }>(
       `select
          (select count(*)::int from quotations q
            where q.status in ('requested', 'returned', 'issued') and ${live} and ${mine}) as open,
          (select count(*)::int from quotations q
            where q.status = 'issued' and ${live} and ${mine}) as with_customer,
+         (select count(*)::int from quotations q
+           where q.status = 'requested' and ${live} and ${mine}) as on_desk,
+         (select count(*)::int from quotations q
+           where q.status = 'returned' and ${live} and ${mine}) as returned,
          (select count(*)::int from quotations q
            where q.status = 'returned' and ${live} and ${mine})
          + (select count(*)::int from dispatches d
@@ -180,14 +190,22 @@ test("the manager's five figures each say which number they are", async ({ page,
     await expect(figure(t("team.openQuotations"))).toHaveText(String(counts.open));
     await expect(figure(t("team.sentBackOrRefused"))).toHaveText(String(counts.stopped));
 
-    // And the caption is the part of the open figure nobody here can move by
-    // working harder: the ones the customer is holding (D59).
+    // And the caption is every part of the open figure, so the parts add up to
+    // it (D95): the ones the customer is holding (D59), the ones on the
+    // coordinator's desk, and the ones sent back to him.
+    expect(counts.with_customer + counts.on_desk + counts.returned).toBe(counts.open);
     await expect(
       floor
         .locator("> div")
         .filter({ hasText: t("team.openQuotations") })
         .locator('[data-slot="figure-caption"]'),
-    ).toHaveText(t("team.openWithCustomer", { count: counts.with_customer }));
+    ).toHaveText(
+      [
+        t("team.openWithCustomer", { count: counts.with_customer }),
+        t("team.openOnDesk", { count: counts.on_desk }),
+        t("team.openReturned", { count: counts.returned }),
+      ].join(" · "),
+    );
   });
 });
 
@@ -396,5 +414,5 @@ test("a rep's floor and his day cannot disagree about what is waiting", async ({
       .locator("> div")
       .filter({ hasText: t("team.openQuotations") })
       .locator('[data-slot="figure-caption"]'),
-  ).toHaveText(t("team.openWithCustomer", { count: withCustomer }));
+  ).toContainText(t("team.openWithCustomer", { count: withCustomer }));
 });

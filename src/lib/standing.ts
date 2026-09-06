@@ -67,18 +67,24 @@ export function approvedSqmSql(scope: SQL): SQL<string> {
   )`;
 }
 
-/** Quotations that are still moving: somebody owes an answer or the customer does. */
-export function openQuotationsSql(scope: SQL): SQL<number> {
-  return sql`(
-    select count(*)::int
-      from quotations q
+/**
+ * The rows that are still moving: somebody owes an answer or the customer does.
+ * One WHERE for the figure and for its parts, so the parts cannot fail to add
+ * up to it (D95, rules/data.md).
+ */
+function openQuotationRows(scope: SQL): SQL {
+  return sql`from quotations q
      where q.status in ('requested', 'returned', 'issued')
        and not exists (
          select 1 from quotations later
           where later.number = q.number and later.revision > q.revision
        )
-       and ${scope}
-  )`;
+       and ${scope}`;
+}
+
+/** Quotations that are still moving: somebody owes an answer or the customer does. */
+export function openQuotationsSql(scope: SQL): SQL<number> {
+  return sql`(select count(*)::int ${openQuotationRows(scope)})`;
 }
 
 /**
@@ -92,24 +98,53 @@ export function openQuotationsSql(scope: SQL): SQL<number> {
  * An archived company is off the floor, so its quotations are off this figure:
  * the list below the strip does not show them either.
  */
-export async function openQuotationsForRep(repId: string): Promise<number> {
+export type OpenQuotations = {
+  /** The three parts together — the figure. */
+  total: number;
+  /** Asked and not yet answered: on the coordinator's desk. */
+  onDesk: number;
+  /** Sent back: on his own desk, to fix and ask again. */
+  returned: number;
+  /** Issued and no answer recorded: with the customer. */
+  withCustomer: number;
+};
+
+/**
+ * The figure and its three parts from one read (D95). The strip said "6 open"
+ * over "3 with the customer" and the reader was left to wonder where the other
+ * three were; they were on the coordinator's desk, which nothing said.
+ */
+export async function openQuotationsForRep(repId: string): Promise<OpenQuotations> {
   const id = sql`${repId}::uuid`;
-  const result = await db.execute<{ open: number }>(sql`
-    select ${openQuotationsSql(sql`exists (
+  const result = await db.execute<{
+    total: number;
+    on_desk: number;
+    returned: number;
+    with_customer: number;
+  }>(sql`
+    select count(*)::int as total,
+           (count(*) filter (where q.status = 'requested'))::int as on_desk,
+           (count(*) filter (where q.status = 'returned'))::int as returned,
+           (count(*) filter (where q.status = 'issued'))::int as with_customer
+    ${openQuotationRows(sql`exists (
       select 1 from companies c
        where c.id = q.company_id and c.rep_id = ${id} and c.archived_at is null
-    )`)} as open
+    )`)}
   `);
-  return Number(result.rows[0]?.open ?? 0);
+  const row = result.rows[0];
+  return {
+    total: Number(row?.total ?? 0),
+    onDesk: Number(row?.on_desk ?? 0),
+    returned: Number(row?.returned ?? 0),
+    withCustomer: Number(row?.with_customer ?? 0),
+  };
 }
 
 export type PersonStanding = {
   /** Expected m² on this person's live projects (S45). */
   pipelineSqm: string;
-  /** Quotations still moving on his floor: asked, sent back, or with the customer. */
-  openQuotations: number;
-  /** Of those, the ones the customer is holding — a call, not a form. */
-  withCustomer: number;
+  /** Quotations still moving on his floor, and where each of them is. */
+  openQuotations: OpenQuotations;
   /**
    * Sent back or refused: stopped, and stopped on HIM. The one figure here that
    * is nobody else's fault and nobody else's to fix.
@@ -144,7 +179,6 @@ export async function personStanding(repId: string): Promise<PersonStanding> {
   return {
     pipelineSqm: pipelineSqmValue,
     openQuotations,
-    withCustomer: waiting.filter((row) => row.reasonKey === "day.withCustomer").length,
     sentBack: waiting.filter((row) => row.reasonKey !== "day.withCustomer").length,
   };
 }
@@ -291,13 +325,6 @@ export async function pipelineByRep(): Promise<Map<string, string>> {
 }
 
 export type QueueStanding = {
-  /**
-   * The day each waiting request arrived, both chains. A list rather than the
-   * one oldest date, because the screen asks two things of it — how long the
-   * worst one has waited, and how many are past the line — and computing the
-   * second from the first is impossible (D59).
-   */
-  waitingSince: Day[];
   /** What she has answered today, both chains: issued, sent back, approved, refused. */
   answeredToday: number;
   /**
@@ -311,28 +338,18 @@ export type QueueStanding = {
 /**
  * The coordinator's own two figures (P8.6).
  *
- * Her screen already lists what is waiting; what it never said is how long the
- * worst one has been there, or how much she has got through — and both are
- * questions she asks herself, not questions about her. The counts beside them
- * come from the rows already on the page rather than from a second query, so
- * the strip and the list cannot disagree.
+ * Her screen already lists what is waiting; what it never said is how much she
+ * has got through — a question she asks herself, not a question about her. How
+ * long the worst one has waited is read from the rows on the page, not from
+ * here: a second query over the same tables named a request neither list
+ * showed, because it never asked whether the company was archived (D95).
  */
 export async function queueStanding(): Promise<QueueStanding> {
   const result = await db.execute<{
-    waiting: string[] | null;
     answered: number;
     arrived: number;
   }>(sql`
     select
-      (
-        select array_agg(to_char(waiting.raised, 'YYYY-MM-DD')) from (
-          select (q.created_at at time zone 'Asia/Riyadh')::date as raised
-            from quotations q where q.status = 'requested'
-          union all
-          select (d.created_at at time zone 'Asia/Riyadh')::date
-            from dispatches d where d.status = 'submitted'
-        ) waiting
-      ) as waiting,
       (
         select count(*)::int from (
           select 1 from quotations q
@@ -361,7 +378,6 @@ export async function queueStanding(): Promise<QueueStanding> {
   const row = result.rows[0];
 
   return {
-    waitingSince: (row?.waiting ?? []) as Day[],
     answeredToday: Number(row?.answered ?? 0),
     arrivedToday: Number(row?.arrived ?? 0),
   };

@@ -335,6 +335,15 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   so where it sits — the drawer names the project and its date under the picker, and the clear
   toast says what still stands. And every write that moves a count sends the live event the
   first write sent: a correction is news exactly as the entry was.
+- **A figure agrees with the figures under it.** Three strips in the stranger read where the
+  number and the sentence beneath it were two different reads (P11A, D95): six open quotations
+  over "3 with the customer", a headline of quiet people over rows that excused some of them,
+  and a longest wait over two lists that did not contain it. The rule has two clauses. A strip
+  is read once: the figure and every part named under it come from one query, so the parts add
+  up to the figure by construction and not by luck (`openQuotationsForRep`), and a predicate a
+  row is coloured by is the predicate the headline counts (`isQuiet`). And a caption over a
+  list comes from the list's own rows, never from a second query over the same tables — the
+  second query is the one that forgets a filter the first one had.
 
 ## §4 Not built until asked
 

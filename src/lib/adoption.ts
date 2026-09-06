@@ -27,13 +27,9 @@ import { db } from "@/db";
 import { diffDays, todayRiyadh, type Day } from "@/lib/dates";
 import { personNameOf } from "@/lib/people";
 import type { Role } from "@/lib/types";
+import { isQuiet, USE_WINDOW_DAYS } from "@/lib/use-window";
 
-/**
- * The window, in days. A week, because that is the sentence the founder said —
- * "who has not opened it this week" — and because a rep on four days of leave
- * must not read as somebody who has stopped.
- */
-export const USE_WINDOW_DAYS = 7;
+export { isQuiet, USE_WINDOW_DAYS };
 
 export type PersonUse = {
   userId: string;
@@ -106,9 +102,8 @@ export async function whoIsUsingIt(day: Day = todayRiyadh()): Promise<Use> {
 
   return {
     people,
-    // Never opened counts as quiet: an account nobody has ever signed into is
-    // the loudest version of this figure, not an exception to it.
-    quiet: people.filter((person) => person.daysSince === null || person.daysSince >= USE_WINDOW_DAYS)
-      .length,
+    // The rows' own predicate (use-window.ts, D95): the number at the top is
+    // the count of amber rows under it, and nothing else.
+    quiet: people.filter(isQuiet).length,
   };
 }

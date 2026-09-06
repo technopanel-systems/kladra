@@ -37,13 +37,18 @@ export async function PersonStrip({ standing }: { standing: PersonStanding }) {
           label: t("team.openQuotations"),
           value: (
             <span dir="ltr" className="num">
-              {standing.openQuotations}
+              {standing.openQuotations.total}
             </span>
           ),
-          // The part of the figure that is a phone call rather than a form
-          // (D59): of six in play, the three the customer is holding are the
-          // ones nobody here can move by working harder.
-          caption: t("team.openWithCustomer", { count: standing.withCustomer }),
+          // Every part of the figure, so the parts add up to it (D95): the ones
+          // the customer is holding are a phone call rather than a form (D59),
+          // the ones on the coordinator's desk are nobody's here to move, and
+          // the ones sent back are his to fix.
+          caption: [
+            t("team.openWithCustomer", { count: standing.openQuotations.withCustomer }),
+            t("team.openOnDesk", { count: standing.openQuotations.onDesk }),
+            t("team.openReturned", { count: standing.openQuotations.returned }),
+          ].join(" · "),
         },
         {
           label: t("team.sentBackOrRefused"),

@@ -85,7 +85,11 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
   // Both chains, one rule (src/lib/waiting.ts): the manager's screen has called
   // a request stuck after two working days since P8, and until now the person
   // who could clear it was the only one not told.
-  const worst = longestWait(standing.waitingSince, today, nonWorking);
+  // From the rows the page shows, as the counts are: a second query over the
+  // same tables once named a request neither list showed — an archived
+  // company's — and the strip said "4 working days" over an empty desk (D95).
+  const raised = [...quotationRows, ...dispatchRows].map((row) => row.createdOn);
+  const worst = longestWait(raised, today, nonWorking);
   const lateQuotations = countLate(
     quotationRows.map((row) => row.createdOn),
     today,
@@ -140,7 +144,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               <span className="text-muted-foreground">—</span>
             ),
             caption: worst
-              ? t("queue.since", { day: formatDay(oldest(standing.waitingSince), locale) })
+              ? t("queue.since", { day: formatDay(oldest(raised), locale) })
               : t("queue.nothingWaiting"),
             // Late is late whoever it is waiting on: the same red the rest of
             // the app uses for an overdue date (DESIGN §6).

@@ -179,7 +179,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
         target: targetByUser.get(person.id) ?? null,
         achieved: achieved.get(person.id) ?? "0",
         pipeline: pipelines.get(person.id) ?? "0",
-        openQuotations: open,
+        openQuotations: open.total,
         overdueFollowUps: counts.overdue,
         neverContacted: counts.neverContacted,
         away: away.get(person.id) ?? null,

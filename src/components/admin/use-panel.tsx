@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { USE_WINDOW_DAYS, type PersonUse, type Use } from "@/lib/adoption";
+import { isQuiet, USE_WINDOW_DAYS, type PersonUse, type Use } from "@/lib/adoption";
 import { TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
@@ -123,17 +123,19 @@ export async function UsePanel({ use }: { use: Use }) {
  */
 async function Opened({ person, locale }: { person: PersonUse; locale: string }) {
   const t = await getTranslations();
-  const late = person.daysSince === null || person.daysSince >= USE_WINDOW_DAYS;
+  // The headline's own predicate (D95): this row is amber exactly when it is
+  // one of the number at the top.
+  const quiet = isQuiet(person);
 
   // Amber here too, and not red: an account nobody has opened is the same fact
   // as one nobody has opened for a fortnight — somebody to ring — and one fact
   // wears one colour on one screen.
   if (person.lastSeenOn === null) {
-    return <span className={TONE_TEXT.wait}>{t("admin.useNever")}</span>;
+    return <span className={cn(quiet && TONE_TEXT.wait)}>{t("admin.useNever")}</span>;
   }
 
   return (
-    <span className={cn("flex flex-wrap items-baseline gap-x-2", late && !person.away && TONE_TEXT.wait)}>
+    <span className={cn("flex flex-wrap items-baseline gap-x-2", quiet && TONE_TEXT.wait)}>
       <DayText day={person.lastSeenOn} locale={locale} />
       {person.daysSince === 0 ? null : (
         <span className="text-xs">{t("admin.useDaysAgo", { count: person.daysSince ?? 0 })}</span>

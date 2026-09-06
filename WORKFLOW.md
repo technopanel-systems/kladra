@@ -67,7 +67,8 @@
             in place, D88); 9, 13 (a phone read in its country, a month sentence that
             matches its bars, D89, D90); 10, 11, 12 (a role and an id, a child restored
             onto its company, a backup held to its own counts, D91–D93); 15, 16, 21 (a
-            drawer says what it writes, D94)
+            drawer says what it writes, D94); 22, 23, 24 (a figure agrees with the figures
+            under it, D95)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -98,16 +99,14 @@ metres are the raiser's and the m² formula is written once, D86), P11A-3 (a ter
 records what it did, D87), P11A-4 (a SMAC number refused by name and corrected in place, D88),
 P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
 D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
-backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes: the quotation
-it raises names a project, the follow-up picker says when a project's date is the one the
-list shows, a corrected or unfiled entry is live news, D94). Next is P11A-8: findings 22, 23,
-24 — a figure agrees with the figures under it: the Use headline and its rows share one
-predicate, a rep's open quotations are the sum of the parts under them, and the queue's
-longest wait is read from the rows the page shows (D95; the design is written, the script is
-not). After it, down §5 in order: 14 the phone's back gesture, 19 CSV cells, 25 the message
-check's computed keys; 17–18 wait for 11B, 20 for 11G. The dev database is seeded at volume
-(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is
-down to entries that are not defects.
+backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
+figure agrees with the figures under it: one read per strip, one predicate per colour, a
+caption from the list's own rows, D95). Next is P11A-9: findings 14, 19, 25 — the guards: the
+phone's back gesture on a dirty log dialog, CSV cells neutralised against a leading formula
+character, and the message check's computed-key families. 17–18 wait for 11B, 20 for 11G, 26
+onward in §5 order after that. The dev database is seeded at volume (`seed:demo` then
+`seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that
+are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -731,6 +730,15 @@ the project is due first and that the list shows the earlier; clearing the compa
 the project still has its own, and the project's date is untouched (D94). Each test puts the
 dates back and removes what it raised.
 
+**The figures under a figure** — `tests/figures.spec.ts`, `tests/numbers.spec.ts`
+Pure: never opened is quiet, opened this week is not, the window is the line, and away today
+excuses today whatever came before (D95). On the floor: Faisal's open quotations equal the
+three parts named under them, counted from the database by the same definition, and the
+sent-back tile is the day's own list minus the ones with the customer. In `tests/queue.spec.ts`
+Rawan's longest wait is the oldest row her two lists show, and archiving the company of the
+oldest request moves it to the next one rather than leaving a wait over a desk that does not
+hold it.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -910,12 +918,12 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   exists. Fix: a themed, bilingual error page in the shell. Reader cites absence. (11G.)
 - [x] 21 **Edit and unfile of a log entry never call `notifyLive`.** Verified; both send the event a new entry sends (P11A-7, D94). `activities.ts:276-296,
   320-337`; every other write does. Reader cites code. (11B.)
-- [ ] 22 **The adoption headline counts people the same screen excuses as away.** `src/lib/
+- [x] 22 **The adoption headline counts people the same screen excuses as away.** Verified; one predicate for the headline and the rows (P11A-8, D95). `src/lib/
   adoption.ts:74-112`, `use-panel.tsx:118-132`. Reader cites code.
-- [ ] 23 **A rep's "open quotations" does not sum to the two figures under it.** `standing.ts:
+- [x] 23 **A rep's "open quotations" does not sum to the two figures under it.** Verified; the caption names all three parts from the figure's own read (P11A-8, D95). `standing.ts:
   69-81, 136-149`, `day.ts:57-160`: the total counts requested too; the breakdown never does.
   Fix: a reason for a plain "requested" one, or a caption that says it. Reader cites code.
-- [ ] 24 **The queue's "longest wait" can name a request in neither list under it.**
+- [x] 24 **The queue's "longest wait" can name a request in neither list under it.** Verified; it is read from the rows the page shows (P11A-8, D95).
   `standing.ts:318-366` never filters archived companies; the lists do. Reader cites code.
 - [ ] 25 **`check-messages` guards five computed-key families and misses six more**, including
   `LINE_FIELDS` on the revision-diff screen. `scripts/check-messages.ts:186-192`. Two readers.
