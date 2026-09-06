@@ -564,6 +564,7 @@ export function QuotationSheet({
               companyId: quotation.companyId,
               projectId: quotation.projectId,
               isLatest: quotation.isLatest,
+              smacNumber: quotation.smacNumber,
               draft,
             }}
             scope={scope}

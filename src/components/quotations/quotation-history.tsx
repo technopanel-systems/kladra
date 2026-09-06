@@ -54,7 +54,13 @@ export async function QuotationHistory({ history }: { history: readonly Quotatio
                 <span className="text-xs text-faint">{t("common.by", { name: event.who })}</span>
               ) : null}
             </span>
-            {event.note ? (
+            {event.note && event.what === "correctNumber" ? (
+              // The old number, not a sentence (D88): the loader isolates the
+              // run of digits, so it reads the same way on either page.
+              <span className="text-xs text-muted-foreground">
+                {t("quotations.wasNumber", { number: event.note })}
+              </span>
+            ) : event.note ? (
               <Prose text={event.note} className="text-xs text-muted-foreground" />
             ) : null}
           </li>

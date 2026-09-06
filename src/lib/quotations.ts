@@ -648,7 +648,7 @@ export type QuotationEvent = {
   day: Day;
   /** Who did it, named in the reader's script (D68). Null if the account is gone. */
   who: string | null;
-  /** The coordinator's words, where the event carried any. */
+  /** The coordinator's words, where the event carried any — or, on a number correction, the old number (D88). */
   note: string | null;
 };
 
@@ -673,7 +673,7 @@ export async function quotationHistory(id: string): Promise<QuotationEvent[]> {
       select replace(a.action, 'quotation.', '') as what,
              to_char((a.at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day,
              ${personNameOf("u", locale)} as who,
-             nullif(btrim(coalesce(a.details ->> 'reason', '')), '') as note
+             nullif(btrim(coalesce(a.details ->> 'reason', a.details ->> 'from', '')), '') as note
         from audit_log a
         left join users u on u.id = a.user_id
        where a.record_type = 'quotation'

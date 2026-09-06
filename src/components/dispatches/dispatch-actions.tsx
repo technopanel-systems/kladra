@@ -1,9 +1,13 @@
 "use client";
 
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Pencil, PenLine, X } from "lucide-react";
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { approveDispatchAction, refuseDispatchAction } from "@/actions/dispatches";
+import {
+  approveDispatchAction,
+  correctDispatchNumberAction,
+  refuseDispatchAction,
+} from "@/actions/dispatches";
 import {
   RequestDispatchDialog,
   type DispatchDraft,
@@ -43,6 +47,8 @@ export function DispatchActions({
     status: DispatchStatus;
     quotationId: string;
     quotationLabel: string;
+    /** SMAC's dispatch number, once approved — the thing she may correct (D88). */
+    smacDispatchNumber: string | null;
     draft: DispatchDraft;
   };
   scope: DispatchScope;
@@ -122,6 +128,29 @@ export function DispatchActions({
               {t("dispatches.editRequest")}
             </Button>
           }
+        />
+      ) : null}
+
+      {/* Hers alone, and only on an approved one (D88). */}
+      {scope.coordinator && status === "approved" && dispatch.smacDispatchNumber ? (
+        <PromptDialog
+          trigger={
+            <Button variant="ghost" className="text-muted-foreground">
+              <PenLine aria-hidden="true" />
+              {t("dispatches.correctNumber")}
+            </Button>
+          }
+          title={t("dispatches.correctNumberTitle", { label })}
+          description={t("dispatches.correctNumberHint")}
+          label={t("common.smacDispatchNumber")}
+          placeholder={t("common.asSmacIssuedIt")}
+          initialValue={dispatch.smacDispatchNumber}
+          confirmLabel={t("dispatches.correctNumber")}
+          successMessage={t("dispatches.numberCorrected", { label })}
+          onConfirm={(smacDispatchNumber) =>
+            withId(correctDispatchNumberAction, { smacDispatchNumber })()
+          }
+          onDone={refresh}
         />
       ) : null}
     </div>

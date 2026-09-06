@@ -32,6 +32,10 @@ import type { ActionResult } from "@/lib/types";
  * The button is never disabled while the field is empty. An empty reason is
  * refused by the action, in the app's own sentence, at the field — the same
  * answer as every other rejected input (DESIGN §5).
+ *
+ * `initialValue` is for the one use that edits rather than asks: correcting a
+ * SMAC number opens on the number as it stands (D88), so a one-character typo
+ * is a one-character fix.
  */
 export function PromptDialog({
   trigger,
@@ -44,6 +48,7 @@ export function PromptDialog({
   successMessage,
   onConfirm,
   onDone,
+  initialValue,
 }: {
   trigger: ReactNode;
   title: string;
@@ -52,6 +57,8 @@ export function PromptDialog({
   placeholder?: string;
   /** A reason is a sentence; a SMAC number is not. */
   multiline?: boolean;
+  /** What the field holds when the dialog opens — a correction starts from the current value. */
+  initialValue?: string;
   confirmLabel: string;
   successMessage: string;
   onConfirm: (value: string) => Promise<ActionResult<unknown>>;
@@ -67,10 +74,8 @@ export function PromptDialog({
   function onOpenChange(next: boolean) {
     if (pending) return;
     setOpen(next);
-    if (!next) {
-      setValue("");
-      setRefusal(null);
-    }
+    setValue(next ? (initialValue ?? "") : "");
+    if (!next) setRefusal(null);
   }
 
   function confirm() {
@@ -116,6 +121,9 @@ export function PromptDialog({
           ) : (
             <Input
               id={fieldId}
+              // A SMAC number is a Latin run and a reason is Arabic prose: each
+              // takes its own direction, on either locale's page (DESIGN §5).
+              dir="auto"
               disabled={pending}
               autoComplete="off"
               value={value}

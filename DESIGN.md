@@ -315,6 +315,15 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   neither. And an audit row is written after the database has handed back the row it changed,
   never before and never regardless — `.returning()` and a count, then the log, or "not there
   any more" in the reader's words.
+- **A typed key is refused by name, and can be corrected.** The SMAC number (P11A, D88): unique
+  by index, typed by a person, and the only link to the money. A unique typed key fails in two
+  ways — typed twice, or typed wrong — and a screen that answers the first with "something went
+  wrong" and the second with nothing has no answer to either. The rule: when an index fires,
+  the sentence names the record that holds the value, at the field (`src/lib/smac.ts`,
+  `violatedUnique` in `src/lib/pg-errors.ts` — the driver's error is wrapped, and a check that
+  reads the top level is a check that never fires); and the person who types the key can
+  correct it in place, with the old value kept in the trail. A correction is not a second
+  transition: status, instants and months stay where they were.
 
 ## §4 Not built until asked
 

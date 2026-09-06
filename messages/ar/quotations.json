@@ -17,6 +17,15 @@
   "issue": "إصدار",
   "issueTitle": "إصدار {label}",
   "issueHint": "رقم عرض السعر كما أصدره سماك. هذا ما يجعله صادرًا.",
+  "smacTaken": "الرقم {number} مسجّل بالفعل على {label}.",
+  "smacTakenSomewhere": "الرقم {number} مسجّل بالفعل على عرض سعر آخر.",
+  "correctNumber": "تصحيح الرقم",
+  "correctNumberTitle": "تصحيح رقم سماك على {label}",
+  "correctNumberHint": "الرقم كما أصدره سماك. يبقى الرقم القديم في «ما حدث».",
+  "numberCorrected": "تم تصحيح رقم {label}",
+  "sameNumber": "هذا هو الرقم الحالي.",
+  "noNumberYet": "عرض السعر لا يحمل رقم سماك قبل إصداره.",
+  "wasNumber": "سابقًا {number}",
   "issued": "تم إصدار {label}",
   "sendBack": "إعادة للتعديل",
   "sendBackTitle": "إعادة {label} للتعديل",
@@ -77,6 +86,7 @@
     "revise": "طُلبت مراجعة",
     "cancel": "سُحب الطلب",
     "accepted": "قبِله العميل",
-    "rejected": "رفضه العميل"
+    "rejected": "رفضه العميل",
+    "correctNumber": "صُحِّح رقم سماك"
   }
 }

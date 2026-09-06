@@ -18,6 +18,7 @@ export const QUOTATION_EVENTS = [
   "cancel",
   "accepted",
   "rejected",
+  "correctNumber",
 ] as const;
 
 export type QuotationEventName = (typeof QUOTATION_EVENTS)[number];

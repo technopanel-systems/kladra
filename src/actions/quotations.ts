@@ -29,6 +29,7 @@ import { round2 } from "@/lib/money";
 import { clearNotifications, createNotification } from "@/lib/notify";
 import { holdQuotation } from "@/lib/hold";
 import { quotationLabel } from "@/lib/labels";
+import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
@@ -109,6 +110,22 @@ async function load(actor: SessionUser, quotationId: string): Promise<Loaded | n
     status: row.status as QuotationStatus,
     label: quotationLabel(row.number, row.revision),
   };
+}
+
+/** The states in which a quotation carries SMAC's number (`quotations_smac_check`). */
+const NUMBERED: readonly QuotationStatus[] = ["issued", "accepted", "rejected"];
+
+/**
+ * The refusal for a number another quotation carries: at the field, naming the
+ * holder (D88). `say` builds the sentence in the caller's namespace; the holder
+ * is looked up after the transaction has rolled back.
+ */
+async function taken(
+  number: string,
+  say: (holder: string | null) => string,
+): Promise<ActionResult<{ quotationId: string }>> {
+  const sentence = say(await smacHolder("quotation", number));
+  return { ok: false, error: sentence, fieldErrors: { smacNumber: sentence } };
 }
 
 const idSchema = z.uuid();
@@ -450,8 +467,107 @@ export async function issueQuotationAction(
         { type: "quotation", id: quotation.id, number: quotation.label, status: "issued" },
       );
       return true;
+    }).catch((error: unknown) => {
+      // The index fired: the number is on another quotation. Named, at the
+      // field, rather than "something went wrong" about a typo (D88).
+      if (isSmacClash(error, "quotation")) return "clash" as const;
+      throw error;
     });
+    if (held === "clash") {
+      return taken(parsed.data.smacNumber, (holder) =>
+        holder
+          ? tq("smacTaken", { number: parsed.data.smacNumber, label: holder })
+          : tq("smacTakenSomewhere", { number: parsed.data.smacNumber }),
+      );
+    }
     if (!held) return { ok: false, error: tq("notWaiting") };
+
+    revalidateChain();
+    return { ok: true, data: { quotationId: quotation.id } };
+  }, "coordinator");
+}
+
+/**
+ * The coordinator corrects a SMAC number she typed wrong (D88). The one value
+ * the spec calls error-prone had no way out of a typo. The row is held (D85),
+ * the status does not move — a correction is not a second issue — the old
+ * number goes into the trail, and a number another quotation carries is
+ * refused by name, exactly as at issue.
+ */
+export async function correctQuotationNumberAction(
+  _prev: ActionResult<{ quotationId: string }> | null,
+  formData: FormData,
+): Promise<ActionResult<{ quotationId: string }>> {
+  return guard(async (actor) => {
+    const tq = await getTranslations("quotations");
+    const tc = await getTranslations("common");
+
+    const parsed = z
+      .object({ quotationId: z.uuid(), smacNumber: z.string().trim().min(1).max(60) })
+      .safeParse({
+        quotationId: field(formData, "quotationId"),
+        smacNumber: field(formData, "smacNumber"),
+      });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: tc("invalid"),
+        fieldErrors: fieldErrorsOf(parsed.error, tc("required"), tc("invalid")),
+      };
+    }
+
+    const quotation = await load(actor, parsed.data.quotationId);
+    if (!quotation) return { ok: false, error: tq("notFound") };
+    if (!NUMBERED.includes(quotation.status)) return { ok: false, error: tq("noNumberYet") };
+
+    const outcome = await db
+      .transaction(async (tx) => {
+        const status = await holdQuotation(tx, quotation.id);
+        if (status === null || !NUMBERED.includes(status)) return "noNumber" as const;
+
+        const [current] = await tx
+          .select({ smacNumber: quotations.smacNumber })
+          .from(quotations)
+          .where(eq(quotations.id, quotation.id));
+        const from = current?.smacNumber ?? null;
+        if (from === parsed.data.smacNumber) return "same" as const;
+
+        await tx
+          .update(quotations)
+          .set({ smacNumber: parsed.data.smacNumber })
+          .where(eq(quotations.id, quotation.id));
+
+        // The old number is history, not a secret: the trail says "was …" (D72).
+        await tx.insert(auditLog).values({
+          userId: actor.id,
+          action: quotationEvent("correctNumber"),
+          recordType: "quotation",
+          recordId: quotation.id,
+          details: { from, to: parsed.data.smacNumber },
+        });
+
+        await notifyLive(
+          tx,
+          await liveAudienceFor(quotation.companyRepId, actor.id, ["coordinator"]),
+          { type: "quotation", id: quotation.id, number: quotation.label, status: quotation.status },
+        );
+        return "ok" as const;
+      })
+      .catch((error: unknown) => {
+        if (isSmacClash(error, "quotation")) return "clash" as const;
+        throw error;
+      });
+    if (outcome === "clash") {
+      return taken(parsed.data.smacNumber, (holder) =>
+        holder
+          ? tq("smacTaken", { number: parsed.data.smacNumber, label: holder })
+          : tq("smacTakenSomewhere", { number: parsed.data.smacNumber }),
+      );
+    }
+    if (outcome === "noNumber") return { ok: false, error: tq("noNumberYet") };
+    if (outcome === "same") {
+      return { ok: false, error: tq("sameNumber"), fieldErrors: { smacNumber: tq("sameNumber") } };
+    }
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };

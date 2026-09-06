@@ -17,6 +17,15 @@
   "issue": "Issue",
   "issueTitle": "Issue {label}",
   "issueHint": "The number SMAC gave it. That is what issues it.",
+  "smacTaken": "{number} is already on {label}.",
+  "smacTakenSomewhere": "{number} is already on another quotation.",
+  "correctNumber": "Correct the number",
+  "correctNumberTitle": "Correct the SMAC number on {label}",
+  "correctNumberHint": "The number as SMAC issued it. The old one stays under What happened.",
+  "numberCorrected": "Number corrected on {label}",
+  "sameNumber": "That is the number it already carries.",
+  "noNumberYet": "It has no SMAC number until it is issued.",
+  "wasNumber": "was {number}",
   "issued": "{label} issued",
   "sendBack": "Send back",
   "sendBackTitle": "Send {label} back",
@@ -77,6 +86,7 @@
     "revise": "Revision raised",
     "cancel": "Withdrawn",
     "accepted": "Customer accepted",
-    "rejected": "Customer rejected"
+    "rejected": "Customer rejected",
+    "correctNumber": "SMAC number corrected"
   }
 }

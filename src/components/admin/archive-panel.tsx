@@ -42,10 +42,12 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
       {rows.map((row) => (
         <li
           key={`${row.kind}-${row.id}`}
-          className="card-face flex flex-wrap items-center gap-3 p-3"
+          className="card-face flex flex-wrap items-start gap-3 p-3"
         >
           <Badge variant="secondary">{t(`admin.kind.${row.kind}`)}</Badge>
-          <div className="flex min-w-0 flex-1 flex-col">
+          {/* Wide enough to read a name and its reason on a phone: below ten
+              rems the date and the button wrap under it rather than squeeze it. */}
+          <div className="flex min-w-[10rem] flex-1 flex-col">
             <span className="font-medium">{row.name}</span>
             <span className="text-xs text-muted-foreground">
               {/* Two names either side of a neutral separator: <bdi> keeps each

@@ -63,7 +63,8 @@
             — the list is written (§5, sixty-seven entries, unverified); fixed so far:
             1, 2, 6, 57 (a write holds its row, D85); 3, 4, 46, 52 (achieved is the
             raiser's, the formula written once, D86); 7, 8, 44 (a terminal action
-            records what it did, D87)
+            records what it did, D87); 5 (a typed key refused by name and corrected
+            in place, D88)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -87,19 +88,18 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** inside P11A. The stranger read is done and ranked — §5 below, sixty-seven
-entries with causes — and the worst are being fixed in committed slices, each one verified
-in the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A-2
-(achieved metres are the raiser's and the m² formula is written once, D86), P11A-3 (a
-terminal action records what it did — the archive reason, unfile inside the reporting window,
-admin audit rows only for a change that happened, D87). Next is P11A-4, finding 5: a SMAC
-number typed twice is refused by name and a wrong one can be corrected in place (the script
-and its anchors are ready; the same fault turned out to sit under the contact form's
-duplicate-phone answer, because drizzle wraps the driver's error). After it, down §5 in
-order: 9 phone country, 10 a promoted account's floor, 11 restore's side effect, 12
-`backup:verify`, 13 the six-month card's "first". The dev database is seeded at volume
-(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is
-down to entries that are not defects.
+**Where I stopped:** inside P11A. The stranger read is done and ranked — §5 below, sixty-eight
+entries with causes — and the worst are being fixed in committed slices, each one verified in
+the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A-2 (achieved
+metres are the raiser's and the m² formula is written once, D86), P11A-3 (a terminal action
+records what it did, D87), P11A-4 (a SMAC number typed twice is refused by name and a wrong
+one is corrected in place; the contact form's duplicate-phone answer had the same fault under
+it, D88). Next is P11A-5: findings 9 and 13 — a phone read in its company's country and the
+six-month sentence that matches its bars (D89, D90; the script and its anchors are ready) —
+then P11A-6: 10, 11, 12 — a permission is a role and an id, a child restored onto its
+company, a backup held to its own counts (D91–D93; scripted). After those, down §5 in order.
+The dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts
+it back. 11B–11J follow when §5 is down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -688,6 +688,15 @@ metres stayed with the person who raised the dispatch, as D86 says, and the quot
 under that company says "Raised by Faisal" rather than naming its new owner. The company is
 handed back by SQL afterwards, with the hand-over's own audit row and notification removed.
 
+**A number typed wrong** — `tests/smac.spec.ts`
+Rawan issues a request with a SMAC number another quotation already carries: the field says
+which one, and the request stays waiting. She corrects the number on an issued quotation —
+the dialog opens on the number as it stands — and the drawer shows the new one with "was …"
+in its trail; correcting it to a number a third quotation holds is refused by name. The same
+on an approved dispatch, whose month does not move. Faisal is offered no correction. Faisal
+adds a contact with a phone already on the company and reads "already on this company" at
+the field rather than "something went wrong" (D88). Each test puts the numbers back.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -813,7 +822,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   196-207`, `src/actions/companies.ts:407-411`. `quotations.rep_id` is frozen at creation while
   the floor moved. With 3 decided, the display is right and the sentence beside it must say
   "raised by". Reader cites code.
-- [ ] 5 **A SMAC number cannot be corrected, and a duplicate says "something went wrong".**
+- [x] 5 **A SMAC number cannot be corrected, and a duplicate says "something went wrong".** Verified; a clash names its holder at the field and the coordinator corrects the number in place — and the contact form's duplicate-phone answer had the same fault underneath (P11A-4, D88).
   `src/db/schema.ts:374-391`, `src/actions/quotations.ts:388-446`, `src/actions/dispatches.ts:
   461-528`; contrast the phone-duplicate handling in `src/actions/contacts.ts:27-31`. The one
   value the spec itself calls error-prone has no named error and no way out of a typo. Fix: a

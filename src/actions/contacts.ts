@@ -21,13 +21,17 @@ import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { violatedUnique } from "@/lib/pg-errors";
 import { normalizePhone } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
-/** Postgres 23505 on the (company_id, phone_normalized) index — a real answer. */
+/**
+ * Postgres 23505 on the (company_id, phone_normalized) index — a real answer.
+ * Read through the wrapper drizzle puts round the driver's error (D88); read
+ * off the top it was never true, and the answer was "something went wrong".
+ */
 function isDuplicatePhone(error: unknown): boolean {
-  const e = error as { code?: string; constraint?: string } | null;
-  return e?.code === "23505" && e?.constraint === "contacts_company_phone_idx";
+  return violatedUnique(error) === "contacts_company_phone_idx";
 }
 
 async function guard<T>(

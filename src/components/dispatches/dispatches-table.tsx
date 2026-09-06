@@ -507,6 +507,7 @@ export function DispatchSheet({
               status: dispatch.status,
               quotationId: dispatch.quotationId,
               quotationLabel: dispatch.quotationLabel,
+              smacDispatchNumber: dispatch.smacDispatchNumber,
               draft,
             }}
             scope={scope}

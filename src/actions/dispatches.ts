@@ -38,6 +38,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
+import { isSmacClash, smacHolder } from "@/lib/smac";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
@@ -469,6 +470,18 @@ export async function updateDispatchAction(
 }
 
 /**
+ * The refusal for a number another dispatch carries: at the field, naming the
+ * holder (D88) — the dispatch side of `taken` in src/actions/quotations.ts.
+ */
+async function taken(
+  number: string,
+  say: (holder: string | null) => string,
+): Promise<ActionResult<{ dispatchId: string }>> {
+  const sentence = say(await smacHolder("dispatch", number));
+  return { ok: false, error: sentence, fieldErrors: { smacDispatchNumber: sentence } };
+}
+
+/**
  * The coordinator approves it with SMAC's dispatch number (S39).
  *
  * This is the event the whole month rests on: the approved m² counts toward the
@@ -544,9 +557,107 @@ export async function approveDispatchAction(
         { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "approved" },
       );
       return "ok" as const;
+    }).catch((error: unknown) => {
+      // The index fired: the number is on another dispatch (D88).
+      if (isSmacClash(error, "dispatch")) return "clash" as const;
+      throw error;
     });
+    if (outcome === "clash") {
+      return taken(parsed.data.smacDispatchNumber, (holder) =>
+        holder
+          ? td("smacTaken", { number: parsed.data.smacDispatchNumber, label: holder })
+          : td("smacTakenSomewhere", { number: parsed.data.smacDispatchNumber }),
+      );
+    }
     if (outcome === "answered") return { ok: false, error: td("notWaiting") };
     if (outcome === "superseded") return { ok: false, error: td("supersededQuotation") };
+
+    revalidateChain();
+    return { ok: true, data: { dispatchId: dispatch.id } };
+  }, "coordinator");
+}
+
+/**
+ * The coordinator corrects a SMAC dispatch number she typed wrong (D88). The
+ * row is held (D85); the status, the instant and the month it counts in do not
+ * move — the number is a label on an approval, not the approval. The old one
+ * stays in the audit log with the new one beside it.
+ */
+export async function correctDispatchNumberAction(
+  _prev: ActionResult<{ dispatchId: string }> | null,
+  formData: FormData,
+): Promise<ActionResult<{ dispatchId: string }>> {
+  return guard(async (actor) => {
+    const td = await getTranslations("dispatches");
+
+    const parsed = z
+      .object({ dispatchId: z.uuid(), smacDispatchNumber: z.string().trim().min(1).max(60) })
+      .safeParse({
+        dispatchId: field(formData, "dispatchId"),
+        smacDispatchNumber: field(formData, "smacDispatchNumber"),
+      });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: td("numberRequired"),
+        fieldErrors: { smacDispatchNumber: td("numberRequired") },
+      };
+    }
+
+    const dispatch = await load(actor, parsed.data.dispatchId);
+    if (!dispatch) return { ok: false, error: td("notFound") };
+    if (dispatch.status !== "approved") return { ok: false, error: td("notApproved") };
+
+    const outcome = await db
+      .transaction(async (tx) => {
+        if ((await holdDispatch(tx, dispatch.id)) !== "approved") return "notApproved" as const;
+
+        const [current] = await tx
+          .select({ smacDispatchNumber: dispatches.smacDispatchNumber })
+          .from(dispatches)
+          .where(eq(dispatches.id, dispatch.id));
+        const from = current?.smacDispatchNumber ?? null;
+        if (from === parsed.data.smacDispatchNumber) return "same" as const;
+
+        await tx
+          .update(dispatches)
+          .set({ smacDispatchNumber: parsed.data.smacDispatchNumber })
+          .where(eq(dispatches.id, dispatch.id));
+
+        await tx.insert(auditLog).values({
+          userId: actor.id,
+          action: "dispatch.correctNumber",
+          recordType: "dispatch",
+          recordId: dispatch.id,
+          details: { from, to: parsed.data.smacDispatchNumber },
+        });
+
+        await notifyLive(
+          tx,
+          await liveAudienceFor(dispatch.companyRepId, actor.id, ["coordinator", "manager"]),
+          { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "approved" },
+        );
+        return "ok" as const;
+      })
+      .catch((error: unknown) => {
+        if (isSmacClash(error, "dispatch")) return "clash" as const;
+        throw error;
+      });
+    if (outcome === "clash") {
+      return taken(parsed.data.smacDispatchNumber, (holder) =>
+        holder
+          ? td("smacTaken", { number: parsed.data.smacDispatchNumber, label: holder })
+          : td("smacTakenSomewhere", { number: parsed.data.smacDispatchNumber }),
+      );
+    }
+    if (outcome === "notApproved") return { ok: false, error: td("notApproved") };
+    if (outcome === "same") {
+      return {
+        ok: false,
+        error: td("sameNumber"),
+        fieldErrors: { smacDispatchNumber: td("sameNumber") },
+      };
+    }
 
     revalidateChain();
     return { ok: true, data: { dispatchId: dispatch.id } };

@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, FileText, Pencil, RotateCcw, Undo2, X } from "lucide-react";
+import { Check, FileText, Pencil, PenLine, RotateCcw, Undo2, X } from "lucide-react";
 import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import {
   cancelQuotationAction,
+  correctQuotationNumberAction,
   decideQuotationAction,
   issueQuotationAction,
   sendBackQuotationAction,
@@ -53,6 +54,8 @@ export function QuotationActions({
     companyId: string;
     projectId: string | null;
     isLatest: boolean;
+    /** SMAC's number, once it has one — the thing she may correct (D88). */
+    smacNumber: string | null;
     draft: QuotationDraft;
   };
   scope: ActionScope;
@@ -200,6 +203,28 @@ export function QuotationActions({
               {t("quotations.revise")}
             </Button>
           }
+        />
+      ) : null}
+
+      {/* Hers alone, and only once there is a number to correct (D88). Quiet,
+          because it is the exception on this row, not one of its two actions. */}
+      {scope.coordinator && (issued || answered) && quotation.smacNumber ? (
+        <PromptDialog
+          trigger={
+            <Button variant="ghost" className="text-muted-foreground">
+              <PenLine aria-hidden="true" />
+              {t("quotations.correctNumber")}
+            </Button>
+          }
+          title={t("quotations.correctNumberTitle", { label })}
+          description={t("quotations.correctNumberHint")}
+          label={t("common.smacNumber")}
+          placeholder={t("common.asSmacIssuedIt")}
+          initialValue={quotation.smacNumber}
+          confirmLabel={t("quotations.correctNumber")}
+          successMessage={t("quotations.numberCorrected", { label })}
+          onConfirm={(smacNumber) => withId(correctQuotationNumberAction, { smacNumber })()}
+          onDone={refresh}
         />
       ) : null}
     </div>
