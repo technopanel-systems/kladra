@@ -71,7 +71,7 @@
             under it, D95); 14, 19, 25 (the guards, D96); 26, 30, 32 (a day as it happened,
             D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
             walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
-            D100)
+            D100); 45, 58, 65, 67 (what it says it is, D101)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -95,7 +95,7 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** inside P11A. The stranger read is done and ranked — §5 below, sixty-eight
+**Where I stopped:** inside P11A. The stranger read is done and ranked — §5 below, seventy
 entries with causes — and the worst are being fixed in committed slices, each one verified in
 the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A-2 (achieved
 metres are the raiser's and the m² formula is written once, D86), P11A-3 (a terminal action
@@ -105,16 +105,16 @@ D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its c
 backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
 figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10 (a day as it
 happened, D97), P11A-11 (a number is a call, D98), P11A-12 (derived from the source, walked in
-the spec, D99), P11A-13 (the database says what the code assumes — a closed list checked from
-its one constant, the use panel's index, a line's position unique, a target's month the first
-of the month; migration 0011, D100). Next is P11A-14: findings 45, 65, 67, 58 — the funnel's
-"never asked again" given an age, the log dialog opening on the contact the card shows, the
-dead `archivedCount`, and the unused-messages exemption narrowed so it stops hiding dead keys.
-Then 15 (words: 48, 59, 60 and the notes in the session's todo), 16 (tests that cannot pass
-for nothing: 47, 49, 50, 62), 61; 27, 28, 35, 51 wait for 11H, 34, 40, 41, 53, 66 for 11G,
-17–18, 54, 63–64 for 11B, 20 for 11G, 33 is noted. The dev database is seeded at volume
-(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is
-down to entries that are not defects.
+the spec, D99), P11A-13 (the database says what the code assumes, D100), P11A-14 (what it says
+it is — the funnel's sent-back row with the oldest's age, the log from a card on its contact,
+dead code gone, the unused-strings check no longer blind under `common`, D101). Next is
+P11A-15, the words: 48 (revision is one word), 59 ("picked"), 60 (person is one word), and the
+notes the Arabic reviewer left in the session's todo — the `لـ` spacing, the two shapes of
+`emptyStatus`, the hint that echoes its placeholder, the six-month sentence when two months are
+equal. Then 16 (a test that cannot pass for nothing: 47, 49, 50, 62), then 61; 27, 28, 35, 51
+wait for 11H, 34, 40, 41, 53, 66 for 11G, 17–18, 54, 63–64 for 11B, 20 for 11G, 33 is noted.
+The dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts
+it back. 11B–11J follow when §5 is down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -783,6 +783,12 @@ quotation line at a position already taken, and a target dated inside its month 
 its first day; `pg_indexes` has the use panel's index by person and instant and the line index
 by position — asked of the catalogue, not of the ORM's opinion (D100).
 
+**What it says it is** — `tests/numbers.spec.ts`, `tests/calls.spec.ts`
+The funnel's sent-back row reads "not asked again yet" and, when it counts anything, how many
+days ago the oldest was last sent back — the same number SQL gets from the trail. Faisal
+presses Log on a call card and the form opens on the contact the card names; from the drawer's
+header it opens on nobody (D101).
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -1010,7 +1016,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   78-95`: `(user_id, at)`. Reader cites code. (11C.)
 - [x] 44 **Seven admin writes log an audit row whether or not a row changed.** Verified for five; each writes its row only when one came back (P11A-3, D87). Restore is finding 11; setting a target is an upsert, and clearing one that was never set is still what was asked for. `admin.ts:196-630`;
   `.returning()` and a count, as `archiveCompanyAction` does. Reader cites code.
-- [ ] 45 **The funnel calls a fresh "sent back" request "never asked again".** `chain.ts:34-121`.
+- [x] 45 **The funnel calls a fresh "sent back" request "never asked again".** Verified; "not asked again yet", and the oldest's age beside it (P11A-14, D101). `chain.ts:34-121`.
   Fix: an age, said in the caption. Reader cites code.
 - [x] 46 **The round-sum-round m² formula is retyped in six places.** Verified — six files and two specs; `src/lib/sqm.ts` and `one-figure` in the lint (P11A-2, D86). `dispatches.ts:571`,
   `months.ts:65`, `reports.ts:157`, `standing.ts:59`, `export.ts:193`, a test. One fragment. (11C.)
@@ -1036,7 +1042,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   297-300`, `schema.ts:516-542`. (11C.)
 - [x] 57 **Two revisions at once collide on the unique index and crash generically.** Verified; the parent row is held, so the second takes the next number (P11A-1, D85).
   `quotations.ts:629-651`. Fix: name the collision. Reader cites code.
-- [ ] 58 **`unused-messages` exempts all of `common.*` off one dynamic call**, hiding a dead
+- [x] 58 **`unused-messages` exempts all of `common.*` off one dynamic call**, — verified; a bare namespace reaches its families only, from the shared table (P11A-14, D101) — hiding a dead
   and wrong key. `unused-messages.mts:28-46`. Reader cites code.
 - [ ] 59 **"picked" in `errors.cityNotInCountry`; the glossary says never pick or select.**
   `errors.json:12`. Reader cites code.
@@ -1049,11 +1055,11 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [ ] 63 **Nothing automated covers the live channel.** No spec opens `/api/events`. (11B.)
 - [ ] 64 **The NOTIFY chunking branch has never run.** `live.ts:30-51`, 150 per payload against
   fourteen people. A unit test with a synthetic audience. (11B.)
-- [ ] 65 **The log dialog does not preselect the contact the card shows.** `log-dialog.tsx`,
+- [x] 65 **The log dialog does not preselect the contact the card shows.** Verified; `contactId` from the card (P11A-14, D101). `log-dialog.tsx`,
   `call-band.tsx`: a `projectId` prop exists, no `contactId`. Reader cites code.
 - [ ] 66 **Eleven primary buttons fall back to a flat red instead of the brand gradient.**
   `button.tsx:12`, `globals.css:169`: `default` aliases `--primary` to the brand hue. (11G.)
-- [ ] 67 **`archivedCount()` is dead code whose comment describes a badge that was never
+- [x] 67 **`archivedCount()` is dead code whose comment describes a badge that was never — deleted (P11A-14, D101) —
   built.** `admin.ts:275-282`. Reader cites code.
 
 Merged: the quantity race (two readers), the SMAC pair, the six blind transitions, the

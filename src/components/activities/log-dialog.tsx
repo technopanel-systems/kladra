@@ -86,6 +86,12 @@ type LogRequest = {
   companyId: string;
   /** Pre-picked when the button sits on a project's own screen. */
   projectId?: string | null;
+  /**
+   * Pre-picked when the button sits beside one person's number — the day's
+   * call card names the main contact and then opened a form that did not
+   * know him (D101). The rep can still change it.
+   */
+  contactId?: string | null;
   entry?: LogEdit;
 };
 
@@ -173,6 +179,7 @@ export function LogDialogHost({
 export function LogButton({
   companyId,
   projectId,
+  contactId,
   entry,
   icon = false,
   onClick,
@@ -187,7 +194,7 @@ export function LogButton({
       {...button}
       onClick={(event) => {
         onClick?.(event);
-        if (!event.defaultPrevented) openFor({ companyId, projectId, entry });
+        if (!event.defaultPrevented) openFor({ companyId, projectId, contactId, entry });
       }}
     >
       {icon ? <NotebookPen aria-hidden="true" /> : null}
@@ -207,7 +214,7 @@ function LogPanel({
   request: LogRequest;
   target: LogTarget;
 }) {
-  const { companyId, projectId, entry } = request;
+  const { companyId, projectId, contactId: pickedContactId, entry } = request;
   const { companyName, contacts, projects } = target;
   const editing = entry !== undefined;
   const t = useTranslations();
@@ -222,7 +229,7 @@ function LogPanel({
   const [happenedOn, setHappenedOn] = useState<string | null>(todayRiyadh());
   const [nextFollowUp, setNextFollowUp] = useState<string | null>(null);
   const [project, setProject] = useState<string>(entry?.projectId ?? projectId ?? NONE);
-  const [contact, setContact] = useState<string>(entry?.contactId ?? NONE);
+  const [contact, setContact] = useState<string>(entry?.contactId ?? pickedContactId ?? NONE);
   const [textError, setTextError] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
@@ -235,7 +242,7 @@ function LogPanel({
     happenedOn !== today ||
     nextFollowUp !== null ||
     project !== (entry?.projectId ?? projectId ?? NONE) ||
-    contact !== (entry?.contactId ?? NONE);
+    contact !== (entry?.contactId ?? pickedContactId ?? NONE);
   // And the phone's back gesture, which D84's guard below never saw: it is a
   // route change, not a tap (D96).
   useBackGuard(open && dirty);

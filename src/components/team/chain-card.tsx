@@ -75,6 +75,20 @@ export async function ChainCard({ cohort }: { cohort: ChainCohort }) {
               <span className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
                 <span className={cn("min-w-0", count === 0 && "text-faint")}>
                   {t(`team.chain.${stage}`)}
+                  {/* A count hides an age: "sent back" with three in it might
+                      be three from this morning or one from March (D101). */}
+                  {stage === "returned" && count > 0 && cohort.returnedOldestDays !== null ? (
+                    <>
+                      {/* A visible separator, not only a margin: read aloud or
+                          selected, label and caption ran together in both
+                          languages ("…yet the oldest…"). */}
+                      {" "}
+                      <span className="text-xs text-muted-foreground">
+                        {"— "}
+                        {t("team.chainReturnedOldest", { days: cohort.returnedOldestDays })}
+                      </span>
+                    </>
+                  ) : null}
                 </span>
                 <span className={cn("flex items-baseline gap-2", count === 0 && "text-faint")}>
                   <span dir="ltr" className="num font-medium">

@@ -8,16 +8,13 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personName, personNameOf } from "@/lib/people";
 import {
-  companies,
   companyTargets,
-  contacts,
   nonWorkingDays,
-  projects,
   targets,
   users,
 } from "@/db/schema";
@@ -289,14 +286,4 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     reason: row.reason,
     companyArchived: row.company_archived,
   }));
-}
-
-/** How many rows are waiting in the archive — for the menu and the heading. */
-export async function archivedCount(): Promise<number> {
-  const [a, b, c] = await Promise.all([
-    db.select({ n: count() }).from(companies).where(isNotNull(companies.archivedAt)),
-    db.select({ n: count() }).from(contacts).where(isNotNull(contacts.archivedAt)),
-    db.select({ n: count() }).from(projects).where(isNotNull(projects.archivedAt)),
-  ]);
-  return Number(a[0]?.n ?? 0) + Number(b[0]?.n ?? 0) + Number(c[0]?.n ?? 0);
 }

@@ -22,7 +22,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { addDays, todayRiyadh, type Day } from "@/lib/dates";
+import { addDays, diffDays, todayRiyadh, type Day } from "@/lib/dates";
 
 /** The window the question is asked over. A quarter — long enough to have shape. */
 export const CHAIN_WINDOW_DAYS = 90;
@@ -34,7 +34,11 @@ export const CHAIN_WINDOW_DAYS = 90;
 export const CHAIN_STAGES = [
   /** Raised and still on the coordinator's desk. */
   "waiting",
-  /** She sent it back and the rep has not asked again. */
+  /**
+   * She sent it back and the rep has not asked again — yet. One sent back this
+   * morning sits here beside one from March, so the card says how old the
+   * oldest is rather than calling either of them never (D101).
+   */
   "returned",
   /** The rep took his own request back (D32). */
   "withdrawn",
@@ -60,6 +64,12 @@ export type ChainCohort = {
    */
   answered: number;
   reached: number;
+  /**
+   * How many days ago the oldest of the sent-back ones was last sent back —
+   * read off its `quotation.sendBack` audit row, not off `updated_at`, which an
+   * edit while it waits would move. Null when none is sent back.
+   */
+  returnedOldestDays: number | null;
 };
 
 /**
@@ -79,8 +89,28 @@ export async function chainCohort(
   const result = await db.execute<{
     stage: ChainStage;
     n: number;
+    oldest_returned: Day | null;
   }>(sql`
-    select case q.status
+    with cohort as (
+      select q.id, q.status
+        from quotations q
+        join companies c on c.id = q.company_id
+       where (q.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
+         and c.archived_at is null
+         and (${repId}::uuid is null or c.rep_id = ${repId}::uuid)
+    ),
+    sent_back as (
+      -- The day each sent-back one was LAST sent back: its latest sendBack row.
+      select (max(a.at) at time zone 'Asia/Riyadh')::date as on_day
+        from cohort co
+        join audit_log a
+          on a.record_type = 'quotation'
+         and a.record_id = co.id::text
+         and a.action = 'quotation.sendBack'
+       where co.status = 'returned'
+       group by co.id
+    )
+    select case status
              when 'requested' then 'waiting'
              when 'returned' then 'returned'
              when 'cancelled' then 'withdrawn'
@@ -88,12 +118,10 @@ export async function chainCohort(
              when 'accepted' then 'accepted'
              when 'rejected' then 'rejected'
            end as stage,
-           count(*)::int as n
-      from quotations q
-      join companies c on c.id = q.company_id
-     where (q.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-       and c.archived_at is null
-       and (${repId}::uuid is null or c.rep_id = ${repId}::uuid)
+           count(*)::int as n,
+           -- The same on every row, read once with the rest (D95).
+           to_char((select min(on_day) from sent_back), 'YYYY-MM-DD') as oldest_returned
+      from cohort
      group by 1
   `);
 
@@ -111,12 +139,15 @@ export async function chainCohort(
   // superseded still went out, and the one that replaced it is its own trip.
   const reached = ended.withCustomer + ended.accepted + ended.rejected;
 
+  const oldest = result.rows[0]?.oldest_returned ?? null;
+
   return {
     from,
     raised,
     ended,
     reached,
     answered: ended.accepted + ended.rejected,
+    returnedOldestDays: oldest ? diffDays(oldest, today) : null,
   };
 }
 

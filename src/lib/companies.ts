@@ -62,6 +62,8 @@ export type CompanyRow = {
   id: string;
   name: string;
   cityName: string | null;
+  /** Who the card names — so a log opened from it starts on him (D101). */
+  mainContactId: string | null;
   mainContactName: string | null;
   mainContactPhone: E164 | null;
   lastActivityOn: Day | null;
@@ -180,6 +182,7 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
       id: companies.id,
       name: companies.name,
       cityName: sql<string | null>`coalesce(${cityLabel}, ${companies.cityText})`,
+      mainContactId: mainContactIdSql(sql`companies.id`),
       mainContactName: mainContact("name"),
       mainContactPhone: mainContact("phone_normalized"),
       lastActivityOn: lastActivity,
@@ -199,6 +202,7 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
     id: row.id,
     name: row.name,
     cityName: row.cityName ?? null,
+    mainContactId: row.mainContactId ?? null,
     mainContactName: row.mainContactName ?? null,
     mainContactPhone: row.mainContactPhone ? storedE164(row.mainContactPhone) : null,
     lastActivityOn: row.lastActivityOn ?? null,

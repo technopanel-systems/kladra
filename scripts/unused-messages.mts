@@ -8,6 +8,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { families } from "./lib/message-families";
 
 function files(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -22,10 +23,40 @@ const code = [...files("src"), ...files("tests")].map((f) => readFileSync(f, "ut
 
 /**
  * Every prefix the code builds a key from at runtime — `common.${role}`,
- * `projects.lossReason.${code}`. Anything under one of these is reachable and
- * cannot be judged from the source, so it is never reported.
+ * `projects.lossReason.${code}`. A prefix that names a sub-namespace
+ * (`projects.lossReason`) is a family of its own and everything under it is
+ * reachable. A BARE namespace (`common`) is not: `common.${role}` reaches the
+ * five roles and nothing else, and treating it as reaching all of `common`
+ * exempted every key in the app's biggest namespace from this check for four
+ * phases (D101). So a bare prefix reaches exactly the members the source lists
+ * for it (scripts/lib/message-families.ts) — and a bare prefix with no family
+ * declared is a blind spot, reported rather than assumed.
  */
-const dynamicPrefixes = [...code.matchAll(/`([A-Za-z0-9_.]+)\.\$\{/g)].map((m) => m[1]);
+// Only prefixes that start with a message namespace: `quotation.${name}` in
+// quotation-events.ts is an audit action, not a key, and `majed.${n}` is an
+// email in a seed.
+const namespaces = new Set(
+  readdirSync("messages/en")
+    .filter((f) => f.endsWith(".json"))
+    .map((f) => f.replace(/\.json$/, "")),
+);
+const dynamicPrefixes = [...code.matchAll(/`([A-Za-z0-9_.]+)\.\$\{/g)]
+  .map((m) => m[1])
+  .filter((prefix) => namespaces.has(prefix.split(".")[0]));
+const reachable = new Map<string, Set<string>>();
+for (const [namespace, members] of families) {
+  if (namespace.includes(".")) continue;
+  const set = reachable.get(namespace) ?? new Set<string>();
+  for (const member of members) set.add(member);
+  reachable.set(namespace, set);
+}
+const blind = [...new Set(dynamicPrefixes)].filter((p) => !p.includes(".") && !reachable.has(p));
+if (blind.length > 0) {
+  console.error(
+    `unused-messages — dynamic keys under ${blind.join(", ")} with no family in scripts/lib/message-families.ts; the check is blind there`,
+  );
+  process.exit(1);
+}
 
 const unused: string[] = [];
 for (const file of readdirSync("messages/en").filter((f) => f.endsWith(".json"))) {
@@ -38,9 +69,14 @@ for (const file of readdirSync("messages/en").filter((f) => f.endsWith(".json"))
         continue;
       }
       const full = `${ns}.${key}`;
-      if (dynamicPrefixes.some((prefix) => full === prefix || full.startsWith(`${prefix}.`))) {
+      if (
+        dynamicPrefixes.some(
+          (prefix) => prefix.includes(".") && (full === prefix || full.startsWith(`${prefix}.`)),
+        )
+      ) {
         continue;
       }
+      if (reachable.get(ns)?.has(key)) continue;
       // Either the full path, or the bare key inside a namespaced translator.
       const escaped = full.replace(/\./g, "\\.");
       // The full path has to END where the key does. A plain `includes` counts

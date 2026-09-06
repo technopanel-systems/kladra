@@ -1,3 +1,4 @@
+import { addDays, diffDays, todayRiyadh } from "@/lib/dates";
 import { login } from "./helpers/auth";
 import { query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
@@ -415,4 +416,63 @@ test("a rep's floor and his day cannot disagree about what is waiting", async ({
       .filter({ hasText: t("team.openQuotations") })
       .locator('[data-slot="figure-caption"]'),
   ).toContainText(t("team.openWithCustomer", { count: withCustomer }));
+});
+
+test("the sent-back row says how old the oldest is", async ({ page, locale, t }) => {
+  // The same cohort chainCohort(null) reads on /team (SPEC D101): every
+  // quotation raised in the last 90 Riyadh days, on a live company, company-wide
+  // — nobody's floor scopes this card. `from` is computed here the same way
+  // src/lib/chain.ts computes it (today in Node, bound as a parameter) rather
+  // than with SQL's own `now()`, so a slow test run cannot put the two `today`s
+  // a day apart.
+  const today = todayRiyadh();
+  const from = addDays(today, -90);
+
+  const [{ oldest }] = await query<{ oldest: string | null }>(
+    `with cohort as (
+       select q.id, q.status
+         from quotations q
+         join companies c on c.id = q.company_id
+        where (q.created_at at time zone 'Asia/Riyadh')::date >= $1::date
+          and c.archived_at is null
+     ),
+     sent_back as (
+       -- The day each sent-back one was LAST sent back: its latest sendBack row.
+       select co.id, (max(a.at) at time zone 'Asia/Riyadh')::date as on_day
+         from cohort co
+         join audit_log a
+           on a.record_type = 'quotation'
+          and a.record_id = co.id::text
+          and a.action = 'quotation.sendBack'
+        where co.status = 'returned'
+        group by co.id
+     )
+     select to_char(min(on_day), 'YYYY-MM-DD') as oldest from sent_back`,
+    [from],
+  );
+  expect(oldest, "the seed has no sent-back quotation in the 90-day cohort").not.toBeNull();
+  const expectedDays = diffDays(oldest as string, today);
+
+  await login(page, locale, "abdulrahman");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+
+  const returned = page.locator('[data-stage="returned"]');
+
+  await test.step("the row still names its ending, and says how old the oldest is beside it", async () => {
+    // toContainText, not an exact concatenation: the caption sits in its own
+    // span behind a visible em dash ("— "), so asserting the joined string
+    // would also be asserting on that separator, which is a rendering detail
+    // and not the words D101 is about.
+    await expect(returned).toContainText(t("team.chain.returned"));
+    await expect(returned).toContainText(t("team.chainReturnedOldest", { days: expectedDays }));
+  });
+
+  await test.step("and the row is true of every one it counts, not only the newest", async () => {
+    // "never" is what the row used to say, in English, of a request sent back
+    // the same morning. It is what D101 removed — checked in English only, an
+    // Arabic screen never claimed a "never" in the first place.
+    if (locale === "en") {
+      await expect(returned).not.toContainText("never");
+    }
+  });
 });

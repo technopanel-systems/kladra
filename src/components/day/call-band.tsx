@@ -100,6 +100,7 @@ export function CallBand({ band }: { band: CallBandData }) {
             <span className="relative z-10">
               <LogButton
                 companyId={row.id}
+                contactId={row.mainContactId}
                 variant="outline"
                 size="sm"
                 className="text-xs"

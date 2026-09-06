@@ -385,6 +385,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   disagree. An index is added for a read that exists, named for the read, and the read is
   cited beside it. Every one of them is tried in `tests/schema.spec.ts` (rules/data.md: a
   constraint is only worth what it actually refuses).
+- **What it says it is.** Four from the stranger read (P11A, D101). A stage's words are true
+  of every row it counts, and where a count hides an age the age is said beside it. A dialog
+  opened from a card starts on what the card shows. Dead code is deleted, not kept for a badge
+  nobody built. And a check that exempts a whole namespace checks nothing there — it exempts
+  what the source can produce, read from the one table both checks share.
 
 ## §4 Not built until asked
 

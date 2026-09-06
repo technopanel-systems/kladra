@@ -6,6 +6,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { families } from "./lib/message-families";
 
 type Tree = { [key: string]: string | Tree };
 
@@ -139,71 +140,6 @@ for (const [k, v] of ar) {
   }
 }
 
-/**
- * Families a screen renders with a computed key — `t(`common.${role}`)`.
- *
- * The parity check above cannot see these: `common.marketing` was missing from
- * BOTH locales, so both agreed, and the shell printed the key itself under
- * everybody's name on every screen the day the fifth role landed. The members
- * are read from the source union rather than listed here, because a list beside
- * a union is the second copy that drifts (D42's shape, in messages).
- */
-function union(file: string, name: string): string[] {
-  const source = readFileSync(resolve(import.meta.dirname, "..", file), "utf8");
-  const line = new RegExp(`export (?:type|const) ${name}[^=]*=([^;]+);`).exec(source);
-  if (!line) {
-    console.error(`check:messages — cannot find ${name} in ${file}; the families check is blind`);
-    process.exit(1);
-  }
-  // A union is a list of quoted words; a pgEnum is `pgEnum("name", [...])` and
-  // the SQL name is not one of them, so the array wins where there is one.
-  const list = /\[([^\]]*)\]/.exec(line[1]);
-  const members = [...(list ? list[1] : line[1]).matchAll(/"([a-z]\w*)"/g)].map((m) => m[1]);
-  if (members.length === 0) {
-    console.error(`check:messages — ${name} in ${file} has no members; the families check is blind`);
-    process.exit(1);
-  }
-  return members;
-}
-
-/**
- * The same blindness, one shape along: a table of `{ key: "x" }` rows that a
- * component turns into `t(row.key)`. `src/lib/report-figures.ts` is one — the
- * report screen renders ten labels out of it and not one of them is written at
- * a call site — so the keys are read back out of the table itself rather than
- * listed here, because a list beside the table is the copy that drifts.
- */
-function tableKeys(file: string): string[] {
-  const source = readFileSync(resolve(import.meta.dirname, "..", file), "utf8");
-  const members = [...source.matchAll(/key: "([a-z][A-Za-z0-9]*)"/g)].map((m) => m[1]);
-  if (members.length === 0) {
-    console.error(`check:messages — no keys in ${file}; the families check is blind`);
-    process.exit(1);
-  }
-  return [...new Set(members)];
-}
-
-// Every computed key a screen renders — t(`namespace.${member}`) — and the
-// source list it reads from. A family missing here is a key the parity check
-// cannot see (P11A finding 25: there were five of eleven). Finding them: grep
-// src for "t(`".
-const families: [string, string[]][] = [
-  ["common", union("src/lib/types.ts", "ROLES")],
-  ["common", union("src/db/schema.ts", "channelEnum")],
-  ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
-  ["reports", tableKeys("src/lib/report-figures.ts")],
-  ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
-  ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
-  ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
-  ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
-  ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],
-  ["projects.lossReason", union("src/components/projects/mark-lost-dialog.tsx", "LOSS_REASON_CODES")],
-  ["notifications", union("src/lib/notify.ts", "NOTIFICATION_KINDS")],
-  [
-    "companies",
-    union("src/components/companies/follow-up-strip.tsx", "Pill").map((pill) => `${pill}Count`),
-  ],
-];
 for (const [namespace, members] of families) {
   for (const member of members) {
     const key = `${namespace}.${member}`;

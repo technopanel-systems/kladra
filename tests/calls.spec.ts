@@ -307,3 +307,86 @@ test("the number prompts name the customer", async ({ page, locale, t }) => {
     await expect(ask).toBeHidden();
   });
 });
+
+test("the log from a call card starts on the contact the card names", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // The same fixture as the first test in this file: Faisal's due company with
+  // a main contact who carries a phone. Found afresh rather than shared across
+  // tests — each test gets its own page and its own undo.
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const today = todayRiyadh();
+
+  const found = await dueWithContact(faisal, today);
+  let wroteFollowUp = false;
+  const company = found[0] ?? (await anyWithContact(faisal));
+  if (!found[0]) {
+    wroteFollowUp = true;
+    await query(`update companies set next_follow_up = $2::date where id = $1::uuid`, [
+      company.id,
+      today,
+    ]);
+  }
+
+  try {
+    await test.step("the card's Log button (D101): the dialog opens on the contact it names", async () => {
+      await login(page, locale, "faisal");
+      await page.goto(`/${locale}/day`);
+      await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible(COLD);
+
+      const section = callsSection(page, t("day.whoToCall"));
+      const card = section.getByRole("listitem").filter({ hasText: company.name });
+      await expect(card).toBeVisible();
+
+      await card.getByRole("button", { name: t("day.logFor", { name: company.name }) }).click();
+
+      const dialog = page.getByRole("dialog", { name: t("drawer.logTitle") });
+      await expect(dialog).toBeVisible();
+
+      // A shadcn Select, not a native one (log-dialog.tsx): the trigger's own
+      // value slot shows the picked contact's name, and the rep can still
+      // change it — nothing here disables the field.
+      const contactField = dialog.getByRole("combobox", { name: t("common.contact") });
+      await expect(contactField.locator('[data-slot="select-value"]')).toHaveText(
+        company.contact_name,
+      );
+
+      // Cancel — the entry is never typed, so there is nothing to undo.
+      await dialog.getByRole("button", { name: t("common.cancel") }).click();
+      await expect(dialog).toBeHidden();
+    });
+
+    await test.step("the drawer header's Log button (D101): it does not know whom to preselect", async () => {
+      // The card knows whom it shows; the header, opened with no contact in
+      // hand, offers exactly the same field with nothing picked.
+      await page.goto(`/${locale}/companies?open=${company.id}`);
+      const drawer = page.getByRole("dialog", { name: company.name });
+      await expect(drawer).toBeVisible(COLD);
+
+      await drawer
+        .getByRole("group", { name: t("drawer.companyActions") })
+        .getByRole("button", { name: t("common.log"), exact: true })
+        .click();
+
+      const dialog = page.getByRole("dialog", { name: t("drawer.logTitle") });
+      await expect(dialog).toBeVisible();
+
+      const contactField = dialog.getByRole("combobox", { name: t("common.contact") });
+      await expect(contactField.locator('[data-slot="select-value"]')).toHaveText(
+        t("drawer.noContact"),
+      );
+
+      await dialog.getByRole("button", { name: t("common.cancel") }).click();
+      await expect(dialog).toBeHidden();
+    });
+  } finally {
+    if (wroteFollowUp) {
+      await query(`update companies set next_follow_up = $2 where id = $1::uuid`, [
+        company.id,
+        company.next_follow_up,
+      ]);
+    }
+  }
+});

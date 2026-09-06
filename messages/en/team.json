@@ -47,12 +47,13 @@
   "chainTitle": "Where quotations go",
   "chain": {
     "waiting": "Still on the coordinator’s desk",
-    "returned": "Sent back and never asked again",
+    "returned": "Sent back, not asked again yet",
     "withdrawn": "Withdrawn by the rep",
     "withCustomer": "With the customer, no answer yet",
     "accepted": "The customer accepted",
     "rejected": "The customer rejected"
   },
+  "chainReturnedOldest": "{days, plural, =0 {the latest today} =1 {the oldest yesterday} other {the oldest # days ago}}",
   "stuckQuiet": "Gone quiet",
   "quietDays": "{count, plural, one {no activity for # day} other {no activity for # days}}",
   "openWithCustomer": "{count, plural, =0 {none with a customer} one {# with the customer} other {# with the customer}}",
