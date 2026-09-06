@@ -15,7 +15,6 @@
   "followUpCleared": "Follow-up date cleared",
   "followUpClearedProject": "The company’s date is cleared. {project} still has its own.",
   "projectDrivesFollowUp": "{project} is due {date}. The Companies list shows the earlier of the two — the date above is the company’s own.",
-  "openWhatsApp": "Open WhatsApp",
   "lost": "Lost",
   "lostOn": "Lost on {date}",
   "logTitle": "Log what happened",

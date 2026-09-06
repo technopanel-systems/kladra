@@ -146,17 +146,23 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
         where companies.rep_id = $1::uuid and companies.archived_at is null`,
       [faisal.id],
     );
+    // Every link on the table that is not a way to reach a person — the number
+    // as a message and the handset as a call (D98) — is a company link. Told
+    // apart by what the link IS (its scheme), not by what its text looks like:
+    // the call link has no text at all, and a skip written against the shape
+    // of a phone number let it through as a company called "".
     const shown = await page
       .getByRole("table")
       .first()
-      .getByRole("link")
+      .locator('a:not([href^="tel:"]):not([href^="https://wa.me/"])')
       .filter({ visible: true })
       .allInnerTexts();
     const names = new Set(mine.map((row) => row.name));
     for (const text of shown) {
       const first = text.split("\n")[0].trim();
-      if (first.startsWith("0") || first.startsWith("+")) continue; // a phone link
-      expect(names.has(first), `${first} is not one of Faisal's companies`).toBe(true);
+      expect(names.has(first), `${JSON.stringify(first)} is not one of Faisal's companies`).toBe(
+        true,
+      );
     }
 
     await page.getByRole("link", { name: t("team.backToTeam") }).click();

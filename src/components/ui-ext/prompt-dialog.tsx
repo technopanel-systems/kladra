@@ -49,6 +49,7 @@ export function PromptDialog({
   onConfirm,
   onDone,
   initialValue,
+  context,
 }: {
   trigger: ReactNode;
   title: string;
@@ -59,6 +60,11 @@ export function PromptDialog({
   multiline?: boolean;
   /** What the field holds when the dialog opens — a correction starts from the current value. */
   initialValue?: string;
+  /**
+   * Whose record this is, under the title: the customer's name, so a number is
+   * typed against a company and not against a bare label (D98).
+   */
+  context?: string;
   confirmLabel: string;
   successMessage: string;
   onConfirm: (value: string) => Promise<ActionResult<unknown>>;
@@ -102,6 +108,11 @@ export function PromptDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          {context ? (
+            <p data-slot="prompt-context" className="text-sm font-medium">
+              <bdi>{context}</bdi>
+            </p>
+          ) : null}
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 

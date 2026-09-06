@@ -34,6 +34,8 @@ import { join } from "node:path";
  * often; the verb is written `سجّل` and that is what is listed.
  */
 const ADDRESSED_TO_A_MAN = [
+  "اتصل",
+  "اتّصل",
   "اختر",
   "اكتب",
   "أضف",

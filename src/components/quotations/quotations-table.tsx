@@ -562,6 +562,7 @@ export function QuotationSheet({
               label: quotation.label,
               status: quotation.status,
               companyId: quotation.companyId,
+              companyName: quotation.companyName,
               projectId: quotation.projectId,
               isLatest: quotation.isLatest,
               smacNumber: quotation.smacNumber,

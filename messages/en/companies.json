@@ -8,6 +8,7 @@
   "noContact": "No contact yet",
   "openCompany": "Open {name}",
   "whatsappContact": "WhatsApp {name}",
+  "callContact": "Call {name}",
   "overdueCount": "{count} overdue",
   "todayCount": "{count} today",
   "neverCount": "{count, plural, one {# company never contacted} other {# companies never contacted}}",

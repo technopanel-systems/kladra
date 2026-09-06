@@ -505,6 +505,7 @@ export function DispatchSheet({
               id: dispatch.id,
               label: dispatch.label,
               status: dispatch.status,
+              companyName: dispatch.companyName,
               quotationId: dispatch.quotationId,
               quotationLabel: dispatch.quotationLabel,
               smacDispatchNumber: dispatch.smacDispatchNumber,

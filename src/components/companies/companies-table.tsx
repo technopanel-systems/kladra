@@ -1,6 +1,5 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import {
   Table,
@@ -14,7 +13,8 @@ import {
 import { useArrived } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
-import { formatPhone, whatsappHref, type E164 } from "@/lib/phone";
+import { PhoneLinks } from "@/components/ui-ext/phone-links";
+import type { E164 } from "@/lib/phone";
 import { followUpClass } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
@@ -56,28 +56,6 @@ type RowProps = {
 const ROW_LINK =
   "rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50";
 
-function Phone({ name, phone }: { name: string; phone: E164 }) {
-  const t = useTranslations();
-  return (
-    <a
-      href={whatsappHref(phone)}
-      target="_blank"
-      rel="noreferrer"
-      className="relative z-10 inline-flex items-center gap-1 rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
-    >
-      <MessageCircle aria-hidden="true" className="size-3 shrink-0" />
-      <span dir="ltr" translate="no" className="num">
-        {formatPhone(phone)}
-      </span>
-      {/* The number is the visible label, so it stays IN the accessible name and
-          this extends it — an `aria-label` here replaced the number with the
-          contact's name, and a person using speech input says what they can see
-          (DESIGN §5). The same shape the call list already used. */}
-      <span className="sr-only">{t("companies.whatsappContact", { name })}</span>
-    </a>
-  );
-}
-
 function DeskRow({ row, href, today, current }: RowProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -103,7 +81,7 @@ function DeskRow({ row, href, today, current }: RowProps) {
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="truncate">{row.contactName ?? "—"}</span>
             {row.contactPhone ? (
-              <Phone name={row.contactName ?? row.name} phone={row.contactPhone} />
+              <PhoneLinks name={row.contactName ?? row.name} phone={row.contactPhone} />
             ) : null}
           </span>
         ) : (
@@ -161,7 +139,7 @@ function CardRow({ row, href, today, current }: RowProps) {
           <>
             <span className="truncate text-foreground">{row.contactName ?? "—"}</span>
             {row.contactPhone ? (
-              <Phone name={row.contactName ?? row.name} phone={row.contactPhone} />
+              <PhoneLinks name={row.contactName ?? row.name} phone={row.contactPhone} />
             ) : null}
           </>
         ) : (

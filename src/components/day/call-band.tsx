@@ -1,12 +1,11 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { LogButton } from "@/components/activities/log-dialog";
 import { DayText } from "@/components/ui-ext/day-text";
+import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import { Link } from "@/i18n/navigation";
 import type { CompanyRow } from "@/lib/companies";
-import { formatPhone, whatsappHref } from "@/lib/phone";
 import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
@@ -76,7 +75,14 @@ export function CallBand({ band }: { band: CallBandData }) {
                 <bdi>{row.name}</bdi>
               </Link>
               <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                {row.mainContactName ? <bdi>{row.mainContactName}</bdi> : null}
+                {/* The same words the customer list uses when there is nobody
+                    to call (D98): a card on "Calls due" with no contact and no
+                    number said nothing, and the rep read it as a card to tap. */}
+                {row.mainContactName ? (
+                  <bdi>{row.mainContactName}</bdi>
+                ) : row.mainContactPhone ? null : (
+                  <span className="text-faint">{t("companies.noContact")}</span>
+                )}
                 {row.cityName ? <span>{row.cityName}</span> : null}
               </span>
             </span>
@@ -105,18 +111,11 @@ export function CallBand({ band }: { band: CallBandData }) {
             </span>
 
             {row.mainContactPhone ? (
-              <a
-                href={whatsappHref(row.mainContactPhone)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="relative z-10 inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs hover:bg-surface"
-              >
-                <MessageCircle aria-hidden="true" className="size-3.5" />
-                <span dir="ltr" translate="no" className="num">
-                  {formatPhone(row.mainContactPhone)}
-                </span>
-                <span className="sr-only">{t("drawer.openWhatsApp")}</span>
-              </a>
+              <PhoneLinks
+                name={row.mainContactName ?? row.name}
+                phone={row.mainContactPhone}
+                chip
+              />
             ) : null}
           </li>
         ))}

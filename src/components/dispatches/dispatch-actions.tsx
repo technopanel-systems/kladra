@@ -45,6 +45,8 @@ export function DispatchActions({
     id: string;
     label: string;
     status: DispatchStatus;
+    /** Under the SMAC prompts' titles: whose number is being typed (D98). */
+    companyName: string;
     quotationId: string;
     quotationLabel: string;
     /** SMAC's dispatch number, once approved — the thing she may correct (D88). */
@@ -87,6 +89,7 @@ export function DispatchActions({
               </Button>
             }
             title={t("dispatches.approveTitle", { label })}
+            context={dispatch.companyName}
             description={t("dispatches.approveHint")}
             label={t("common.smacDispatchNumber")}
             placeholder={t("common.asSmacIssuedIt")}
@@ -141,6 +144,7 @@ export function DispatchActions({
             </Button>
           }
           title={t("dispatches.correctNumberTitle", { label })}
+          context={dispatch.companyName}
           description={t("dispatches.correctNumberHint")}
           label={t("common.smacDispatchNumber")}
           placeholder={t("common.asSmacIssuedIt")}

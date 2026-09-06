@@ -148,3 +148,8 @@ export function formatPhone(e164: E164 | null | undefined): string {
 export function whatsappHref(e164: E164): string {
   return `https://wa.me/${e164.replace(/\D/g, "")}`;
 }
+
+/** The same number as a call: on a phone this dials, which "Calls due" never offered (D98). */
+export function telHref(e164: E164): string {
+  return `tel:${e164}`;
+}

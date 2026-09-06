@@ -15,7 +15,6 @@
   "followUpCleared": "تم مسح تاريخ المتابعة",
   "followUpClearedProject": "تم مسح تاريخ الشركة. وما زال لمشروع {project} تاريخه الخاص.",
   "projectDrivesFollowUp": "مشروع {project} عليه متابعة في {date}. تُظهر قائمة الشركات الأقرب من التاريخين، والتاريخ أعلاه للشركة وحدها.",
-  "openWhatsApp": "فتح واتساب",
   "lost": "خاسر",
   "lostOn": "سُجّل كخاسر في {date}",
   "logTitle": "تسجيل ما حدث",

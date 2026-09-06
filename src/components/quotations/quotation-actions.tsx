@@ -52,6 +52,8 @@ export function QuotationActions({
     label: string;
     status: QuotationStatus;
     companyId: string;
+    /** Under the SMAC prompts' titles: whose number is being typed (D98). */
+    companyName: string;
     projectId: string | null;
     isLatest: boolean;
     /** SMAC's number, once it has one — the thing she may correct (D88). */
@@ -96,6 +98,7 @@ export function QuotationActions({
               </Button>
             }
             title={t("quotations.issueTitle", { label })}
+            context={quotation.companyName}
             description={t("quotations.issueHint")}
             label={t("common.smacNumber")}
             placeholder={t("common.asSmacIssuedIt")}
@@ -217,6 +220,7 @@ export function QuotationActions({
             </Button>
           }
           title={t("quotations.correctNumberTitle", { label })}
+          context={quotation.companyName}
           description={t("quotations.correctNumberHint")}
           label={t("common.smacNumber")}
           placeholder={t("common.asSmacIssuedIt")}

@@ -363,6 +363,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   the day it counts from, never from a convenient anchor like the first of the month or sixty
   days: the anchor is the second definition of "when the wait began", and the two disagree the
   first time a wait is longer than the anchor.
+- **A number is a call.** Three from the stranger read (P11A, D98). A phone number on screen is
+  drawn once (`PhoneLinks`) and is two verbs — message and call — because a screen named for
+  calling that only messages is missing the verb in its own name; the number stays the visible
+  label of the message link, and the handset is icon-only with the person's name in its label.
+  A card that lacks a thing says so in the words the list uses for the same lack — "No contact
+  yet" on a call card, not silence. And a prompt that takes a value names what the value is for:
+  a number typed against "Q-12" is typed against a label, and the customer's name under the
+  title is what makes it typed against a company.
 
 ## §4 Not built until asked
 

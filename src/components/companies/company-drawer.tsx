@@ -1,4 +1,4 @@
-import { ChevronRight, FileText, MessageCircle, Pencil, Plus, Star } from "lucide-react";
+import { ChevronRight, FileText, Pencil, Plus, Star } from "lucide-react";
 import { projectOptionValue } from "@/lib/picker-option";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
@@ -18,6 +18,7 @@ import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
@@ -36,7 +37,6 @@ import { dayOf, formatDay } from "@/lib/dates";
 import { formatSqm } from "@/lib/money";
 import { TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
-import { formatPhone, whatsappHref } from "@/lib/phone";
 
 /**
  * The company drawer (SPEC §3, DESIGN §2 — work happens in a drawer over the
@@ -292,20 +292,10 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                       </span>
                     ) : null}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                      {/* A tap opens WhatsApp; the number itself is the link
-                          text, so it is always readable (SPEC §3). */}
-                      <a
-                        href={whatsappHref(row.phoneNormalized)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 hover:underline"
-                      >
-                        <MessageCircle aria-hidden="true" className="size-3.5" />
-                        <span dir="ltr" className="num">
-                          {formatPhone(row.phoneNormalized)}
-                        </span>
-                        <span className="sr-only">{t("drawer.openWhatsApp")}</span>
-                      </a>
+                      {/* A tap opens WhatsApp and the handset dials; the number
+                          itself is the link text, so it is always readable
+                          (SPEC §3, D98). */}
+                      <PhoneLinks name={row.name} phone={row.phoneNormalized} />
                       {row.email ? (
                         <a
                           href={`mailto:${row.email}`}
