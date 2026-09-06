@@ -73,11 +73,13 @@
             walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
             D100); 45, 58, 65, 67 (what it says it is, D101); 48, 59, 60 (one word for one
             thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103); 61 (the
-            volume floor has a past, D104); 11B: 17, 18, 54, 63, 64 (live is proved, D105)
+            volume floor has a past, D104); 11B: 17, 18, 54, 63, 64 (live is proved, D105);
+            11C-1 (closed where the code is closed, D106); 11C-2 (reads measured at the
+            volume floor, D107)
       - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
-      - [ ] C Database and data honesty, read as a critic: shapes, constraints, indexes,
+      - [x] C Database and data honesty, read as a critic: shapes, constraints, indexes,
             figures computable two ways, history worth keeping; then the messy realities;
             migrations proved from information_schema
       - [ ] D The whole flow, creation to oversight, walked step by step: what is retyped,
@@ -113,10 +115,15 @@ volume floor has a past). What remains in §5 is parked on purpose: 17–18, 54,
 slice (D105): two people, no reload, in `tests/live.spec.ts`, timed; every list marks an
 arrived row, and the mark's two seconds start when the row is on screen (timed on the page's
 own clock); the channel and the count open for a viewer; a listener outage ends with one
-resync; the chunking branch ran against four hundred. Next is box 11C, database honesty — the
-sweep after D100: every rule the code assumes held by the database, every read that exists
-served by an index it can use (EXPLAIN at volume), every migration confirmed from the
-catalogue in `tests/schema.spec.ts`. The dev database is seeded
+resync; the chunking branch ran against four hundred. Box 11C is done in two slices, one
+commit (D106, D107): three more free-text columns closed where the code is closed, the trail's
+eighteen record kinds derived rather than copied, migration 0012; one archived company in the
+demo so the archive rule's second half and the archive screen have a row; the schema file and the
+catalogue held to each other both ways in `tests/schema.spec.ts`; every screen's reads logged
+and explained at the volume floor, one index added where a plan grew per row, the baseline
+written in §3 and the round-trip count parked for 11I as §5 #71. Next is box 11D, the whole
+flow walked step by step, creation to oversight: what is retyped, how many clicks, what a
+person must remember, where two screens could disagree. The dev database is seeded
 at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -784,7 +791,22 @@ instant and an undecided one with it. The admin sweeps in `tests/admin.spec.ts` 
 The database refuses a notice about a kind of record it has no list entry for, a second
 quotation line at a position already taken, and a target dated inside its month rather than on
 its first day; `pg_indexes` has the use panel's index by person and instant and the line index
-by position — asked of the catalogue, not of the ORM's opinion (D100).
+by position — asked of the catalogue, not of the ORM's opinion (D100). A notice of a kind no
+locale has a sentence for, a trail line about a kind of record nobody writes, and an archive
+reason on a live company are each refused; and every check and index the schema file names is
+in the catalogue, and nothing in the catalogue is a stranger to the schema file (D106).
+
+**What the database is asked** — baseline for 11I (D107)
+Measured 6 Sep 2026 on the production build against the volume floor (828 companies, 432
+projects, 348 quotations, 551 activities): every role's screens, 653 statements over 45 screens.
+Worst statement 12.6 ms — the manager's projects list, before `activities_project_happened_idx`;
+manager's day 48 statements and 29 ms of database time; rep's day 32 and 22 ms; admin sign-in
+32 and 16 ms; every other screen under 10 ms. Method: `alter system set
+log_min_duration_statement = 0` and a `%d` in `log_line_prefix` on the kladra database, one
+marker statement per screen, `docker logs kladra-db-1 --since`, then EXPLAIN (ANALYZE, BUFFERS)
+of each distinct statement with the parameters the log recorded; both settings reset after.
+11I builds the repeatable harness and re-measures after any change to a read; a screen may not
+grow past these numbers without a sentence here saying why.
 
 **What it says it is** — `tests/numbers.spec.ts`, `tests/calls.spec.ts`
 The funnel's sent-back row reads "not asked again yet" and, when it counts anything, how many
@@ -1113,3 +1135,10 @@ P10d before this list was written (D83).
   one sheet, against rules/words.md. Cause: a second way to lay out typed text, written by hand.
   Fixed in P11A-12: both boxes are `Prose`, and `one-look` now refuses a hand-laid typed block
   (`whitespace-pre-*` outside `prose.tsx`).
+
+- [ ] 71 **One screen asks the database forty-eight questions, and every screen reads the session
+  row seven times over.** Measured in 11C-2 (D107): the manager's day is 48 statements — seven of
+  them the session, six the non-working-days calendar, one per band — the rep's day 32, and each
+  statement is under 4 ms, so what a screen costs is round trips, not work. For 11I: read the
+  session once per request and let a screen's bands share one calendar; then re-measure against
+  the §3 baseline.

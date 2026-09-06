@@ -410,6 +410,10 @@ async function seedCompanies(
             notes: c.notes ?? null,
             repId: must(userIds, c.rep, "user"),
             nextFollowUp: null,
+            // Off the floor, with the reason (D87); the check refuses a reason
+            // on a company that has not left (D106).
+            archivedAt: c.archived ? instant(addDays(TODAY, -c.archived.daysAgo), 16, 20) : null,
+            archiveReason: c.archived?.reason ?? null,
             createdAt: created,
             updatedAt: created,
           };
@@ -420,6 +424,27 @@ async function seedCompanies(
       const row = rows.find((r) => r.name === c.name);
       if (!row) throw new Error(`company ${c.name} did not come back from the insert`);
       companyIds.set(c.key, row.id);
+    }
+
+    // An archive is a write somebody made (D104): the admin's row in the trail,
+    // as the archive screen and the company's history read it.
+    const archived = COMPANIES.filter((c) => c.archived);
+    if (archived.length > 0) {
+      await tx.insert(auditLog).values(
+        archived.map((c) => {
+          const when = instant(addDays(TODAY, -c.archived!.daysAgo), 16, 20);
+          return {
+            userId: must(userIds, "jerom", "user"),
+            action: "company.archive",
+            recordType: "company" as const,
+            recordId: companyIds.get(c.key)!,
+            details: { reason: c.archived!.reason },
+            at: when,
+            createdAt: when,
+            updatedAt: when,
+          };
+        }),
+      );
     }
 
     const contactValues = COMPANIES.flatMap((c) =>
@@ -536,7 +561,7 @@ async function seedActivities(
       rows.map((row, i) => ({
         userId: values[i].userId,
         action: "activity.create",
-        recordType: "activity",
+        recordType: "activity" as const,
         recordId: row.id,
         details: { channel: values[i].channel },
         at: values[i].createdAt,
@@ -628,7 +653,7 @@ async function writeTrail(tx: Tx, quotationId: string, events: TrailEvent[]): Pr
     events.map((e) => ({
       userId: e.by,
       action: quotationEvent(e.name),
-      recordType: "quotation",
+      recordType: "quotation" as const,
       recordId: quotationId,
       details: e.reason ? { reason: e.reason } : {},
       at: e.at,
@@ -816,7 +841,7 @@ async function seedDispatches(
         {
           userId: must(userIds, d.rep, "user"),
           action: "dispatch.request",
-          recordType: "dispatch",
+          recordType: "dispatch" as const,
           recordId: row.id,
           details: {},
           at: created,
@@ -827,7 +852,7 @@ async function seedDispatches(
           ? [{
               userId: desk,
               action: "dispatch.approve",
-              recordType: "dispatch",
+              recordType: "dispatch" as const,
               recordId: row.id,
               details: { smacDispatchNumber: d.smacDispatchNumber ?? null },
               at: approvedAt,
@@ -839,7 +864,7 @@ async function seedDispatches(
           ? [{
               userId: desk,
               action: "dispatch.refuse",
-              recordType: "dispatch",
+              recordType: "dispatch" as const,
               recordId: row.id,
               details: { reason: d.refuseReason ?? "" },
               at: refusedAt,
@@ -988,7 +1013,7 @@ async function seedHistory(
         {
           userId: him,
           action: "dispatch.request",
-          recordType: "dispatch",
+          recordType: "dispatch" as const,
           recordId: dispatch.id,
           details: {},
           at: raised,
@@ -998,7 +1023,7 @@ async function seedHistory(
         {
           userId: her,
           action: "dispatch.approve",
-          recordType: "dispatch",
+          recordType: "dispatch" as const,
           recordId: dispatch.id,
           details: { smacDispatchNumber: String(8000 + dispatchNumber) },
           at: approved,
@@ -1197,7 +1222,7 @@ async function seedReports(userIds: Map<string, string>): Promise<number> {
       rows.map((row, i) => ({
         userId: values[i].userId,
         action: "report.write",
-        recordType: "daily_report",
+        recordType: "daily_report" as const,
         recordId: row.id,
         details: { day: values[i].day },
         at: values[i].createdAt,

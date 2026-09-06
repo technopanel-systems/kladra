@@ -22,6 +22,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import {
+  type AuditRecordType,
   auditLog,
   companies,
   companyTargets,
@@ -70,7 +71,7 @@ async function record(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   actorId: string,
   action: string,
-  recordType: string,
+  recordType: AuditRecordType,
   recordId: string,
   details: Record<string, unknown>,
 ): Promise<void> {

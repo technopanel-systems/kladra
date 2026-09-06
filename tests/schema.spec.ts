@@ -1,4 +1,7 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { test, expect } from "@playwright/test";
+import { AUDIT_RECORD_TYPES, NOTIFICATION_KINDS } from "@/db/schema";
 import { one, query } from "./helpers/db";
 
 /**
@@ -358,4 +361,167 @@ test("the catalogue carries what D100 promised", async () => {
     "notifications_subject_type_check",
     "targets_month_check",
   ]);
+});
+
+test("a notice's kind is one of the list (0012, D106)", async () => {
+  // kind was the same trap subject_type already had (D100): a TypeScript union
+  // over a free-text column, closed in the editor and open in the database.
+  const seeded = await one<{
+    user_id: string;
+    params: Record<string, unknown>;
+    link: string;
+    subject_type: string;
+    subject_id: string;
+  }>("select user_id, params, link, subject_type, subject_id from notifications limit 1");
+
+  // A copy of a real row with the kind swapped for one no locale has a
+  // sentence for — it would reach the bell as a raw key.
+  const bad = await refused(
+    `insert into notifications (user_id, kind, params, link, subject_type, subject_id)
+     values ($1::uuid, 'somethingElse', $2::jsonb, $3, $4, $5::uuid)`,
+    [seeded.user_id, JSON.stringify(seeded.params), seeded.link, seeded.subject_type, seeded.subject_id],
+  );
+  expect(bad).toContain("violates check constraint");
+  expect(bad).toContain("notifications_kind_check");
+
+  // And the other way round: every kind the app actually writes, from the one
+  // list the check itself reads — never a copy of it typed again here.
+  try {
+    for (const kind of NOTIFICATION_KINDS) {
+      await query(
+        `insert into notifications (user_id, kind, params, link, subject_type, subject_id)
+         values ($1::uuid, $2, $3::jsonb, '/spec-11c1', $4, gen_random_uuid())`,
+        [seeded.user_id, kind, JSON.stringify(seeded.params), seeded.subject_type],
+      );
+    }
+    const written = await query("select kind from notifications where link = '/spec-11c1'");
+    expect(written, "not every listed kind was accepted").toHaveLength(NOTIFICATION_KINDS.length);
+  } finally {
+    await query("delete from notifications where link = '/spec-11c1'");
+  }
+});
+
+test("a trail line is about a kind of record the app writes (0012, D106)", async () => {
+  const user = await one<{ id: string }>("select id from users limit 1");
+
+  // A kind the trail has no word for — nothing renders it, nothing clears it.
+  const bad = await refused(
+    `insert into audit_log (user_id, action, record_type, record_id)
+     values ($1::uuid, 'spec.check', 'invoice', gen_random_uuid()::text)`,
+    [user.id],
+  );
+  expect(bad).toContain("violates check constraint");
+  expect(bad).toContain("audit_log_record_type_check");
+
+  // Every kind the trail is actually written against — the eight floor
+  // records, the two admin settings, the eight reference lists — from
+  // AUDIT_RECORD_TYPES itself, so a ninth list added there is proven here too.
+  try {
+    for (const recordType of AUDIT_RECORD_TYPES) {
+      await query(
+        `insert into audit_log (user_id, action, record_type, record_id)
+         values ($1::uuid, 'spec.check', $2, gen_random_uuid()::text)`,
+        [user.id, recordType],
+      );
+    }
+    const written = await query("select record_type from audit_log where action = 'spec.check'");
+    expect(written, "not every listed record type was accepted").toHaveLength(
+      AUDIT_RECORD_TYPES.length,
+    );
+  } finally {
+    await query("delete from audit_log where action = 'spec.check'");
+  }
+});
+
+test("an archive reason lives only on an archived company (0012, D87)", async () => {
+  const live = await one<{ id: string }>("select id from companies where archived_at is null limit 1");
+
+  // A reason on a company that never left the floor is a state that never
+  // happened (rules/data.md).
+  const onLive = await refused(
+    "update companies set archive_reason = 'spec' where id = $1::uuid",
+    [live.id],
+  );
+  expect(onLive).toContain("violates check constraint");
+  expect(onLive).toContain("companies_archive_reason_check");
+
+  // The other way stays open: an archived company with no reason is a row
+  // archived before 0010 gave one, and the constraint has to let that through.
+  // The demo keeps one archived company with its reason (rules/data.md: a
+  // state the demo never shows is a branch nobody has seen), so this half of
+  // the rule runs against a row every time rather than being skipped.
+  const archived = await query<{ id: string; archive_reason: string | null }>(
+    "select id, archive_reason from companies where archived_at is not null limit 1",
+  );
+  expect(archived, "the seed has no archived company for this half to run against").toHaveLength(1);
+  const company = archived[0];
+  try {
+    const written = await query(
+      "update companies set archive_reason = null where id = $1::uuid returning archive_reason",
+      [company.id],
+    );
+    expect(written, "a cleared reason on an archived company was refused").toHaveLength(1);
+  } finally {
+    await query("update companies set archive_reason = $2 where id = $1::uuid", [
+      company.id,
+      company.archive_reason,
+    ]);
+  }
+});
+
+test("the schema file and the catalogue agree, both ways (D106)", async () => {
+  // Asked of pg_constraint/pg_indexes, not the ORM's opinion (rules/migrations.md):
+  // a name typed once in schema.ts and never migrated, or dropped by hand and
+  // never un-typed, is invisible to every other test in this file, which only
+  // ever asks about the names it already knows to ask about.
+  const schemaSource = readFileSync(resolve(process.cwd(), "src/db/schema.ts"), "utf-8");
+
+  const checkNames = new Set<string>();
+  const indexNames = new Set<string>();
+  const namePattern = /(check|index|uniqueIndex)\(\s*"([a-z0-9_]+)"/g;
+  for (const match of schemaSource.matchAll(namePattern)) {
+    const [, kind, name] = match;
+    (kind === "check" ? checkNames : indexNames).add(name);
+  }
+
+  const catalogueChecks = await query<{ conname: string }>(
+    `select conname from pg_constraint
+      where contype = 'c' and connamespace = 'public'::regnamespace`,
+  );
+  const catalogueIndexes = await query<{ indexname: string }>(
+    "select indexname from pg_indexes where schemaname = 'public'",
+  );
+  const catalogueCheckNames = new Set(catalogueChecks.map((row) => row.conname));
+  // The auto-named indexes from `.unique()` columns and primary keys were
+  // never typed in schema.ts by name — Postgres named them — so they are not
+  // strangers, they are just not this test's business.
+  const catalogueIndexNames = new Set(
+    catalogueIndexes
+      .map((row) => row.indexname)
+      .filter((name) => !name.endsWith("_pkey") && !name.endsWith("_unique")),
+  );
+
+  const checksNotInCatalogue = [...checkNames].filter((name) => !catalogueCheckNames.has(name));
+  expect(
+    checksNotInCatalogue,
+    `schema.ts names a check the catalogue does not have: ${checksNotInCatalogue.join(", ")}`,
+  ).toEqual([]);
+
+  const indexesNotInCatalogue = [...indexNames].filter((name) => !catalogueIndexNames.has(name));
+  expect(
+    indexesNotInCatalogue,
+    `schema.ts names an index the catalogue does not have: ${indexesNotInCatalogue.join(", ")}`,
+  ).toEqual([]);
+
+  const checksNotInSchema = [...catalogueCheckNames].filter((name) => !checkNames.has(name));
+  expect(
+    checksNotInSchema,
+    `the catalogue has a check schema.ts does not name: ${checksNotInSchema.join(", ")}`,
+  ).toEqual([]);
+
+  const indexesNotInSchema = [...catalogueIndexNames].filter((name) => !indexNames.has(name));
+  expect(
+    indexesNotInSchema,
+    `the catalogue has an index schema.ts does not name: ${indexesNotInSchema.join(", ")}`,
+  ).toEqual([]);
 });

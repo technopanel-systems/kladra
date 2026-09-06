@@ -203,7 +203,7 @@ async function main(): Promise<void> {
       await db.insert(auditLog).values({
         userId: repId,
         action: "activity.create",
-        recordType: "activity",
+        recordType: "activity" as const,
         recordId: logged.id,
         details: { companyId: row.id, projectId: null },
         at: at(when),
@@ -292,7 +292,7 @@ async function main(): Promise<void> {
       events.map((e) => ({
         userId: e.by,
         action: quotationEvent(e.name),
-        recordType: "quotation",
+        recordType: "quotation" as const,
         recordId: row.id,
         details: e.details ?? {},
         at: at(e.on),
@@ -361,7 +361,7 @@ async function main(): Promise<void> {
       {
         userId: source.repId,
         action: "dispatch.request",
-        recordType: "dispatch",
+        recordType: "dispatch" as const,
         recordId: row.id,
         details: {},
         at: at(created),
@@ -373,7 +373,7 @@ async function main(): Promise<void> {
             {
               userId: desk.id,
               action: status === "approved" ? "dispatch.approve" : "dispatch.refuse",
-              recordType: "dispatch",
+              recordType: "dispatch" as const,
               recordId: row.id,
               details:
                 status === "approved"

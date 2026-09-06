@@ -14,7 +14,12 @@
  */
 import { and, count, eq, inArray, isNull } from "drizzle-orm";
 import type { Db, Tx } from "@/db";
-import { notifications, type NotificationSubjectType } from "@/db/schema";
+import {
+  NOTIFICATION_KINDS,
+  notifications,
+  type NotificationKind,
+  type NotificationSubjectType,
+} from "@/db/schema";
 import { notifyLive } from "@/lib/live";
 
 /**
@@ -32,20 +37,10 @@ import { notifyLive } from "@/lib/live";
  * `smacNumber` is always SMAC's, `rep` is a person, `reason` is what somebody
  * wrote.
  */
-export const NOTIFICATION_KINDS = [
-  "quotationRequested",
-  "quotationIssued",
-  "quotationReturned",
-  "quotationAccepted",
-  "quotationRejected",
-  "quotationCancelled",
-  "dispatchRequested",
-  "dispatchApproved",
-  "dispatchRefused",
-  "companyHandedOver",
-] as const;
-
-export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+// The list moved beside the column that refuses anything else (D106); it is
+// re-exported here so the callers and the scripts that read it keep their door.
+export { NOTIFICATION_KINDS };
+export type { NotificationKind };
 
 /** The record a notice is about, and where the work at the end of it lives. */
 export type NotificationSubject = { type: NotificationSubjectType; id: string };

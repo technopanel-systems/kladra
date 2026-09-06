@@ -63,7 +63,7 @@ export const families: [string, string[]][] = [
   ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
   ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],
   ["projects.lossReason", union("src/components/projects/mark-lost-dialog.tsx", "LOSS_REASON_CODES")],
-  ["notifications", union("src/lib/notify.ts", "NOTIFICATION_KINDS")],
+  ["notifications", union("src/db/schema.ts", "NOTIFICATION_KINDS")],
   [
     "companies",
     union("src/components/companies/follow-up-strip.tsx", "Pill").map((pill) => `${pill}Count`),

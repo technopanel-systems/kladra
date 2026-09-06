@@ -85,6 +85,13 @@
       "when": 1788681830179,
       "tag": "0011_what_the_code_assumes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788699271863,
+      "tag": "0012_closed_where_the_code_is_closed",
+      "breakpoints": true
     }
   ]
 }

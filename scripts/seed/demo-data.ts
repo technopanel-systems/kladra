@@ -156,6 +156,13 @@ export type CompanySeed = {
   notes?: string;
   /** The first one is the main contact (SPEC D18). */
   contacts: ContactSeed[];
+  /**
+   * Off the floor, with the reason the admin typed (D87, D106). One company in
+   * the demo is archived so the archive screen, the restore path and the
+   * reason-only-when-archived rule all have a row to run against, rather than
+   * a branch nobody has seen (rules/data.md).
+   */
+  archived?: { daysAgo: number; reason: string };
 };
 
 export const COMPANIES: CompanySeed[] = [
@@ -486,6 +493,21 @@ export const COMPANIES: CompanySeed[] = [
     // marketing's day, which is the habit S51 wants visible.
     notes: "وصلت من الموقع، لم يتم التواصل بعد",
     contacts: [{ name: "ماجد الزهراني", phone: "0501129983", position: "Owner" }],
+  },
+  // ---- Off the floor (1) -------------------------------------------------------
+  // Saad's, archived six weeks ago with the reason he gave. It is on the admin's
+  // archive screen and nowhere else; its contact stays as it was, the way the
+  // app leaves a company's people when the company goes (D87).
+  {
+    key: "x1",
+    name: "مؤسسة الرواد للألمنيوم",
+    rep: "saad",
+    category: "Contractor",
+    source: "Direct contact",
+    city: "Riyadh",
+    notes: "تعاملنا معهم في مشروعين صغيرين",
+    contacts: [{ name: "ناصر العتيبي", phone: "0558817320", position: "Owner" }],
+    archived: { daysAgo: 42, reason: "أغلقت المؤسسة نشاطها" },
   },
 ];
 

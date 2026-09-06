@@ -408,6 +408,15 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   row somebody else just touched, from the one provider, and the mark's clock starts when the
   refreshed row is on screen, not when the event landed. A read never goes through the write
   door. And a channel that can be away says so when it is back — one resync, not a hole.
+- **Closed where the code is closed.** Phase 11C (D106). A column the code fills from a list
+  refuses anything off the list; the list is written once, beside the column, and the type
+  is derived from it. A column that explains a state is empty when the state is not there.
+  And the schema file and the catalogue are held to each other by a test, both ways.
+- **A read is measured, not assumed.** Phase 11C (D107). Every screen's statements are logged
+  from the production build against the volume floor and the slowest explained with the app's
+  own parameters; an index is added where a plan walks a table once per row, and nowhere else,
+  because a whole-table scan of four hundred rows is the planner being right. The baseline
+  lives in WORKFLOW §3 and a change to a read is measured against it.
 
 ## §4 Not built until asked
 

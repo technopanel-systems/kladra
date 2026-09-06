@@ -3,6 +3,7 @@
  * Money and m² are numeric; dates that are "a day in Riyadh" are `date`;
  * instants are timestamptz. No RLS — authorization lives in src/lib/authz.ts.
  */
+import { LOOKUP_KINDS } from "@/lib/lookup-kinds";
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
@@ -250,6 +251,14 @@ export const companies = pgTable(
     // Saudi picks a city, everywhere else types one (S3). Both or neither is a
     // company with no readable address, and the form is not the only way in.
     check("companies_city_check", sql`num_nonnulls(${t.cityId}, ${t.cityText}) = 1`),
+    // Why it left the floor is a fact about a company that HAS left (D87,
+    // rules/data.md): a reason on a live company is a state that never
+    // happened. Nullable the other way — rows archived before the column
+    // gave no reason, and inventing one would be the same lie (0010).
+    check(
+      "companies_archive_reason_check",
+      sql`${t.archiveReason} is null or ${t.archivedAt} is not null`,
+    ),
   ],
 );
 
@@ -337,6 +346,11 @@ export const activities = pgTable(
     // The whole team's day, read by day rather than by company or by person —
     // the daily report's own query, and the only one with no other index to use.
     index("activities_happened_idx").on(t.happenedOn),
+    // The projects list asks each project for the last day anything was logged
+    // against it. Measured at the volume floor (D107) that subquery walked the
+    // whole activities table once per project — the one plan that grew with the
+    // data — while its twin by company already had an index.
+    index("activities_project_happened_idx").on(t.projectId, t.happenedOn),
   ],
 );
 
@@ -606,6 +620,28 @@ export const dailyReports = pgTable(
 export const NOTIFICATION_SUBJECT_TYPES = ["quotation", "dispatch", "company"] as const;
 export type NotificationSubjectType = (typeof NOTIFICATION_SUBJECT_TYPES)[number];
 
+/**
+ * Every kind of notice the app writes. The row holds no words — the sentence is
+ * built in the reader's language at read time from this kind and its params
+ * (D13) — so a kind is a key in both locales (`notifications.<kind>`, read by
+ * the message check) and a value the column refuses anything else for (D106).
+ * Here rather than in src/lib/notify.ts because the check reads it, and the
+ * schema cannot import from lib without a cycle; notify.ts re-exports it.
+ */
+export const NOTIFICATION_KINDS = [
+  "quotationRequested",
+  "quotationIssued",
+  "quotationReturned",
+  "quotationAccepted",
+  "quotationRejected",
+  "quotationCancelled",
+  "dispatchRequested",
+  "dispatchApproved",
+  "dispatchRefused",
+  "companyHandedOver",
+] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
+
 export const notifications = pgTable(
   "notifications",
   {
@@ -613,7 +649,7 @@ export const notifications = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    kind: text("kind").notNull(),
+    kind: text("kind").$type<NotificationKind>().notNull(),
     params: jsonb("params").$type<Record<string, string | number>>().notNull().default({}),
     link: text("link").notNull(),
     /**
@@ -641,8 +677,40 @@ export const notifications = pgTable(
       "notifications_subject_type_check",
       sql`${t.subjectType} in (${sql.raw(NOTIFICATION_SUBJECT_TYPES.map((v) => `'${v}'`).join(", "))})`,
     ),
+    // The same for the kind: a notice with a kind no locale has a sentence for
+    // would reach the bell as a raw key (D106).
+    check(
+      "notifications_kind_check",
+      sql`${t.kind} in (${sql.raw(NOTIFICATION_KINDS.map((v) => `'${v}'`).join(", "))})`,
+    ),
   ],
 );
+
+/**
+ * The kinds of record the trail is written against (D106): the eight records
+ * of the floor, the two admin settings, and the eight reference lists the
+ * admin edits — those from their one source, `LOOKUP_KINDS`, so a ninth list
+ * is a ninth kind the day it is added. `action` stays open on purpose: it is a
+ * family per record kind (quotationEvent and its siblings) and the trail
+ * refuses an action it has no word for at read time; the record kind is a
+ * closed list, and the column now says so. The first draft of this list was
+ * the eight a grep for literals found; the compiler found the rest in the
+ * admin's helper, which takes the kind as an argument.
+ */
+export const AUDIT_RECORD_TYPES = [
+  "company",
+  "contact",
+  "project",
+  "activity",
+  "quotation",
+  "dispatch",
+  "daily_report",
+  "user",
+  "companyTarget",
+  "nonWorkingDay",
+  ...LOOKUP_KINDS,
+] as const;
+export type AuditRecordType = (typeof AUDIT_RECORD_TYPES)[number];
 
 export const auditLog = pgTable(
   "audit_log",
@@ -651,7 +719,7 @@ export const auditLog = pgTable(
     userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }), // who
     action: text("action").notNull(), // what
     at: timestamp("at", { withTimezone: true }).notNull().defaultNow(), // when
-    recordType: text("record_type").notNull(), // record
+    recordType: text("record_type").$type<AuditRecordType>().notNull(), // record
     recordId: text("record_id").notNull(),
     details: jsonb("details").$type<Record<string, unknown>>(),
     ...stamps,
@@ -666,6 +734,10 @@ export const auditLog = pgTable(
     // this table by user and instant; without this it scanned every row per
     // person, fourteen times, on the one screen meant to be opened at volume.
     index("audit_log_user_at_idx").on(t.userId, t.at),
+    check(
+      "audit_log_record_type_check",
+      sql`${t.recordType} in (${sql.raw(AUDIT_RECORD_TYPES.map((v) => `'${v}'`).join(", "))})`,
+    ),
   ],
 );
 
