@@ -8,7 +8,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personName, personNameOf } from "@/lib/people";
@@ -18,7 +18,7 @@ import {
   targets,
   users,
 } from "@/db/schema";
-import type { Day } from "@/lib/dates";
+import { addMonths, type Day } from "@/lib/dates";
 import { LOOKUP_FIELDS, tableName, type LookupKind, type LookupRow } from "@/lib/lookup-kinds";
 import { CARRIES_METRES } from "@/lib/team";
 import type { Role } from "@/lib/types";
@@ -84,11 +84,14 @@ export type TargetRow = {
   role: Role;
   /** numeric(12,2) as text, or null where none is set (S45). */
   sqm: string | null;
+  /** The month before's figure, so an empty box says what it was and one press keeps it (D115). */
+  previous: string | null;
 };
 
 export type TargetsForMonth = {
   month: Day;
   company: string | null;
+  companyPrevious: string | null;
   people: TargetRow[];
 };
 
@@ -100,7 +103,11 @@ export type TargetsForMonth = {
  */
 export async function targetsForMonth(month: Day): Promise<TargetsForMonth> {
   const locale = await getLocale();
-  const [people, rows, companyRow] = await Promise.all([
+  // This month's figures and last month's in the same two reads: a new month
+  // opens on empty boxes, and what each was last month is what the admin is
+  // about to retype (D115).
+  const before = addMonths(month, -1);
+  const [people, rows, companyRows] = await Promise.all([
     db
       .select({ id: users.id, name: personName(locale), role: users.role })
       .from(users)
@@ -108,25 +115,33 @@ export async function targetsForMonth(month: Day): Promise<TargetsForMonth> {
       .where(and(eq(users.active, true), CARRIES_METRES))
       .orderBy(asc(personName(locale))),
     db
-      .select({ userId: targets.userId, sqm: targets.sqm })
+      .select({ userId: targets.userId, month: targets.month, sqm: targets.sqm })
       .from(targets)
-      .where(eq(targets.month, month)),
+      .where(inArray(targets.month, [month, before])),
     db
-      .select({ sqm: companyTargets.sqm })
+      .select({ month: companyTargets.month, sqm: companyTargets.sqm })
       .from(companyTargets)
-      .where(eq(companyTargets.month, month))
-      .limit(1),
+      .where(inArray(companyTargets.month, [month, before])),
   ]);
 
-  const byUser = new Map(rows.map((row) => [row.userId, String(row.sqm)]));
+  const byUser = new Map(
+    rows.filter((row) => row.month === month).map((row) => [row.userId, String(row.sqm)]),
+  );
+  const byUserBefore = new Map(
+    rows.filter((row) => row.month === before).map((row) => [row.userId, String(row.sqm)]),
+  );
+  const company = companyRows.find((row) => row.month === month);
+  const companyBefore = companyRows.find((row) => row.month === before);
   return {
     month,
-    company: companyRow[0] ? String(companyRow[0].sqm) : null,
+    company: company ? String(company.sqm) : null,
+    companyPrevious: companyBefore ? String(companyBefore.sqm) : null,
     people: people.map((person) => ({
       userId: person.id,
       name: person.name,
       role: person.role as Role,
       sqm: byUser.get(person.id) ?? null,
+      previous: byUserBefore.get(person.id) ?? null,
     })),
   };
 }

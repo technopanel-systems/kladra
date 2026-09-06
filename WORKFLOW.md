@@ -75,14 +75,21 @@
             thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103); 61 (the
             volume floor has a past, D104); 11B: 17, 18, 54, 63, 64 (live is proved, D105);
             11C-1 (closed where the code is closed, D106); 11C-2 (reads measured at the
-            volume floor, D107)
+            volume floor, D107); 11D-1: 72 (a count counts the rows its list shows, D108); 11D-2: 73 (a
+            company that comes back is recognised, D109); 11D-3: 74 (a notice names the
+            customer, D110); 11D-4: 75 (a call card says why, D111); 11D-5: 76 (a dispatch line says what
+            already went, D112); 11D-6: 77 (a day off the calendar is a span, D113); 11D-7: 78
+            (Enter saves what a person typed, D114); 11D-8: 79, 80, 81 (a form starts from what
+            the app knows, a queue row names its person, D115, D116); 11D-9: 82 (a typed line
+            starts where its row starts; the targets row wraps alike with or without last
+            month's figure — both seen in the box's own shots)
       - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
       - [x] C Database and data honesty, read as a critic: shapes, constraints, indexes,
             figures computable two ways, history worth keeping; then the messy realities;
             migrations proved from information_schema
-      - [ ] D The whole flow, creation to oversight, walked step by step: what is retyped,
+      - [x] D The whole flow, creation to oversight, walked step by step: what is retyped,
             how many clicks, what a person must remember, where two screens could disagree
       - [ ] E Dashboards and reports audited as products: one look, no interpretation,
             every figure saying what it means; charts where a shape is clearer than a number
@@ -121,9 +128,19 @@ eighteen record kinds derived rather than copied, migration 0012; one archived c
 demo so the archive rule's second half and the archive screen have a row; the schema file and the
 catalogue held to each other both ways in `tests/schema.spec.ts`; every screen's reads logged
 and explained at the volume floor, one index added where a plan grew per row, the baseline
-written in §3 and the round-trip count parked for 11I as §5 #71. Next is box 11D, the whole
-flow walked step by step, creation to oversight: what is retyped, how many clicks, what a
-person must remember, where two screens could disagree. The dev database is seeded
+written in §3 and the round-trip count parked for 11I as §5 #71. Box 11D is done in nine slices, one
+commit (D108-D116): the flow walked in the code and counted (§3 "The flow, counted"), ten
+findings written with their causes (§5 #72-81) and all ten fixed with a spec each — a count
+counts the rows its list shows; the archive is read when a company comes back; a notice names
+the customer; a call card says why; a dispatch line says what already went; leave is a span;
+Enter saves; a form starts from what the app knows; a queue row names its person — and one
+more (#82) seen in the box's own shots: a typed line starts where its row starts. The walk's
+own fan-out was the lesson of the box: nine readers rebuilding one context spent two million
+tokens and returned nothing, and the routing rule in §1 came out of it. Next is box 11E,
+dashboards and reports audited as products: one look, no interpretation, every figure saying
+what it means, a chart only where a shape is clearer than a number — with the parked notes in
+scratchpad/todo-later carried in (the Use screen's fortnight plural, the chain card's
+plurals of one, the queue strip's capped counts). The dev database is seeded
 at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -534,6 +551,15 @@ Each of these was considered and dropped because it shortens nobody's day here.
 Agents: shot-looker (sonnet) · screen-builder (xhigh) · test-runner (sonnet) · arabic-reviewer
 (opus). Hooks `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12; rules in `.claude/rules/`.
 
+**Who runs on what** (founder, 11D). Bounded, mechanical work with an exact file list and a
+schema — an inventory, a count, a grep matrix, a spec written and run, a screenshot read — goes
+to sonnet (test-runner, shot-looker, or a general agent handed the files). Judgement — a cause, a
+rank, a refutation, a design, a rule — stays in the session (fable); Arabic register stays with
+arabic-reviewer (opus). The session reads the authority files once and passes the extract in the
+prompt; a fan-out never hands the same documents to eight readers to rebuild. Never more than
+three agents at once. A workflow opens with one scout whose result decides whether the fan-out
+is worth its tokens, and a read the session can do in a few `grep`s is not an agent's job.
+
 ## §2 The charter — how this gets built
 
 **I own this system.** Not a task list being executed. FACET failed because its interface was
@@ -595,7 +621,7 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 4. Rawan sends it back with a reason. Faisal is told, reads the reason, changes a price and asks again — and the notice that brought him there is gone from his screen, because he did what it asked (D79).
 5. Rawan issues it with SMAC's number. Faisal marks it Customer accepted, then raises a revision: it is Q-n/2, the first is Superseded, and the revision says which one line it changed and what the price was before.
 6. The drawer says what happened to it, in order and in his language — requested, sent back, lines edited, issued, accepted — and her reason left the screen the moment he fixed it.
-7. Rawan's own screen then holds one of each kind of notice: the customer's answer, which is finished, and the revision he has just raised, which is not. She marks everything read; the first stops being a row for ever and the second stays exactly where it is. The rep in that sentence is named in the script she is reading, because the row carries his id and never his name (D68, D79).
+7. Rawan's own screen then holds one of each kind of notice: the customer's answer, which is finished, and the revision he has just raised, which is not. She marks everything read; the first stops being a row for ever and the second stays exactly where it is. The rep in that sentence is named in the script she is reading, because the row carries his id and never his name (D68, D79), and the customer is named in it too, from the notice's subject (D110).
 8. Second test: a request the seed sent back twice says so, both her reasons are readable, and each line names her.
 9. Third test: a repeat ask at a customer already quoted opens on that quotation's items in one press, the offer leaves once there is work to lose, and a new item opens on the sheet above it.
 10. Fourth test: Faisal withdraws a request of his own. It leaves Rawan's queue and stays readable, marked Withdrawn.
@@ -604,7 +630,7 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 1. Faisal opens an issued quotation and sends part of item 1, with a shipment method, a destination and payment terms. The m² adds up as he types.
 2. The drawer that opens shows the same m², worked out again in SQL.
 3. Rawan's Queue, open in another browser and never reloaded, shows the request arrive and her bell rise by one.
-4. She opens it, reads how many are going against how many were quoted, and approves it with SMAC dispatch number 8810.
+4. She opens it, reads how many are going against how many were quoted, what other dispatches already hold and what is left once this one is counted (D112), and approves it with SMAC dispatch number 8810.
 5. Faisal is told; it reads Approved with the number; the approved m² is on this Riyadh month, by the approval's own date (S41, S43).
 6. The quotation now has that much less left to send.
 7. Raising a second dispatch against the same quotation opens on the first one's destination, terms and shipment method, with every quantity box empty (D81).
@@ -757,6 +783,36 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**A count counts the rows its list shows** — `tests/counts.spec.ts`
+One of Faisal's companies is put a day late on its own date and on a project's — the shape
+that used to count as two. On Companies filtered to overdue, the active pill's sentence is the
+one built from the number of rows in the table and the company is one of them; on Projects the
+overdue chip's sentence is built from the project rows and the project is among them; on the
+day the overdue band's heading carries the number of its cards, the company is a card, and
+there is no "and more" link, because everyone late is there (D108). The dates go back after.
+
+**A company that comes back is recognised** — `tests/known.spec.ts`
+Faisal opens Add company and types the number of the seeded archived company's contact: the
+warning under the phone says the company was archived, on which day and whose it was, in his
+locale, and carries the reason typed then; Save is still enabled (S15, D109). Then he types the
+name of a colleague's live company: the warning names it and its rep, its city, and the day it
+was last worked. Nothing is written.
+
+**A call card says why** — `tests/why.spec.ts`
+An entry is written into Faisal's log in Arabic with today's follow-up; on his day the card for
+that company carries the entry's words in a line of their own: the words take their direction
+from the text and the line starts where the card starts, in the page's direction (D111, and the
+line rule in DESIGN §5). The entry and the date are taken back after.
+
+**The presses** — `tests/presses.spec.ts`
+Jerom adds three free days from one dialog with a first and a last day and reads "3 days
+added"; the same span again adds nothing and the calendar still holds three (D113). Rawan
+opens a waiting request, types SMAC's number and presses Enter; it is issued with that number
+(D114). On next month's targets Faisal's box is empty, says what last month was, one press
+keeps it and Enter saves it (D115). Faisal presses Log on a company with one contact and the
+form opens on that person (D115). On Rawan's queue the row names the rep in her script; on
+Faisal's own list no row names him (D116). Every write is taken back.
+
 **The guards** — `tests/csv.spec.ts`, `tests/guards.spec.ts`
 Pure: a cell that opens with `=`, `@`, a tab, or `+`/`-` before anything but a number is
 apostrophed; a phone, a negative figure, a quoted name and an empty cell are what they were
@@ -807,6 +863,42 @@ marker statement per screen, `docker logs kladra-db-1 --since`, then EXPLAIN (AN
 of each distinct statement with the parameters the log recorded; both settings reset after.
 11I builds the repeatable harness and re-measures after any change to a read; a screen may not
 grow past these numbers without a sentence here saying why.
+
+**The flow, counted** — baseline for 11D
+Walked 6 Sep 2026 in the code, creation to oversight, the shortest honest path a person who
+knows the app takes from the screen they start the day on. A press is a click or a tap; a text
+field is one press to reach it; a select or a date is two (open, choose); a confirm is one more.
+
+| Task | Who | Presses | Typed | Filled by the app | Must remember |
+|---|---|---|---|---|---|
+| Log a call on a company due today, from the day | rep | 4 | 1 | company, contact, today; channel opens on visit | — (the card says why, #75) |
+| Add a company with its first contact | rep | 4 (9 with category and source) | 2 (4) | country, city | — |
+| Request a quotation, two lines, from a project | rep | 14 (3 + prices from "copy the items") | 6 | thickness, sheet, quantity 1; line 2 takes line 1's four lookups | — |
+| Raise a second dispatch on a quotation | rep | 3 | 1 | shipment, destination, terms (D81) | — |
+| Mark a project lost | rep | 4 (5 for Other) | 0 (1) | — | — |
+| Find a company by the number that just called | rep | 2 | 1 | — | — |
+| Hand a company to a rep | marketing | 4 | 0 | — | — |
+| Issue the top request with its SMAC number | coordinator | 3 (was 4, #78) | 1 | — | — (the notice names the customer, #74) |
+| Send one back with a reason | coordinator | 4 | 1 | — | — |
+| Approve a dispatch with its SMAC number | coordinator | 3 (was 4, #78) | 1 | — | — (the line says what already went, #76) |
+| From home to "who is stuck and why" | manager | 1 | 0 | the Stuck list is on the home screen | — |
+| Read one rep's yesterday | manager | 2 | 0 | — | — |
+| Set one rep's target for next month | admin | 3 (× 5 people; 2 to keep last month's, #79) | 1 (0) | last month's figure, offered | — |
+| Add one public holiday | admin | 5 | 0 | today, everyone | — |
+| Enter a rep's fortnight of leave | admin | 8 (was 84, #77) | 0 | — | — |
+| Restore an archived company | admin | 3 | 0 | — | — |
+
+What the shell gives for nothing: Ctrl/Cmd+K from any screen and a number typed in any shape
+finds the contact; every form dialog opens with the first field focused and Enter saves it;
+saving opens the record just made; Log is on every card and every row of a day and a drawer
+(D82); every list creates from itself (P8.2). The rep's four lobby tasks are inside S23's
+minute. Where the presses go instead: three dialogs and one box take a click where every other
+takes Enter (#78); the admin's calendar takes one day per dialog (#77); a month's targets are
+five boxes and five Saves (#79). What a person carried in their head was the longer list, and
+it is where the findings were: the reason behind a call, the customer behind a number, what
+had already gone against a quotation line, and a company that came back from the archive with
+nothing to say it had been there. Re-walked after the ten fixes: the table above carries the
+counts as they stand, with the old figure in brackets where one changed.
 
 **What it says it is** — `tests/numbers.spec.ts`, `tests/calls.spec.ts`
 The funnel's sent-back row reads "not asked again yet" and, when it counts anything, how many
@@ -1142,3 +1234,142 @@ P10d before this list was written (D83).
   statement is under 4 ms, so what a screen costs is round trips, not work. For 11I: read the
   session once per request and let a screen's bands share one calendar; then re-measure against
   the §3 baseline.
+
+The whole flow walked (P11D). One reader this time — the session, with the authority files
+already in hand — walking every dialog, drawer, band and notice in the code for four things:
+what is retyped, how many presses, what a person must carry in their head, and where two
+screens can answer one question two ways. Each entry was read in the code before it was written
+down, and the counts are in §3 "The flow, counted". Ranked as above: what lies or loses first,
+then what costs presses.
+
+- [x] 72 **A follow-up count counts dates, and the list it opens shows something else.**
+  Verified and fixed in P11D-1 (D108): the counts are the lists' own filters, companies on
+  Companies, the day and the team table, projects on Projects; `tests/counts.spec.ts`.
+  `followUpCounts` (`src/lib/followups.ts:219-247`) counts the rows of a `union all` of company
+  dates and project dates. The pill on Companies opens `?filter=overdue`, which is one row per
+  company by `least(company, min(project))` (`src/lib/companies.ts:177,250`;
+  `followups.ts:86`); the chip on Projects opens a list of projects only
+  (`src/lib/projects.ts:143`); the day's bands are `listCompanies` rows under `total:
+  totals.overdue` (`src/components/day/call-list.tsx:62-63`), so "and 2 more" can name
+  companies that are not there; the team table's "Overdue follow-ups" is the same count
+  (`src/lib/team.ts:183`) and opens the rep's companies (`team-table.tsx:57`). Measured on the
+  volume floor: Faisal's Projects screen says 37 overdue and the list under the chip holds one
+  project. Cause: one count for three units, written once "because the strip counts both" (D9)
+  — and D9 itself says "clicking it lists them", which is D95's rule. Fix: a count counts the
+  rows the list it opens will show — companies by their effective date on Companies, the day and
+  the team table; projects on Projects — through the same predicate the list filters by.
+- [x] 73 **A company that comes back from the archive is not recognised.** Verified and fixed
+  in P11D-2 (D109): archived rows match, the warning says when and why, a live one says where
+  and when last worked; `tests/known.spec.ts`. The duplicate check
+  reads live companies only (`src/lib/companies.ts:532`, `isNull(companies.archivedAt)`), so a
+  customer archived last year with "closed down" is created again as a stranger, and the reason
+  somebody gave up on him — the whole point of archiving rather than deleting (S16) — is never
+  shown to the rep typing him in. The warning that does fire names the company and the rep and
+  nothing a rep can decide by (`add-company-dialog.tsx:173-182`). Cause: the archive was built as
+  a place things go, not as a place the app looks. Fix: the check reads archived companies too
+  and the warning says what it knows — the city, the last activity, and for an archived one who
+  archived it, when, and why; creation stays unblocked (S15).
+- [x] 74 **A notice names a number and never the customer.** Verified and fixed in P11D-3
+  (D110): the customer is in every quotation and dispatch sentence, joined at read time from
+  the subject; the chain specs look for the sentence with the customer in it. Every quotation and dispatch
+  notice carries `label` and nothing about the company (`src/actions/quotations.ts:302, 390,
+  468, 644, 730, 827, 904`; `src/actions/dispatches.ts:354, 549, 725`), and both message files
+  say "{label} came back for edits" / «أُعيد عرض السعر {label} للتعديل». A rep with eight open
+  quotations and the coordinator with thirty must remember which customer Q-12 is before the
+  sentence means anything. The list already resolves the rep's name at read time from an id
+  (`src/lib/notifications.ts:83`, D68) and every notice carries its subject (D79). Cause: the
+  sentence was written from what the action had in hand, not from what the reader needs. Fix:
+  the customer's name, resolved at read time from the subject the way the rep's is, in the
+  sentence in both locales.
+- [x] 75 **A call card says who to call and not why.** Verified and fixed in P11D-4 (D111):
+  the last entry's words ride with the card, one line, in the writer's direction;
+  `tests/why.spec.ts`. The day's call band shows the company,
+  the main contact, the city, the date, Log and the number (`src/components/day/call-band.tsx:
+  55-120`); no list anywhere carries the words of the last entry — `listCompanies` and the
+  standing strips return `lastActivityOn` and nothing else (`src/lib/companies.ts:188`,
+  `standing.ts:29,220`). The rep who wrote "wants 4 mm samples, follow up tomorrow" reads
+  tomorrow's card as a name and a date, and either remembers or opens the drawer for the
+  Activity tab. Cause: the card was built from the follow-up table's columns, and the reason
+  lives in another table. Fix: a card that asks for a call carries the last entry's first line
+  and its day, from the same query that already finds the last activity's date.
+- [x] 76 **The dispatch sheet says quoted and sending, never what already went.** Verified and
+  fixed in P11D-5 (D112): each line reads sending · on the quotation · on other dispatches ·
+  left to send, from `committedQtySql`'s definition; Rawan's reading step in
+  `tests/dispatches.spec.ts` holds the two new figures to the line's own arithmetic. A dispatch's
+  lines carry `qty` and `quotedQty` only (`src/lib/dispatches.ts:364,407`); the quotation sheet
+  shows one total "left to send" and per-line quantities as quoted (`quotations.ts:430`). Rawan
+  approving the third partial dispatch reads "sending 40 of 100 quoted" and has to open the
+  quotation and count the mini list to know that 70 already went. Nothing corrupts — the action
+  holds the row and refuses an over-send (D85) — but she approves blind or clicks through. Cause:
+  the committed-quantity SQL exists for the rep's dialog (`dispatches.ts:156,556`) and was not
+  offered to the reader who checks the request. Fix: each line on the dispatch sheet reads
+  sending · already sent · quoted, from that one definition.
+- [x] 77 **Two weeks of leave is fourteen dialogs.** Verified and fixed in P11D-6 (D113): a first
+  day and a last day, one row per day, a day already there skipped; `tests/presses.spec.ts`. The calendar takes one day per submit
+  (`src/components/admin/holidays-panel.tsx:173-215`, one `DatePicker`, hidden `day`;
+  `src/actions/admin.ts:545+`, `day: regex`), six presses each with the person picked every
+  time. Eid is four or five days twice a year and S48's own example is "a rep back from two
+  weeks off" — eighty-four presses, or, likelier, leave that never gets entered and a pace that
+  says he is behind. Cause: the row is a day, and the form was drawn from the row. Fix: the
+  dialog takes a first and a last day and the action writes one row per day in the span; the
+  table, pace and leave stay exactly as they are.
+- [x] 78 **Enter does nothing in the coordinator's number box, a target box, or a new project.**
+  Verified and fixed in P11D-7 (D114): all five are forms; Rawan issues with Enter in
+  `tests/presses.spec.ts`.
+  `PromptDialog` has no form (`src/components/ui-ext/prompt-dialog.tsx:105-166`): Rawan types
+  SMAC's number and must find Issue or Approve with the mouse, on her most frequent act; the
+  target box saves from a button (`targets-panel.tsx:148`); New project, Edit project and Mark
+  lost submit from `onClick` (`new-project-dialog.tsx:186`, `edit-project-dialog.tsx:142`).
+  Every other dialog is a `<form>` and Enter saves it. Cause: three dialogs were written before
+  the form shell and never moved onto it. Fix: a dialog with a text field is a form and Enter
+  submits it; a multi-line reason keeps Enter as a new line and takes Ctrl/Cmd+Enter.
+- [x] 79 **A month's targets are five boxes, five Saves, and no memory of last month.** Verified
+  and fixed in P11D-8 (D115): last month's figure under an empty box and one press to keep it,
+  Enter saves; the boxes stay one Save each on purpose (the panel's own reason stands);
+  `tests/presses.spec.ts`. Each
+  person's target is its own box with its own Save (`targets-panel.tsx:85-150`), and a new month
+  opens every box empty (`value === null → ""`) with nothing on screen saying what last month
+  was. Cause: the box was built for one correction, and the monthly chore is five of them. Fix:
+  last month's figure under each box and one press to keep it, and one Save for the month.
+- [x] 80 **Logging on a company with one contact still asks which contact.** Verified and fixed
+  in P11D-8 (D115): one contact is the contact; several still open on nobody;
+  `tests/presses.spec.ts`. The log opens on
+  "No contact" unless the button that opened it named one (`log-dialog.tsx:232`, the call card's
+  D101); from a drawer, a company with exactly one person opens on nobody, so naming him is two
+  presses on every entry or the entry goes unnamed (S24). Cause: the default was written for the
+  many-contacts case. Fix: when a company has one contact, the log opens on him; with several it
+  still opens on nobody, because guessing would misname the call.
+- [x] 81 **A queue row does not say whose request it is.** Verified and fixed in P11D-8 (D116):
+  the queue's rows and cards name the rep in the reader's script, a rep's own list does not;
+  `tests/presses.spec.ts`. The coordinator's rows carry the
+  quotation, the company, the project, the metres, the total and the wait (`quotations-table.tsx:
+  316-323, 349-362`); the rep who raised it is in the sheet only (`:560`). The conversation
+  about a request is with the rep (S54), so she opens each row to learn whom to write to.
+  Cause: the row was drawn for the rep's own list, where the rep is himself. Fix: on the queue,
+  the row names the person, in the reader's script (D68).
+- [x] 82 **A typed line on a wide card floats to the far edge.** Seen in the box's own shots
+  and fixed in P11D-9: on Faisal's English day at 1366 the Arabic last-said line under a
+  company sat alone at the right edge of the card, nearer the date than the name, and the
+  sent-back reason on a waiting card had done the same since P11A-11 (parked then as a layout
+  note). Cause: `<Prose>` served two layouts with one rule — `dir="auto"` on the block gives a
+  paragraph its own alignment, which is right for a report or a log entry and wrong for a
+  one-line caption that belongs to the row above it. Fix: `<Prose line>` keeps the page's
+  alignment for the block and the writer's direction for the words in a `<bdi>`; the call
+  card, the waiting card, the notice, the history row, the archive row and the duplicate
+  warning use it; the rule is written beside the paragraph rule in DESIGN §5 and words.md;
+  `tests/why.spec.ts` reads both directions. In the same pass the targets row put its unit and
+  Save on the box's own line, so a row with last month's figure and one without wrap alike.
+
+Refuted in the walk, so the next reader does not re-find them: the quotation line is nine
+fields but only colour, three lookups and the price are typed on a first line, and the second
+line and the next quotation start from the last (D74, 9A item 7); the second dispatch already
+opens on the first one's site and terms (D81); the log is three presses with the company,
+the contact, today and the channel filled (D82, D101); the phone number is the search key and
+Ctrl+K reaches it from anywhere (SPEC §3); every write refreshes every open screen of everyone
+it concerns, so the same figure on two screens is one query and one live event (D105); the
+team table, the rep's strip and the day read target, achieved and pace through one function
+(`repMonth`), and pipeline and open quotations through one (`personStanding`), so there was no
+second definition to find (D95, D102); and the manager's "stuck" is on his home screen at zero
+presses. Parked for other boxes: the date picker offers no "tomorrow" or "next week" (11H, the
+phone); the duplicate warning cannot open the company it names because the form would be lost
+(11F, views).

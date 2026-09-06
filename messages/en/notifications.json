@@ -1,13 +1,13 @@
 {
-  "quotationRequested": "{rep} asked for {label}.",
-  "quotationIssued": "{label} is issued — SMAC {smacNumber}.",
-  "quotationReturned": "{label} came back for edits.",
-  "quotationAccepted": "The customer accepted {label}.",
-  "quotationRejected": "The customer rejected {label}.",
-  "quotationCancelled": "{rep} withdrew {label}.",
-  "dispatchRequested": "{rep} raised {label}.",
-  "dispatchApproved": "{label} is approved — SMAC {smacNumber}.",
-  "dispatchRefused": "{label} was refused.",
+  "quotationRequested": "{rep} asked for {label} for {company}.",
+  "quotationIssued": "{label} for {company} is issued — SMAC {smacNumber}.",
+  "quotationReturned": "{label} for {company} came back for edits.",
+  "quotationAccepted": "{company} accepted {label}.",
+  "quotationRejected": "{company} rejected {label}.",
+  "quotationCancelled": "{rep} withdrew {label} for {company}.",
+  "dispatchRequested": "{rep} requested {label} for {company}.",
+  "dispatchApproved": "{label} for {company} is approved — SMAC {smacNumber}.",
+  "dispatchRefused": "{label} for {company} was refused.",
   "companyHandedOver": "{rep} handed you {label}.",
   "unreadMark": "Unread"
 }

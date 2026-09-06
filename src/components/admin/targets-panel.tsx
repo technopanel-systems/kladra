@@ -68,6 +68,7 @@ export function TargetsPanel({ targets }: { targets: TargetsForMonth }) {
           month={targets.month}
           label={t("admin.companyTarget")}
           value={targets.company}
+          previous={targets.companyPrevious}
         />
         {targets.people.map((person) => (
           <TargetBox
@@ -76,6 +77,7 @@ export function TargetsPanel({ targets }: { targets: TargetsForMonth }) {
             userId={person.userId}
             label={person.name}
             value={person.sqm}
+            previous={person.previous}
           />
         ))}
       </div>
@@ -88,11 +90,14 @@ function TargetBox({
   userId,
   label,
   value,
+  previous,
 }: {
   month: string;
   userId?: string;
   label: string;
   value: string | null;
+  /** Last month's figure, or null when there was none (D115). */
+  previous: string | null;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -121,32 +126,64 @@ function TargetBox({
   }
 
   return (
-    <div className="card-face flex flex-wrap items-end gap-3 p-3">
+    // A form, so Enter in the box saves it (D114): five boxes a month, and the
+    // hand was leaving the keyboard for each one.
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!pending) save();
+      }}
+      noValidate
+      className="card-face flex flex-wrap items-center gap-3 p-3"
+    >
       <Label htmlFor={id} className="min-w-40 flex-1 text-sm font-medium">
         {label}
       </Label>
+      {/* The box, its unit and its Save are one row, and what sits under the box
+          belongs to the box — so a row with last month's figure and a row without
+          wrap the same way at 375, and the unit never reads twice on one line. */}
       <span className="flex flex-col gap-1.5">
-        <Input
-          id={id}
-          dir="ltr"
-          className="num w-36"
-          inputMode="numeric"
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
-          disabled={pending}
-          aria-invalid={error ? true : undefined}
-          placeholder={t("admin.noTarget")}
-        />
+        <span className="flex items-center gap-3">
+          <Input
+            id={id}
+            dir="ltr"
+            className="num w-36"
+            inputMode="numeric"
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            disabled={pending}
+            aria-invalid={error ? true : undefined}
+            placeholder={t("admin.noTarget")}
+          />
+          <span className="text-sm text-muted-foreground">{t("common.sqm")}</span>
+          <Button type="submit" variant="outline" disabled={pending}>
+            {pending ? t("common.saving") : t("common.save")}
+          </Button>
+        </span>
         {error ? (
           <span role="alert" className="text-xs text-destructive">
             {error}
           </span>
         ) : null}
+        {/* An empty box says what last month was, and one press keeps it;
+            the admin still presses Save, because a target is a number
+            somebody agreed out loud (D115). */}
+        {value === null && previous !== null ? (
+          <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span data-slot="target-previous">
+              {t("admin.lastMonthWas", { sqm: String(Number(previous)) })}
+            </span>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => setTyped(String(Number(previous)))}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              {t("admin.keepLastMonth")}
+            </button>
+          </span>
+        ) : null}
       </span>
-      <span className="self-end text-sm text-muted-foreground">{t("common.sqm")}</span>
-      <Button variant="outline" onClick={save} disabled={pending}>
-        {pending ? t("common.saving") : t("common.save")}
-      </Button>
-    </div>
+    </form>
   );
 }

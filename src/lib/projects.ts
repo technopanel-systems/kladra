@@ -156,6 +156,31 @@ export async function countProjects(input: ListProjectsInput): Promise<number> {
   return Number(row?.total ?? 0);
 }
 
+/**
+ * The two chips above the list, counted the way the list is narrowed: projects
+ * with a pending date, through the same predicate `narrowTo` filters by, in one
+ * statement (D108). This screen used to show the home strip's figure — company
+ * dates and project dates together — above a list of projects only, and read
+ * "37 overdue" over one row.
+ */
+export async function projectFollowUpCounts(
+  user: SessionUser,
+): Promise<{ overdue: number; today: number }> {
+  const pending = pendingFollowUpSql();
+  const never = neverContactedProjectSql();
+  const overdue = followUpFilterSql(pending, "overdue", never);
+  const today = followUpFilterSql(pending, "today", never);
+  const [row] = await db
+    .select({
+      overdue: sql<number>`count(*) filter (where ${overdue})::int`,
+      today: sql<number>`count(*) filter (where ${today})::int`,
+    })
+    .from(projects)
+    .innerJoin(companies, eq(companies.id, projects.companyId))
+    .where(and(...narrowTo({ user })));
+  return { overdue: Number(row?.overdue ?? 0), today: Number(row?.today ?? 0) };
+}
+
 export type ProjectDetail = ProjectRow & {
   notes: string | null;
   archivedAt: Date | null;

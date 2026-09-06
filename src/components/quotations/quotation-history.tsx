@@ -61,7 +61,7 @@ export async function QuotationHistory({ history }: { history: readonly Quotatio
                 {t("quotations.wasNumber", { number: event.note })}
               </span>
             ) : event.note ? (
-              <Prose text={event.note} className="text-xs text-muted-foreground" />
+              <Prose line text={event.note} className="text-xs text-muted-foreground" />
             ) : null}
           </li>
         ))}

@@ -362,6 +362,14 @@ export type DispatchItemRow = {
   qty: number;
   /** What the quotation asked for on that line. */
   quotedQty: number;
+  /**
+   * What OTHER dispatches — waiting or approved — already hold of that line,
+   * and what is left once this one is counted (D112). The coordinator checking
+   * the third partial dispatch reads them here rather than counting the
+   * quotation's mini list; the definition is `committedQtySql`'s (D12).
+   */
+  elsewhereQty: number;
+  leftAfter: number;
   width: string;
   length: string;
   sqm: string;
@@ -405,6 +413,16 @@ export async function getDispatch(
       colourCode: quotationItems.colourCode,
       qty: dispatchItems.qty,
       quotedQty: quotationItems.qty,
+      // Both tables named outright inside the subquery (rules/data.md), and
+      // the same status test as committedQtySql: waiting counts as spoken for.
+      elsewhereQty: sql<number>`(
+        select coalesce(sum(di.qty), 0)::int
+          from dispatch_items di
+          join dispatches d on d.id = di.dispatch_id
+         where di.quotation_item_id = quotation_items.id
+           and d.status in ('submitted', 'approved')
+           and d.id <> dispatch_items.dispatch_id
+      )`,
       width: quotationItems.width,
       length: quotationItems.length,
       sqm: lineSqm,
@@ -413,8 +431,20 @@ export async function getDispatch(
     .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
     .where(eq(dispatchItems.dispatchId, id))
     .orderBy(asc(quotationItems.position));
-
-  return { ...toRow(row, row.shipmentMethod), items };
+  // This dispatch holds its own share only while it is waiting or approved; a
+  // refused or cancelled one gave its quantities back (D12).
+  const holds = row.status === "submitted" || row.status === "approved";
+  return {
+    ...toRow(row, row.shipmentMethod),
+    items: items.map((item) => ({
+      ...item,
+      elsewhereQty: Number(item.elsewhereQty ?? 0),
+      leftAfter: Math.max(
+        0,
+        item.quotedQty - Number(item.elsewhereQty ?? 0) - (holds ? item.qty : 0),
+      ),
+    })),
+  };
 }
 
 /** The dispatches raised against one quotation, newest first — the drawer's tab. */

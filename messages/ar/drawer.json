@@ -33,7 +33,7 @@
   "archiveTitle": "أرشفة {name}؟",
   "archiveReason": "سبب الأرشفة",
   "archiveReasonPlaceholder": "أُغلقت الشركة؛ اندمجت في شركة أخرى؛ مكرّرة",
-  "archiveWarning": "تخرج الشركة من قوائمك ويبقى سجلها كما هو. يمكن لمدير النظام إعادتها.",
+  "archiveWarning": "تخرج الشركة من قوائمك ويبقى سجلها كما هو. يمكن لمدير النظام استرجاعها.",
   "archived": "تمت أرشفة {name}",
   "archiveContactTitle": "أرشفة {name}؟",
   "archiveContactWarning": "تخرج جهة الاتصال من قائمة هذه الشركة، ويبقى اسمها في كل ما سُجّل باسمها.",

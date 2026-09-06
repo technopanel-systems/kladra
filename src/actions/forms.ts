@@ -88,6 +88,11 @@ export type DuplicateHit = {
   name: string;
   rep: string;
   matchedOn: "name" | "phone";
+  city: string | null;
+  /** A Riyadh day, or null for a company nobody has logged against. */
+  lastActivityOn: string | null;
+  /** Off the floor: the Riyadh day it left, and the reason typed then (S16, D109). */
+  archived: { on: string; reason: string | null } | null;
 };
 
 /**
@@ -382,7 +387,15 @@ export async function duplicateCheckAction(
     if (!hit) return { ok: true, data: null };
     return {
       ok: true,
-      data: { id: hit.id, name: hit.name, rep: hit.repName, matchedOn: hit.matchedOn },
+      data: {
+        id: hit.id,
+        name: hit.name,
+        rep: hit.repName,
+        matchedOn: hit.matchedOn,
+        city: hit.city,
+        lastActivityOn: hit.lastActivityOn,
+        archived: hit.archivedOn ? { on: hit.archivedOn, reason: hit.archiveReason } : null,
+      },
     };
   } catch {
     // A warning that cannot be computed is not an error a rep should see; the

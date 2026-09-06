@@ -88,8 +88,8 @@ async function fillTheDetails(form: Locator, t: Translate) {
  */
 async function issuedQuotation() {
   const faisal = await userId("faisal@technopanel.com.sa");
-  return one<{ id: string; number: number }>(
-    `select q.id, q.number
+  return one<{ id: string; number: number; company: string }>(
+    `select q.id, q.number, c.name as company
        from quotations q
        join companies c on c.id = q.company_id
       where c.rep_id = $1::uuid
@@ -235,9 +235,17 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
 
     const sheet = sheetFor(page, label);
     await expect(sheet).toBeVisible(COLD);
-    // Her check: how many are going, against how many the quotation asked for.
+    // Her check: how many are going, against how many the quotation asked for,
+    // what other dispatches already hold, and what is left once this one is
+    // counted (D112) — the line's own arithmetic, not the mini list's.
     await expect(sheet.getByText(t("dispatches.quoted")).first()).toBeVisible();
     await expect(sheet.getByText(String(first.qty), { exact: true }).first()).toBeVisible();
+    await expect(sheet.locator('[data-slot="figure-elsewhere"]').first()).toHaveText(
+      String(first.qty - first.remaining),
+    );
+    await expect(sheet.locator('[data-slot="figure-left-after"]').first()).toHaveText(
+      String(first.remaining - sending),
+    );
 
     await sheet.getByRole("button", { name: t("dispatches.approve") }).click();
     const ask = page.getByRole("dialog", { name: t("dispatches.approveTitle", { label }) });
@@ -252,7 +260,11 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     await page.goto(`/${locale}/notifications`);
 
     const notice = page.getByText(
-      t("notifications.dispatchApproved", { label, smacNumber: smacNumber(locale) }),
+      t("notifications.dispatchApproved", {
+        label,
+        company: quotation.company,
+        smacNumber: smacNumber(locale),
+      }),
     );
     await expect(notice).toBeVisible(COLD);
     await notice.click();

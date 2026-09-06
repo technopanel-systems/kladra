@@ -148,13 +148,17 @@ function AddDayForm({
   const t = useTranslations();
   const router = useRouter();
   const [day, setDay] = useState<Day | null>(todayRiyadh());
+  // The last day of the span. Null means "the same day", which is the usual
+  // answer; Eid and a fortnight's leave are the other one (D113).
+  const [until, setUntil] = useState<Day | null>(null);
   const [who, setWho] = useState<string>(EVERYONE);
   const [note, setNote] = useState("");
 
   const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
     addNonWorkingAction,
-    () => {
-      toast.success(t("admin.dayAdded"));
+    (data) => {
+      const added = data?.added ?? 1;
+      toast.success(added === 1 ? t("admin.dayAdded") : t("admin.daysAdded", { count: added }));
       onClose();
       router.refresh();
     },
@@ -171,6 +175,7 @@ function AddDayForm({
   return (
     <form ref={form} action={submit} noValidate className="flex min-h-0 flex-1 flex-col">
       <input type="hidden" name="day" value={day ?? ""} />
+      {until ? <input type="hidden" name="until" value={until} /> : null}
       {who ? <input type="hidden" name="userId" value={who} /> : null}
 
       <FormBody>
@@ -189,6 +194,28 @@ function AddDayForm({
               {fieldErrors.day}
             </p>
           ) : null}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="until-picker">{t("admin.lastDay")}</Label>
+          <DatePicker
+            id="until-picker"
+            value={until}
+            onChange={setUntil}
+            min={day ?? undefined}
+            disabled={pending}
+            invalid={fieldErrors.until ? true : undefined}
+            aria-describedby={fieldErrors.until ? "until-error" : "until-hint"}
+          />
+          {fieldErrors.until ? (
+            <p id="until-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.until}
+            </p>
+          ) : (
+            <p id="until-hint" className="text-xs text-muted-foreground">
+              {t("admin.lastDayHint")}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">

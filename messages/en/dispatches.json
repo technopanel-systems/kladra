@@ -31,6 +31,7 @@
   "sending": "Sending now",
   "quoted": "On the quotation",
   "remaining": "Left to send",
+  "elsewhere": "On other dispatches",
   "nothingLeft": "Nothing left on this line",
   "destinationPlaceholder": "Where the panels are going",
   "paymentTermsPlaceholder": "As agreed with the customer",

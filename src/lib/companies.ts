@@ -67,6 +67,12 @@ export type CompanyRow = {
   mainContactName: string | null;
   mainContactPhone: E164 | null;
   lastActivityOn: Day | null;
+  /**
+   * The words of the last entry — why the next call is owed, on the card that
+   * asks for it (D111). The rep who wrote "wants 4 mm samples, follow up
+   * tomorrow" read tomorrow's card as a name and a date until this rode with it.
+   */
+  lastActivityText: string | null;
   /** The soonest date waiting on this customer — its own or an open project's. */
   nextFollowUp: Day | null;
   followUpState: FollowUpState | null;
@@ -155,6 +161,22 @@ function lastActivitySql(): SQL<Day | null> {
   )`;
 }
 
+/**
+ * What the last entry said — the same entry `lastActivitySql` dates, chosen the
+ * same way, so the card's day and its words are one visit (D111). Ties on a day
+ * go to the one written last.
+ */
+function lastActivityTextSql(): SQL<string | null> {
+  return sql`(
+    select a.text
+      from activities a
+     where a.company_id = companies.id
+       and a.archived_at is null
+     order by a.happened_on desc, a.created_at desc
+     limit 1
+  )`;
+}
+
 
 /** A rep sees only his own; manager and admin see all (S8, authz.seesAll). */
 function ownedBy(user: SessionUser): SQL | undefined {
@@ -186,6 +208,7 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
       mainContactName: mainContact("name"),
       mainContactPhone: mainContact("phone_normalized"),
       lastActivityOn: lastActivity,
+      lastActivityText: lastActivityTextSql(),
       nextFollowUp: effective,
       followUpState: followUpStateSql(effective),
     })
@@ -206,6 +229,7 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
     mainContactName: row.mainContactName ?? null,
     mainContactPhone: row.mainContactPhone ? storedE164(row.mainContactPhone) : null,
     lastActivityOn: row.lastActivityOn ?? null,
+    lastActivityText: row.lastActivityText ?? null,
     nextFollowUp: row.nextFollowUp ?? null,
     followUpState: row.followUpState ?? null,
   }));
@@ -466,6 +490,12 @@ export type PossibleDuplicate = {
   repName: string;
   /** Which of the two signs matched, so the warning sits under that field. */
   matchedOn: "phone" | "name";
+  /** What a rep decides by without leaving the form: where it is, when it was last worked. */
+  city: string | null;
+  lastActivityOn: Day | null;
+  /** Off the floor, with the day and the reason somebody gave up on it (S16, D109). */
+  archivedOn: Day | null;
+  archiveReason: string | null;
 };
 
 /** Below this a name prefix matches half the book and the warning is noise. */
@@ -485,7 +515,15 @@ const MIN_DUPLICATE_NAME = 3;
  * do — and it is compared on `phone_normalized`, so 0551234567, +966551234567
  * and 00966551234567 all find the same contact (S14). The name is a prefix
  * match, because the question is asked mid-word, with an exact hit ahead of the
- * rest. Archived rows never match.
+ * rest.
+ *
+ * Archived rows match TOO, and say so (D109). The first draft skipped them,
+ * which made the archive a place things went and never a place the app looked:
+ * a customer archived last year as "closed down" was typed in again as a
+ * stranger, and the one reason to archive rather than delete — that when he
+ * resurfaces the record says he was known and why somebody gave up on him
+ * (S16) — was never shown to the person it was kept for. A live match still
+ * sorts ahead of an archived one.
  */
 export async function findPossibleDuplicates(input: {
   name?: string;
@@ -518,18 +556,25 @@ export async function findPossibleDuplicates(input: {
 
   const matches = [phoneMatch, nameMatch].filter((clause): clause is SQL => clause !== null);
 
+  const locale = await getLocale();
+  const cityLabel = locale.startsWith("ar") ? cities.nameAr : cities.nameEn;
   const rows = await db
     .select({
       id: companies.id,
       name: companies.name,
-      repName: personName(await getLocale()),
+      repName: personName(locale),
       matchedOn: sql<"phone" | "name">`case when ${phoneMatch ?? sql`false`} then 'phone' else 'name' end`,
+      city: sql<string | null>`coalesce(${cityLabel}, ${companies.cityText})`,
+      lastActivityOn: lastActivitySql(),
+      // The Riyadh day it left the floor; null while it is on it.
+      archivedOn: sql<Day | null>`to_char((${companies.archivedAt} at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+      archiveReason: companies.archiveReason,
     })
     .from(companies)
     .innerJoin(users, eq(users.id, companies.repId))
+    .leftJoin(cities, eq(cities.id, companies.cityId))
     .where(
       and(
-        isNull(companies.archivedAt),
         input.excludeId ? sql`companies.id <> ${input.excludeId}::uuid` : undefined,
         // Parenthesised deliberately: `and` binds tighter than `or`, so an
         // unwrapped disjunction would swallow the archived and exclude clauses.
@@ -539,11 +584,19 @@ export async function findPossibleDuplicates(input: {
     .orderBy(
       sql`case when ${phoneMatch ?? sql`false`} then 0 else 1 end`,
       sql`case when lower(trim(companies.name)) = lower(${name}) then 0 else 1 end`,
+      // Somebody's live customer before a record nobody works.
+      sql`companies.archived_at is null desc`,
       asc(companies.name),
     )
     .limit(input.limit ?? 5);
 
-  return rows;
+  return rows.map((row) => ({
+    ...row,
+    city: row.city ?? null,
+    lastActivityOn: row.lastActivityOn ?? null,
+    archivedOn: row.archivedOn ?? null,
+    archiveReason: row.archiveReason ?? null,
+  }));
 }
 
 // ---- shared with the actions --------------------------------------------------

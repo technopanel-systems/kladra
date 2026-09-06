@@ -79,8 +79,10 @@ export function WaitingList({
                   </>
                 ) : null}
               </span>
+              {/* Her reason, under the company it is about: a line, so it sits
+                  where the row starts and not at the far edge of a wide card. */}
               {row.reason ? (
-                <Prose text={row.reason} className="text-xs text-muted-foreground" />
+                <Prose line text={row.reason} className="text-xs text-muted-foreground" />
               ) : null}
             </Link>
           </li>

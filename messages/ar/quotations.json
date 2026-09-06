@@ -38,7 +38,7 @@
   "cancelHint": "يخرج الطلب من قائمة منسقة المبيعات. لا يُحذف شيء.",
   "cancelled": "تم سحب {label}",
   "accepted": "قبول العميل",
-  "acceptTitle": "هل قبل العميل {label}؟",
+  "acceptTitle": "هل قبِل العميل {label}؟",
   "acceptHint": "يُسجَّل جواب العميل على عرض السعر. لا يتغير المشروع بهذا.",
   "acceptedDone": "تم تسجيل قبول {label}",
   "rejected": "رفض العميل",

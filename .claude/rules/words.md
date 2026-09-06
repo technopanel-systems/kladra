@@ -99,6 +99,13 @@ what the message loader uses it for, and leaves the BLOCK aligned to the page â€
 so an English paragraph in an Arabic card read left-to-right and sat flush right,
 ragged down its left. Legible, and wrong.
 
+That is for a PARAGRAPH â€” the body of its own box. A one-line caption that
+belongs to the row above it (the reason under a waiting card, the last words on
+a call card, the note under a notice) is `<Prose line>`: the block keeps the
+page's alignment so the line starts where its row starts, and only the words,
+in a `<bdi>`, take the writer's direction. Aligned its own way, an Arabic line
+on a wide English card sat at the far right edge, detached from its company.
+
 ## Two figures with almost the same name are one figure with a bug
 "Follow-ups overdue" (more than three days past) sat two inches above "Overdue
 follow-ups" (any day past) on the manager's own screen, and both were correct.

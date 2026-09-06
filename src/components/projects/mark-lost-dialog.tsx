@@ -57,13 +57,7 @@ export function isLossReasonCode(value: string): value is LossReasonCode {
   return (LOSS_REASON_CODES as readonly string[]).includes(value);
 }
 
-export function MarkLostDialog({
-  projectId,
-  trigger,
-}: {
-  projectId: string;
-  trigger?: ReactNode;
-}) {
+export function MarkLostDialog({ projectId, trigger }: { projectId: string; trigger?: ReactNode }) {
   const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -121,59 +115,76 @@ export function MarkLostDialog({
           <DialogDescription>{t("projects.markLostDescription")}</DialogDescription>
         </DialogHeader>
 
-        <FieldGroup>
-          <Field data-invalid={errors.reason ? true : undefined}>
-            <FieldLabel htmlFor="loss-reason">{t("projects.lossReasonLabel")}</FieldLabel>
-            <Select
-              value={reason || undefined}
-              onValueChange={(next) => {
-                setReason(next);
-                setErrors((prev) => ({ ...prev, reason: undefined }));
-              }}
-            >
-              <SelectTrigger id="loss-reason" className="w-full" aria-invalid={!!errors.reason}>
-                <SelectValue placeholder={t("projects.lossReasonPlaceholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                {LOSS_REASON_CODES.map((code) => (
-                  <SelectItem key={code} value={code}>
-                    {t(`projects.lossReason.${code}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <FieldError>{errors.reason}</FieldError>
-          </Field>
-
-          {needsDetail ? (
-            <Field data-invalid={errors.detail ? true : undefined}>
-              <FieldLabel htmlFor="loss-detail">{t("projects.lossDetailLabel")}</FieldLabel>
-              <Textarea
-                id="loss-detail"
-                rows={3}
-                value={detail}
-                aria-invalid={!!errors.detail}
-                onChange={(event) => {
-                  setDetail(event.target.value);
-                  setErrors((prev) => ({ ...prev, detail: undefined }));
+        {/* A form, so the written detail can be confirmed from the keyboard
+            (D114): Enter stays a new line in the box, Ctrl/Cmd+Enter marks it. */}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!pending) submit();
+          }}
+          noValidate
+          className="flex flex-col gap-4"
+        >
+          <FieldGroup>
+            <Field data-invalid={errors.reason ? true : undefined}>
+              <FieldLabel htmlFor="loss-reason">{t("projects.lossReasonLabel")}</FieldLabel>
+              <Select
+                value={reason || undefined}
+                onValueChange={(next) => {
+                  setReason(next);
+                  setErrors((prev) => ({ ...prev, reason: undefined }));
                 }}
-              />
-              <FieldDescription>{t("projects.lossDetailRequired")}</FieldDescription>
-              <FieldError>{errors.detail}</FieldError>
+              >
+                <SelectTrigger id="loss-reason" className="w-full" aria-invalid={!!errors.reason}>
+                  <SelectValue placeholder={t("projects.lossReasonPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {LOSS_REASON_CODES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {t(`projects.lossReason.${code}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldError>{errors.reason}</FieldError>
             </Field>
-          ) : null}
-        </FieldGroup>
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button">
-              {t("common.cancel")}
+            {needsDetail ? (
+              <Field data-invalid={errors.detail ? true : undefined}>
+                <FieldLabel htmlFor="loss-detail">{t("projects.lossDetailLabel")}</FieldLabel>
+                <Textarea
+                  id="loss-detail"
+                  rows={3}
+                  value={detail}
+                  aria-invalid={!!errors.detail}
+                  onChange={(event) => {
+                    setDetail(event.target.value);
+                    setErrors((prev) => ({ ...prev, detail: undefined }));
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+                      event.preventDefault();
+                      if (!pending) submit();
+                    }
+                  }}
+                />
+                <FieldDescription>{t("projects.lossDetailRequired")}</FieldDescription>
+                <FieldError>{errors.detail}</FieldError>
+              </Field>
+            ) : null}
+          </FieldGroup>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" type="button">
+                {t("common.cancel")}
+              </Button>
+            </DialogClose>
+            <Button type="submit" variant="destructive" disabled={pending}>
+              {pending ? t("common.saving") : t("common.markLost")}
             </Button>
-          </DialogClose>
-          <Button type="button" variant="destructive" onClick={submit} disabled={pending}>
-            {pending ? t("common.saving") : t("common.markLost")}
-          </Button>
-        </DialogFooter>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

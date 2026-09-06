@@ -194,11 +194,18 @@ export type FollowUpCounts = {
 };
 
 /**
- * The three numbers behind the home strip — "Follow-ups: 2 overdue · 1 today".
+ * The numbers behind the home strip — "Follow-ups: 2 overdue · 1 today".
  *
- * Counted over companies AND projects (SPEC D9: "the home strip counts both"),
- * inside one statement, against Riyadh's today. A rep is counted on his own
- * records only; manager and admin see everyone's (S8).
+ * Counted as COMPANIES, one per company by the soonest date on it or on any of
+ * its live projects (SPEC D9: the strip counts both sources; D108: it counts
+ * them as the rows the list it opens will show). The first draft counted the
+ * dates themselves — a `union all` of company dates and project dates — and a
+ * company late on its own date and on a project's counted twice above a list
+ * that showed it once; on the Projects screen the same figure sat over a list
+ * of projects only, thirty-seven above one. The predicate below is the very
+ * one `listCompanies` filters by, so the pill and its rows cannot come apart.
+ * One statement, against Riyadh's today; a rep is counted on his own records
+ * only, manager and admin on everyone's (S8).
  *
  * A lost project is finished work, so its date no longer chases anybody; an
  * archived company or project never appears anywhere.
@@ -217,42 +224,37 @@ export async function followUpCountsForRep(repId: string): Promise<FollowUpCount
 }
 
 async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
+  // Each figure is the list's own filter, built by the same function the list
+  // calls with the same date expression (D108, rules/data.md). A count written
+  // any other way is a number above rows it does not describe.
+  const effective = effectiveFollowUpSql();
+  const never = neverContactedCompanySql();
+  const quiet = goneQuietCompanySql(effective);
+  const overdue = followUpFilterSql(effective, "overdue", never, quiet);
+  const today = followUpFilterSql(effective, "today", never, quiet);
   const result = await db.execute<{
     overdue: number;
     due_today: number;
     never_contacted: number;
     gone_quiet: number;
   }>(sql`
-    with riyadh as (select ${riyadhTodaySql()} as d),
-    due as (
-      select companies.next_follow_up as day
-        from companies
-       where companies.archived_at is null
-         and companies.next_follow_up is not null
-         and ${mine}
-      union all
-      select projects.next_follow_up as day
-        from projects
-        join companies on companies.id = projects.company_id
-       where projects.archived_at is null
-         and projects.lost_at is null
-         and projects.next_follow_up is not null
-         and companies.archived_at is null
-         and ${mine}
-    )
     select
-      (select count(*) from due, riyadh where due.day < riyadh.d)::int as overdue,
-      (select count(*) from due, riyadh where due.day = riyadh.d)::int as due_today,
       (select count(*) from companies
         where companies.archived_at is null
           and ${mine}
-          and ${neverContactedCompanySql()})::int as never_contacted,
-      -- The same predicate the list filters by, so the pill and the rows it
-      -- opens cannot disagree about how many there are (rules/data.md).
+          and ${overdue})::int as overdue,
       (select count(*) from companies
         where companies.archived_at is null
           and ${mine}
-          and ${goneQuietCompanySql(effectiveFollowUpSql())})::int as gone_quiet
+          and ${today})::int as due_today,
+      (select count(*) from companies
+        where companies.archived_at is null
+          and ${mine}
+          and ${never})::int as never_contacted,
+      (select count(*) from companies
+        where companies.archived_at is null
+          and ${mine}
+          and ${quiet})::int as gone_quiet
   `);
 
   const row = result.rows[0];

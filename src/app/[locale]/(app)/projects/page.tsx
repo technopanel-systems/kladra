@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/authz";
 import { ownsCompanies } from "@/lib/floor";
-import { followUpCounts, parseFollowUpFilter } from "@/lib/followups";
+import { parseFollowUpFilter } from "@/lib/followups";
 import { companyOptions } from "@/lib/pickers";
-import { countProjects, listProjects } from "@/lib/projects";
+import { countProjects, listProjects, projectFollowUpCounts } from "@/lib/projects";
 import { LIST_LIMIT } from "@/lib/list-size";
 
 /**
@@ -50,7 +50,9 @@ export default async function ProjectsPage({
   const [t, rows, counts, companies] = await Promise.all([
     getTranslations(),
     listProjects({ ...narrowing, limit: LIST_LIMIT }),
-    followUpCounts(user),
+    // The chips count what this list shows — projects — not the home strip's
+    // companies (D108).
+    projectFollowUpCounts(user),
     companyOptions(user),
   ]);
 

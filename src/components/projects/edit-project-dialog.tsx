@@ -125,24 +125,34 @@ export function EditProjectDialog({
           <DialogTitle>{t("projects.editProject")}</DialogTitle>
         </DialogHeader>
 
-        <ProjectFields
-          idPrefix="edit-project"
-          value={form}
-          onChange={change}
-          errors={errors}
-          disabled={pending}
-        />
+        {/* A form, so Enter in a field saves it (D114). */}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!pending) submit();
+          }}
+          noValidate
+          className="flex flex-col gap-4"
+        >
+          <ProjectFields
+            idPrefix="edit-project"
+            value={form}
+            onChange={change}
+            errors={errors}
+            disabled={pending}
+          />
 
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline" type="button" disabled={pending}>
-              {t("common.cancel")}
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline" type="button" disabled={pending}>
+                {t("common.cancel")}
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={pending}>
+              {pending ? t("common.saving") : t("common.save")}
             </Button>
-          </DialogClose>
-          <Button type="button" onClick={submit} disabled={pending}>
-            {pending ? t("common.saving") : t("common.save")}
-          </Button>
-        </DialogFooter>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

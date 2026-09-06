@@ -68,7 +68,7 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
             {/* Why, in the words of whoever did it (S16, D87) — typed text, so
                 it takes its own direction; under the name, where it is read. */}
             {row.reason ? (
-              <Prose text={row.reason} className="text-xs text-muted-foreground" />
+              <Prose line text={row.reason} className="text-xs text-muted-foreground" />
             ) : null}
           </div>
           <span className="flex flex-col text-xs text-muted-foreground">

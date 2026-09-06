@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { LogButton } from "@/components/activities/log-dialog";
 import { DayText } from "@/components/ui-ext/day-text";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
+import { Prose } from "@/components/ui-ext/prose";
 import { Link } from "@/i18n/navigation";
 import type { CompanyRow } from "@/lib/companies";
 import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
@@ -39,7 +40,7 @@ export function CallBand({ band }: { band: CallBandData }) {
   const locale = useLocale();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div data-slot="call-band" data-band={band.filter} className="flex flex-col gap-2">
       <div className="flex flex-col gap-0.5">
         <h3 className={cn("text-xs font-medium tracking-wide uppercase", TONE_TEXT[band.tone])}>
           {t(band.key)}{" "}
@@ -85,6 +86,19 @@ export function CallBand({ band }: { band: CallBandData }) {
                 )}
                 {row.cityName ? <span>{row.cityName}</span> : null}
               </span>
+              {/* Why the call is owed: the last thing written about him, one
+                  line, in the writer's own direction (D111). Without it the
+                  card was a name and a date, and the reason lived two presses
+                  away on the drawer's Activity tab. A line, not a paragraph:
+                  it starts where the card starts, whichever way it reads. */}
+              {row.lastActivityText ? (
+                <Prose
+                  line
+                  text={row.lastActivityText}
+                  slot="last-said"
+                  className="line-clamp-1 text-xs text-muted-foreground"
+                />
+              ) : null}
             </span>
 
             {row.nextFollowUp ? (

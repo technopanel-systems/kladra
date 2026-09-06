@@ -229,7 +229,13 @@ function LogPanel({
   const [happenedOn, setHappenedOn] = useState<string | null>(todayRiyadh());
   const [nextFollowUp, setNextFollowUp] = useState<string | null>(null);
   const [project, setProject] = useState<string>(entry?.projectId ?? projectId ?? NONE);
-  const [contact, setContact] = useState<string>(entry?.contactId ?? pickedContactId ?? NONE);
+  // The one the button named (D101); otherwise the only person there is, when
+  // there is only one — with several it opens on nobody, because a guess would
+  // misname the call (D115).
+  const onlyContact = contacts.length === 1 ? contacts[0].id : NONE;
+  const [contact, setContact] = useState<string>(
+    entry?.contactId ?? pickedContactId ?? onlyContact,
+  );
   const [textError, setTextError] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
@@ -242,7 +248,7 @@ function LogPanel({
     happenedOn !== today ||
     nextFollowUp !== null ||
     project !== (entry?.projectId ?? projectId ?? NONE) ||
-    contact !== (entry?.contactId ?? pickedContactId ?? NONE);
+    contact !== (entry?.contactId ?? pickedContactId ?? onlyContact);
   // And the phone's back gesture, which D84's guard below never saw: it is a
   // route change, not a tap (D96).
   useBackGuard(open && dirty);

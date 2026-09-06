@@ -36,6 +36,10 @@ import type { ActionResult } from "@/lib/types";
  * `initialValue` is for the one use that edits rather than asks: correcting a
  * SMAC number opens on the number as it stands (D88), so a one-character typo
  * is a one-character fix.
+ *
+ * It is a FORM (D114): Rawan types SMAC's number and presses Enter, on her most
+ * frequent act, instead of finding the button with the mouse. A reason is a
+ * paragraph, so there Enter stays a new line and Ctrl/Cmd+Enter confirms.
  */
 export function PromptDialog({
   trigger,
@@ -116,54 +120,69 @@ export function PromptDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor={fieldId}>{label}</Label>
-          {multiline ? (
-            <Textarea
-              id={fieldId}
-              rows={3}
-              disabled={pending}
-              value={value}
-              placeholder={placeholder}
-              aria-invalid={refusal ? true : undefined}
-              aria-describedby={refusal ? errorId : undefined}
-              onChange={(event) => setValue(event.target.value)}
-            />
-          ) : (
-            <Input
-              id={fieldId}
-              // A SMAC number is a Latin run and a reason is Arabic prose: each
-              // takes its own direction, on either locale's page (DESIGN §5).
-              dir="auto"
-              disabled={pending}
-              autoComplete="off"
-              value={value}
-              placeholder={placeholder}
-              aria-invalid={refusal ? true : undefined}
-              aria-describedby={refusal ? errorId : undefined}
-              onChange={(event) => setValue(event.target.value)}
-            />
-          )}
-          {refusal ? (
-            <p id={errorId} role="alert" className="text-xs text-destructive">
-              {refusal}
-            </p>
-          ) : null}
-        </div>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!pending) confirm();
+          }}
+          noValidate
+          className="flex flex-col gap-4"
+        >
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor={fieldId}>{label}</Label>
+            {multiline ? (
+              <Textarea
+                id={fieldId}
+                rows={3}
+                disabled={pending}
+                value={value}
+                placeholder={placeholder}
+                aria-invalid={refusal ? true : undefined}
+                aria-describedby={refusal ? errorId : undefined}
+                onChange={(event) => setValue(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+                    event.preventDefault();
+                    if (!pending) confirm();
+                  }
+                }}
+              />
+            ) : (
+              <Input
+                id={fieldId}
+                // A SMAC number is a Latin run and a reason is Arabic prose: each
+                // takes its own direction, on either locale's page (DESIGN §5).
+                dir="auto"
+                disabled={pending}
+                autoComplete="off"
+                value={value}
+                placeholder={placeholder}
+                aria-invalid={refusal ? true : undefined}
+                aria-describedby={refusal ? errorId : undefined}
+                onChange={(event) => setValue(event.target.value)}
+              />
+            )}
+            {refusal ? (
+              <p id={errorId} role="alert" className="text-xs text-destructive">
+                {refusal}
+              </p>
+            ) : null}
+          </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={pending}
-            onClick={() => onOpenChange(false)}
-          >
-            {t("common.cancel")}
-          </Button>
-          <Button type="button" disabled={pending} onClick={confirm}>
-            {pending ? t("common.saving") : confirmLabel}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending}
+              onClick={() => onOpenChange(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" disabled={pending}>
+              {pending ? t("common.saving") : confirmLabel}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

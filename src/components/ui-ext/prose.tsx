@@ -21,6 +21,16 @@ import { cn } from "@/lib/utils";
  * the question being asked: whose sentence is this. Arabic goes right, English
  * goes left, on either locale's page, with nothing to remember.
  *
+ * That is a PARAGRAPH: the body of its own box, read as a paragraph. A LINE is
+ * different, and that was the second defect (Phase 11D shots). The last words on
+ * a call card, the reason under a waiting card, the note under a notice — each is
+ * one line that belongs to the row above it, and when the line took its own
+ * alignment too, an Arabic reason on an English card at 1366 sat alone at the
+ * far right edge, nearer the date column than the company it explained. With
+ * `line`, the block keeps the page's alignment and the words keep their own
+ * direction, isolated in a `<bdi>`: the line starts where its row starts and
+ * reads the way it was written.
+ *
  * `break-words` because it is user content and somebody will paste a URL.
  *
  * Nothing at all renders nothing at all: `whitespace-pre-line` would turn a note
@@ -31,16 +41,28 @@ export function Prose({
   text,
   className,
   slot,
+  line = false,
 }: {
   text: string;
   className?: string;
   /** A hook for the specs, where one of these is the thing under test. */
   slot?: string;
+  /** A caption under something else, not a paragraph in its own box: the line
+   *  sits where its row starts and only the words take the writer's direction. */
+  line?: boolean;
 }) {
   if (text.trim() === "") return null;
+  const classes = cn("break-words whitespace-pre-line", className);
 
+  if (line) {
+    return (
+      <p data-slot={slot} className={classes}>
+        <bdi dir="auto">{text}</bdi>
+      </p>
+    );
+  }
   return (
-    <p data-slot={slot} dir="auto" className={cn("break-words whitespace-pre-line", className)}>
+    <p data-slot={slot} dir="auto" className={classes}>
       {text}
     </p>
   );

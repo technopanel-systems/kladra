@@ -178,8 +178,8 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
   test.slow(); // Six sign-ins and four dialogs.
 
   const faisal = await userId("faisal@technopanel.com.sa");
-  const project = await one<{ id: string; name: string }>(
-    `select p.id, p.name
+  const project = await one<{ id: string; name: string; company: string }>(
+    `select p.id, p.name, c.name as company
        from projects p
        join companies c on c.id = p.company_id
       where c.rep_id = $1::uuid
@@ -290,7 +290,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
 
     // The notice is a sentence in his language, built from the kind and its
     // params — the row stores no English (D13).
-    const notice = page.getByText(t("notifications.quotationReturned", { label }));
+    const notice = page.getByText(t("notifications.quotationReturned", { label, company: project.company }));
     await expect(notice).toBeVisible();
 
     // And HER words are a block of their own under it, not a clause inside a
@@ -342,7 +342,7 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     // his bell describing a request he had already corrected.
     await page.goto(`/${locale}/notifications`);
     await expect(
-      page.getByText(t("notifications.quotationReturned", { label })),
+      page.getByText(t("notifications.quotationReturned", { label, company: project.company })),
       "the notice about a request he has already fixed is still on his screen",
     ).toHaveCount(0);
   });
@@ -437,13 +437,14 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     await login(page, locale, "rawan");
     await page.goto(`/${locale}/notifications`);
 
-    const accepted = page.getByText(t("notifications.quotationAccepted", { label }));
+    const accepted = page.getByText(t("notifications.quotationAccepted", { label, company: project.company }));
     // The rep is named in the reader's script, because the row stores his id
     // and the screen resolves it (D68): in Arabic this locator is his Arabic
     // name, and it used to be his Latin one on every screen.
     const asked = page.getByText(
       t("notifications.quotationRequested", {
         label: `${label}/2`,
+        company: project.company,
         rep: await personName("faisal@technopanel.com.sa", locale),
       }),
     );
@@ -612,8 +613,8 @@ test("a rep withdraws his own request and it leaves the coordinator's queue", as
   test.slow();
 
   const faisal = await userId("faisal@technopanel.com.sa");
-  const project = await one<{ id: string; name: string }>(
-    `select p.id, p.name
+  const project = await one<{ id: string; name: string; company: string }>(
+    `select p.id, p.name, c.name as company
        from projects p
        join companies c on c.id = p.company_id
       where c.rep_id = $1::uuid and p.lost_at is null and p.archived_at is null

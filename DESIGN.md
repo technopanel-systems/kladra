@@ -111,7 +111,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   the base direction of a paragraph: an English log entry inside an Arabic card read
   left-to-right internally and still sat flush against the right margin, ragged down its
   left. Both languages are on every screen — Saad writes English, Rawan writes Arabic, each
-  reads the other's — so every such block goes through `<Prose>`.
+  reads the other's — so every such block goes through `<Prose>`. That is a PARAGRAPH: the
+  body of its own box — a log entry, a report, the reason box on a sheet — and it aligns its
+  own way. A LINE under something else is not (Phase 11D shots): the last words on a call
+  card, the reason under a waiting card, the note under a notice or a history row belong to
+  the row above them, and a line that took its own alignment sat alone at the far right edge
+  of an English card at 1366, nearer the date than the company it explained. `<Prose line>`
+  keeps the page's alignment for the block and the writer's direction for the words, in a
+  `<bdi>`: the line starts where its row starts and reads the way it was written.
 - **The brand red and the "it went wrong" red are the same colour.** `--brand` and
   `--a-red-fg` are both `#c8102e` in light mode, so a brand-tinted ring drawn round a card
   to mean "this one is yours" said "alert" in the app's own vocabulary. Colour carries one
@@ -417,6 +424,41 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   own parameters; an index is added where a plan walks a table once per row, and nowhere else,
   because a whole-table scan of four hundred rows is the planner being right. The baseline
   lives in WORKFLOW §3 and a change to a read is measured against it.
+- **A count counts the rows its list shows.** Phase 11D (D108). A pill, a chip or a band's
+  number is the list's own filter counted — the same function, the same date expression,
+  one per row of the kind that list draws: companies where the list is companies, projects
+  where it is projects. A figure counted any other way (dates, say, when the rows are
+  companies) is a number above rows it does not describe, and "clicking it lists them" stops
+  being true. The spec for it holds the sentence on the pill to the count of the rows.
+- **The archive is read, not only written.** Phase 11D (D109). A record kept for the day
+  something resurfaces is looked at on that day: the duplicate check matches archived
+  companies and says so, with the day and the reason. A warning carries what the person
+  decides by — where, when last worked, why it left — and a reason somebody typed is a block
+  in its own direction, under the sentence.
+- **A notice names its subject in words a person recognises.** Phase 11D (D110). A number is
+  a label, not a name: the sentence carries the customer, resolved at read time from the
+  notice's subject, never copied into the row — the same rule as the rep's name (D68), so a
+  rename reads right and an old row reads the same as a new one.
+- **A card that asks for work carries the reason.** Phase 11D (D111). A row that tells a
+  person to do something — call this customer, answer this request — says why in the words
+  that were written when the reason arose, on the card, not on a screen behind it. The words
+  are a typed block: one line, clamped, in their own direction.
+- **The person who checks a figure sees the figures it is checked against.** Phase 11D
+  (D112). A sheet that asks somebody to approve a quantity shows, beside it, what the paper
+  allowed, what other requests already hold, and what is left — computed by the same function
+  the form that typed the quantity used, never by a second one.
+- **A chore is entered once.** Phase 11D (D113). When the same fact recurs on consecutive days
+  — leave, a holiday — the form takes the span and the action writes the rows; the row stays
+  the unit the rest of the system reads, and a day already there is not written twice.
+- **A dialog with a text field is a form.** Phase 11D (D114). Enter submits it; a multi-line
+  field keeps Enter as a new line and takes Ctrl/Cmd+Enter. A dialog that saves from a
+  button's `onClick` is one that missed the form shell.
+- **A form starts from what the app knows.** Phase 11D (D115, with D74, D81 and D101 before
+  it). The last value of a recurring figure is shown where the new one is typed, with one
+  press to keep it; a list with one entry is chosen; a list with several is not guessed at.
+- **A row names its person where the reader is not that person.** Phase 11D (D116). On a
+  shared desk a row says whose it is, in the reader's script; on somebody's own list it does
+  not tell him his own name.
 
 ## §4 Not built until asked
 

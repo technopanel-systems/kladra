@@ -294,6 +294,13 @@ export function QuotationsTable({
                     )}
                   </span>
                   <span className="truncate text-sm">{row.companyName}</span>
+                  {/* On the queue the row is somebody's request, and the
+                      conversation about it is with him (S54, D116). */}
+                  {waiting ? (
+                    <span data-slot="row-rep" className="truncate text-xs text-muted-foreground">
+                      {row.repName}
+                    </span>
+                  ) : null}
                   {row.projectName ? (
                     <span className="truncate text-xs text-muted-foreground">
                       {row.projectName}
@@ -346,7 +353,17 @@ export function QuotationsTable({
                           ) : null}
                         </Link>
                       </TableCell>
-                      <TableCell className="p-3">{row.companyName}</TableCell>
+                      <TableCell className="p-3">
+                        {row.companyName}
+                        {waiting ? (
+                          <span
+                            data-slot="row-rep"
+                            className="block text-xs text-muted-foreground"
+                          >
+                            {row.repName}
+                          </span>
+                        ) : null}
+                      </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
                         {row.projectName ?? "—"}
                       </TableCell>

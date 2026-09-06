@@ -15,7 +15,7 @@
  * one; nobody, admin included, can see the old one.
  */
 
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -38,7 +38,7 @@ import { holdsFloor } from "@/lib/floor";
 import { isLookupKind, LOOKUP_FIELDS, tableName } from "@/lib/lookup-kinds";
 import { NotAllowed, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { firstOfMonth, type Day } from "@/lib/dates";
+import { addDays, diffDays, firstOfMonth, type Day } from "@/lib/dates";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
 /** bcrypt cost. The same one the seed uses, so a reset and a seed match. */
@@ -542,21 +542,34 @@ export async function setLookupActiveAction(
  * the only difference is whether a user is named. A rep back from two weeks off
  * must not be told he is behind.
  */
+/** Longer than any leave a person takes; a typo in the last day is refused, not written. */
+const MAX_SPAN_DAYS = 62;
+
 export async function addNonWorkingAction(
-  _prev: ActionResult<undefined> | null,
+  _prev: ActionResult<{ added: number }> | null,
   formData: FormData,
-): Promise<ActionResult<undefined>> {
+): Promise<ActionResult<{ added: number }>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
 
+    const dayShape = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
     const parsed = z
       .object({
-        day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        day: dayShape,
+        // The last day of the span; the same day when the form left it alone
+        // (D113). Eid is four days and a rep's leave is a fortnight, and one
+        // dialog per day was how leave stopped being entered at all.
+        until: dayShape.optional(),
         userId: z.uuid().optional(),
         note: z.string().trim().max(200).optional(),
       })
+      .refine((value) => !value.until || value.until >= value.day, { path: ["until"] })
+      .refine((value) => !value.until || diffDays(value.day, value.until) < MAX_SPAN_DAYS, {
+        path: ["until"],
+      })
       .safeParse({
         day: field(formData, "day"),
+        until: field(formData, "until"),
         userId: field(formData, "userId"),
         note: field(formData, "note"),
       });
@@ -568,24 +581,51 @@ export async function addNonWorkingAction(
       };
     }
 
-    await db.transaction(async (tx) => {
-      const [row] = await tx
+    const { day, userId, note } = parsed.data;
+    const until = parsed.data.until ?? day;
+    const span: Day[] = [];
+    for (let d = day; d <= until; d = addDays(d, 1)) span.push(d);
+
+    const added = await db.transaction(async (tx) => {
+      // A day already on this person's calendar (or everyone's) is not written
+      // twice: pace would count it once anyway, and the list would show two.
+      const already = await tx
+        .select({ day: nonWorkingDays.day })
+        .from(nonWorkingDays)
+        .where(
+          and(
+            inArray(nonWorkingDays.day, span),
+            userId ? eq(nonWorkingDays.userId, userId) : isNull(nonWorkingDays.userId),
+          ),
+        );
+      const taken = new Set(already.map((row) => row.day));
+      const fresh = span.filter((d) => !taken.has(d));
+      if (fresh.length === 0) return 0;
+      const rows = await tx
         .insert(nonWorkingDays)
-        .values({
-          day: parsed.data.day,
-          kind: parsed.data.userId ? "leave" : "holiday",
-          userId: parsed.data.userId ?? null,
-          note: parsed.data.note ?? null,
-        })
-        .returning({ id: nonWorkingDays.id });
-      await record(tx, actor.id, "nonWorking.add", "nonWorkingDay", String(row.id), {
-        day: parsed.data.day,
-        userId: parsed.data.userId ?? null,
-      });
+        .values(
+          fresh.map((d) => ({
+            day: d,
+            kind: userId ? ("leave" as const) : ("holiday" as const),
+            userId: userId ?? null,
+            note: note ?? null,
+          })),
+        )
+        .returning({ id: nonWorkingDays.id, day: nonWorkingDays.day });
+      // One trail row per day written: the record is the day (D104), and a
+      // span is however many of them there were.
+      for (const row of rows) {
+        await record(tx, actor.id, "nonWorking.add", "nonWorkingDay", String(row.id), {
+          day: row.day,
+          userId: userId ?? null,
+          span: fresh.length > 1 ? { from: day, until } : undefined,
+        });
+      }
+      return rows.length;
     });
 
     revalidateAdmin();
-    return { ok: true, data: undefined };
+    return { ok: true, data: { added } };
   });
 }
 

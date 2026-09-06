@@ -269,6 +269,12 @@ export function DispatchesTable({
                     )}
                   </span>
                   <span className="truncate text-sm">{row.companyName}</span>
+                  {/* On the queue the row is somebody's request (S54, D116). */}
+                  {waiting ? (
+                    <span data-slot="row-rep" className="truncate text-xs text-muted-foreground">
+                      {row.repName}
+                    </span>
+                  ) : null}
                   {row.projectName ? (
                     <span className="truncate text-xs text-muted-foreground">
                       {row.projectName}
@@ -321,7 +327,17 @@ export function DispatchesTable({
                           ) : null}
                         </Link>
                       </TableCell>
-                      <TableCell className="p-3">{row.companyName}</TableCell>
+                      <TableCell className="p-3">
+                        {row.companyName}
+                        {waiting ? (
+                          <span
+                            data-slot="row-rep"
+                            className="block text-xs text-muted-foreground"
+                          >
+                            {row.repName}
+                          </span>
+                        ) : null}
+                      </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
                         {row.projectName ?? "—"}
                       </TableCell>
@@ -542,7 +558,11 @@ export function DispatchSheet({
                   </h4>
                   <Sqm value={item.sqm} className="text-sm" />
                 </div>
-                <dl className="grid grid-cols-3 gap-x-4 gap-y-1 text-xs">
+                {/* Her check on a partial dispatch: what is going now, against
+                    what the quotation asked for, what other dispatches already
+                    hold, and what is left once this one is counted — one
+                    definition, the dialog's (D112, D12). */}
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-5">
                   <Fact label={t("dispatches.sending")}>
                     <span dir="ltr" className="num">
                       {item.qty}
@@ -551,6 +571,16 @@ export function DispatchSheet({
                   <Fact label={t("dispatches.quoted")}>
                     <span dir="ltr" className="num">
                       {item.quotedQty}
+                    </span>
+                  </Fact>
+                  <Fact label={t("dispatches.elsewhere")}>
+                    <span dir="ltr" className="num" data-slot="figure-elsewhere">
+                      {item.elsewhereQty}
+                    </span>
+                  </Fact>
+                  <Fact label={t("dispatches.remaining")}>
+                    <span dir="ltr" className="num" data-slot="figure-left-after">
+                      {item.leftAfter}
                     </span>
                   </Fact>
                   <Fact label={t("quotations.sheet")}>

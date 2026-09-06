@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { createCompanyAction } from "@/actions/companies";
 import { duplicateCheckAction, type DuplicateHit, type FormLookups } from "@/actions/forms";
@@ -28,8 +28,10 @@ import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { Prose } from "@/components/ui-ext/prose";
 import { Button } from "@/components/ui/button";
 import { usePathname, useRouter } from "@/i18n/navigation";
+import { formatDay } from "@/lib/dates";
 import { normalizePhone } from "@/lib/phone";
 import { TONE_CLASS } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
@@ -48,7 +50,10 @@ import type { ActionResult } from "@/lib/types";
  * Three things it will not do:
  *
  * - **Block on a duplicate.** The warning names the company and the rep who
- *   owns it and stays out of the way; a company is always created (SPEC S15).
+ *   owns it, says where it is and when it was last worked, and stays out of the
+ *   way; a company is always created (SPEC S15). An ARCHIVED match warns too,
+ *   with the day it left and the reason typed then — the case the archive is
+ *   kept for (S16, D109).
  * - **Ask for a city we do not have.** Saudi Arabia picks from the seeded list
  *   with Riyadh already chosen; anywhere else the city is a box to type in.
  * - **Lose what was typed.** Every field is controlled, so a refused save comes
@@ -121,6 +126,7 @@ function CompanyForm({
   onCancel: () => void;
 }) {
   const t = useTranslations();
+  const locale = useLocale();
   const [state, formAction, pending] = useActionState<
     ActionResult<{ companyId: string }> | null,
     FormData
@@ -170,15 +176,47 @@ function CompanyForm({
     };
   }, [company.name, contact.phone, countryCode]);
 
+  // What the rep decides by, on the form: a live match says where it is and
+  // when it was last worked; an archived one says when it left and why (D109).
+  // The reason is a block somebody typed, so it takes its own direction.
   const warning =
     duplicate === null ? null : (
-      <p
+      <div
         role="status"
         className={cn("flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs", TONE_CLASS.wait)}
       >
         <Info className="mt-px size-3.5 shrink-0" />
-        <span>{t("forms.duplicateCompany", { name: duplicate.name, rep: duplicate.rep })}</span>
-      </p>
+        <span className="flex min-w-0 flex-col gap-0.5">
+          {duplicate.archived ? (
+            <span>
+              {t("forms.duplicateArchived", {
+                name: duplicate.name,
+                rep: duplicate.rep,
+                date: formatDay(duplicate.archived.on, locale),
+              })}
+            </span>
+          ) : (
+            <>
+              <span>{t("forms.duplicateCompany", { name: duplicate.name, rep: duplicate.rep })}</span>
+              <span className="opacity-80">
+                {[
+                  duplicate.city,
+                  duplicate.lastActivityOn
+                    ? t("forms.duplicateLastActivity", {
+                        date: formatDay(duplicate.lastActivityOn, locale),
+                      })
+                    : t("forms.duplicateNeverContacted"),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            </>
+          )}
+          {duplicate.archived?.reason ? (
+            <Prose line text={duplicate.archived.reason} className="opacity-80" />
+          ) : null}
+        </span>
+      </div>
     );
 
   return (

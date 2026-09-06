@@ -99,8 +99,10 @@ export function NotificationsList({
                     from the message file, running the way the page runs. A
                     block a person wrote takes its direction from the text
                     (words.md, DESIGN §5), so it is a block, under the sentence
-                    that says what happened. */}
+                    that says what happened — a line of it, starting where the
+                    sentence starts, not a paragraph aligned its own way. */}
                 <Prose
+                  line
                   text={reasonOf(row)}
                   slot="notice-reason"
                   className="text-sm text-muted-foreground"
