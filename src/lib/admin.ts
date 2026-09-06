@@ -211,9 +211,13 @@ export async function listNonWorking(from: Day): Promise<NonWorkingRow[]> {
 
 // ---- the archive (D24) -------------------------------------------------------
 
+/** What the archive screen lists, and the family `admin.kind.*` names (D96). */
+export const ARCHIVE_KINDS = ["company", "contact", "project"] as const;
+export type ArchiveKind = (typeof ARCHIVE_KINDS)[number];
+
 export type ArchivedRow = {
   id: string;
-  kind: "company" | "contact" | "project";
+  kind: ArchiveKind;
   name: string;
   /** The company it belongs to; the same name again for a company. */
   companyName: string;
@@ -236,7 +240,7 @@ export async function listArchived(): Promise<ArchivedRow[]> {
   const locale = await getLocale();
   const result = await db.execute<{
     id: string;
-    kind: "company" | "contact" | "project";
+    kind: ArchiveKind;
     name: string;
     company_name: string;
     rep_name: string;

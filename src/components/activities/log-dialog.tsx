@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui-ext/date-picker";
+import { useBackGuard } from "@/components/ui-ext/use-back-guard";
 import { useRouter } from "@/i18n/navigation";
 import { todayRiyadh } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -235,6 +236,9 @@ function LogPanel({
     nextFollowUp !== null ||
     project !== (entry?.projectId ?? projectId ?? NONE) ||
     contact !== (entry?.contactId ?? NONE);
+  // And the phone's back gesture, which D84's guard below never saw: it is a
+  // route change, not a tap (D96).
+  useBackGuard(open && dirty);
 
   const textId = `${ids}-text`;
   const textErrorId = `${ids}-text-error`;
@@ -289,8 +293,10 @@ function LogPanel({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* A sentence typed in a lobby is not lost to a thumb landing beside the
-          sheet: once something is written, a tap outside does nothing, and
-          Cancel and Escape — deliberate — still close it (D84). */}
+          sheet, nor to one swiping back from its edge: once something is
+          written, a tap outside does nothing and the back gesture stays on the
+          screen (useBackGuard above), while Cancel and Escape — deliberate —
+          still close it (D84, D96). */}
       <DialogContent
         className={cn(
           "max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md",

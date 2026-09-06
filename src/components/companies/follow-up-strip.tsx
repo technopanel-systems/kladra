@@ -21,7 +21,8 @@ import { cn } from "@/lib/utils";
  * rows under it can never mean different things. (`followups`, the fourth, is
  * the combined "everything waiting" the manager screens use.)
  */
-type Pill = Extract<FollowUpFilter, "overdue" | "today" | "never" | "quiet">;
+/** Exported for the message check: `companies.<pill>Count` is a computed family (D96). */
+export type Pill = Extract<FollowUpFilter, "overdue" | "today" | "never" | "quiet">;
 
 const PILL =
   "inline-flex h-7 items-center rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";

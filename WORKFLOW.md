@@ -68,7 +68,7 @@
             matches its bars, D89, D90); 10, 11, 12 (a role and an id, a child restored
             onto its company, a backup held to its own counts, D91–D93); 15, 16, 21 (a
             drawer says what it writes, D94); 22, 23, 24 (a figure agrees with the figures
-            under it, D95)
+            under it, D95); 14, 19, 25 (the guards, D96)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -100,13 +100,12 @@ records what it did, D87), P11A-4 (a SMAC number refused by name and corrected i
 P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
 D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
 backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
-figure agrees with the figures under it: one read per strip, one predicate per colour, a
-caption from the list's own rows, D95). Next is P11A-9: findings 14, 19, 25 — the guards: the
-phone's back gesture on a dirty log dialog, CSV cells neutralised against a leading formula
-character, and the message check's computed-key families. 17–18 wait for 11B, 20 for 11G, 26
-onward in §5 order after that. The dev database is seeded at volume (`seed:demo` then
-`seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that
-are not defects.
+figure agrees with the figures under it, D95), P11A-9 (the guards: the back gesture on a dirty
+sheet, a CSV cell as text, every computed key checked, D96). Next in §5 order: 26 a Saturday
+worked is a day reported, 27 the day's small controls over a card link (11H), 28 the project
+dialogs as bottom sheets (11H), then 29 onward; 17–18 wait for 11B, 20 for 11G. The dev
+database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
+11B–11J follow when §5 is down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -739,6 +738,13 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**The guards** — `tests/csv.spec.ts`, `tests/guards.spec.ts`
+Pure: a cell that opens with `=`, `@`, a tab, or `+`/`-` before anything but a number is
+apostrophed; a phone, a negative figure, a quoted name and an empty cell are what they were
+(D96). On the phone: Faisal opens Log on a company, types a sentence, and swipes back — the
+sheet is still there with his words; he cancels, swipes back again, and leaves the screen.
+Jerom's companies export carries a company named like a formula as text, apostrophe first.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -894,7 +900,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [x] 13 **The six-month card calls a month "the first with anything" while its own bars say
   otherwise.** Verified; first, after-empty and nothing are three sentences now (P11A-5, D90). `src/lib/months.ts:116-132`, `months-card.tsx:74-84`: null percent comes from the
   previous month alone. Fix: first only when every earlier month is nought. Reader cites code.
-- [ ] 14 **D84's guard does not cover the phone's back gesture.** `log-dialog.tsx`: a route
+- [x] 14 **D84's guard does not cover the phone's back gesture.** Verified; the dirty sheet holds one history entry and the gesture lands on it (P11A-9, D96). `log-dialog.tsx`: a route
   change loses the typed entry. Fix: a popstate guard while dirty. Reader cites code.
 - [x] 15 **The drawer's follow-up picker cannot clear a badge a project drives, and says it
   did.** Verified; the drawer names the project's date and the toast stops pretending (P11A-7, D94). `src/lib/followups.ts:85-93`, `company-header.tsx:168-194`, `actions/companies.ts:
@@ -912,7 +918,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [ ] 18 **`requireActor()` gates the SSE and count routes, so live updates 401 during
   "view as".** `events/route.ts:162-169`, `authz.ts:105-111`, `notifications/count/route.ts:
   15-20`. Fix: a read-only identity check for reads. Reader cites code. (11B.)
-- [ ] 19 **CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`.** `src/lib/
+- [x] 19 **CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`.** Verified; a cell Excel would run is written as text, numbers pass (P11A-9, D96). `src/lib/
   export.ts:28-32`. Reader cites code.
 - [ ] 20 **No error boundary in the signed-in app.** No `error.tsx` anywhere; `loading.tsx`
   exists. Fix: a themed, bilingual error page in the shell. Reader cites absence. (11G.)
@@ -925,7 +931,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   Fix: a reason for a plain "requested" one, or a caption that says it. Reader cites code.
 - [x] 24 **The queue's "longest wait" can name a request in neither list under it.** Verified; it is read from the rows the page shows (P11A-8, D95).
   `standing.ts:318-366` never filters archived companies; the lists do. Reader cites code.
-- [ ] 25 **`check-messages` guards five computed-key families and misses six more**, including
+- [x] 25 **`check-messages` guards five computed-key families and misses six more**, — verified; all eleven are read from their source lists (P11A-9, D96) — including
   `LINE_FIELDS` on the revision-diff screen. `scripts/check-messages.ts:186-192`. Two readers.
 - [ ] 26 **A rep who works a Saturday cannot write that day's report.** `workdays.ts:13-16`,
   `reports.ts:374-389`; S47 allows recorded Saturday work. Reader cites code.
@@ -1024,3 +1030,13 @@ P10d before this list was written (D83).
   kept here because a hang that eats a core until somebody notices is what 11I is for. If it
   is seen again: note what was compiled last (`.next/dev`), whether a second Next process was
   running from the same tree, and take a CPU profile before killing it. Observed, one reader.
+  **Seen again, P11A-9, on the TEST server:** `next dev` on 3101, started by a spec run at 06:45,
+  was still alive two hours and nine runs later at 2.9 GB resident — Playwright's stop reached
+  the shell in front of it and not the server two processes down — and every run since had
+  reused it (`reuseExistingServer`). The suite slowed from 13 to 16.6 minutes and the Arabic
+  rep walk timed out at thirty seconds, on a step it passes in three. Killed; a fresh server
+  ran the same walk green. Cause fixed in `scripts/dev-test.ts`: the server's whole tree goes
+  when the script does, on a signal, on exit, or on finding its parent gone. The 3100 hang
+  above is the same shape — a long-lived dev compiler that has hot-reloaded through hours of
+  edits — so the rule for both is a dev server that has served one session's edits is restarted,
+  not reused.

@@ -32,6 +32,7 @@ import {
   targets,
   users,
 } from "@/db/schema";
+import { ARCHIVE_KINDS } from "@/lib/admin";
 import { holdsFloor } from "@/lib/floor";
 import { isLookupKind, LOOKUP_FIELDS, tableName } from "@/lib/lookup-kinds";
 import { NotAllowed, requireActor } from "@/lib/authz";
@@ -639,7 +640,7 @@ export async function restoreAction(
     const ta = await getTranslations("admin");
 
     const parsed = z
-      .object({ kind: z.enum(["company", "contact", "project"]), id: z.uuid() })
+      .object({ kind: z.enum(ARCHIVE_KINDS), id: z.uuid() })
       .safeParse({ kind: field(formData, "kind"), id: field(formData, "id") });
     if (!parsed.success) return { ok: false, error: tc("invalid") };
 

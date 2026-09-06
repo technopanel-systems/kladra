@@ -344,6 +344,16 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   row is coloured by is the predicate the headline counts (`isQuiet`). And a caption over a
   list comes from the list's own rows, never from a second query over the same tables — the
   second query is the one that forgets a filter the first one had.
+- **A guard covers every door.** Three from the stranger read (P11A, D96). A guard written for one
+  gesture is a guard against that gesture: D84 stopped the tap beside the sheet and not the
+  swipe back from its edge, which reaches the same words by a different route. When a screen
+  protects unsaved work, it protects it against every way the screen can leave — tap, back,
+  and navigation — or it says which one it does not. A file the app writes for another program
+  is written for that program's reading of it: the CSV is quoted for Excel's commas and
+  apostrophed for Excel's formulas, and the test for it is a list of cells, not a screenshot.
+  And a check that guards a family by name guards only the families it was told about: the
+  list of computed-key families in `check-messages` is the whole list, found by grepping the
+  call sites, and adding a computed key means adding its line there.
 
 ## §4 Not built until asked
 

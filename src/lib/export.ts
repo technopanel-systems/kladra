@@ -1,12 +1,9 @@
 /**
  * The three CSV exports (SPEC D19, §3: admin only).
  *
- * UTF-8 with a byte-order mark, because Excel on Windows reads a BOM-less UTF-8
- * file as the system codepage and turns every Arabic name into mojibake. That
- * is the single most common way a correct export is reported as a broken one.
- *
- * CRLF line endings for the same reason: Excel is the reader here, not a
- * terminal.
+ * The file itself — the byte-order mark Excel needs to read Arabic, the CRLF
+ * endings, the quoting, and a typed name that Excel would otherwise run as a
+ * formula — is src/lib/csv.ts; this file is the three queries.
  *
  * Everything is one flat table per file, joined already — an accountant opening
  * this does not want to look a supplier up in a second sheet.
@@ -16,6 +13,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { mainContactIdSql } from "@/lib/companies";
+import { csv } from "@/lib/csv";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { LINE_SQM } from "@/lib/sqm";
 
@@ -24,22 +22,6 @@ export type ExportName = (typeof EXPORTS)[number];
 
 export function isExportName(value: unknown): value is ExportName {
   return typeof value === "string" && (EXPORTS as readonly string[]).includes(value);
-}
-
-/** One CSV cell: quoted always, so a comma, a quote or a newline is safe. */
-function cell(value: unknown): string {
-  if (value === null || value === undefined) return '""';
-  return `"${String(value).replace(/"/g, '""')}"`;
-}
-
-/** The whole file, with its header row. */
-function csv(headers: string[], rows: Record<string, unknown>[]): string {
-  const lines = [headers.map(cell).join(",")];
-  for (const row of rows) {
-    lines.push(headers.map((header) => cell(row[header])).join(","));
-  }
-  // The BOM is what makes Excel read it as UTF-8 (D19).
-  return "﻿" + lines.join("\r\n") + "\r\n";
 }
 
 /**

@@ -14,7 +14,7 @@
  * `next dev` otherwise listens on 0.0.0.0 and a seeded, signed-in copy of the
  * CRM answers on the office Wi-Fi.
  */
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { testDatabaseUrl } from "../src/lib/env";
@@ -41,3 +41,42 @@ const child = spawn("npx", ["next", "dev", "-H", "127.0.0.1", "-p", PORT], {
 child.on("exit", (code, signal) => {
   process.exit(signal ? 1 : (code ?? 0));
 });
+
+/*
+ * The server dies with this process (P11A, WORKFLOW §5 #68). Playwright stops
+ * the command it started, but on Windows that is the shell in front of npx,
+ * and `next dev` two processes down kept running: every later run reused it
+ * as-is (reuseExistingServer), it hot-reloaded through hours of edits, reached
+ * three gigabytes, and the suite slowed until a thirty-second walk timed out.
+ * So the whole tree goes when this does, on a signal or a plain exit.
+ */
+let stopped = false;
+function stopServer() {
+  if (stopped || child.pid === undefined) return;
+  stopped = true;
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+  } else {
+    child.kill("SIGTERM");
+  }
+}
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+  process.on(signal, () => {
+    stopServer();
+    process.exit(0);
+  });
+}
+process.on("exit", stopServer);
+
+// And when whatever started this is gone without a word — a force-killed npm
+// runs no handler here — the server does not outlive it: the parent is checked
+// every few seconds, and an orphan takes its tree down and leaves.
+const parent = process.ppid;
+setInterval(() => {
+  try {
+    process.kill(parent, 0);
+  } catch {
+    stopServer();
+    process.exit(0);
+  }
+}, 5_000).unref();

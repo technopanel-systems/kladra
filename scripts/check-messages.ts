@@ -183,12 +183,26 @@ function tableKeys(file: string): string[] {
   return [...new Set(members)];
 }
 
+// Every computed key a screen renders — t(`namespace.${member}`) — and the
+// source list it reads from. A family missing here is a key the parity check
+// cannot see (P11A finding 25: there were five of eleven). Finding them: grep
+// src for "t(`".
 const families: [string, string[]][] = [
   ["common", union("src/lib/types.ts", "ROLES")],
   ["common", union("src/db/schema.ts", "channelEnum")],
+  ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
   ["reports", tableKeys("src/lib/report-figures.ts")],
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
   ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
+  ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
+  ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
+  ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],
+  ["projects.lossReason", union("src/components/projects/mark-lost-dialog.tsx", "LOSS_REASON_CODES")],
+  ["notifications", union("src/lib/notify.ts", "NOTIFICATION_KINDS")],
+  [
+    "companies",
+    union("src/components/companies/follow-up-strip.tsx", "Pill").map((pill) => `${pill}Count`),
+  ],
 ];
 for (const [namespace, members] of families) {
   for (const member of members) {
