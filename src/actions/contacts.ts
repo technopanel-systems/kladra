@@ -22,7 +22,7 @@ import { NotAllowed, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { violatedUnique } from "@/lib/pg-errors";
-import { normalizePhone } from "@/lib/phone";
+import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
 /**
@@ -95,15 +95,17 @@ export async function createContactAction(
     }
     const input = parsed.data;
 
-    const { repId, archived } = await assertCompanyMine(actor, input.companyId);
+    const { repId, archived, country } = await assertCompanyMine(actor, input.companyId);
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.
     if (archived) return { ok: false, error: t("companyArchived") };
 
-    const phoneNormalized = normalizePhone(input.phone);
+    // In the company's country (D89): 050 on a Dubai card is a UAE number.
+    const phoneNormalized = normalizePhone(input.phone, country);
     if (!phoneNormalized) {
-      return { ok: false, error: t("phoneInvalid"), fieldErrors: { phone: t("phoneInvalid") } };
+      const sentence = t(isSaudi(country) ? "phoneInvalid" : "phoneInvalidAbroad");
+      return { ok: false, error: sentence, fieldErrors: { phone: sentence } };
     }
     if (input.email && !z.email().safeParse(input.email).success) {
       return { ok: false, error: t("emailInvalid"), fieldErrors: { email: t("emailInvalid") } };
@@ -183,11 +185,12 @@ export async function updateContactAction(
       .limit(1);
     if (!row) return { ok: false, error: t("contactNotFound") };
 
-    const { repId } = await assertCompanyMine(actor, row.companyId);
+    const { repId, country } = await assertCompanyMine(actor, row.companyId);
 
-    const phoneNormalized = normalizePhone(input.phone);
+    const phoneNormalized = normalizePhone(input.phone, country);
     if (!phoneNormalized) {
-      return { ok: false, error: t("phoneInvalid"), fieldErrors: { phone: t("phoneInvalid") } };
+      const sentence = t(isSaudi(country) ? "phoneInvalid" : "phoneInvalidAbroad");
+      return { ok: false, error: sentence, fieldErrors: { phone: sentence } };
     }
     if (input.email && !z.email().safeParse(input.email).success) {
       return { ok: false, error: t("emailInvalid"), fieldErrors: { email: t("emailInvalid") } };

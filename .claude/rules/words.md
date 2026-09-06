@@ -155,3 +155,10 @@ he issues a revision, when what he raises is a request that waits in the coordin
 queue exactly as his first one did (D73). A line that names a person is the hardest test
 a verb takes: write the sentence with the name in it before choosing the word, and the
 passive that hides the actor stops looking neutral.
+
+## Tanween sits on the letter, not on the alif
+
+«صادرًا», «موجودًا», «سابقًا» — the fathatan goes on the consonant, and the alif follows it
+bare. Not «صادراً». Both spellings are read, but the files had both, and a reviewer found the
+two on one drawer in P11A-5. `npm run check:messages` refuses «اً» in `messages/ar/*` now;
+the gendered-Arabic check also depends on the damma being on the letter it belongs to.

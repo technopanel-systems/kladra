@@ -95,37 +95,7 @@ export async function monthsBack(
 }
 
 /**
- * The sentence a row of bars is for: how this month compares with the last one
- * that finished.
- *
- * Not an average and not a trend line. Fourteen people on cladding cycles have
- * lumpy months — one tower approved on the 28th is half a target — so a
- * smoothed line would say something the business does not do, and S46 already
- * forbids one number that mixes target with activity. Last month against the
- * one before it is the comparison a manager makes out loud.
+ * The sentence a row of bars is for, in src/lib/month-change.ts — pure, so the
+ * spec that holds it to its own bars imports no query (D90).
  */
-export type MonthChange = {
-  /** The last FINISHED month, and the one before it. */
-  last: MonthFigure;
-  previous: MonthFigure;
-  /** Per cent, signed, or null when the earlier month was empty. */
-  percent: number | null;
-};
-
-export function lastFinishedChange(months: MonthFigure[]): MonthChange | null {
-  // The current month is still being worked, so comparing it with a whole month
-  // says "down 60%" on the third of every month. Drop it.
-  const finished = months.slice(0, -1);
-  if (finished.length < 2) return null;
-
-  const last = finished[finished.length - 1];
-  const previous = finished[finished.length - 2];
-  const before = Number(previous.achieved);
-  const now = Number(last.achieved);
-
-  return {
-    last,
-    previous,
-    percent: before > 0 ? Math.round(((now - before) / before) * 100) : null,
-  };
-}
+export { lastFinishedChange, type MonthChange } from "@/lib/month-change";

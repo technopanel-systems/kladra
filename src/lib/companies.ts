@@ -473,12 +473,14 @@ const MIN_DUPLICATE_NAME = 3;
 export async function findPossibleDuplicates(input: {
   name?: string;
   phone?: string;
+  /** ISO code of the country the form has picked; Saudi when none (D89). */
+  country?: string;
   /** The company being edited, so it never warns about itself. */
   excludeId?: string;
   limit?: number;
 }): Promise<PossibleDuplicate[]> {
   const name = (input.name ?? "").trim();
-  const phone = normalizePhone(input.phone ?? "");
+  const phone = normalizePhone(input.phone ?? "", input.country);
   const byName = name.length >= MIN_DUPLICATE_NAME;
   if (!byName && !phone) return [];
 

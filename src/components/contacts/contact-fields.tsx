@@ -7,7 +7,7 @@ import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { normalizePhone } from "@/lib/phone";
+import { isSaudi, normalizePhone } from "@/lib/phone";
 
 /**
  * Name · Phone · Position · Email · Notes — the five fields a contact is,
@@ -59,6 +59,7 @@ export function ContactFields({
   errors,
   disabled,
   belowPhone,
+  country,
 }: {
   idPrefix: string;
   names: ContactFieldNames;
@@ -69,17 +70,21 @@ export function ContactFields({
   disabled?: boolean;
   /** The duplicate warning, when the parent has one to show. */
   belowPhone?: ReactNode;
+  /** ISO code of the company's country — the number is read there (D89). */
+  country?: string;
 }) {
   const t = useTranslations();
   const [phoneTouched, setPhoneTouched] = useState(false);
 
-  const normalized = normalizePhone(value.phone);
+  const normalized = normalizePhone(value.phone, country);
   const typedSomething = value.phone.trim() !== "";
   const badPhone = phoneTouched && typedSomething && normalized === null;
   // The SAME key the action answers with, not a second copy of the sentence:
   // one rejected input, one sentence (DESIGN §5). It was written out twice and
   // the two would have drifted the first time either was reworded.
-  const phoneError = errors?.[names.phone] ?? (badPhone ? t("errors.phoneInvalid") : undefined);
+  const phoneError =
+    errors?.[names.phone] ??
+    (badPhone ? t(isSaudi(country) ? "errors.phoneInvalid" : "errors.phoneInvalidAbroad") : undefined);
 
   // The seeded list is a suggestion, not a constraint: a contact stores the
   // words, so the value IS the label and the rep may type his own (SPEC D21).
@@ -151,7 +156,7 @@ export function ContactFields({
           </p>
         ) : (
           <p id={helpId} className="text-xs text-faint">
-            {t("forms.phoneHelp")}
+            {t(isSaudi(country) ? "forms.phoneHelp" : "forms.phoneHelpAbroad")}
           </p>
         )}
         {belowPhone}

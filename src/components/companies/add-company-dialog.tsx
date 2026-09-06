@@ -143,6 +143,9 @@ function CompanyForm({
     if (data) onCreated(data.companyId, submitted.current);
   });
 
+  // The country picked on the form, so the phone is read there (D89).
+  const countryCode = lookups.countryCodes[company.countryId];
+
   // "Looks like an existing company" (SPEC D8). Asked while the rep types the
   // name or the number, quietly, and never in the way of the save.
   useEffect(() => {
@@ -153,11 +156,11 @@ function CompanyForm({
     // effect body. Clearing synchronously costs a render on every keystroke,
     // and it made the warning blink away and back while a rep kept typing.
     const timer = setTimeout(async () => {
-      if (typedName.length < 3 && normalizePhone(typedPhone) === null) {
+      if (typedName.length < 3 && normalizePhone(typedPhone, countryCode) === null) {
         setDuplicate(null);
         return;
       }
-      const outcome = await duplicateCheckAction(typedName, typedPhone);
+      const outcome = await duplicateCheckAction(typedName, typedPhone, countryCode);
       if (cancelled) return;
       setDuplicate(outcome.ok ? (outcome.data ?? null) : null);
     }, DEBOUNCE_MS);
@@ -165,7 +168,7 @@ function CompanyForm({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [company.name, contact.phone]);
+  }, [company.name, contact.phone, countryCode]);
 
   const warning =
     duplicate === null ? null : (
@@ -222,6 +225,7 @@ function CompanyForm({
             onChange={(patch) => setContact((current) => ({ ...current, ...patch }))}
             errors={errors}
             belowPhone={duplicate?.matchedOn === "phone" ? warning : null}
+            country={countryCode}
           />
         </div>
       </FormBody>

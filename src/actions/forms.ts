@@ -69,6 +69,11 @@ export type FormLookups = {
   leadSources: Option[];
   positions: Option[];
   countries: Option[];
+  /**
+   * Option value → ISO code, so the form can read a typed phone in the country
+   * just picked (D89). Never rendered: the screens say words, not codes.
+   */
+  countryCodes: Record<string, string>;
   /** Saudi cities. Everywhere else the city is free text (SPEC §3). */
   cities: Option[];
   /** Preselected, and the one country that gets a city list rather than a box. */
@@ -128,6 +133,7 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
         // Arabia with, not the dialog's to render — a rep never sees "SA"
         // (DESIGN §2, words not codes).
         countries: countryRows.map(toOption),
+        countryCodes: Object.fromEntries(countryRows.map((row) => [String(row.id), row.code])),
         cities: cityRows.map(toOption),
         saudiCountry: saudi ? String(saudi.id) : null,
         defaultCity: riyadh ? String(riyadh.id) : null,
@@ -337,6 +343,8 @@ export async function remainingItemsAction(
 const duplicateInput = z.object({
   name: z.string().max(200).default(""),
   phone: z.string().max(40).default(""),
+  /** The country picked on the form, so a local number is read there (D89). */
+  country: z.string().length(2).optional(),
 });
 
 /**
@@ -352,6 +360,7 @@ const duplicateInput = z.object({
 export async function duplicateCheckAction(
   name: unknown,
   phone: unknown,
+  country?: unknown,
 ): Promise<ActionResult<DuplicateHit | null>> {
   const t = await getTranslations("common");
   try {
@@ -360,13 +369,14 @@ export async function duplicateCheckAction(
     return { ok: false, error: t("notAllowed") };
   }
 
-  const parsed = duplicateInput.safeParse({ name, phone });
+  const parsed = duplicateInput.safeParse({ name, phone, country });
   if (!parsed.success) return { ok: true, data: null };
 
   try {
     const [hit] = await findPossibleDuplicates({
       name: parsed.data.name,
       phone: parsed.data.phone,
+      country: parsed.data.country,
       limit: 1,
     });
     if (!hit) return { ok: true, data: null };

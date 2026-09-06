@@ -73,13 +73,23 @@ export async function MonthsCard({ months }: { months: MonthFigure[] }) {
             worked, and would read "down 60%" on the third of every month. */}
         {change ? (
           <p className="text-sm">
-            {change.percent === null
-              ? t("team.monthFirst", { month: formatMonth(change.last.month, locale) })
-              : t(change.percent >= 0 ? "team.monthUp" : "team.monthDown", {
+            {change.kind === "percent" && change.percent !== null
+              ? t(change.percent >= 0 ? "team.monthUp" : "team.monthDown", {
                   month: formatMonth(change.last.month, locale),
                   previous: formatMonth(change.previous.month, locale),
                   percent: Math.abs(change.percent),
-                })}
+                })
+              : t(
+                  change.kind === "first"
+                    ? "team.monthFirst"
+                    : change.kind === "afterEmpty"
+                      ? "team.monthAfterEmpty"
+                      : "team.monthNothing",
+                  {
+                    month: formatMonth(change.last.month, locale),
+                    previous: formatMonth(change.previous.month, locale),
+                  },
+                )}
           </p>
         ) : null}
       </div>

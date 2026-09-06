@@ -222,7 +222,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         <TabsContent value="contacts" className="flex flex-col gap-3">
           {mine ? (
             <div className="flex">
-              <AddContactDialog companyId={company.id} trigger={addContactTrigger} />
+              <AddContactDialog
+                companyId={company.id}
+                country={company.countryCode}
+                trigger={addContactTrigger}
+              />
             </div>
           ) : null}
           {contacts.length === 0 ? (
@@ -249,6 +253,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                       {mine ? (
                       <span className="ms-auto flex items-center gap-1">
                         <EditContactDialog
+                          country={company.countryCode}
                           contact={{
                             id: row.id,
                             name: row.name,

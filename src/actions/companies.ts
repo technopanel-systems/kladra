@@ -32,7 +32,7 @@ import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { createNotification } from "@/lib/notify";
 import { SAUDI_CODE } from "@/lib/lookups";
-import { normalizePhone } from "@/lib/phone";
+import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
 /**
@@ -108,7 +108,10 @@ async function resolvePlace(
   cityId: number | undefined,
   cityText: string | undefined,
   t: (key: string) => string,
-): Promise<{ ok: true; cityId: number | null; cityText: string | null } | { ok: false; fieldErrors: FieldErrors }> {
+): Promise<
+  | { ok: true; cityId: number | null; cityText: string | null; country: string }
+  | { ok: false; fieldErrors: FieldErrors }
+> {
   const [country] = await db
     .select({ code: countries.code })
     .from(countries)
@@ -118,7 +121,7 @@ async function resolvePlace(
 
   if (country.code !== SAUDI_CODE) {
     if (!cityText) return { ok: false, fieldErrors: { cityText: t("cityTextRequired") } };
-    return { ok: true, cityId: null, cityText };
+    return { ok: true, cityId: null, cityText, country: country.code };
   }
 
   if (cityId === undefined) return { ok: false, fieldErrors: { cityId: t("cityRequired") } };
@@ -128,7 +131,7 @@ async function resolvePlace(
     .where(and(eq(cities.id, cityId), eq(cities.countryId, countryId)))
     .limit(1);
   if (!city) return { ok: false, fieldErrors: { cityId: t("cityNotInCountry") } };
-  return { ok: true, cityId: city.id, cityText: null };
+  return { ok: true, cityId: city.id, cityText: null, country: country.code };
 }
 
 /**
@@ -169,13 +172,11 @@ export async function createCompanyAction(
     const place = await resolvePlace(input.countryId, input.cityId, input.cityText, t);
     if (!place.ok) return { ok: false, error: tc("invalid"), fieldErrors: place.fieldErrors };
 
-    const phoneNormalized = normalizePhone(input.contactPhone);
+    // Read in the country just chosen (D89), not as Saudi whatever the country.
+    const phoneNormalized = normalizePhone(input.contactPhone, place.country);
     if (!phoneNormalized) {
-      return {
-        ok: false,
-        error: t("phoneInvalid"),
-        fieldErrors: { contactPhone: t("phoneInvalid") },
-      };
+      const sentence = t(isSaudi(place.country) ? "phoneInvalid" : "phoneInvalidAbroad");
+      return { ok: false, error: sentence, fieldErrors: { contactPhone: sentence } };
     }
     if (input.contactEmail && !z.email().safeParse(input.contactEmail).success) {
       return {

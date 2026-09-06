@@ -219,6 +219,15 @@ for (const file of readdirSync(specDir).filter((f) => f.endsWith(".spec.ts")).so
   }
 }
 
+// Tanween sits on the letter, not on the alif: «صادرًا», never «صادراً». The
+// files had drifted into both spellings and a reviewer found them side by side
+// on one drawer (P11A-5); one form, checked here, so it cannot drift again.
+for (const [key, value] of ar) {
+  if (value.includes("اً")) {
+    problems.push(`ar ${key}: tanween written on the alif — write it on the letter before it (…ًا)`);
+  }
+}
+
 if (problems.length) {
   console.error(`check:messages — ${problems.length} problem(s)`);
   for (const p of problems) console.error("  " + p);

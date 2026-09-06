@@ -64,7 +64,8 @@
             1, 2, 6, 57 (a write holds its row, D85); 3, 4, 46, 52 (achieved is the
             raiser's, the formula written once, D86); 7, 8, 44 (a terminal action
             records what it did, D87); 5 (a typed key refused by name and corrected
-            in place, D88)
+            in place, D88); 9, 13 (a phone read in its country, a month sentence that
+            matches its bars, D89, D90)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -92,14 +93,14 @@ rule have to cover the edit screens too, and sweeping twice is how a second defi
 entries with causes — and the worst are being fixed in committed slices, each one verified in
 the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A-2 (achieved
 metres are the raiser's and the m² formula is written once, D86), P11A-3 (a terminal action
-records what it did, D87), P11A-4 (a SMAC number typed twice is refused by name and a wrong
-one is corrected in place; the contact form's duplicate-phone answer had the same fault under
-it, D88). Next is P11A-5: findings 9 and 13 — a phone read in its company's country and the
-six-month sentence that matches its bars (D89, D90; the script and its anchors are ready) —
-then P11A-6: 10, 11, 12 — a permission is a role and an id, a child restored onto its
-company, a backup held to its own counts (D91–D93; scripted). After those, down §5 in order.
-The dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts
-it back. 11B–11J follow when §5 is down to entries that are not defects.
+records what it did, D87), P11A-4 (a SMAC number refused by name and corrected in place, D88),
+P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
+D89, D90). Next is P11A-6: findings 10, 11, 12 — a permission is a role and an id, a child
+restored onto its company, a backup held to its own counts (D91–D93; the script and its
+anchors are ready). After it, down §5 in order: 14 the phone's back gesture, 15 the follow-up
+picker, 16 a quotation's project, 17–18 live updates, 19 CSV cells, 20 an error boundary. The
+dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it
+back. 11B–11J follow when §5 is down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -688,6 +689,14 @@ metres stayed with the person who raised the dispatch, as D86 says, and the quot
 under that company says "Raised by Faisal" rather than naming its new owner. The company is
 handed back by SQL afterwards, with the hand-over's own audit row and notification removed.
 
+**A phone in its country, a month in its row** — `tests/phone.spec.ts`, `tests/months-change.spec.ts`
+Pure. The same digits read as Saudi on a Riyadh card and as UAE on a Dubai one; a plus wins;
+a country code typed without its plus is honoured wherever the card is; eight bare digits
+are refused rather than guessed (D89). Over the bars: a per cent when the month before had
+metres, "first" only when nothing came before, "after an empty month" otherwise, and
+"nothing" when the last two are empty (D90). In `tests/phone-walk.spec.ts` Faisal adds a
+Dubai company with a local number and reads +971 back from the row and from the WhatsApp link.
+
 **A number typed wrong** — `tests/smac.spec.ts`
 Rawan issues a request with a SMAC number another quotation already carries: the field says
 which one, and the request stays waiting. She corrects the number on an issued quotation —
@@ -838,7 +847,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [x] 8 **Unfiling an old entry rewrites a reported day.** Verified; unfile takes the correction's window, in the action and on the button (P11A-3, D87). `src/actions/activities.ts:219-245`
   vs `308-341`: edit checks `mayWriteFor(day)`, archive never does, and the button is always
   offered. Fix: the same gate on both, and the button only while the day is open. Reader cites code.
-- [ ] 9 **Phones are normalised as Saudi whatever the country.** `src/lib/phone.ts:34-47` and
+- [x] 9 **Phones are normalised as Saudi whatever the country.** Verified; every caller passes the company's country now, and the eight-digit fallback is gone (P11A-5, D89). `src/lib/phone.ts:34-47` and
   its three callers; the country is in scope at every one. Fix: pass it. Reader cites code.
 - [ ] 10 **A promoted account keeps its floor for ever.** `src/lib/floor.ts:51-54` `mayWrite`
   checks identity only; its sibling `mayQuote` checks the role too. Fix: require a floor-holding
@@ -849,8 +858,8 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [ ] 12 **`backup:verify` fails on any day the business used Kladra.** `scripts/backup-verify.ts:
   169-196` compares the live database now against a dump from earlier. Fix: capture the counts
   when the dump is taken. Reader cites code.
-- [ ] 13 **The six-month card calls a month "the first with anything" while its own bars say
-  otherwise.** `src/lib/months.ts:116-132`, `months-card.tsx:74-84`: null percent comes from the
+- [x] 13 **The six-month card calls a month "the first with anything" while its own bars say
+  otherwise.** Verified; first, after-empty and nothing are three sentences now (P11A-5, D90). `src/lib/months.ts:116-132`, `months-card.tsx:74-84`: null percent comes from the
   previous month alone. Fix: first only when every earlier month is nought. Reader cites code.
 - [ ] 14 **D84's guard does not cover the phone's back gesture.** `log-dialog.tsx`: a route
   change loses the typed entry. Fix: a popstate guard while dirty. Reader cites code.
@@ -862,6 +871,9 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `company-drawer.tsx:377-384`, `request-quotation-dialog.tsx:184-274`, `actions/quotations.ts:
   205-254`; SPEC says every quotation belongs to one. Reader cites code.
 - [ ] 17 **A Postgres blip longer than one reconnect loses live events with no resync.**
+  Seen beside it (P11A-5, a test run's server log): `Error: The destination stream closed early.`
+  four times per locale project, each as a drawer closed in rep.spec — the SSE route does not
+  close cleanly when the browser drops it. Same file, same slice when 17 is taken.
   `src/app/api/events/route.ts:92-174`, `live-provider.tsx:122-130`. Fix: broadcast a refresh
   when the listener heals. Reader cites code. (11B territory.)
 - [ ] 18 **`requireActor()` gates the SSE and count routes, so live updates 401 during

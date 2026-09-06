@@ -17,7 +17,7 @@
 import { and, desc, eq, isNull, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { activities, companies, contacts, projects, users } from "@/db/schema";
+import { activities, companies, contacts, countries, projects, users } from "@/db/schema";
 import { NotAllowed } from "@/lib/authz";
 import { personName } from "@/lib/people";
 import { mayOpen, mayWrite } from "@/lib/floor";
@@ -49,13 +49,14 @@ export { mayOpen, mayWrite };
 /** The company's owner and whether it is archived, in ONE read. */
 async function companyRow(
   companyId: string,
-): Promise<{ repId: string; archived: boolean } | null> {
+): Promise<{ repId: string; archived: boolean; country: string } | null> {
   const [row] = await db
-    .select({ repId: companies.repId, archivedAt: companies.archivedAt })
+    .select({ repId: companies.repId, archivedAt: companies.archivedAt, country: countries.code })
     .from(companies)
+    .innerJoin(countries, eq(countries.id, companies.countryId))
     .where(eq(companies.id, companyId))
     .limit(1);
-  return row ? { repId: row.repId, archived: row.archivedAt !== null } : null;
+  return row ? { repId: row.repId, archived: row.archivedAt !== null, country: row.country } : null;
 }
 
 /**
@@ -88,7 +89,7 @@ export async function assertCompanyOpen(
 export async function assertCompanyMine(
   user: SessionUser,
   companyId: string,
-): Promise<{ repId: string; archived: boolean }> {
+): Promise<{ repId: string; archived: boolean; country: string }> {
   const row = await companyRow(companyId);
   if (!row || !mayWrite(user, row.repId)) throw new NotAllowed();
   return row;

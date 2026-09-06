@@ -13,6 +13,7 @@
   "cityPlaceholder": "Type the city name",
   "notesPlaceholder": "Anything worth remembering",
   "phoneHelp": "0551234567, +966551234567 and 00966551234567 are the same number.",
+  "phoneHelpAbroad": "As it is on the card — 050 123 4567 — or with its country code, +971 50 123 4567.",
   "phoneStoredAs": "Saved as",
   "makeMain": "Make this the main contact",
   "duplicateCompany": "Looks like an existing company: {name} ({rep})",

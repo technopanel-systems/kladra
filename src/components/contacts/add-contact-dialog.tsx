@@ -38,9 +38,12 @@ import type { ActionResult } from "@/lib/types";
 
 export function AddContactDialog({
   companyId,
+  country,
   trigger,
 }: {
   companyId: string;
+  /** ISO code of the company's country, for reading the phone (D89). */
+  country: string;
   trigger?: ReactNode;
 }) {
   const t = useTranslations();
@@ -81,6 +84,7 @@ export function AddContactDialog({
       ) : lookups ? (
         <ContactForm
           companyId={companyId}
+          country={country}
           lookups={lookups}
           onCreated={onCreated}
           onCancel={() => setOpen(false)}
@@ -94,11 +98,14 @@ export function AddContactDialog({
 
 function ContactForm({
   companyId,
+  country,
   lookups,
   onCreated,
   onCancel,
 }: {
   companyId: string;
+  /** ISO code of the company's country, for reading the phone (D89). */
+  country: string;
   lookups: FormLookups;
   onCreated: (name: string) => void;
   onCancel: () => void;
@@ -151,6 +158,7 @@ function ContactForm({
           value={contact}
           onChange={(patch) => setContact((current) => ({ ...current, ...patch }))}
           errors={errors}
+          country={country}
         />
 
         <div className="flex items-center gap-2.5">

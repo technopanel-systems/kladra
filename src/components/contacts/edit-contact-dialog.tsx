@@ -47,9 +47,12 @@ function draftOf(contact: ContactEditable): ContactDraft {
 
 export function EditContactDialog({
   contact,
+  country,
   trigger,
 }: {
   contact: ContactEditable;
+  /** ISO code of the company's country, for reading the phone (D89). */
+  country: string;
   trigger?: ReactNode;
 }) {
   const t = useTranslations();
@@ -72,6 +75,7 @@ export function EditContactDialog({
         <EditForm
           key={contact.id}
           contact={contact}
+          country={country}
           lookups={lookups}
           onSaved={() => setOpen(false)}
           onCancel={() => setOpen(false)}
@@ -85,11 +89,14 @@ export function EditContactDialog({
 
 function EditForm({
   contact,
+  country,
   lookups,
   onSaved,
   onCancel,
 }: {
   contact: ContactEditable;
+  /** ISO code of the company's country, for reading the phone (D89). */
+  country: string;
   lookups: FormLookups;
   onSaved: () => void;
   onCancel: () => void;
@@ -149,6 +156,7 @@ function EditForm({
           onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           errors={errors}
           disabled={pending}
+          country={country}
         />
       </FormBody>
 
