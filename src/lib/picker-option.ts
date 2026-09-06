@@ -21,6 +21,10 @@ export type PickerOption = {
  * picked project has to answer both questions. The option carries the two ids
  * joined by a colon — neither is ever shown, and uuids contain no colon.
  */
+export function projectOptionValue(projectId: string, companyId: string): string {
+  return `${projectId}:${companyId}`;
+}
+
 export function splitProjectOption(value: string): { projectId: string; companyId: string } | null {
   const [projectId, companyId] = value.split(":");
   return projectId && companyId ? { projectId, companyId } : null;

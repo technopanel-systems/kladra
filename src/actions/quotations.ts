@@ -249,19 +249,28 @@ export async function requestQuotationAction(
     if (!mayQuote(actor, company.repId)) throw new NotAllowed();
     if (company.archivedAt) return { ok: false, error: t("companyArchived") };
 
-    if (input.projectId) {
-      const [project] = await db
-        .select({ companyId: projects.companyId, lostAt: projects.lostAt })
-        .from(projects)
-        .where(eq(projects.id, input.projectId))
-        .limit(1);
-      if (!project) return { ok: false, error: t("projectNotFound") };
-      if (project.companyId !== input.companyId) {
-        return { ok: false, error: t("projectNotAtCompany") };
-      }
-      // A lost project is finished work (S20): nothing new hangs off it.
-      if (project.lostAt) return { ok: false, error: t("alreadyLost") };
+    // Every quotation belongs to a project (S18). The company drawer used to
+    // raise one against no project at all, and the month's figures then hung
+    // off a customer with no job named (D94). The picker shows its refusal
+    // under the key `companyId`, because one option carries both ids.
+    if (!input.projectId) {
+      return {
+        ok: false,
+        error: t("projectRequired"),
+        fieldErrors: { companyId: t("projectRequired") },
+      };
     }
+    const [project] = await db
+      .select({ companyId: projects.companyId, lostAt: projects.lostAt })
+      .from(projects)
+      .where(eq(projects.id, input.projectId))
+      .limit(1);
+    if (!project) return { ok: false, error: t("projectNotFound") };
+    if (project.companyId !== input.companyId) {
+      return { ok: false, error: t("projectNotAtCompany") };
+    }
+    // A lost project is finished work (S20): nothing new hangs off it.
+    if (project.lostAt) return { ok: false, error: t("alreadyLost") };
 
     const created = await db.transaction(async (tx) => {
       const [row] = await tx
@@ -269,7 +278,7 @@ export async function requestQuotationAction(
         .values({
           number: sql`nextval('quotation_numbers')`,
           companyId: input.companyId,
-          projectId: input.projectId ?? null,
+          projectId: input.projectId,
           repId: actor.id,
           notes: input.notes ?? null,
         })

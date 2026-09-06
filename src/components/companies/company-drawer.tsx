@@ -1,4 +1,5 @@
 import { ChevronRight, FileText, MessageCircle, Pencil, Plus, Star } from "lucide-react";
+import { projectOptionValue } from "@/lib/picker-option";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -140,6 +141,12 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   const logProjects: LogProject[] = projects
     .filter((row) => !row.lostAt)
     .map((row) => ({ id: row.id, name: row.name }));
+  // The same open projects, for the quotation the drawer raises: every
+  // quotation belongs to one (S18, D94), so the dialog asks which.
+  const quotationProjects = logProjects.map((row) => ({
+    value: projectOptionValue(row.id, company.id),
+    label: row.name,
+  }));
 
   const addContactTrigger = (
     <Button variant="outline">
@@ -179,6 +186,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           leadSource: company.leadSourceName,
           repName: company.repName,
           nextFollowUp: company.nextFollowUp,
+          projectFollowUp: company.projectFollowUp,
           // The ids, not the words: Edit opens on the rows the lookups hold,
           // so renaming a category in Lookups cannot move this company.
           editable: {
@@ -385,10 +393,18 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         <TabsContent value="quotations" className="flex flex-col gap-3">
           {/* Quoting is the sales conversation: marketing works the lead and
               hands it on, so it owns this company and does not price it (P8.9). */}
-          {mayQuote(user, company.repId) ? (
+          {mayQuote(user, company.repId) && quotationProjects.length > 0 ? (
             <div className="flex">
-              <RequestQuotationDialog companyId={company.id} trigger={requestQuotationTrigger} />
+              <RequestQuotationDialog
+                companyId={company.id}
+                projects={quotationProjects}
+                trigger={requestQuotationTrigger}
+              />
             </div>
+          ) : mayQuote(user, company.repId) ? (
+            // No open project, so no button that the action would refuse
+            // (DESIGN §5): the sentence says what to do first.
+            <p className="text-sm text-muted-foreground">{t("quotations.needsProject")}</p>
           ) : null}
           {quotations.length === 0 ? (
             <EmptyPanel sentence={t("quotations.emptyForCompany")} />

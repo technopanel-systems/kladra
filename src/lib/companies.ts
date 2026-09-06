@@ -294,10 +294,19 @@ export type CompanyProject = {
   followUpState: FollowUpState | null;
 };
 
+/** The earliest follow-up among the company's open projects, and whose it is (D94). */
+export type ProjectFollowUp = { day: Day; project: string };
+
 export type CompanyDetail = {
   id: string;
   name: string;
   notes: string | null;
+  /**
+   * What drives the row's colour when it is not the company's own date: the
+   * list shows least(company, projects), and the drawer's picker writes the
+   * company only (D94). Null when no open project carries a date.
+   */
+  projectFollowUp: ProjectFollowUp | null;
   categoryId: number;
   categoryName: string;
   leadSourceId: number;
@@ -431,6 +440,10 @@ export async function getCompany(
       notes: c.notes ?? null,
     })),
     projects: projectRows.map((p) => ({ ...p, followUpState: p.followUpState ?? null })),
+    projectFollowUp:
+      projectRows
+        .flatMap((p) => (!p.lostAt && p.nextFollowUp ? [{ day: p.nextFollowUp, project: p.name }] : []))
+        .sort((a, b) => a.day.localeCompare(b.day))[0] ?? null,
     counts: {
       contacts: contactRows.length,
       projects: projectRows.length,

@@ -16,6 +16,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
+import { projectOptionValue } from "@/lib/picker-option";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
@@ -73,7 +74,7 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
     .orderBy(asc(companies.name), asc(projects.name));
 
   return rows.map((row) => ({
-    value: `${row.id}:${row.companyId}`,
+    value: projectOptionValue(row.id, row.companyId),
     label: row.name,
     hint: row.companyName,
   }));

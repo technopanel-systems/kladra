@@ -66,7 +66,8 @@
             records what it did, D87); 5 (a typed key refused by name and corrected
             in place, D88); 9, 13 (a phone read in its country, a month sentence that
             matches its bars, D89, D90); 10, 11, 12 (a role and an id, a child restored
-            onto its company, a backup held to its own counts, D91–D93)
+            onto its company, a backup held to its own counts, D91–D93); 15, 16, 21 (a
+            drawer says what it writes, D94)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -97,13 +98,16 @@ metres are the raiser's and the m² formula is written once, D86), P11A-3 (a ter
 records what it did, D87), P11A-4 (a SMAC number refused by name and corrected in place, D88),
 P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
 D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
-backup held to its own counts, D91–D93). Next is P11A-7: findings 15, 16, 21 — a drawer says
-what it writes: the quotation it raises names a project, the follow-up picker says when a
-project's date is the one the list shows, and a corrected or unfiled entry is live news (D94;
-the script and its anchors are ready). After it, down §5 in order: 14 the phone's back
-gesture, 17–18 live updates, 19 CSV cells, 20 an error boundary, 22 the adoption headline. The
-dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it
-back. 11B–11J follow when §5 is down to entries that are not defects.
+backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes: the quotation
+it raises names a project, the follow-up picker says when a project's date is the one the
+list shows, a corrected or unfiled entry is live news, D94). Next is P11A-8: findings 22, 23,
+24 — a figure agrees with the figures under it: the Use headline and its rows share one
+predicate, a rep's open quotations are the sum of the parts under them, and the queue's
+longest wait is read from the rows the page shows (D95; the design is written, the script is
+not). After it, down §5 in order: 14 the phone's back gesture, 19 CSV cells, 25 the message
+check's computed keys; 17–18 wait for 11B, 20 for 11G. The dev database is seeded at volume
+(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is
+down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -718,6 +722,15 @@ on an approved dispatch, whose month does not move. Faisal is offered no correct
 adds a contact with a phone already on the company and reads "already on this company" at
 the field rather than "something went wrong" (D88). Each test puts the numbers back.
 
+**A drawer says what it writes** — `tests/drawer-writes.spec.ts`
+Faisal opens a company with an open project and asks for a quotation from its drawer: the
+dialog asks which project, refuses a save without one at the picker, and the saved row carries
+the project he picked. On a company with no open project the tab says to add one first and
+offers no button. With the company's date ten days out and a project's three, the drawer says
+the project is due first and that the list shows the earlier; clearing the company's date says
+the project still has its own, and the project's date is untouched (D94). Each test puts the
+dates back and removes what it raised.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -875,11 +888,11 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   previous month alone. Fix: first only when every earlier month is nought. Reader cites code.
 - [ ] 14 **D84's guard does not cover the phone's back gesture.** `log-dialog.tsx`: a route
   change loses the typed entry. Fix: a popstate guard while dirty. Reader cites code.
-- [ ] 15 **The drawer's follow-up picker cannot clear a badge a project drives, and says it
-  did.** `src/lib/followups.ts:85-93`, `company-header.tsx:168-194`, `actions/companies.ts:
+- [x] 15 **The drawer's follow-up picker cannot clear a badge a project drives, and says it
+  did.** Verified; the drawer names the project's date and the toast stops pretending (P11A-7, D94). `src/lib/followups.ts:85-93`, `company-header.tsx:168-194`, `actions/companies.ts:
   305-333`: the badge is least(company, projects); the picker writes the company only. Reader
   cites code.
-- [ ] 16 **A quotation raised from the company drawer belongs to no project, by default.**
+- [x] 16 **A quotation raised from the company drawer belongs to no project, by default.** Verified; the drawer asks which project, offers nothing when there is none, and the action refuses (P11A-7, D94).
   `company-drawer.tsx:377-384`, `request-quotation-dialog.tsx:184-274`, `actions/quotations.ts:
   205-254`; SPEC says every quotation belongs to one. Reader cites code.
 - [ ] 17 **A Postgres blip longer than one reconnect loses live events with no resync.**
@@ -895,7 +908,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   export.ts:28-32`. Reader cites code.
 - [ ] 20 **No error boundary in the signed-in app.** No `error.tsx` anywhere; `loading.tsx`
   exists. Fix: a themed, bilingual error page in the shell. Reader cites absence. (11G.)
-- [ ] 21 **Edit and unfile of a log entry never call `notifyLive`.** `activities.ts:276-296,
+- [x] 21 **Edit and unfile of a log entry never call `notifyLive`.** Verified; both send the event a new entry sends (P11A-7, D94). `activities.ts:276-296,
   320-337`; every other write does. Reader cites code. (11B.)
 - [ ] 22 **The adoption headline counts people the same screen excuses as away.** `src/lib/
   adoption.ts:74-112`, `use-panel.tsx:118-132`. Reader cites code.

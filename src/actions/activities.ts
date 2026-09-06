@@ -293,6 +293,14 @@ export async function editActivityAction(
         recordId: input.activityId,
         details: { was: entry.text, now: input.text, channel: input.channel },
       });
+
+      // A correction is news exactly as the entry was (D94): the manager's
+      // open drawer and the day's figures move without a reload.
+      const audience = await liveAudienceFor(entry.repId, actor.id);
+      await notifyLive(tx, audience, { type: "company", id: entry.companyId });
+      if (input.projectId) {
+        await notifyLive(tx, audience, { type: "project", id: input.projectId });
+      }
     });
 
     revalidateFloor();
@@ -341,6 +349,12 @@ export async function archiveActivityAction(
           text: entry.text,
         },
       });
+
+      // Unfiled is news too (D94): every count that included it moves.
+      await notifyLive(tx, await liveAudienceFor(entry.repId, actor.id), {
+        type: "company",
+        id: entry.companyId,
+      });
     });
 
     revalidateFloor();
@@ -348,7 +362,7 @@ export async function archiveActivityAction(
   });
 }
 
-type Correctable = { companyId: string; happenedOn: Day; text: string };
+type Correctable = { companyId: string; repId: string; happenedOn: Day; text: string };
 
 /**
  * The one gate both corrections ask: it is his own entry, it is still filed,
@@ -378,10 +392,11 @@ async function mineToCorrect(
 
   if (!row || row.archivedAt) return { ok: false, error: t("activityNotFound") };
   if (row.userId !== actor.id) throw new NotAllowed();
-  await assertCompanyMine(actor, row.companyId);
+  const { repId } = await assertCompanyMine(actor, row.companyId);
 
   return {
     companyId: row.companyId,
+    repId,
     happenedOn: row.happenedOn as Day,
     text: row.text,
   };

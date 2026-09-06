@@ -324,6 +324,17 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   reads the top level is a check that never fires); and the person who types the key can
   correct it in place, with the old value kept in the trail. A correction is not a second
   transition: status, instants and months stay where they were.
+- **A drawer says what it writes.** Three places in the stranger read where the screen and the
+  write disagreed (P11A, D94): the company drawer raised a quotation against no project while
+  S18 says every quotation belongs to one; its follow-up picker wrote the company's own date
+  while the list coloured the row by the earlier of that and its projects', so "cleared" could
+  leave the row amber; and correcting or unfiling a log entry wrote its audit row and told no
+  open screen. Three clauses. A dialog that creates a child asks for every parent the record
+  must have, and when there is none to pick it offers a sentence instead of a button that the
+  action would refuse. A control that writes one column, on a screen coloured by another, says
+  so where it sits — the drawer names the project and its date under the picker, and the clear
+  toast says what still stands. And every write that moves a count sends the live event the
+  first write sent: a correction is news exactly as the entry was.
 
 ## §4 Not built until asked
 

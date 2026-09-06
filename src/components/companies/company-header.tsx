@@ -130,6 +130,8 @@ export type DrawerCompany = {
   editable: CompanyEditable;
   /** A Riyadh day, "YYYY-MM-DD". */
   nextFollowUp: string | null;
+  /** The earliest open project's date, when one is set — what the list may be showing instead (D94). */
+  projectFollowUp: { day: string; project: string } | null;
 };
 
 export function CompanyHeader({
@@ -183,10 +185,13 @@ export function CompanyHeader({
         toast.error(result.error);
         return;
       }
+      // Cleared is only cleared if nothing else drives the row (D94).
       toast.success(
         next
           ? t("drawer.followUpSet", { date: formatDay(next, locale) })
-          : t("drawer.followUpCleared"),
+          : company.projectFollowUp
+            ? t("drawer.followUpClearedProject", { project: company.projectFollowUp.project })
+            : t("drawer.followUpCleared"),
       );
       router.refresh();
     });
@@ -284,6 +289,17 @@ export function CompanyHeader({
           >
             <DatePicker value={day} onChange={save} />
           </div>
+        ) : null}
+        {/* The list colours the row by the earlier of the company's date and
+            its projects' (least(...) in followups.ts). When a project's is the
+            earlier, say so here, or the picker above looks like it lies (D94). */}
+        {company.projectFollowUp && (day === null || company.projectFollowUp.day < day) ? (
+          <p className="basis-full text-xs text-muted-foreground">
+            {t("drawer.projectDrivesFollowUp", {
+              project: company.projectFollowUp.project,
+              date: formatDay(company.projectFollowUp.day, locale),
+            })}
+          </p>
         ) : null}
       </div>
 

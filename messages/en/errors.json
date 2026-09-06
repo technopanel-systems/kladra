@@ -4,6 +4,7 @@
   "phoneTaken": "This company already has a contact with that number.",
   "emailInvalid": "Not a valid email address.",
   "companyNotFound": "That company is not there any more.",
+  "projectRequired": "Pick the project this quotation is for. Every quotation belongs to one.",
   "archiveReasonRequired": "Say why it is being archived.",
   "companyArchived": "This company is archived. Restore it before adding to it.",
   "projectNotFound": "That project is not there any more.",
