@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition, type ReactNode } from "reac
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
+import { Prose } from "@/components/ui-ext/prose";
 import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
 import type { Waited } from "@/lib/waiting";
 import { Button } from "@/components/ui/button";
@@ -596,7 +597,9 @@ function Reason({ title, text }: { title: string; text: string }) {
   return (
     <div className="card-face flex flex-col gap-1 p-3">
       <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      <p className="text-sm whitespace-pre-wrap">{text}</p>
+      {/* Typed by the desk, so it runs in her direction and not the page's
+          (rules/words.md) — as the trail below already did. */}
+      <Prose text={text} className="text-sm" />
     </div>
   );
 }

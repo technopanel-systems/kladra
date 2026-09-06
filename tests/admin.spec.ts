@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { ADMIN_PATHS } from "@/components/shell/nav";
 import { login } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
@@ -461,9 +462,11 @@ test("a rep who types an admin URL lands on his own home, and cannot download th
 }) => {
   await login(page, locale, "faisal");
 
-  for (const path of ["users", "targets", "lookups", "holidays", "export", "archive"]) {
-    await page.goto(`/${locale}/admin/${path}`);
-    await expect(page, `/admin/${path} let a rep in`).toHaveURL(/\/day/, COLD);
+  // Every admin screen the rail has, read from the rail (D99): a list typed
+  // here missed /admin/use for three phases.
+  for (const path of ADMIN_PATHS) {
+    await page.goto(`/${locale}${path}`);
+    await expect(page, `${path} let a rep in`).toHaveURL(/\/day/, COLD);
   }
   await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
 

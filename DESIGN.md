@@ -371,6 +371,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   yet" on a call card, not silence. And a prompt that takes a value names what the value is for:
   a number typed against "Q-12" is typed against a label, and the customer's name under the
   title is what makes it typed against a company.
+- **Derived from the source, walked in the spec.** Three from the stranger read (P11A, D99). A
+  list a screen is built from is the list a test sweeps — read from the same constant, never
+  retyped beside it, because the retyped copy is the one that misses the seventh entry. A rule
+  every page of a kind applies is one function those pages call, not two lines each of them
+  carries. And every state the business has is in the seed and is reached once in the spec
+  through the screen that reaches it: a state the demo never shows and the walk never enters
+  is a state whose screen nobody has read.
 
 ## §4 Not built until asked
 

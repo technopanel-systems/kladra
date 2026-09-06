@@ -1,7 +1,6 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { TargetsPanel } from "@/components/admin/targets-panel";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { targetsForMonth } from "@/lib/admin";
 import { firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 
@@ -25,8 +24,7 @@ export default async function AdminTargetsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [user, params] = await Promise.all([requireUser(), searchParams]);
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
+  const [, params] = await Promise.all([requireAdmin(), searchParams]);
 
   const [t, targets] = await Promise.all([
     getTranslations(),

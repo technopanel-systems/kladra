@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
+import { dispatchLabel } from "@/lib/labels";
 
 /**
  * P5 — the dispatch chain, end to end (WORKFLOW §3, Rawan-2).
@@ -359,4 +360,100 @@ test("a request for more than the quotation has left is refused, in the app's wo
   // written, and the dialog stays open on what was typed.
   await expect(form.getByText(t("dispatches.tooMuch")).first()).toBeVisible(COLD);
   await expect(page).not.toHaveURL(/\/dispatches\?open=/);
+});
+
+/**
+ * The desk's other answer to a request: not approved, refused with a reason
+ * (SPEC D37, S39). The seed already carries one refused dispatch (d4) so
+ * Faisal's day is never empty on this row (D99) — this walk refuses a
+ * DIFFERENT one, the seed's still-submitted d3, so the seeded row and the
+ * one this test makes are never confused for each other in the assertions
+ * or in the cleanup.
+ *
+ * Refusing gives the quantities back and ends the request the way approving
+ * does (D79): it leaves Rawan's queue, and it lands on Faisal's day under
+ * "Waiting on you" carrying her words, exactly like a sent-back quotation.
+ */
+test("the desk refuses a dispatch with a reason, and the rep reads it on his day", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow(); // Two sign-ins and a dialog.
+
+  const start = new Date();
+  const dispatch = await one<{ id: string; number: number }>(
+    `select id, number from dispatches where status = 'submitted' order by created_at limit 1`,
+  );
+  const label = dispatchLabel(dispatch.number);
+  const reason = "The shipment method quoted is not what SMAC has on file for this job.";
+
+  try {
+    await test.step("Rawan refuses the submitted dispatch, with a reason", async () => {
+      await login(page, locale, "rawan");
+      await page.goto(`/${locale}/queue?dispatch=${dispatch.id}`);
+
+      const sheet = sheetFor(page, label);
+      await expect(sheet).toBeVisible(COLD);
+
+      await sheet.getByRole("button", { name: t("dispatches.refuse") }).click();
+      const ask = page.getByRole("dialog", { name: t("dispatches.refuseTitle", { label }) });
+      await ask.getByLabel(t("common.reason")).fill(reason);
+      await ask.getByRole("button", { name: t("dispatches.refuse") }).click();
+
+      await expect(page.getByText(t("dispatches.refused", { label }))).toBeVisible(COLD);
+
+      // Answered, so it is off her queue (D79) — read fresh, not live: this is
+      // the same user who just acted, not the second-context check further up.
+      await page.goto(`/${locale}/queue`);
+      await expect(page.getByText(label, { exact: true })).toHaveCount(0);
+    });
+
+    await test.step("the row and one audit row carry the refusal", async () => {
+      const row = await one<{ status: string; refuse_reason: string | null }>(
+        "select status, refuse_reason from dispatches where id = $1::uuid",
+        [dispatch.id],
+      );
+      expect(row.status).toBe("refused");
+      expect(row.refuse_reason).toBe(reason);
+
+      // record_id is text (rules/data.md) — cast the dispatch's uuid to match.
+      const audit = await query(
+        `select id from audit_log
+          where action = 'dispatch.refuse' and record_id = $1::text and at >= $2::timestamptz`,
+        [dispatch.id, start.toISOString()],
+      );
+      expect(audit, "expected exactly one dispatch.refuse audit row for this dispatch").toHaveLength(1);
+    });
+
+    await test.step("Faisal reads it under Waiting on you, in her words", async () => {
+      await login(page, locale, "faisal");
+      await page.goto(`/${locale}/day`);
+
+      await expect(page.getByRole("heading", { name: t("day.waitingOnYou") })).toBeVisible(COLD);
+
+      const labelText = labelOnScreen(page, label);
+      await expect(labelText).toBeVisible(COLD);
+      const card = labelText.locator("xpath=ancestor::li[1]");
+      await expect(card.getByText(t("day.refused"), { exact: true })).toBeVisible();
+      await expect(card.getByText(reason)).toBeVisible();
+    });
+  } finally {
+    await query(
+      `update dispatches
+          set status = 'submitted', refuse_reason = null, updated_at = now()
+        where id = $1::uuid`,
+      [dispatch.id],
+    );
+    await query(
+      `delete from audit_log
+        where action = 'dispatch.refuse' and record_id = $1::text and at >= $2::timestamptz`,
+      [dispatch.id, start.toISOString()],
+    );
+    await query(
+      `delete from notifications
+        where subject_type = 'dispatch' and subject_id = $1::uuid and created_at >= $2::timestamptz`,
+      [dispatch.id, start.toISOString()],
+    );
+  }
 });

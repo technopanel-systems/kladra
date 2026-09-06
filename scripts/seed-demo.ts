@@ -787,6 +787,9 @@ async function seedDispatches(
         d.approvedOnDayOfMonth === undefined
           ? null
           : instant(dayOfThisMonth(d.approvedOnDayOfMonth), 14, 30);
+      // Refused the morning after it was raised; nothing else ends a dispatch.
+      const refusedAt = d.status === "refused" ? instant(back(d.createdBack - 1), 9, 40) : null;
+      const ended = approvedAt ?? refusedAt;
 
       const [row] = await tx
         .insert(dispatches)
@@ -799,12 +802,52 @@ async function seedDispatches(
           destination: d.destination,
           paymentTerms: d.paymentTerms,
           smacDispatchNumber: d.smacDispatchNumber ?? null,
-          refuseReason: null,
+          refuseReason: d.refuseReason ?? null,
           approvedAt,
           createdAt: created,
-          updatedAt: approvedAt ?? created,
+          updatedAt: ended ?? created,
         })
         .returning({ id: dispatches.id });
+
+      // The trail (D72, D77): the desk's day counts what it refused from the
+      // audit log, so a seeded refusal without its row is one she never made.
+      const desk = must(userIds, "rawan", "user");
+      await tx.insert(auditLog).values([
+        {
+          userId: must(userIds, d.rep, "user"),
+          action: "dispatch.request",
+          recordType: "dispatch",
+          recordId: row.id,
+          details: {},
+          at: created,
+          createdAt: created,
+          updatedAt: created,
+        },
+        ...(approvedAt
+          ? [{
+              userId: desk,
+              action: "dispatch.approve",
+              recordType: "dispatch",
+              recordId: row.id,
+              details: { smacDispatchNumber: d.smacDispatchNumber ?? null },
+              at: approvedAt,
+              createdAt: approvedAt,
+              updatedAt: approvedAt,
+            }]
+          : []),
+        ...(refusedAt
+          ? [{
+              userId: desk,
+              action: "dispatch.refuse",
+              recordType: "dispatch",
+              recordId: row.id,
+              details: { reason: d.refuseReason ?? "" },
+              at: refusedAt,
+              createdAt: refusedAt,
+              updatedAt: refusedAt,
+            }]
+          : []),
+      ]);
 
       const parentItems = must(itemIds, d.quotation, "quotation");
       const rows = await tx
@@ -935,6 +978,34 @@ async function seedHistory(
         createdAt: instant(on(24), 12, 15),
         updatedAt: approved,
       });
+
+      // The trail (D72, D99): a month's approved metres are read off the
+      // dispatches, but who raised and who approved each one is read off this
+      // table — and the history months carried none, so every trail panel on
+      // an old dispatch was empty.
+      const raised = instant(on(24), 12, 15);
+      await tx.insert(auditLog).values([
+        {
+          userId: him,
+          action: "dispatch.request",
+          recordType: "dispatch",
+          recordId: dispatch.id,
+          details: {},
+          at: raised,
+          createdAt: raised,
+          updatedAt: raised,
+        },
+        {
+          userId: her,
+          action: "dispatch.approve",
+          recordType: "dispatch",
+          recordId: dispatch.id,
+          details: { smacDispatchNumber: String(8000 + dispatchNumber) },
+          at: approved,
+          createdAt: approved,
+          updatedAt: approved,
+        },
+      ]);
     }
 
     // And the ones that did not land. No dispatch on any of them, so they move

@@ -1,8 +1,7 @@
 import { Download } from "lucide-react";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { EXPORTS } from "@/lib/export";
 
 /**
@@ -14,8 +13,7 @@ import { EXPORTS } from "@/lib/export";
  * route, and putting a locale prefix in front of one would 404.
  */
 export default async function AdminExportPage() {
-  const user = await requireUser();
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
+  await requireAdmin();
 
   const t = await getTranslations();
 

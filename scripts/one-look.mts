@@ -32,6 +32,16 @@ const RULES: Rule[] = [
     allow: [],
     fix: "use border border-line",
   },
+  {
+    // 3. A block somebody typed runs in the writer's direction (rules/words.md).
+    //    `Prose` is the one place that knows how; a `<p>` that preserves the
+    //    typist's line breaks by hand is a typed block laid out by hand, and two
+    //    of them sat on the sheets beside a trail that did it right (P11A-12).
+    name: "typed text is laid out by Prose, in the writer's direction",
+    pattern: /whitespace-pre-(wrap|line)/,
+    allow: ["src/components/ui-ext/prose.tsx"],
+    fix: "use <Prose text={…} />",
+  },
 ];
 
 const root = resolve(import.meta.dirname, "..");
@@ -68,4 +78,6 @@ if (problems.length > 0) {
   for (const line of problems) console.error("  " + line);
   process.exit(1);
 }
-console.log("one-look — the primary button and the surface edge are each written once");
+console.log(
+  "one-look — the primary button, the surface edge and typed text are each written once",
+);

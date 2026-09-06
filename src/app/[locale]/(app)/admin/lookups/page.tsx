@@ -1,7 +1,6 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { LookupsPanel } from "@/components/admin/lookups-panel";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { listLookup } from "@/lib/admin";
 import { isLookupKind, LOOKUP_KINDS, type LookupKind } from "@/lib/lookup-kinds";
 
@@ -20,8 +19,7 @@ export default async function AdminLookupsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [user, params] = await Promise.all([requireUser(), searchParams]);
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
+  const [, params] = await Promise.all([requireAdmin(), searchParams]);
 
   const kind: LookupKind = isLookupKind(params.list) ? params.list : LOOKUP_KINDS[0];
   const [t, rows] = await Promise.all([getTranslations(), listLookup(kind)]);

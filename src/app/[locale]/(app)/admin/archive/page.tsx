@@ -1,7 +1,6 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { ArchivePanel } from "@/components/admin/archive-panel";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { listArchived } from "@/lib/admin";
 
 /**
@@ -11,8 +10,7 @@ import { listArchived } from "@/lib/admin";
  * screen: everything taken off the floor, newest first, with Restore.
  */
 export default async function AdminArchivePage() {
-  const user = await requireUser();
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
+  await requireAdmin();
 
   const [t, rows] = await Promise.all([getTranslations(), listArchived()]);
 

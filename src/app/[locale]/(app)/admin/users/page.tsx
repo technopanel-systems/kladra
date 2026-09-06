@@ -1,7 +1,6 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { UsersPanel } from "@/components/admin/users-panel";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { listUsers } from "@/lib/admin";
 
 /**
@@ -12,9 +11,8 @@ import { listUsers } from "@/lib/admin";
  * entry keeps pointing at a real person.
  */
 export default async function AdminUsersPage() {
-  const user = await requireUser();
+  const user = await requireAdmin();
   // The rail never offers Admin to anyone else; a typed URL goes home.
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
 
   const [t, users] = await Promise.all([getTranslations(), listUsers()]);
 

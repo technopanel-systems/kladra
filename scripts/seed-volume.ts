@@ -26,6 +26,12 @@ import { normalizePhone } from "../src/lib/phone";
 loadEnv();
 
 const { db } = await import("../src/db");
+
+// The ERP's numbers this seed hands out, counted so that no two are the same
+// (quotations_smac_number_idx, dispatches_smac_number_idx) and none is the demo
+// floor's, which stay below 10000.
+let nextSmacNumber = 20000;
+let nextSmacDispatchNumber = 30000;
 const {
   activities,
   companies,
@@ -225,9 +231,12 @@ async function main(): Promise<void> {
         projectId: project.id,
         repId: pick(reps).id,
         status,
-        // The ERP's own number, which is what the coordinator types: four digits
-        // that have nothing to do with ours, as on the demo floor.
-        smacNumber: answered ? String(between(1000, 9999)) : null,
+        // The ERP's own number, which is what the coordinator types: nothing to
+        // do with ours, as on the demo floor. Counted up, not drawn at random:
+        // four random digits collided with themselves once in a few hundred
+        // (the unique index is right; the draw was wrong), and 20000 upward
+        // sits clear of the demo floor's own numbers.
+        smacNumber: answered ? String(nextSmacNumber++) : null,
         issuedAt: answered ? at(created) : null,
         decidedAt: status === "accepted" || status === "rejected" ? at(created) : null,
         returnReason: status === "returned" ? "المقاسات ناقصة" : null,
@@ -279,7 +288,7 @@ async function main(): Promise<void> {
         destination: `${pick(["الرياض", "جدة", "الدمام"])} — موقع المشروع`,
         paymentTerms: pick(["تحويل بنكي 30 يوم", "50% مقدم", "نقدًا عند التسليم"]),
         status,
-        smacDispatchNumber: status === "approved" ? String(between(1000, 9999)) : null,
+        smacDispatchNumber: status === "approved" ? String(nextSmacDispatchNumber++) : null,
         approvedAt: status === "approved" ? at(created) : null,
         refuseReason: status === "refused" ? "الكمية أكبر من المتبقي" : null,
         createdAt: at(created),

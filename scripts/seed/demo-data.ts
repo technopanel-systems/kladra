@@ -869,7 +869,9 @@ export type DispatchSeed = {
   key: string;
   quotation: string;
   rep: RepKey;
-  status: "submitted" | "approved";
+  status: "submitted" | "approved" | "refused";
+  /** The desk's reason, for a refused one — in her words (S28). */
+  refuseReason?: string;
   /** `shipment_methods.code`. */
   shipmentMethod: string;
   destination: string;
@@ -925,6 +927,22 @@ export const DISPATCHES: DispatchSeed[] = [
       { item: 0, qty: 20 },
       { item: 1, qty: 15 },
     ],
+  },
+  // The state the demo never showed (P11A finding 37, D99): a dispatch the desk
+  // refused, with her reason, waiting on the rep the way a returned quotation
+  // does. Against Faisal's accepted quotation, raised four days ago and refused
+  // the next morning; the audit rows carry both instants.
+  {
+    key: "d4",
+    quotation: "q4",
+    rep: "faisal",
+    status: "refused",
+    refuseReason: "الكمية المطلوبة أكبر مما تبقّى في عرض السعر — يُراجع البند الثاني ثم يُعاد الطلب.",
+    shipmentMethod: "ct",
+    destination: "موقع المشروع — طريق الملك فهد، الرياض",
+    paymentTerms: "50% مقدم والباقي عند التسليم",
+    createdBack: 4,
+    items: [{ item: 1, qty: 10 }],
   },
 ];
 

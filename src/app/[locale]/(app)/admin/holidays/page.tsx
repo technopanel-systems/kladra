@@ -4,8 +4,7 @@ import { HolidaysPanel } from "@/components/admin/holidays-panel";
 import { db } from "@/db";
 import { personName } from "@/lib/people";
 import { users } from "@/db/schema";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { listNonWorking } from "@/lib/admin";
 import { firstOfMonth, todayRiyadh } from "@/lib/dates";
 
@@ -17,8 +16,7 @@ import { firstOfMonth, todayRiyadh } from "@/lib/dates";
  * screen somebody scrolls past every time.
  */
 export default async function AdminHolidaysPage() {
-  const user = await requireUser();
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
+  await requireAdmin();
 
   const locale = await getLocale();
   const [t, rows, people] = await Promise.all([

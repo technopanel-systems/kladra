@@ -95,6 +95,21 @@ export async function requireUser(): Promise<SessionUser> {
 }
 
 /**
+ * The admin's screens, and only his (SPEC §3: admin only). Anybody else who
+ * types the URL is put back on his own home — not an error page, a floor
+ * (DESIGN §5). Seven pages carried this as two hand-copied lines each, and the
+ * test that sweeps them was a third copy of the list that had missed one (D99).
+ */
+export async function requireAdmin(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (user.role !== "admin") {
+    const locale = await getLocale();
+    redirect({ href: homeFor(user.role), locale });
+  }
+  return user;
+}
+
+/**
  * For server actions and route handlers: throw instead of redirecting.
  *
  * This is the one door every write in the app goes through, which is why

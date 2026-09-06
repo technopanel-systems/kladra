@@ -114,6 +114,13 @@ const adminItems: NavItem[] = [
   { href: "/admin/export", labelKey: "common.export", icon: Download },
 ];
 
+/**
+ * The admin's paths, read off the rail's own list: the specs that sweep the
+ * admin screens read this rather than a list typed beside it, which is how one
+ * of seven went unswept for three phases (D99).
+ */
+export const ADMIN_PATHS: readonly string[] = adminItems.map((item) => item.href);
+
 export function navFor(role: Role): NavGroup[] {
   switch (role) {
     case "marketing":

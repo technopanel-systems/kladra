@@ -1,8 +1,9 @@
 import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one, personName, userId } from "./helpers/db";
+import { one, personName, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 import { quotationLabel } from "@/lib/labels";
+import { quotationEvent } from "@/lib/quotation-events";
 
 /**
  * P4 — the quotation chain, end to end (WORKFLOW §3).
@@ -652,4 +653,109 @@ test("a rep withdraws his own request and it leaves the coordinator's queue", as
     await labelOnScreen(page, label).click();
     await expect(statusOf(sheetFor(page, label))).toHaveText(t("quotations.statusCancelled"));
   });
+});
+
+/**
+ * The customer's other answer, recorded on the rep's own screen (SPEC D99,
+ * S36): not accepted, rejected with a reason. The accept path is walked at
+ * step 7 above; this mirrors it for reject, which carries a reason the
+ * accept path does not.
+ *
+ * `decideQuotationAction` does not touch the project (D11), so nothing here
+ * needs undoing beyond the quotation row itself — the customer having said no
+ * to one price is not the project going lost.
+ */
+test("the customer says no, and the rep writes it down", async ({ page, locale, t }) => {
+  test.slow(); // One sign-in, one dialog, and a database round trip either side.
+
+  const start = new Date();
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const quotation = await one<{ id: string; number: number; revision: number }>(
+    `select q.id, q.number, q.revision
+       from quotations q
+       join companies c on c.id = q.company_id
+      where c.rep_id = $1::uuid
+        and q.status = 'issued'
+        and not exists (
+          select 1 from quotations later
+           where later.number = q.number and later.revision > q.revision
+        )
+      order by q.created_at
+      limit 1`,
+    [faisal],
+  );
+  const label = quotationLabel(quotation.number, quotation.revision);
+  const reason = "The customer went with a cheaper supplier for this phase.";
+
+  try {
+    await test.step("Faisal records the customer's rejection, with a reason", async () => {
+      await login(page, locale, "faisal");
+      await page.goto(`/${locale}/quotations?open=${quotation.id}`);
+
+      const sheet = sheetFor(page, label);
+      await expect(sheet).toBeVisible(COLD);
+      await expect(statusOf(sheet)).toHaveText(t("quotations.statusIssued"));
+
+      await sheet.getByRole("button", { name: t("quotations.rejected") }).click();
+      const ask = page.getByRole("dialog", { name: t("quotations.rejectTitle", { label }) });
+      await ask.getByLabel(t("common.reason")).fill(reason);
+      await ask.getByRole("button", { name: t("quotations.rejected") }).click();
+
+      await expect(page.getByText(t("quotations.rejectedDone", { label }))).toBeVisible(COLD);
+
+      const decided = sheetFor(page, label);
+      await expect(statusOf(decided)).toHaveText(t("quotations.statusRejected"));
+      await expect(decided.getByText(t("quotations.rejectedReason"), { exact: true })).toBeVisible();
+      // On the drawer twice over — in the "Rejected because" box and in the
+      // trail below it — so the assertion takes the first of whichever it
+      // matches, exactly as the twice-returned quotation's does further up.
+      await expect(decided.getByText(reason).first()).toBeVisible();
+    });
+
+    await test.step("the row and one audit row carry the decision", async () => {
+      const row = await one<{
+        status: string;
+        decided_at: string | null;
+        decision_reason: string | null;
+      }>(
+        "select status, decided_at, decision_reason from quotations where id = $1::uuid",
+        [quotation.id],
+      );
+      expect(row.status).toBe("rejected");
+      expect(row.decided_at).not.toBeNull();
+      expect(row.decision_reason).toBe(reason);
+
+      // record_id is text (rules/data.md) — cast the quotation's uuid to match.
+      const audit = await query(
+        `select id from audit_log
+          where action = $1::text and record_id = $2::text and at >= $3::timestamptz`,
+        [quotationEvent("rejected"), quotation.id, start.toISOString()],
+      );
+      expect(audit, "expected exactly one quotation.rejected audit row for this quotation").toHaveLength(
+        1,
+      );
+    });
+
+    await test.step("it is no longer with the customer, on his day", async () => {
+      await page.goto(`/${locale}/day`);
+      await expect(page.getByText(label, { exact: true })).toHaveCount(0);
+    });
+  } finally {
+    await query(
+      `update quotations
+          set status = 'issued', decided_at = null, decision_reason = null
+        where id = $1::uuid`,
+      [quotation.id],
+    );
+    await query(
+      `delete from audit_log
+        where action = $1::text and record_id = $2::text and at >= $3::timestamptz`,
+      [quotationEvent("rejected"), quotation.id, start.toISOString()],
+    );
+    await query(
+      `delete from notifications
+        where subject_type = 'quotation' and subject_id = $1::uuid and created_at >= $2::timestamptz`,
+      [quotation.id, start.toISOString()],
+    );
+  }
 });

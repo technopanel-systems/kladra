@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { Prose } from "@/components/ui-ext/prose";
 import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
 import type { Waited } from "@/lib/waiting";
 import { Badge } from "@/components/ui/badge";
@@ -669,7 +670,10 @@ function Reason({ title, text }: { title: string; text: string }) {
   return (
     <div className="card-face flex flex-col gap-1 p-3">
       <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      <p className="text-sm whitespace-pre-wrap">{text}</p>
+      {/* Typed by the desk or the rep, so it runs in the writer's direction and
+          not the page's (rules/words.md) — the trail below already did; this
+          box did not, and one sentence read two ways on one sheet. */}
+      <Prose text={text} className="text-sm" />
     </div>
   );
 }

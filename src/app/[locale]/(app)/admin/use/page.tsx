@@ -1,7 +1,6 @@
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { UsePanel } from "@/components/admin/use-panel";
-import { redirect } from "@/i18n/navigation";
-import { homeFor, requireUser } from "@/lib/authz";
+import { requireAdmin } from "@/lib/authz";
 import { whoIsUsingIt } from "@/lib/adoption";
 
 /**
@@ -13,8 +12,7 @@ import { whoIsUsingIt } from "@/lib/adoption";
  * would then be answering two different questions with one table.
  */
 export default async function AdminUsePage() {
-  const user = await requireUser();
-  if (user.role !== "admin") redirect({ href: homeFor(user.role), locale: await getLocale() });
+  await requireAdmin();
 
   const [t, use] = await Promise.all([getTranslations(), whoIsUsingIt()]);
 

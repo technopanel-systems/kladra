@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { ADMIN_PATHS } from "@/components/shell/nav";
 import { login } from "./helpers/auth";
 import { test, expect, type Locale } from "./helpers/i18n";
 
@@ -20,6 +21,7 @@ import { test, expect, type Locale } from "./helpers/i18n";
 
 const REP_SCREENS = ["", "companies", "projects", "quotations", "dispatches", "notifications"];
 const COORDINATOR_SCREENS = ["", "queue", "quotations", "dispatches", "notifications"];
+// The admin half read from the rail (D99): typed here it had missed /admin/use.
 const ADMIN_SCREENS = [
   "",
   "companies",
@@ -28,12 +30,7 @@ const ADMIN_SCREENS = [
   "dispatches",
   "team",
   "notifications",
-  "admin/users",
-  "admin/targets",
-  "admin/lookups",
-  "admin/holidays",
-  "admin/archive",
-  "admin/export",
+  ...ADMIN_PATHS.map((path) => path.slice(1)),
 ];
 
 /**

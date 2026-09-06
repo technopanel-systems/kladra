@@ -138,6 +138,50 @@ test("a reason lives exactly as long as the state it explains", async () => {
   expect(silent).toContain("quotations_returned_check");
 });
 
+test("a decided quotation carries its instant, and only a decided one", async () => {
+  // Half of `quotations_decided_check` (drizzle/0002_constraints.sql):
+  // `(decided_at is not null) = (status in ('accepted','rejected','cancelled'))`.
+  // Untested since it was written (SPEC D99) — the app always writes both
+  // columns together, so only a direct write ever finds the gap.
+  const issued = await one<{ id: string }>(
+    "select id from quotations where status = 'issued' and decided_at is null limit 1",
+  );
+
+  // A decided status with no instant: reads as waiting zero days for ever.
+  const statusOnly = await refused(
+    "update quotations set status = 'rejected' where id = $1::uuid",
+    [issued.id],
+  );
+  expect(statusOnly, "a decided status with no decided_at was accepted").toContain(
+    "violates check constraint",
+  );
+  expect(statusOnly).toContain("quotations_decided_check");
+
+  // And the other way round: an instant with no decision behind it.
+  const instantOnly = await refused(
+    "update quotations set decided_at = now() where id = $1::uuid",
+    [issued.id],
+  );
+  expect(instantOnly, "an instant on an undecided quotation was accepted").toContain(
+    "violates check constraint",
+  );
+  expect(instantOnly).toContain("quotations_decided_check");
+
+  // Both together is the real transition the app performs, and the
+  // constraint has to let it through. `query()` draws from a pool, so a
+  // BEGIN here has no guarantee of landing on the same connection as the
+  // ROLLBACK after it — the update is made and then undone by hand instead.
+  try {
+    await query("update quotations set status = 'rejected', decided_at = now() where id = $1::uuid", [
+      issued.id,
+    ]);
+  } finally {
+    await query("update quotations set status = 'issued', decided_at = null where id = $1::uuid", [
+      issued.id,
+    ]);
+  }
+});
+
 test("a revision names a quotation that exists", async () => {
   const quotation = await one<{ id: string }>("select id from quotations limit 1");
   const message = await refused(

@@ -69,7 +69,8 @@
             onto its company, a backup held to its own counts, D91–D93); 15, 16, 21 (a
             drawer says what it writes, D94); 22, 23, 24 (a figure agrees with the figures
             under it, D95); 14, 19, 25 (the guards, D96); 26, 30, 32 (a day as it happened,
-            D97); 29, 31, 39 (a number is a call, D98)
+            D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
+            walked in the spec, D99)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -102,12 +103,11 @@ P11A-5 (a phone read in its company's country; the six-month sentence says what 
 D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
 backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
 figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10 (a day as it
-happened, D97), P11A-11 (a number is a call: message and call on every number, "no contact" on
-a call card, the customer's name under the SMAC prompts, D98). Next is P11A-12: findings 36, 37,
-38 — the admin gate written once and the sweeps read off the rail, a refused dispatch and a
-rejected quotation in the seed and walked in the spec, the decided check tried (D99; the script
-is ready). After it, §5 in order from 41; 27, 28, 35 wait for 11H, 34, 40 for 11G, 17–18 for
-11B, 20 for 11G, 33 is noted. The dev database is seeded at volume (`seed:demo` then
+happened, D97), P11A-11 (a number is a call, D98), P11A-12 (the admin gate written once and the
+sweeps read off the rail; a refused dispatch and a rejected quotation in the seed and walked in
+the spec; the decided check tried, D99). Next is P11A-13: §5 in order from 41, three at a time
+by theme, each verified in the code first; 27, 28, 35 wait for 11H, 34, 40 for 11G, 17–18 and
+63–64 for 11B, 20 for 11G, 33 is noted. The dev database is seeded at volume (`seed:demo` then
 `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that
 are not defects.
 
@@ -764,6 +764,14 @@ card as it does on the list. The customer list and the drawer's contacts carry t
 Rawan opens Issue on a request and reads the customer's name under the title before she types
 the SMAC number; the same on Approve for a dispatch and on both corrections (D98).
 
+**What the walk never did** — `tests/dispatches.spec.ts`, `tests/quotations.spec.ts`, `tests/schema.spec.ts`
+Rawan refuses a submitted dispatch with a reason: it leaves her queue, Faisal's day lists it as
+refused with her words, and the trail has the row. Faisal records a customer's rejection on an
+issued quotation with the reason: it leaves "with the customer", the status and the instant are
+both set, and the trail has the row. The database refuses a decided quotation without its
+instant and an undecided one with it. The admin sweeps in `tests/admin.spec.ts` and
+`tests/controls.spec.ts` read the rail's list, so a screen added to the rail is swept (D99).
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -973,11 +981,11 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [ ] 35 **The phone breakpoint is written three times — 639, 640 and 768.** `responsive-dialog.
   tsx:35`, `company-header.tsx:56`, `bottom-bar.tsx:34`; between 641 and 767 the shell is a
   phone and the dialogs are not. Two readers. (11H.)
-- [ ] 36 **The admin gate is hand-copied into seven pages, and both test sweeps miss `admin/use`.**
+- [x] 36 **The admin gate is hand-copied into seven pages, and both test sweeps miss `admin/use`.** Verified; one `requireAdmin`, and both sweeps read `ADMIN_PATHS` off the rail (P11A-12, D99).
   Derive the lists from `nav.ts`. Reader cites code.
-- [ ] 37 **A dispatch is never refused in the seed, the spec or the walk.** `demo-data.ts:
+- [x] 37 **A dispatch is never refused in the seed, the spec or the walk.** Verified; the seed carries one with its trail and the spec refuses one (P11A-12, D99). `demo-data.ts:
   885-929`, `tests/dispatches.spec.ts`; WORKFLOW §3 marks it done. Reader cites code.
-- [ ] 38 **Nor is a quotation ever rejected live, nor `quotations_decided_check` tested.** Same
+- [x] 38 **Nor is a quotation ever rejected live, nor `quotations_decided_check` tested.** Verified; the spec rejects one through the screen and tries the check (P11A-12, D99). Same
   shape. Reader cites code.
 - [x] 39 **A call card with no contact says nothing; the customer list says "no contact".** Verified; the card says the list's words (P11A-11, D98).
   `call-band.tsx` vs `companies-table.tsx:101-111`. Reader cites code.
@@ -1059,3 +1067,16 @@ P10d before this list was written (D83).
   above is the same shape — a long-lived dev compiler that has hot-reloaded through hours of
   edits — so the rule for both is a dev server that has served one session's edits is restarted,
   not reused.
+- [x] 69 **`seed:volume` drew its SMAC numbers at random from four digits and collided with
+  itself.** Seen P11A-12, restoring the dev database after the demo reseed: `between(1000, 9999)`
+  for every issued quotation and approved dispatch, hundreds of each, so a duplicate under
+  `quotations_smac_number_idx` was a matter of when, and the run died half-way with the database
+  half-seeded. Cause: a random draw where a sequence belongs — the index is right, the draw was
+  wrong. Fixed in P11A-12: counted up from 20000 and 30000, clear of the demo floor's.
+- [x] 70 **A typed reason on the quotation and dispatch sheets ran in the page's direction, not
+  the writer's.** Found by the test-runner in P11A-12: the "Sent back because" / "Rejected
+  because" / "Refused because" box on each sheet was a bare `<p>`, while the same sentence two
+  lines down in the trail went through `Prose` (`dir="auto"`) — one sentence read two ways on
+  one sheet, against rules/words.md. Cause: a second way to lay out typed text, written by hand.
+  Fixed in P11A-12: both boxes are `Prose`, and `one-look` now refuses a hand-laid typed block
+  (`whitespace-pre-*` outside `prose.tsx`).
