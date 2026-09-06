@@ -4,6 +4,7 @@ import { OwnCard, PersonCard } from "@/components/reports/person-card";
 import { ReportBox } from "@/components/reports/report-box";
 import { requireUser } from "@/lib/authz";
 import { todayRiyadh, type Day } from "@/lib/dates";
+import { boxOffered } from "@/lib/report-figures";
 import { latestReportDay, mayWriteFor, owesReport, reportNeighbours, teamDay } from "@/lib/reports";
 
 /**
@@ -68,10 +69,18 @@ export default async function ReportsPage({
 
       {/* Yours first, because on the day you are reading it you are here to
           write rather than to read. A person who is off gets no box and no
-          nagging — a day he did not work is not a day he owes (D57). */}
-      {mine && mine.state !== "off" ? (
+          nagging — a day he did not work is not a day he owes (D57) — unless
+          the day is still open to him: a Saturday he worked can be written,
+          and the box says it is not owed (S47, D97). */}
+      {mine && boxOffered(mine.state, canWrite, mine.note) ? (
         <OwnCard person={mine} open={team.open}>
-          <ReportBox day={day} note={mine.note} canWrite={canWrite} closed={!dayIsOpen} />
+          <ReportBox
+            day={day}
+            note={mine.note}
+            canWrite={canWrite}
+            closed={!dayIsOpen}
+            optional={mine.state === "off"}
+          />
         </OwnCard>
       ) : null}
 

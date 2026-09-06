@@ -28,7 +28,7 @@ import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personNameOf } from "@/lib/people";
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
-import { writesReports } from "@/lib/floor";
+import { sells, writesReports } from "@/lib/floor";
 import type { Role } from "@/lib/types";
 import { isWorkingDay, type NonWorking } from "@/lib/workdays";
 import { SUM_SQM } from "@/lib/sqm";
@@ -36,6 +36,12 @@ import { SUM_SQM } from "@/lib/sqm";
 /** What a person on a floor did with customers on one day. */
 export type FloorDay = {
   kind: "floor";
+  /**
+   * May raise a quotation or a dispatch — a rep, or the manager on his own
+   * floor. Marketing stops at the quotation (D50), so six of the figures below
+   * can never move for it and its card leaves them out (D97).
+   */
+  sells: boolean;
   /** Log entries written for that day, and the customers they were about. */
   logged: number;
   companies: number;
@@ -110,7 +116,7 @@ export type TeamDay = {
  * column resolves inside the inner table and silently matches nothing
  * (rules/data.md).
  */
-async function floorDay(userId: string, day: Day): Promise<FloorDay> {
+async function floorDay(userId: string, role: Role, day: Day): Promise<FloorDay> {
   const result = await db.execute<{
     logged: number;
     companies: number;
@@ -194,6 +200,7 @@ async function floorDay(userId: string, day: Day): Promise<FloorDay> {
   const row = result.rows[0];
   return {
     kind: "floor",
+    sells: sells(role),
     logged: Number(row?.logged ?? 0),
     companies: Number(row?.companies ?? 0),
     quotationsRaised: Number(row?.raised ?? 0),
@@ -255,7 +262,7 @@ async function deskDay(day: Day): Promise<DeskDay> {
 
 /** One person's assembled day, whichever kind of day they have. */
 export async function dayWork(userId: string, role: Role, day: Day): Promise<DayWork> {
-  return role === "coordinator" ? deskDay(day) : floorDay(userId, day);
+  return role === "coordinator" ? deskDay(day) : floorDay(userId, role, day);
 }
 
 /** Everybody's sentence for one day, by user id — one read, not one per person. */

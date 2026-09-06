@@ -10,7 +10,7 @@ import {
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { requireUser } from "@/lib/authz";
 import { listNonWorkingDays } from "@/lib/calendar";
-import { addDays, formatDay, todayRiyadh } from "@/lib/dates";
+import { formatDay, todayRiyadh, type Day } from "@/lib/dates";
 import { listDispatches } from "@/lib/dispatches";
 import { listQuotations } from "@/lib/quotations";
 import { queueStanding } from "@/lib/standing";
@@ -68,14 +68,11 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
 
   const today = todayRiyadh();
 
-  const [t, quotationRows, dispatchRows, standing, nonWorking] = await Promise.all([
+  const [t, quotationRows, dispatchRows, standing] = await Promise.all([
     getTranslations(),
     listQuotations({ user, q: q || undefined, status: "requested", locale }),
     listDispatches({ user, q: q || undefined, status: "submitted", locale }),
     queueStanding(),
-    // Sixty days back covers any wait this desk has ever had, and the holidays
-    // in it are why a wait is counted in working days at all (S48).
-    listNonWorkingDays(addDays(today, -60), today),
   ]);
 
   // The counts come from the rows already on the page, so the strip cannot say
@@ -89,6 +86,13 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
   // same tables once named a request neither list showed — an archived
   // company's — and the strip said "4 working days" over an empty desk (D95).
   const raised = [...quotationRows, ...dispatchRows].map((row) => row.createdOn);
+  // The holidays a wait crosses, back to the day the oldest request was raised
+  // — they are why a wait is counted in working days at all (S48). A fixed
+  // sixty days let a longer wait age an earlier holiday as a working day (D97).
+  const nonWorking = await listNonWorkingDays(
+    raised.length > 0 ? (oldest(raised) as Day) : today,
+    today,
+  );
   const worst = longestWait(raised, today, nonWorking);
   const lateQuotations = countLate(
     quotationRows.map((row) => row.createdOn),

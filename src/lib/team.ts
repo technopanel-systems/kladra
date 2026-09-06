@@ -411,7 +411,7 @@ export type Stuck = {
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   const locale = await getLocale();
-  const [waiting, followUps, never, quiet, nonWorking, away] = await Promise.all([
+  const [waiting, followUps, never, quiet, away] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -513,9 +513,18 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
        order by days desc
     `),
 
-    listNonWorkingDays(firstOfMonth(day), day),
     awayOn(day),
   ]);
+
+  // The holidays a wait crosses, back to the day the OLDEST request was raised
+  // (D97). This read from the first of the month, so a request from the 28th
+  // aged a holiday on the 30th as a working day and read a day older than it
+  // was on the manager's screen and the coordinator's. `waiting` is oldest
+  // first, so its first row is the earliest day any wait here counts from.
+  const nonWorking = await listNonWorkingDays(
+    waiting[0] && waiting[0].since < firstOfMonth(day) ? (waiting[0].since as Day) : firstOfMonth(day),
+    day,
+  );
 
   const requests: StuckRequest[] = [];
   for (const row of waiting) {

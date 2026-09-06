@@ -32,6 +32,7 @@ export function ReportBox({
   note,
   canWrite,
   closed,
+  optional = false,
 }: {
   day: Day;
   /** What is already saved for this day, or null. */
@@ -42,6 +43,8 @@ export function ReportBox({
    *  for a reader on a day that is still open — and telling that reader the day
    *  is closed would be telling them something untrue. */
   closed: boolean;
+  /** An off day the person may still write for — offered, not owed (S47, D97). */
+  optional?: boolean;
 }) {
   const t = useTranslations("reports");
   const tc = useTranslations("common");
@@ -70,6 +73,7 @@ export function ReportBox({
 
   return (
     <div className="flex flex-col gap-2">
+      {optional ? <p className="text-sm text-muted-foreground">{t("offDayOptional")}</p> : null}
       <Textarea
         id="report-note"
         value={text}

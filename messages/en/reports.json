@@ -7,6 +7,7 @@
   "written": "{written} of {owed} wrote",
   "nobodyOwes": "Nobody was working on this day.",
   "notWorking": "Not a working day.",
+  "offDayOptional": "No report is owed for a day off — write if you worked.",
   "stateOpen": "The day is not over",
   "stateSilent": "Nothing written",
   "stateWeekend": "Weekend",

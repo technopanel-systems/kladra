@@ -11,7 +11,7 @@
  * imports it with `import type` and nothing here drags `@/db` anywhere.
  */
 import { toNumber } from "@/lib/money";
-import type { DayWork } from "@/lib/reports";
+import type { DayWork, PersonDay } from "@/lib/reports";
 
 export type Figure = {
   /** A key inside the `reports` namespace. */
@@ -41,7 +41,7 @@ export function figuresOf(work: DayWork): Figure[] {
       { key: "dispatchesRefused", value: work.refused },
     ];
   }
-  return [
+  const floor: Figure[] = [
     { key: "logged", value: work.logged },
     { key: "companies", value: work.companies },
     { key: "quotationRequests", value: work.quotationsRaised },
@@ -51,6 +51,12 @@ export function figuresOf(work: DayWork): Figure[] {
     { key: "dispatchesApproved", value: work.dispatchesApproved },
     { key: "moved", value: work.sqmMoved, sqm: true },
   ];
+  // Only the figures this person can move (D97): marketing never raises a
+  // quotation or a dispatch (D50), and six noughts it cannot change are a card
+  // nobody reads — and a card the manager reads as a floor that did nothing.
+  return work.sells
+    ? floor
+    : floor.filter((figure) => figure.key === "logged" || figure.key === "companies");
 }
 
 /**
@@ -63,6 +69,18 @@ export function figuresOf(work: DayWork): Figure[] {
  */
 export function whatMoved(work: DayWork): Figure[] {
   return figuresOf(work).filter((figure) => toNumber(figure.value) > 0);
+}
+
+/**
+ * Whether the reader's own card carries the box (D57, D97).
+ *
+ * A day he did not work is not a day he owes, so an off day shows no box and
+ * no nagging — unless the day is still open to him, in which case the box is
+ * there to be used and not to be filled: Saturday work is recorded, never
+ * required (S47). A note already written is shown whatever the day was.
+ */
+export function boxOffered(state: PersonDay["state"], canWrite: boolean, note: string | null): boolean {
+  return state !== "off" || canWrite || note !== null;
 }
 
 /** Nothing at all was recorded against this person on this day. */

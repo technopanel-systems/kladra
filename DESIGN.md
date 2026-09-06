@@ -354,6 +354,15 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   And a check that guards a family by name guards only the families it was told about: the
   list of computed-key families in `check-messages` is the whole list, found by grepping the
   call sites, and adding a computed key means adding its line there.
+- **A day as it happened.** Three from the stranger read (P11A, D97). An off day is offered, not
+  owed: the box is there while the day is open and the sentence beside it says nothing is
+  required, so the one who worked the Saturday can say so and the one who did not is asked
+  nothing. A card shows the figures its person can move and no others — a nought somebody
+  cannot change is not a fact about their day, it is a fact about their role, and the manager
+  reads it as a floor that did nothing. And working-day arithmetic reads the calendar back to
+  the day it counts from, never from a convenient anchor like the first of the month or sixty
+  days: the anchor is the second definition of "when the wait began", and the two disagree the
+  first time a wait is longer than the anchor.
 
 ## §4 Not built until asked
 

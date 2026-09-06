@@ -68,7 +68,8 @@
             matches its bars, D89, D90); 10, 11, 12 (a role and an id, a child restored
             onto its company, a backup held to its own counts, D91–D93); 15, 16, 21 (a
             drawer says what it writes, D94); 22, 23, 24 (a figure agrees with the figures
-            under it, D95); 14, 19, 25 (the guards, D96)
+            under it, D95); 14, 19, 25 (the guards, D96); 26, 30, 32 (a day as it happened,
+            D97)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -100,10 +101,12 @@ records what it did, D87), P11A-4 (a SMAC number refused by name and corrected i
 P11A-5 (a phone read in its company's country; the six-month sentence says what its bars say,
 D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
 backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
-figure agrees with the figures under it, D95), P11A-9 (the guards: the back gesture on a dirty
-sheet, a CSV cell as text, every computed key checked, D96). Next in §5 order: 26 a Saturday
-worked is a day reported, 27 the day's small controls over a card link (11H), 28 the project
-dialogs as bottom sheets (11H), then 29 onward; 17–18 wait for 11B, 20 for 11G. The dev
+figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10 (a day as it
+happened: an off day offered not owed, a card with the figures its role can move, the calendar
+read back to the day a wait began, D97). Next in §5 order: 29 a call from "calls due", 31 the
+SMAC prompt names its company, 39 a call card with no contact says so; then 36, 37, 38 (the
+admin gate from nav.ts, a refused dispatch and a rejected quotation in the seed and the spec);
+27, 28, 35 wait for 11H, 34, 40 for 11G, 17–18 for 11B, 20 for 11G, 33 is noted. The dev
 database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 11B–11J follow when §5 is down to entries that are not defects.
 
@@ -745,6 +748,14 @@ apostrophed; a phone, a negative figure, a quoted name and an empty cell are wha
 sheet is still there with his words; he cancels, swipes back again, and leaves the screen.
 Jerom's companies export carries a company named like a formula as text, apostrophe first.
 
+**A day as it happened** — `tests/figures.spec.ts`, `tests/calendar.spec.ts`
+Pure: a rep's card carries the chain and marketing's the two figures it can move; the box on
+an off day is offered while open, gone when closed, kept when written (D97). On the screens:
+marketing's own report card shows two figures and the manager reads the same two; a request
+raised forty days ago with a company holiday between then and the first of this month ages
+the holiday as a day off on the manager's stuck list and on the coordinator's queue, by the
+same arithmetic the spec runs itself.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -933,7 +944,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `standing.ts:318-366` never filters archived companies; the lists do. Reader cites code.
 - [x] 25 **`check-messages` guards five computed-key families and misses six more**, — verified; all eleven are read from their source lists (P11A-9, D96) — including
   `LINE_FIELDS` on the revision-diff screen. `scripts/check-messages.ts:186-192`. Two readers.
-- [ ] 26 **A rep who works a Saturday cannot write that day's report.** `workdays.ts:13-16`,
+- [x] 26 **A rep who works a Saturday cannot write that day's report.** Verified; the box is offered on an open off day and says nothing is owed (P11A-10, D97). `workdays.ts:13-16`,
   `reports.ts:374-389`; S47 allows recorded Saturday work. Reader cites code.
 - [ ] 27 **The day's Log and WhatsApp controls are small and sit over a whole-card link.**
   `call-band.tsx:66-120`. A rushed thumb opens the drawer. Reader cites code. (11H.)
@@ -941,11 +952,11 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   nine others use `ResponsiveDialog`. Reader cites code. (11H.)
 - [ ] 29 **"Calls due" has no way to place a call.** `phone.ts:61-63` exports WhatsApp only;
   `tel:` appears nowhere. Reader cites code.
-- [ ] 30 **Marketing's daily report shows six figures it can never move.** `reports.ts:256`,
+- [x] 30 **Marketing's daily report shows six figures it can never move.** Verified; its card carries the two it can (P11A-10, D97). `reports.ts:256`,
   `report-figures.ts:32-49`; the coordinator got a trimmed set, marketing did not. Reader cites code.
 - [ ] 31 **The SMAC prompt hides the company while the number is retyped.** `prompt-dialog.tsx:
   94-101`: title and description carry a bare label. Reader cites code.
-- [ ] 32 **Stuck-request ageing reads holidays from the first of this month only.** `team.ts:
+- [x] 32 **Stuck-request ageing reads holidays from the first of this month only.** Verified; both screens read back to the oldest request's day (P11A-10, D97). `team.ts:
   412-432, 516-532`, `calendar.ts:21-27`. Reader cites code.
 - [ ] 33 **The queue's headline counts are a capped array's length.** `queue/page.tsx:71-134`;
   `/dispatches` counts. Unreachable at fourteen people; wrong shape all the same. Reader cites code.
