@@ -38,6 +38,7 @@ import { quotationTone } from "@/lib/state-tone";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
 import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
+import { useArrivedIds } from "@/hooks/use-arrived";
 
 /**
  * The quotations screen and the drawer it opens (DESIGN §2: work happens in a
@@ -139,6 +140,12 @@ export function QuotationsTable({
   waiting?: Record<string, Waited>;
 }) {
   const t = useTranslations();
+  // Rows somebody else touched in the last two seconds (D105): the companies
+  // and projects lists had this since P8; these two, and the queue built from
+  // them, did not — so a request that landed while the desk was watching looked
+  // like one that had always been there. The clock starts when these rows are
+  // on screen, which the hook reports from `rows`.
+  const arrived = useArrivedIds(rows);
   const locale = useLocale();
   const router = useRouter();
   const [term, setTerm] = useState(q);
@@ -271,7 +278,10 @@ export function QuotationsTable({
                 <Link
                   key={row.id}
                   href={listHref(base, q, status, row.id)}
-                  className="card-face flex flex-col gap-1.5 p-3"
+                  className={cn(
+                    "card-face flex flex-col gap-1.5 p-3",
+                    arrived.has(row.id) && "row-arrived",
+                  )}
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span dir="ltr" className="num font-medium">
@@ -315,7 +325,11 @@ export function QuotationsTable({
                 </TableHeader>
                 <TableBody>
                   {rows.map((row) => (
-                    <TableRow key={row.id} data-state={openId === row.id ? "selected" : undefined}>
+                    <TableRow
+                      key={row.id}
+                      data-state={openId === row.id ? "selected" : undefined}
+                      className={cn(arrived.has(row.id) && "row-arrived")}
+                    >
                       <TableCell className="p-0">
                         <Link
                           href={listHref(base, q, status, row.id)}

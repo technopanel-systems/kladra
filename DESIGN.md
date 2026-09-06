@@ -403,6 +403,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   writes rows the actions would have written — a seed, an import — leaves the trail the
   actions leave, keeps to the floor and the calendar, and checks its own output against the
   database before it reports done.
+- **Live is proved, not promised.** Phase 11B (D105). A live update is a spec with two people
+  in it, not a diagram: raise here, see it arrive there, no reload, timed. Every list marks a
+  row somebody else just touched, from the one provider, and the mark's clock starts when the
+  refreshed row is on screen, not when the event landed. A read never goes through the write
+  door. And a channel that can be away says so when it is back — one resync, not a hole.
 
 ## §4 Not built until asked
 

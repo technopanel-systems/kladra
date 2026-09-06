@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useArrived } from "@/hooks/use-arrived";
+import { useArrived, useLanded } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
@@ -164,6 +164,9 @@ export function CompaniesTable({
   today: string;
 }) {
   const t = useTranslations();
+  // The rows are on screen: whatever arrived while the refresh was in flight
+  // starts its two seconds now (D105).
+  useLanded(rows);
 
   // Local on purpose: the files that build a /companies URL each own their own
   // copy rather than share one across the client/server boundary.

@@ -8,13 +8,28 @@
  * bell's new number; every other event means a record somebody else touched, so
  * the server components re-render (router.refresh) and the row is marked as
  * arrived for two seconds — that is the `row-arrived` highlight in globals.css.
+ * The two seconds start when the refresh has landed, not when the event did:
+ * the other way round, the round trip that paints the row is subtracted from
+ * them, and a highlight that fades before it is seen is a highlight nobody
+ * gets (D105). "Landed" is what a list reports when what its rows say has
+ * changed on screen (`useArrivedIds` / `useLanded` in src/hooks/use-arrived.ts):
+ * a refresh changes the rows' content exactly when the refreshed tree has
+ * painted, and tests/live.spec.ts times the highlight from that moment.
  *
  * EventSource reconnects by itself after the server's `retry: 3000`. Because a
  * gap can swallow events, every reconnect re-syncs the count from
  * /api/notifications/count rather than trusting the number it was holding.
  */
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { ReactNode } from "react";
 import { useRouter } from "@/i18n/navigation";
 import type { LiveEvent } from "@/lib/types";
@@ -23,6 +38,12 @@ import type { LiveEvent } from "@/lib/types";
 export const ARRIVED_MS = 2000;
 /** Several writes in one second are one refresh, not five. */
 const REFRESH_COALESCE_MS = 200;
+/**
+ * How long an arrival waits for a list to report its landing. Longer than any
+ * refresh; shorter than a walk to another screen, so a row touched minutes ago
+ * is not presented as just arrived when a list finally mounts.
+ */
+const WAITING_MS = 10_000;
 
 export type LiveState = {
   /** Unread notifications for the signed-in user. */
@@ -31,6 +52,11 @@ export type LiveState = {
   arrivedIds: ReadonlySet<string>;
   /** The most recent event, for anything that wants to react to one. */
   lastEvent: LiveEvent | null;
+  /**
+   * A list's report that its rows are on screen: whatever arrived while the
+   * refresh was in flight starts its two seconds now. Stable across renders.
+   */
+  landed: () => void;
 };
 
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
@@ -66,6 +92,9 @@ export function LiveProvider({
 
   const arrivedTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ids whose refresh is still in flight, with when each arrived; they become
+  // arrived when a list reports the landing.
+  const waiting = useRef(new Map<string, number>());
 
   const markArrived = useCallback((id: string) => {
     if (!id) return;
@@ -100,6 +129,16 @@ export function LiveProvider({
     }, REFRESH_COALESCE_MS);
   }, []);
 
+  // A list's rows are on screen: everything that arrived while the refresh
+  // was in flight is highlighted now, for the full two seconds, on the row as
+  // it now reads.
+  const landed = useCallback(() => {
+    const cutoff = Date.now() - WAITING_MS;
+    const ids = [...waiting.current].filter(([, at]) => at >= cutoff).map(([id]) => id);
+    waiting.current.clear();
+    for (const id of ids) markArrived(id);
+  }, [markArrived]);
+
   useEffect(() => {
     if (!userId) return;
 
@@ -108,7 +147,10 @@ export function LiveProvider({
     const source = new EventSource("/api/events");
 
     const resync = () => {
-      void fetch("/api/notifications/count", { cache: "no-store", credentials: "same-origin" })
+      void fetch("/api/notifications/count", {
+        cache: "no-store",
+        credentials: "same-origin",
+      })
         .then((res) => (res.ok ? (res.json() as Promise<{ unread?: unknown }>) : null))
         .then((body) => {
           if (cancelled || !body || typeof body.unread !== "number") return;
@@ -138,11 +180,18 @@ export function LiveProvider({
       }
       if (!event || typeof event.type !== "string") return;
       setLastEvent(event);
+      if (event.type === "resync") {
+        // The channel's listener was away and is back: the count and the
+        // screen are both re-read, as after a reconnect of our own (D105).
+        resync();
+        scheduleRefresh();
+        return;
+      }
       if (event.type === "notification") {
         setUnread(event.unread);
         return;
       }
-      markArrived(event.id);
+      if (event.id) waiting.current.set(event.id, Date.now());
       scheduleRefresh();
     };
 
@@ -155,22 +204,24 @@ export function LiveProvider({
       source.removeEventListener("live", onLive as EventListener);
       source.close();
     };
-  }, [userId, markArrived, scheduleRefresh]);
+  }, [userId, scheduleRefresh]);
 
   // Timers outlive React's own bookkeeping; clear them when the tree goes.
   useEffect(() => {
     const timers = arrivedTimers.current;
+    const pending = waiting.current;
     return () => {
       for (const timer of timers.values()) clearTimeout(timer);
       timers.clear();
+      pending.clear();
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
       refreshTimer.current = null;
     };
   }, []);
 
   const value = useMemo<LiveState>(
-    () => ({ unread, arrivedIds, lastEvent }),
-    [unread, arrivedIds, lastEvent],
+    () => ({ unread, arrivedIds, lastEvent, landed }),
+    [unread, arrivedIds, lastEvent, landed],
   );
 
   return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>;

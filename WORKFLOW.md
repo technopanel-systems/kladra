@@ -73,8 +73,8 @@
             walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
             D100); 45, 58, 65, 67 (what it says it is, D101); 48, 59, 60 (one word for one
             thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103); 61 (the
-            volume floor has a past, D104)
-      - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
+            volume floor has a past, D104); 11B: 17, 18, 54, 63, 64 (live is proved, D105)
+      - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
       - [ ] C Database and data honesty, read as a critic: shapes, constraints, indexes,
@@ -109,9 +109,14 @@ number is a call; derived from the source, walked in the spec; the database says
 assumes; what it says it is; one word for one thing; a test that cannot pass for nothing; the
 volume floor has a past). What remains in §5 is parked on purpose: 17–18, 54, 63–64 are 11B
 (live updates), 34, 40, 41, 53, 66 are 11G (identity, motion, states), 27, 28, 35, 51 are 11H
-(the phone at 375), 20 is 11G, 33 is noted, 68 is observed. Next is box 11B: prove live
-updates end to end — two people, no reload — quotations, dispatches, the queue's arrived row,
-the bell, and the NOTIFY chunking branch under a synthetic audience. The dev database is seeded
+(the phone at 375), 20 is 11G, 33 is noted, 68 is observed. Box 11B is done in one
+slice (D105): two people, no reload, in `tests/live.spec.ts`, timed; every list marks an
+arrived row, and the mark's two seconds start when the row is on screen (timed on the page's
+own clock); the channel and the count open for a viewer; a listener outage ends with one
+resync; the chunking branch ran against four hundred. Next is box 11C, database honesty — the
+sweep after D100: every rule the code assumes held by the database, every read that exists
+served by an index it can use (EXPLAIN at volume), every migration confirmed from the
+catalogue in `tests/schema.spec.ts`. The dev database is seeded
 at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -787,6 +792,14 @@ days ago the oldest was last sent back — the same number SQL gets from the tra
 presses Log on a call card and the form opens on the contact the card names; from the drawer's
 header it opens on nobody (D101).
 
+**Two people, no reload** — `tests/live.spec.ts`, `tests/live-unit.spec.ts`
+Faisal raises a quotation in one browser; Rawan's queue, open in another, shows it within the
+arrival window, marked as just arrived, with no reload — and the mark is timed on the page's
+own clock: on the row the moment it is added, off two seconds later, not two seconds after
+the event. Rawan issues it; Faisal's list and bell change under him. While Jerom views as Faisal the channel and the count still open. The
+listener's own outage ends with one resync. Four hundred recipients cut into three payloads,
+none lost, none doubled (D105).
+
 **One word for one thing** — `check:messages`, `tests/figures.spec.ts`
 The English carries no "pick" or "select" (the glossary pass fails the build on one), every
 computed key has a word in both locales, and the months sentence picks up, down or the same
@@ -956,14 +969,14 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 - [x] 16 **A quotation raised from the company drawer belongs to no project, by default.** Verified; the drawer asks which project, offers nothing when there is none, and the action refuses (P11A-7, D94).
   `company-drawer.tsx:377-384`, `request-quotation-dialog.tsx:184-274`, `actions/quotations.ts:
   205-254`; SPEC says every quotation belongs to one. Reader cites code.
-- [ ] 17 **A Postgres blip longer than one reconnect loses live events with no resync.**
+- [x] 17 **A Postgres blip longer than one reconnect loses live events with no resync.** Verified in the route — readers who connected during the outage sat on a hub with no listener; a `resync` event when it returns (11B-1, D105).
   Seen beside it (P11A-5, a test run's server log): `Error: The destination stream closed early.`
   four times per locale project, each as a drawer closed in rep.spec — the SSE route does not
   close cleanly when the browser drops it. Same file, same slice when 17 is taken.
   `src/app/api/events/route.ts:92-174`, `live-provider.tsx:122-130`. Fix: broadcast a refresh
   when the listener heals. Reader cites code. (11B territory.)
-- [ ] 18 **`requireActor()` gates the SSE and count routes, so live updates 401 during
-  "view as".** `events/route.ts:162-169`, `authz.ts:105-111`, `notifications/count/route.ts:
+- [x] 18 **`requireActor()` gates the SSE and count routes, so live updates 401 during
+  "view as".** Verified; `requireReader` (11B-1, D105). `events/route.ts:162-169`, `authz.ts:105-111`, `notifications/count/route.ts:
   15-20`. Fix: a read-only identity check for reads. Reader cites code. (11B.)
 - [x] 19 **CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`.** Verified; a cell Excel would run is written as text, numbers pass (P11A-9, D96). `src/lib/
   export.ts:28-32`. Reader cites code.
@@ -1037,7 +1050,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `drawer.json:46`, `companies.ts:407-422`. Reader cites code.
 - [ ] 53 **The offline page is always dark.** `public/offline.html:20-33`; the theme cookie is
   readable without a server. Reader cites code. (11G.)
-- [ ] 54 **The coordinator's queue never highlights an arrived row.** `use-arrived.ts` is wired
+- [x] 54 **The coordinator's queue never highlights an arrived row.** Verified; the quotations and dispatches lists, and so the queue, mark arrivals (11B-1, D105). `use-arrived.ts` is wired
   into two tables, not hers. Reader cites code. (11B.)
 - [x] 55 **`quotation_items` has no unique index on position; `dispatch_items` has.** Verified; `quotation_items_position_idx` (P11A-13, D100). `schema.
   ts:407-448` vs `505-509`. Unreachable through the app today. (11C.)
@@ -1055,8 +1068,8 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   meant to be walked. `seed-volume.ts`. Reader cites code.
 - [x] 62 **`admin.spec.ts` re-implements Riyadh-today and the weekend.** Verified; imports `@/lib/dates` and `@/lib/workdays` (P11A-16, D103). `admin.spec.ts:37-58`.
   Import the real ones. Reader cites code.
-- [ ] 63 **Nothing automated covers the live channel.** No spec opens `/api/events`. (11B.)
-- [ ] 64 **The NOTIFY chunking branch has never run.** `live.ts:30-51`, 150 per payload against
+- [x] 63 **Nothing automated covers the live channel.** `tests/live.spec.ts` — two people, no reload (11B-1, D105). No spec opens `/api/events`. (11B.)
+- [x] 64 **The NOTIFY chunking branch has never run.** `tests/live-unit.spec.ts`, four hundred recipients (11B-1, D105). `live.ts:30-51`, 150 per payload against
   fourteen people. A unit test with a synthetic audience. (11B.)
 - [x] 65 **The log dialog does not preselect the contact the card shows.** Verified; `contactId` from the card (P11A-14, D101). `log-dialog.tsx`,
   `call-band.tsx`: a `projectId` prop exists, no `contactId`. Reader cites code.

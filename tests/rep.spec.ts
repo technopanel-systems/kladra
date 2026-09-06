@@ -83,6 +83,10 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
   locale,
   t,
 }) => {
+  // A nine-step walk of the floor — five dialogs, a date moved, a project and
+  // an archive — that took 24 to 33 seconds against a 30-second budget and
+  // timed out twice at the last step. The other long walks already say so.
+  test.slow();
   const fixture = fixtures(locale);
   let categoryName = "";
   /**

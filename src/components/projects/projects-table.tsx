@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui-ext/date-picker";
-import { useArrived } from "@/hooks/use-arrived";
+import { useArrived, useLanded } from "@/hooks/use-arrived";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
@@ -214,6 +214,9 @@ export function ProjectsTable({
   openId: string | null;
 }) {
   const t = useTranslations();
+  // The rows are on screen: whatever arrived while the refresh was in flight
+  // starts its two seconds now (D105).
+  useLanded(rows);
   const router = useRouter();
   const [term, setTerm] = useState(q);
   const [pending, startTransition] = useTransition();

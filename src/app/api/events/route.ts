@@ -17,7 +17,7 @@
  * count from /api/notifications/count. Silently missing events is the worse bug.
  */
 import { Client } from "pg";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, requireReader } from "@/lib/authz";
 import { LIVE_CHANNEL, parseLivePayload } from "@/lib/live";
 import type { LiveEvent } from "@/lib/types";
 
@@ -43,6 +43,12 @@ type Hub = {
   connecting: Promise<void> | null;
   attempt: number;
   retry: ReturnType<typeof setTimeout> | null;
+  /**
+   * The listener was lost and has not come back yet. Readers who connect
+   * meanwhile sit on a hub with nothing to hear; when it returns they are told
+   * to re-read, because every event in between went by unheard (D105).
+   */
+  lost: boolean;
 };
 
 declare global {
@@ -60,6 +66,7 @@ function hub(): Hub {
     connecting: null,
     attempt: 0,
     retry: null,
+    lost: false,
   };
   globalThis.__kladraLiveHub = created;
   return created;
@@ -80,6 +87,7 @@ function dropAll(h: Hub): void {
 function loseClient(h: Hub, client: Client | null): void {
   if (client && h.client !== client) return; // a stale handler from an old socket
   h.client = null;
+  h.lost = true;
   if (client) {
     client.removeAllListeners();
     // The socket is already gone in the error case; end() is best-effort.
@@ -152,6 +160,12 @@ async function openListener(h: Hub): Promise<void> {
   }
   h.client = client;
   h.attempt = 0;
+  if (h.lost) {
+    h.lost = false;
+    // Whoever connected while there was nothing to hear re-reads now. One
+    // message each, not a reconnect storm.
+    for (const sub of h.subscribers.values()) sub.send({ type: "resync" });
+  }
 }
 
 /** Timers must not hold the process open on their own. */
@@ -162,7 +176,7 @@ function unref(timer: ReturnType<typeof setTimeout>): void {
 export async function GET(request: Request) {
   let userId: string;
   try {
-    userId = (await requireActor()).id;
+    userId = (await requireReader()).id;
   } catch (err) {
     if (err instanceof NotAllowed) return new Response("Unauthorized", { status: 401 });
     throw err;

@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, requireReader } from "@/lib/authz";
 import { unreadCount } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export async function GET() {
   let userId: string;
   try {
-    userId = (await requireActor()).id;
+    userId = (await requireReader()).id;
   } catch (err) {
     if (err instanceof NotAllowed) {
       return NextResponse.json({ error: "unauthorized" }, { status: 401 });

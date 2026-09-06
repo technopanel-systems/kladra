@@ -117,6 +117,19 @@ export async function requireAdmin(): Promise<SessionUser> {
  * floor through somebody else's eyes can press anything a missed `mine` check
  * left on screen and nothing will happen (P8.8).
  */
+/**
+ * For route handlers that only READ for the signed-in person — the live
+ * channel and the bell's count. Viewing is allowed: the admin reading Faisal's
+ * floor sees Faisal's events and Faisal's count, and writes nothing (D105).
+ * `requireActor` gated both, so live updates went dark the moment anybody
+ * pressed "view as".
+ */
+export async function requireReader(): Promise<SessionUser> {
+  const user = await getUser();
+  if (!user) throw new NotAllowed("signedOut");
+  return user;
+}
+
 export async function requireActor(...roles: Role[]): Promise<SessionUser> {
   const user = await getUser();
   if (!user) throw new NotAllowed("signedOut");
