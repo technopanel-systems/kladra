@@ -378,6 +378,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   carries. And every state the business has is in the seed and is reached once in the spec
   through the screen that reaches it: a state the demo never shows and the walk never enters
   is a state whose screen nobody has read.
+- **The database says what the code assumes.** Four from the stranger read (P11A, D100). A
+  rule a write relies on — a closed list, a uniqueness, a normalised value — is a constraint
+  the database holds, not a type or a Zod line the database never sees; and a closed list is
+  written once, with the check reading the constant the type is derived from, so the two cannot
+  disagree. An index is added for a read that exists, named for the read, and the read is
+  cited beside it. Every one of them is tried in `tests/schema.spec.ts` (rules/data.md: a
+  constraint is only worth what it actually refuses).
 
 ## §4 Not built until asked
 

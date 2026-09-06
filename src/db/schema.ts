@@ -439,6 +439,11 @@ export const quotationItems = pgTable(
   },
   (t) => [
     index("quotation_items_quotation_idx").on(t.quotationId),
+    // "Item 1, Item 2 …" is the position, and the position is how a dispatch
+    // names the line it moves. Two lines at one position are one label for two
+    // figures (D100). The app rewrites a quotation's lines by delete-and-insert,
+    // so nothing renumbers in place against this.
+    uniqueIndex("quotation_items_position_idx").on(t.quotationId, t.position),
     // Every figure on every screen is width x length x qty x price. A zero or a
     // minus in any of them is a wrong number nobody would question, because it
     // would look like arithmetic.
@@ -529,6 +534,10 @@ export const targets = pgTable(
   (t) => [
     uniqueIndex("targets_user_month_idx").on(t.userId, t.month),
     check("targets_sqm_check", sql`${t.sqm} >= 0`),
+    // The action normalises the month to its first day; the unique index above
+    // only means anything if every writer does (D100). A target on the 15th
+    // would sit beside the one on the 1st, and the month would have two.
+    check("targets_month_check", sql`${t.month} = date_trunc('month', ${t.month})::date`),
   ],
 );
 
@@ -540,7 +549,10 @@ export const companyTargets = pgTable(
     sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
     ...stamps,
   },
-  (t) => [check("company_targets_sqm_check", sql`${t.sqm} >= 0`)],
+  (t) => [
+    check("company_targets_sqm_check", sql`${t.sqm} >= 0`),
+    check("company_targets_month_check", sql`${t.month} = date_trunc('month', ${t.month})::date`),
+  ],
 );
 
 // ---- the daily report --------------------------------------------------------
@@ -591,7 +603,8 @@ export const dailyReports = pgTable(
  * `src/lib/notify.ts` because the column is what enforces it: a fourth one
  * would need a column value, and this is where a reader looks for the list.
  */
-export type NotificationSubjectType = "quotation" | "dispatch" | "company";
+export const NOTIFICATION_SUBJECT_TYPES = ["quotation", "dispatch", "company"] as const;
+export type NotificationSubjectType = (typeof NOTIFICATION_SUBJECT_TYPES)[number];
 
 export const notifications = pgTable(
   "notifications",
@@ -620,6 +633,14 @@ export const notifications = pgTable(
     // How the clearing finds them: every transition asks for one subject's
     // notices and deletes the kinds that transition has just made untrue.
     index("notifications_subject_idx").on(t.subjectType, t.subjectId),
+    // The list above was a TypeScript union over a text column: closed in the
+    // editor, open in the database, so a seed or a migration could write a
+    // fourth kind that no clearing would ever find (D100). The check reads the
+    // same constant the type is derived from — one list, not two.
+    check(
+      "notifications_subject_type_check",
+      sql`${t.subjectType} in (${sql.raw(NOTIFICATION_SUBJECT_TYPES.map((v) => `'${v}'`).join(", "))})`,
+    ),
   ],
 );
 
@@ -641,6 +662,10 @@ export const auditLog = pgTable(
     // transition is already an audit row with who and when, so a second history
     // table beside it would be a second answer to one question (rules/data.md).
     index("audit_log_action_at_idx").on(t.action, t.at),
+    // "What did each person do in the last window?" (admin/use, D100) reads
+    // this table by user and instant; without this it scanned every row per
+    // person, fourteen times, on the one screen meant to be opened at volume.
+    index("audit_log_user_at_idx").on(t.userId, t.at),
   ],
 );
 

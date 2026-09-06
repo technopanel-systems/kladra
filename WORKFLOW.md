@@ -70,7 +70,8 @@
             drawer says what it writes, D94); 22, 23, 24 (a figure agrees with the figures
             under it, D95); 14, 19, 25 (the guards, D96); 26, 30, 32 (a day as it happened,
             D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
-            walked in the spec, D99)
+            walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
+            D100)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -103,13 +104,17 @@ P11A-5 (a phone read in its company's country; the six-month sentence says what 
 D89, D90), P11A-6 (a permission is a role and an id, a child restored onto its company, a
 backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes, D94), P11A-8 (a
 figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10 (a day as it
-happened, D97), P11A-11 (a number is a call, D98), P11A-12 (the admin gate written once and the
-sweeps read off the rail; a refused dispatch and a rejected quotation in the seed and walked in
-the spec; the decided check tried, D99). Next is P11A-13: §5 in order from 41, three at a time
-by theme, each verified in the code first; 27, 28, 35 wait for 11H, 34, 40 for 11G, 17–18 and
-63–64 for 11B, 20 for 11G, 33 is noted. The dev database is seeded at volume (`seed:demo` then
-`seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that
-are not defects.
+happened, D97), P11A-11 (a number is a call, D98), P11A-12 (derived from the source, walked in
+the spec, D99), P11A-13 (the database says what the code assumes — a closed list checked from
+its one constant, the use panel's index, a line's position unique, a target's month the first
+of the month; migration 0011, D100). Next is P11A-14: findings 45, 65, 67, 58 — the funnel's
+"never asked again" given an age, the log dialog opening on the contact the card shows, the
+dead `archivedCount`, and the unused-messages exemption narrowed so it stops hiding dead keys.
+Then 15 (words: 48, 59, 60 and the notes in the session's todo), 16 (tests that cannot pass
+for nothing: 47, 49, 50, 62), 61; 27, 28, 35, 51 wait for 11H, 34, 40, 41, 53, 66 for 11G,
+17–18, 54, 63–64 for 11B, 20 for 11G, 33 is noted. The dev database is seeded at volume
+(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is
+down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -772,6 +777,12 @@ both set, and the trail has the row. The database refuses a decided quotation wi
 instant and an undecided one with it. The admin sweeps in `tests/admin.spec.ts` and
 `tests/controls.spec.ts` read the rail's list, so a screen added to the rail is swept (D99).
 
+**What the database holds** — `tests/schema.spec.ts`
+The database refuses a notice about a kind of record it has no list entry for, a second
+quotation line at a position already taken, and a target dated inside its month rather than on
+its first day; `pg_indexes` has the use panel's index by person and instant and the line index
+by position — asked of the catalogue, not of the ORM's opinion (D100).
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -993,9 +1004,9 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   no cookie like theme and locale. Reader cites code. (11G.)
 - [ ] 41 **The browser chrome colour follows the OS, not Kladra's theme.** `layout.tsx:46-54`.
   Reader cites code. (11G.)
-- [ ] 42 **`notifications.subject_type` is free text pretending to be a closed type.** `schema.
+- [x] 42 **`notifications.subject_type` is free text pretending to be a closed type.** Verified; a check that reads the one list (P11A-13, D100). `schema.
   ts:592, 611`. Fix: a pgEnum or CHECK. Reader cites code. (11C.)
-- [ ] 43 **`audit_log` has no index for the adoption query.** `schema.ts:636-642`, `adoption.ts:
+- [x] 43 **`audit_log` has no index for the adoption query.** Verified; `audit_log_user_at_idx` (P11A-13, D100). `schema.ts:636-642`, `adoption.ts:
   78-95`: `(user_id, at)`. Reader cites code. (11C.)
 - [x] 44 **Seven admin writes log an audit row whether or not a row changed.** Verified for five; each writes its row only when one came back (P11A-3, D87). Restore is finding 11; setting a target is an upsert, and clearing one that was never set is still what was asked for. `admin.ts:196-630`;
   `.returning()` and a count, as `archiveCompanyAction` does. Reader cites code.
@@ -1019,9 +1030,9 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   readable without a server. Reader cites code. (11G.)
 - [ ] 54 **The coordinator's queue never highlights an arrived row.** `use-arrived.ts` is wired
   into two tables, not hers. Reader cites code. (11B.)
-- [ ] 55 **`quotation_items` has no unique index on position; `dispatch_items` has.** `schema.
+- [x] 55 **`quotation_items` has no unique index on position; `dispatch_items` has.** Verified; `quotation_items_position_idx` (P11A-13, D100). `schema.
   ts:407-448` vs `505-509`. Unreachable through the app today. (11C.)
-- [ ] 56 **A target's month is normalised in Zod only, never in the database.** `admin.ts:
+- [x] 56 **A target's month is normalised in Zod only, never in the database.** Verified; a check on both target tables (P11A-13, D100). `admin.ts:
   297-300`, `schema.ts:516-542`. (11C.)
 - [x] 57 **Two revisions at once collide on the unique index and crash generically.** Verified; the parent row is held, so the second takes the next number (P11A-1, D85).
   `quotations.ts:629-651`. Fix: name the collision. Reader cites code.

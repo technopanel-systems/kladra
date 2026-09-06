@@ -229,3 +229,133 @@ test("archiving a company keeps why (S16, D87)", async () => {
   expect(column).toHaveLength(1);
   expect(column[0].data_type).toBe("text");
 });
+
+test("a notice's subject is one of a closed list (D100)", async () => {
+  // subject_type was a closed list in TypeScript over a free-text column: closed
+  // in the editor, open here, so a seed or a migration could write a fourth kind
+  // that no clearing would ever look for.
+  const rows = await query<{
+    user_id: string;
+    kind: string;
+    params: Record<string, unknown>;
+    link: string;
+    subject_id: string;
+  }>("select user_id, kind, params, link, subject_id from notifications limit 1");
+  const seeded = rows[0];
+
+  const userId = seeded?.user_id ?? (await one<{ id: string }>("select id from users limit 1")).id;
+  const kind = seeded?.kind ?? "test";
+  const params = JSON.stringify(seeded?.params ?? {});
+  const link = seeded?.link ?? "#";
+  const subjectId =
+    seeded?.subject_id ?? (await one<{ id: string }>("select gen_random_uuid() as id")).id;
+
+  const message = await refused(
+    `insert into notifications (user_id, kind, params, link, subject_type, subject_id)
+     values ($1::uuid, $2, $3::jsonb, $4, 'project', $5::uuid)`,
+    [userId, kind, params, link, subjectId],
+  );
+  expect(message).toContain("violates check constraint");
+  expect(message).toContain("notifications_subject_type_check");
+});
+
+test("a quotation line's position is unique within the quotation (D100)", async () => {
+  // dispatch_items had its line index from 0002; a quotation's lines had none —
+  // the app rewrites lines by delete-and-insert, so nothing renumbers in place
+  // against it, and two lines at one position are one label for two figures.
+  const line = await one<{
+    quotation_id: string;
+    position: number;
+    colour_code: string;
+    supplier_id: number;
+    fire_rating_id: number;
+    class_id: number;
+    qty: number;
+    thickness_id: number;
+    width: string;
+    length: string;
+    price_per_sqm: string;
+  }>(
+    `select quotation_id, position, colour_code, supplier_id, fire_rating_id, class_id, qty,
+            thickness_id, width, length, price_per_sqm
+       from quotation_items limit 1`,
+  );
+
+  const message = await refused(
+    `insert into quotation_items
+       (quotation_id, position, colour_code, supplier_id, fire_rating_id, class_id, qty,
+        thickness_id, width, length, price_per_sqm)
+     values ($1::uuid, $2::integer, $3, $4::integer, $5::integer, $6::integer, $7::integer,
+             $8::integer, $9::numeric, $10::numeric, $11::numeric)`,
+    [
+      line.quotation_id,
+      line.position,
+      line.colour_code,
+      line.supplier_id,
+      line.fire_rating_id,
+      line.class_id,
+      line.qty,
+      line.thickness_id,
+      line.width,
+      line.length,
+      line.price_per_sqm,
+    ],
+  );
+  expect(message).toContain("duplicate key value violates unique constraint");
+  expect(message).toContain("quotation_items_position_idx");
+});
+
+test("a target's month is always the first of the month (D100)", async () => {
+  // A target's month is its first day. The form made it so; the unique index on
+  // (person, month) only means anything if every writer does — the person's
+  // target first, then the company's own.
+  const user = await one<{ id: string }>("select id from users limit 1");
+
+  const badTarget = await refused(
+    "insert into targets (user_id, month, sqm) values ($1::uuid, '2031-03-15', 10)",
+    [user.id],
+  );
+  expect(badTarget).toContain("targets_month_check");
+
+  const badCompanyTarget = await refused(
+    "insert into company_targets (month, sqm) values ('2031-03-15', 10)",
+  );
+  expect(badCompanyTarget).toContain("company_targets_month_check");
+
+  // And the real write the form makes — the first of a month far enough in the
+  // future that no seeded row collides with it — must go through.
+  try {
+    await query("insert into company_targets (month, sqm) values ('2031-03-01', 10)");
+    const written = await query(
+      "select sqm from company_targets where month = '2031-03-01'",
+    );
+    expect(written, "a first-of-month company target was refused").toHaveLength(1);
+  } finally {
+    await query("delete from company_targets where month = '2031-03-01'");
+  }
+});
+
+test("the catalogue carries what D100 promised", async () => {
+  // Asked of pg_indexes/pg_constraint, not the ORM's opinion (rules/migrations.md):
+  // a migration that silently did nothing would leave the app relying on an
+  // index or a check that is not actually there.
+  const indexes = await query<{ indexname: string }>(
+    `select indexname from pg_indexes
+      where schemaname = 'public'
+        and indexname in ('audit_log_user_at_idx', 'quotation_items_position_idx')`,
+  );
+  expect(indexes.map((row) => row.indexname).sort()).toEqual([
+    "audit_log_user_at_idx",
+    "quotation_items_position_idx",
+  ]);
+
+  const constraints = await query<{ conname: string }>(
+    `select conname from pg_constraint
+      where conname in ('notifications_subject_type_check', 'targets_month_check', 'company_targets_month_check')`,
+  );
+  expect(constraints.map((row) => row.conname).sort()).toEqual([
+    "company_targets_month_check",
+    "notifications_subject_type_check",
+    "targets_month_check",
+  ]);
+});
