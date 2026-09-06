@@ -448,19 +448,27 @@ export async function handOverCompanyAction(
  * Archive, never delete (SPEC §3, S16). The row leaves every list and stays in
  * history, so a company that resurfaces in two years still shows what happened.
  */
-export async function archiveCompanyAction(companyId: unknown): Promise<ActionResult> {
+export async function archiveCompanyAction(companyId: unknown, reason: unknown): Promise<ActionResult> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
     const t = await getTranslations("errors");
     const id = z.uuid().safeParse(companyId);
     if (!id.success) return { ok: false, error: tc("invalid") };
+    // Not optional: S16 promises the record shows why someone gave up on the
+    // company, and every other terminal state here already carries its reason
+    // (D87). Short, because it is read under a name on the archive screen.
+    const why = z.string().trim().min(1).max(500).safeParse(reason);
+    if (!why.success) {
+      const sentence = t("archiveReasonRequired");
+      return { ok: false, error: sentence, fieldErrors: { reason: sentence } };
+    }
 
     const { repId } = await assertCompanyMine(actor, id.data);
 
     const archived = await db.transaction(async (tx) => {
       const rows = await tx
         .update(companies)
-        .set({ archivedAt: new Date() })
+        .set({ archivedAt: new Date(), archiveReason: why.data })
         .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
         .returning({ id: companies.id });
       if (rows.length === 0) return false;
@@ -470,6 +478,7 @@ export async function archiveCompanyAction(companyId: unknown): Promise<ActionRe
         action: "company.archive",
         recordType: "company",
         recordId: id.data,
+        details: { reason: why.data },
       });
       await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
         type: "company",

@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { restoreAction } from "@/actions/admin";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Prose } from "@/components/ui-ext/prose";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
@@ -44,7 +45,7 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
           className="card-face flex flex-wrap items-center gap-3 p-3"
         >
           <Badge variant="secondary">{t(`admin.kind.${row.kind}`)}</Badge>
-          <span className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">
             <span className="font-medium">{row.name}</span>
             <span className="text-xs text-muted-foreground">
               {/* Two names either side of a neutral separator: <bdi> keeps each
@@ -58,7 +59,12 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
                 </>
               )}
             </span>
-          </span>
+            {/* Why, in the words of whoever did it (S16, D87) — typed text, so
+                it takes its own direction; under the name, where it is read. */}
+            {row.reason ? (
+              <Prose text={row.reason} className="text-xs text-muted-foreground" />
+            ) : null}
+          </div>
           <span className="flex flex-col text-xs text-muted-foreground">
             {t("admin.archivedOn")}
             <DayText day={row.archivedOn} locale={locale} />

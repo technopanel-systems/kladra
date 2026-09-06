@@ -61,6 +61,12 @@ const ADDRESSED_TO_A_MAN = [
   "انقر",
   "قم",
   "تأكد",
+  // Added when اذكر shipped in a refusal and this list did not know it (P11A-3).
+  "اذكر",
+  "اشرح",
+  "أدخل",
+  "أرسل",
+  "احفظ",
 ];
 
 const DAMMA = "ُ";

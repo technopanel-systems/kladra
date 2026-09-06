@@ -25,25 +25,28 @@ export function ActivityActions({
 }: {
   entry: LogEdit;
   companyId: string;
-  /** Its day is still open, so the words can still be changed (D58, D70). */
+  /** Its day is still open, so it can still be corrected or unfiled (D58, D70, D87). */
   dayOpen: boolean;
 }) {
   const t = useTranslations();
   const router = useRouter();
 
+  // Both actions take the same window (D58, D70, D87). Unfile used to be offered
+  // on any day while the server refused only the correction; an entry that
+  // vanishes from a reported day rewrites a figure the same way rewording it does.
+  if (!dayOpen) return null;
+
   return (
     <span className="flex items-center gap-1">
-      {dayOpen ? (
-        <LogButton
-          companyId={companyId}
-          entry={entry}
-          variant="ghost"
-          size="sm"
-          className="text-xs text-muted-foreground"
-        >
-          {t("drawer.correct")}
-        </LogButton>
-      ) : null}
+      <LogButton
+        companyId={companyId}
+        entry={entry}
+        variant="ghost"
+        size="sm"
+        className="text-xs text-muted-foreground"
+      >
+        {t("drawer.correct")}
+      </LogButton>
 
       <ConfirmDialog
         trigger={

@@ -415,10 +415,13 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
       .getByRole("group", { name: t("drawer.companyActions") })
       .getByRole("button", { name: t("drawer.archive") })
       .click();
-    await page
-      .getByRole("dialog", { name: t("drawer.archiveTitle", { name: target.name }) })
-      .getByRole("button", { name: t("drawer.archive") })
-      .click();
+    const ask = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name: target.name }) });
+    // Without a reason it is refused, in the app's words (S16, D87) …
+    await ask.getByRole("button", { name: t("drawer.archive") }).click();
+    await expect(ask.getByRole("alert")).toHaveText(t("errors.archiveReasonRequired"));
+    // … and with one it goes, and the archive screen shows the reason.
+    await ask.getByLabel(t("drawer.archiveReason")).fill("Merged into another account — admin.spec");
+    await ask.getByRole("button", { name: t("drawer.archive") }).click();
     await expect(page.getByText(t("drawer.archived", { name: target.name }))).toBeVisible(COLD);
 
     const gone = await one<{ archived_at: string | null }>(
@@ -430,6 +433,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await login(page, locale, "jerom");
     await openAdmin(page, locale, "archive", t("admin.archive"));
     await expect(card(page, target.name)).toBeVisible(COLD);
+    await expect(card(page, target.name)).toContainText("Merged into another account");
 
     await card(page, target.name).getByRole("button", { name: t("admin.restore") }).click();
     await page

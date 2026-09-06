@@ -30,6 +30,8 @@
   "mainSet": "{name} is now the main contact",
   "archive": "Archive",
   "archiveTitle": "Archive {name}?",
+  "archiveReason": "Why it is being archived",
+  "archiveReasonPlaceholder": "Closed down; merged into another company; a duplicate",
   "archiveWarning": "The company leaves your lists but keeps its history. An admin can restore it.",
   "archived": "{name} archived",
   "archiveContactTitle": "Archive {name}?",

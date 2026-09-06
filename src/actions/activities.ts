@@ -311,11 +311,18 @@ export async function archiveActivityAction(
 ): Promise<ActionResult> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
+    const t = await getTranslations("errors");
     const activityId = field(formData, "activityId");
     if (!activityId) return { ok: false, error: tc("invalid") };
 
     const entry = await mineToCorrect(actor, activityId);
     if ("error" in entry) return entry;
+    // The correction's window (D58, D70, D87): a day whose report is written has
+    // been read by the manager, and an entry that vanishes from it rewrites a
+    // figure he has already seen. Sixty lines apart, the two checks had drifted.
+    if (!(await mayWriteFor(entry.happenedOn))) {
+      return { ok: false, error: t("activityDayClosed") };
+    }
 
     await db.transaction(async (tx) => {
       await tx

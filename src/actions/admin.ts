@@ -193,8 +193,8 @@ export async function updateUserAction(
       return { ok: false, error: ta("emailTaken"), fieldErrors: { email: ta("emailTaken") } };
     }
 
-    await db.transaction(async (tx) => {
-      await tx
+    const changed = await db.transaction(async (tx) => {
+      const rows = await tx
         .update(users)
         .set({
           name: parsed.data.name,
@@ -202,12 +202,18 @@ export async function updateUserAction(
           email: parsed.data.email,
           role: parsed.data.role,
         })
-        .where(eq(users.id, parsed.data.userId));
+        .where(eq(users.id, parsed.data.userId))
+        .returning({ id: users.id });
+      // An audit row for a change that did not happen is a lie in the log (D87):
+      // the row is written only when the database handed one back.
+      if (rows.length === 0) return false;
       await record(tx, actor.id, "user.update", "user", parsed.data.userId, {
         email: parsed.data.email,
         role: parsed.data.role,
       });
+      return true;
     });
+    if (!changed) return { ok: false, error: ta("notFound") };
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -244,12 +250,19 @@ export async function resetPasswordAction(
 
     const passwordHash = await hash(parsed.data.password, BCRYPT_ROUNDS);
 
-    await db.transaction(async (tx) => {
-      await tx.update(users).set({ passwordHash }).where(eq(users.id, parsed.data.userId));
+    const changed = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(users)
+        .set({ passwordHash })
+        .where(eq(users.id, parsed.data.userId))
+        .returning({ id: users.id });
+      if (rows.length === 0) return false;
       await tx.delete(sessions).where(eq(sessions.userId, parsed.data.userId));
       // The password itself is never in the log, only that it changed (S55).
       await record(tx, actor.id, "user.resetPassword", "user", parsed.data.userId, {});
+      return true;
     });
+    if (!changed) return { ok: false, error: ta("notFound") };
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -281,11 +294,18 @@ export async function setUserActiveAction(
       return { ok: false, error: ta("cannotDeactivateSelf") };
     }
 
-    await db.transaction(async (tx) => {
-      await tx.update(users).set({ active }).where(eq(users.id, parsed.data.userId));
+    const changed = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(users)
+        .set({ active })
+        .where(eq(users.id, parsed.data.userId))
+        .returning({ id: users.id });
+      if (rows.length === 0) return false;
       if (!active) await tx.delete(sessions).where(eq(sessions.userId, parsed.data.userId));
       await record(tx, actor.id, active ? "user.activate" : "user.deactivate", "user", parsed.data.userId, {});
+      return true;
     });
+    if (!changed) return { ok: false, error: ta("notFound") };
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -468,6 +488,7 @@ export async function setLookupActiveAction(
 ): Promise<ActionResult<undefined>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
+    const ta = await getTranslations("admin");
 
     const kind = field(formData, "kind");
     if (!isLookupKind(kind)) return { ok: false, error: tc("invalid") };
@@ -480,12 +501,15 @@ export async function setLookupActiveAction(
     const table = tableName(kind);
     const active = parsed.data.active === "true";
 
-    await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`update ${sql.raw(table)} set active = ${active} where id = ${parsed.data.id}`,
+    const changed = await db.transaction(async (tx) => {
+      const result = await tx.execute(
+        sql`update ${sql.raw(table)} set active = ${active} where id = ${parsed.data.id} returning id`,
       );
+      if (result.rows.length === 0) return false;
       await record(tx, actor.id, "lookup.setActive", kind, String(parsed.data.id), { active });
+      return true;
     });
+    if (!changed) return { ok: false, error: ta("notFound") };
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -561,14 +585,21 @@ export async function removeNonWorkingAction(
 ): Promise<ActionResult<undefined>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
+    const ta = await getTranslations("admin");
 
     const parsed = z.coerce.number().int().positive().safeParse(field(formData, "id"));
     if (!parsed.success) return { ok: false, error: tc("invalid") };
 
-    await db.transaction(async (tx) => {
-      await tx.delete(nonWorkingDays).where(eq(nonWorkingDays.id, parsed.data));
+    const changed = await db.transaction(async (tx) => {
+      const rows = await tx
+        .delete(nonWorkingDays)
+        .where(eq(nonWorkingDays.id, parsed.data))
+        .returning({ id: nonWorkingDays.id });
+      if (rows.length === 0) return false;
       await record(tx, actor.id, "nonWorking.remove", "nonWorkingDay", String(parsed.data), {});
+      return true;
     });
+    if (!changed) return { ok: false, error: ta("notFound") };
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -600,7 +631,12 @@ export async function restoreAction(
 
     await db.transaction(async (tx) => {
       if (kind === "company") {
-        await tx.update(companies).set({ archivedAt: null }).where(eq(companies.id, id));
+        // The reason lives as long as the state it explains (D87, and the note
+        // on return_reason in the schema): back on the floor, it is gone.
+        await tx
+          .update(companies)
+          .set({ archivedAt: null, archiveReason: null })
+          .where(eq(companies.id, id));
       } else if (kind === "contact") {
         const [row] = await tx
           .update(contacts)
@@ -610,7 +646,7 @@ export async function restoreAction(
         if (row) {
           await tx
             .update(companies)
-            .set({ archivedAt: null })
+            .set({ archivedAt: null, archiveReason: null })
             .where(eq(companies.id, row.companyId));
         }
       } else {
@@ -622,7 +658,7 @@ export async function restoreAction(
         if (row) {
           await tx
             .update(companies)
-            .set({ archivedAt: null })
+            .set({ archivedAt: null, archiveReason: null })
             .where(eq(companies.id, row.companyId));
         }
       }

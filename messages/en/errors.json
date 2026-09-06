@@ -3,6 +3,7 @@
   "phoneTaken": "This company already has a contact with that number.",
   "emailInvalid": "Not a valid email address.",
   "companyNotFound": "That company is not there any more.",
+  "archiveReasonRequired": "Say why it is being archived.",
   "companyArchived": "This company is archived. Restore it before adding to it.",
   "projectNotFound": "That project is not there any more.",
   "contactNotFound": "That contact is not there any more.",

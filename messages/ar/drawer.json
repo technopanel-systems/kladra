@@ -30,6 +30,8 @@
   "mainSet": "تم تعيين {name} جهة الاتصال الرئيسية",
   "archive": "أرشفة",
   "archiveTitle": "أرشفة {name}؟",
+  "archiveReason": "سبب الأرشفة",
+  "archiveReasonPlaceholder": "أُغلقت الشركة؛ اندمجت في شركة أخرى؛ مكرّرة",
   "archiveWarning": "تخرج الشركة من قوائمك ويبقى سجلها كما هو. يمكن لمدير النظام إعادتها.",
   "archived": "تمت أرشفة {name}",
   "archiveContactTitle": "أرشفة {name}؟",

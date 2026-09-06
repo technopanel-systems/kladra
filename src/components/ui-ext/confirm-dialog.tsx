@@ -43,6 +43,10 @@ import type { ActionResult } from "@/lib/types";
  * behind this already has a sentence for the case — which is the app's own
  * sentence, in the reader's language, rather than a button quietly refusing to
  * light up and explaining nothing.
+ *
+ * And that sentence lands under the answer, not only in a toast — the same rule
+ * as PromptDialog: the field is where the eye is and where the fix has to
+ * happen. A refusal about the act itself, with no field to point at, is a toast.
  */
 export function ConfirmDialog({
   trigger,
@@ -70,13 +74,16 @@ export function ConfirmDialog({
 }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function confirm() {
     startTransition(async () => {
       const result = await onConfirm();
       if (!result.ok) {
-        toast.error(result.error);
+        const atField = result.fieldErrors ? Object.values(result.fieldErrors)[0] : null;
+        setRefusal(atField ?? null);
+        if (!atField) toast.error(result.error);
         return;
       }
       toast.success(successMessage);
@@ -87,6 +94,7 @@ export function ConfirmDialog({
 
   function change(next: boolean) {
     setOpen(next);
+    setRefusal(null);
     onOpenChange?.(next);
   }
 
@@ -99,6 +107,11 @@ export function ConfirmDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
         {children}
+        {refusal ? (
+          <p role="alert" className="text-xs text-destructive">
+            {refusal}
+          </p>
+        ) : null}
         <DialogFooter>
           <Button type="button" variant="outline" disabled={pending} onClick={() => change(false)}>
             {t("common.cancel")}

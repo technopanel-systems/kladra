@@ -238,6 +238,8 @@ export const companies = pgTable(
     // Set by the latest log entry or by the picker at the top of the drawer (SPEC D9).
     nextFollowUp: date("next_follow_up"),
     archivedAt: timestamp("archived_at", { withTimezone: true }), // archive, never delete
+    /** Why it left the floor, in the archiver's words (S16, D87). */
+    archiveReason: text("archive_reason"),
     ...stamps,
   },
   (t) => [

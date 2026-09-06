@@ -303,6 +303,18 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   when somebody else got there first. A check at the door is not a lock on the door; write
   the hold first and the check after it, and never claim in a comment what the isolation
   level does not do.
+- **A terminal action says why, and records only what it did.** Three shapes of one fault in
+  the stranger read (P11A, D87). Archiving a company wrote a date and nothing else, while every
+  other terminal state — lost, sent back, refused — carries its reason and S16 promised the
+  record would show why; unfile was offered on any day while its sibling, correct, kept to the
+  reporting window; and five admin writes logged an audit row whether or not a row had changed.
+  The rule has three clauses. A state a person chooses for a record asks why, in a short free
+  box, and keeps the answer where the record is read — on the row and in the audit line — not
+  in a list of reasons nobody asked for. Two actions on the same record take the same window,
+  checked in the action and shown on the button; a gate on one and not the other is a gate on
+  neither. And an audit row is written after the database has handed back the row it changed,
+  never before and never regardless — `.returning()` and a count, then the log, or "not there
+  any more" in the reader's words.
 
 ## §4 Not built until asked
 

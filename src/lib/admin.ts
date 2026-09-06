@@ -219,6 +219,8 @@ export type ArchivedRow = {
   companyName: string;
   repName: string;
   archivedOn: Day;
+  /** Why, in the archiver's words — a company carries one (D87); the rest none. */
+  reason: string | null;
 };
 
 /**
@@ -237,17 +239,20 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     company_name: string;
     rep_name: string;
     archived_on: string;
+    reason: string | null;
   }>(sql`
     select companies.id::text as id, 'company' as kind, companies.name as name,
            companies.name as company_name, ${personNameOf("u", locale)} as rep_name,
-           to_char((companies.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on
+           to_char((companies.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
+           companies.archive_reason as reason
       from companies
       join users u on u.id = companies.rep_id
      where companies.archived_at is not null
     union all
     select contacts.id::text as id, 'contact' as kind, contacts.name as name,
            c.name as company_name, ${personNameOf("u", locale)} as rep_name,
-           to_char((contacts.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on
+           to_char((contacts.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
+           null::text as reason
       from contacts
       join companies c on c.id = contacts.company_id
       join users u on u.id = c.rep_id
@@ -255,7 +260,8 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     union all
     select projects.id::text as id, 'project' as kind, projects.name as name,
            c.name as company_name, ${personNameOf("u", locale)} as rep_name,
-           to_char((projects.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on
+           to_char((projects.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
+           null::text as reason
       from projects
       join companies c on c.id = projects.company_id
       join users u on u.id = c.rep_id
@@ -270,6 +276,7 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     companyName: row.company_name,
     repName: row.rep_name,
     archivedOn: row.archived_on,
+    reason: row.reason,
   }));
 }
 

@@ -173,3 +173,15 @@ test("one person writes one report per day, and never an empty one", async () =>
   );
   expect(twice).toContain("duplicate key value violates unique constraint");
 });
+
+test("archiving a company keeps why (S16, D87)", async () => {
+  // Asked of information_schema, not of the ORM's opinion (rules/migrations.md):
+  // a migration that silently did nothing would leave the app writing to a
+  // column that is not there.
+  const column = await query<{ data_type: string }>(
+    `select data_type from information_schema.columns
+      where table_name = 'companies' and column_name = 'archive_reason'`,
+  );
+  expect(column).toHaveLength(1);
+  expect(column[0].data_type).toBe("text");
+});

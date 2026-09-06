@@ -4,6 +4,7 @@
   "userHint": "Name, email and what they may do.",
   "userAdded": "{name} added.",
   "userSaved": "Saved.",
+  "notFound": "It is not there any more.",
   "emailTaken": "That email is already on another account.",
   "newPassword": "New password",
   "resetPassword": "Reset password",

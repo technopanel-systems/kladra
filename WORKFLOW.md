@@ -62,7 +62,8 @@
             with the cause of each, not the symptom; then fixed worst first in slices
             — the list is written (§5, sixty-seven entries, unverified); fixed so far:
             1, 2, 6, 57 (a write holds its row, D85); 3, 4, 46, 52 (achieved is the
-            raiser's, the formula written once, D86)
+            raiser's, the formula written once, D86); 7, 8, 44 (a terminal action
+            records what it did, D87)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -86,13 +87,19 @@
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
-**Where I stopped:** P10 done, all four boxes, at the end of the volume pilot (P10d above).
-Next is P11A: twelve stranger-read agents have been reading the app as another developer's
-work — actions, schema, the queue, the day, admin, the team figures, live updates, hand-over
-and the rest — with a refute pass behind them; their surviving findings get ranked into a
-new §5 of this file, causes named, and fixed worst first in committed slices. The dev
-database is seeded at volume (`seed:demo` then `seed:volume`, plus three hundred history
-entries on one of Faisal's companies for the drawer test); `seed:demo` alone puts it back.
+**Where I stopped:** inside P11A. The stranger read is done and ranked — §5 below, sixty-seven
+entries with causes — and the worst are being fixed in committed slices, each one verified
+in the code before it is called a defect: P11A-1 (a write holds its row, D85), P11A-2
+(achieved metres are the raiser's and the m² formula is written once, D86), P11A-3 (a
+terminal action records what it did — the archive reason, unfile inside the reporting window,
+admin audit rows only for a change that happened, D87). Next is P11A-4, finding 5: a SMAC
+number typed twice is refused by name and a wrong one can be corrected in place (the script
+and its anchors are ready; the same fault turned out to sit under the contact form's
+duplicate-phone answer, because drizzle wraps the driver's error). After it, down §5 in
+order: 9 phone country, 10 a promoted account's floor, 11 restore's side effect, 12
+`backup:verify`, 13 the six-month card's "first". The dev database is seeded at volume
+(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. 11B–11J follow when §5 is
+down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -816,10 +823,10 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   460-466` which guards its UPDATE with the expected prior state. A second tab overwrites a
   decision silently. Fix: `where status = expected`, check the returned count, say "somebody
   already acted — reload". Two readers cite code.
-- [ ] 7 **Archiving a company records no reason.** `src/db/schema.ts:218-252`, `src/actions/
+- [x] 7 **Archiving a company records no reason.** Verified; it asks why, keeps it, and the archive screen shows it (P11A-3, D87). `src/db/schema.ts:218-252`, `src/actions/
   companies.ts:451-479`. Every other terminal state got a reason column or audit details; S16
   promised "the record shows why". Reader cites code.
-- [ ] 8 **Unfiling an old entry rewrites a reported day.** `src/actions/activities.ts:219-245`
+- [x] 8 **Unfiling an old entry rewrites a reported day.** Verified; unfile takes the correction's window, in the action and on the button (P11A-3, D87). `src/actions/activities.ts:219-245`
   vs `308-341`: edit checks `mayWriteFor(day)`, archive never does, and the button is always
   offered. Fix: the same gate on both, and the button only while the day is open. Reader cites code.
 - [ ] 9 **Phones are normalised as Saudi whatever the country.** `src/lib/phone.ts:34-47` and
@@ -903,7 +910,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   ts:592, 611`. Fix: a pgEnum or CHECK. Reader cites code. (11C.)
 - [ ] 43 **`audit_log` has no index for the adoption query.** `schema.ts:636-642`, `adoption.ts:
   78-95`: `(user_id, at)`. Reader cites code. (11C.)
-- [ ] 44 **Seven admin writes log an audit row whether or not a row changed.** `admin.ts:196-630`;
+- [x] 44 **Seven admin writes log an audit row whether or not a row changed.** Verified for five; each writes its row only when one came back (P11A-3, D87). Restore is finding 11; setting a target is an upsert, and clearing one that was never set is still what was asked for. `admin.ts:196-630`;
   `.returning()` and a count, as `archiveCompanyAction` does. Reader cites code.
 - [ ] 45 **The funnel calls a fresh "sent back" request "never asked again".** `chain.ts:34-121`.
   Fix: an age, said in the caption. Reader cites code.
@@ -954,3 +961,12 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 Merged: the quantity race (two readers), the SMAC pair, the six blind transitions, the
 computed-key families, the breakpoint trio. Dropped: the un-capped waiting list, fixed in
 P10d before this list was written (D83).
+- [ ] 68 **The dev server on 3100 hung with one core pinned and 3.5 GB resident, and stayed hung.**
+  Seen once, P11A-3, while a screenshot pass signed Faisal in and opened `/en/companies` on the
+  volume-seeded dev database: no request logged after the login, `curl` to any route got
+  nothing, CPU time climbed without plateau for fifteen minutes. A fresh `next dev` served the
+  same page in a second, and the production build in 300 ms — so it is the dev compiler, not
+  the page, and it did not reproduce. Not a defect in Kladra's code as far as anything shows;
+  kept here because a hang that eats a core until somebody notices is what 11I is for. If it
+  is seen again: note what was compiled last (`.next/dev`), whether a second Next process was
+  running from the same tree, and take a CPU profile before killing it. Observed, one reader.

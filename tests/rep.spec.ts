@@ -72,6 +72,9 @@ async function confirmArchive(page: Page, t: Translate, name: string): Promise<v
   const confirm = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name }) }).or(
     page.getByRole("dialog", { name: t("drawer.archiveContactTitle", { name }) }),
   );
+  // A company asks why (S16, D87); a contact does not.
+  const why = confirm.getByLabel(t("drawer.archiveReason"));
+  if ((await why.count()) > 0) await why.fill("Closed down — rep.spec");
   await confirm.getByRole("button", { name: t("drawer.archive") }).click();
 }
 
