@@ -178,6 +178,16 @@ for (const [key, value] of ar) {
   }
 }
 
+// The glossary (SPEC §5) says the word for taking a value from a list is
+// "choose" — never "pick" or "select" — and a "picked" sat in errors.json for
+// phases because nothing read the glossary but people (P11A-15, D102). The
+// forbidden words are checked; the glossary stays the list.
+for (const [key, value] of en) {
+  if (/\b(pick|picks|picked|picking|select|selects|selected|selecting)\b/i.test(value)) {
+    problems.push(`en ${key}: "${value}" — the glossary says choose, never pick or select`);
+  }
+}
+
 if (problems.length) {
   console.error(`check:messages — ${problems.length} problem(s)`);
   for (const p of problems) console.error("  " + p);

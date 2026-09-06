@@ -99,3 +99,13 @@ export async function monthsBack(
  * spec that holds it to its own bars imports no query (D90).
  */
 export { lastFinishedChange, type MonthChange } from "@/lib/month-change";
+
+/**
+ * Which sentence the months card says about the last finished month against the
+ * one before it. Two equal months read "0% up" for a phase (P11A-15, D102): a
+ * sign test has three answers, not two, and the third is its own sentence.
+ */
+export function monthSentenceKey(percent: number): "team.monthUp" | "team.monthDown" | "team.monthSame" {
+  if (percent === 0) return "team.monthSame";
+  return percent > 0 ? "team.monthUp" : "team.monthDown";
+}

@@ -390,6 +390,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   opened from a card starts on what the card shows. Dead code is deleted, not kept for a badge
   nobody built. And a check that exempts a whole namespace checks nothing there — it exempts
   what the source can produce, read from the one table both checks share.
+- **One word for one thing.** Three from the stranger read and the reviewer's notes (P11A,
+  D102). SPEC §5 is the glossary and it wins: one word per thing in each locale, the same word
+  on every screen, and the words it forbids fail the build (`check:messages`). A sentence with a
+  sign in it has three branches, and the third — the same — is a sentence of its own, not "0%
+  up".
 
 ## §4 Not built until asked
 

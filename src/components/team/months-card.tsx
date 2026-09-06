@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { formatMonth, formatMonthName } from "@/lib/dates";
 import { formatSqmWhole, toNumber } from "@/lib/money";
-import { lastFinishedChange, type MonthFigure } from "@/lib/months";
+import { lastFinishedChange, monthSentenceKey, type MonthFigure } from "@/lib/months";
 import { paceTone, TONE_BAR, TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +74,7 @@ export async function MonthsCard({ months }: { months: MonthFigure[] }) {
         {change ? (
           <p className="text-sm">
             {change.kind === "percent" && change.percent !== null
-              ? t(change.percent >= 0 ? "team.monthUp" : "team.monthDown", {
+              ? t(monthSentenceKey(change.percent), {
                   month: formatMonth(change.last.month, locale),
                   previous: formatMonth(change.previous.month, locale),
                   percent: Math.abs(change.percent),

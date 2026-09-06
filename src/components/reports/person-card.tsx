@@ -6,6 +6,15 @@ import { movedNothing } from "@/lib/report-figures";
 import type { PersonDay } from "@/lib/reports";
 
 /**
+ * What a card says about a day with no report on it (D97). A list rather than
+ * four words in a ternary because the message check reads it: each is a
+ * computed key, and a key nothing writes at a call site is one the parity and
+ * unused checks cannot see (scripts/lib/message-families.ts, D102).
+ */
+export const REPORT_STATES = ["stateOpen", "stateHoliday", "stateLeave", "stateWeekend"] as const;
+type ReportState = (typeof REPORT_STATES)[number];
+
+/**
  * One person's day, as everybody else reads it (SPEC D56, D57).
  *
  * What moved is on one line, and under it the sentence that person wrote. In
@@ -75,7 +84,7 @@ async function Note({ person }: { person: PersonDay }) {
     );
   }
 
-  const key =
+  const key: ReportState =
     person.state === "open"
       ? "stateOpen"
       : person.off === "holiday"

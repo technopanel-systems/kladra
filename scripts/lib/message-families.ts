@@ -56,6 +56,7 @@ export const families: [string, string[]][] = [
   ["common", union("src/db/schema.ts", "channelEnum")],
   ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
   ["reports", tableKeys("src/lib/report-figures.ts")],
+  ["reports", union("src/components/reports/person-card.tsx", "REPORT_STATES")],
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
   ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
   ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],

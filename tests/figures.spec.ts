@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { boxOffered, figuresOf } from "@/lib/report-figures";
 import type { FloorDay } from "@/lib/reports";
+import { monthSentenceKey } from "@/lib/months";
 import { isQuiet, USE_WINDOW_DAYS } from "@/lib/use-window";
 
 /**
@@ -72,4 +73,14 @@ test("the box on an off day: offered while open, gone when closed, kept when wri
   expect(boxOffered("off", false, "worked the exhibition")).toBe(true);
   expect(boxOffered("open", true, null)).toBe(true);
   expect(boxOffered("silent", false, null)).toBe(true);
+});
+
+/**
+ * The months sentence has three answers, not two (D102): a month that matched
+ * the one before it read "0% up" until the third sentence existed.
+ */
+test("a month up, down or the same is three sentences", () => {
+  expect(monthSentenceKey(12)).toBe("team.monthUp");
+  expect(monthSentenceKey(-3)).toBe("team.monthDown");
+  expect(monthSentenceKey(0)).toBe("team.monthSame");
 });

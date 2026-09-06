@@ -71,7 +71,8 @@
             under it, D95); 14, 19, 25 (the guards, D96); 26, 30, 32 (a day as it happened,
             D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
             walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
-            D100); 45, 58, 65, 67 (what it says it is, D101)
+            D100); 45, 58, 65, 67 (what it says it is, D101); 48, 59, 60 (one word for one
+            thing, D102)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -106,15 +107,14 @@ backup held to its own counts, D91–D93), P11A-7 (a drawer says what it writes,
 figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10 (a day as it
 happened, D97), P11A-11 (a number is a call, D98), P11A-12 (derived from the source, walked in
 the spec, D99), P11A-13 (the database says what the code assumes, D100), P11A-14 (what it says
-it is — the funnel's sent-back row with the oldest's age, the log from a card on its contact,
-dead code gone, the unused-strings check no longer blind under `common`, D101). Next is
-P11A-15, the words: 48 (revision is one word), 59 ("picked"), 60 (person is one word), and the
-notes the Arabic reviewer left in the session's todo — the `لـ` spacing, the two shapes of
-`emptyStatus`, the hint that echoes its placeholder, the six-month sentence when two months are
-equal. Then 16 (a test that cannot pass for nothing: 47, 49, 50, 62), then 61; 27, 28, 35, 51
-wait for 11H, 34, 40, 41, 53, 66 for 11G, 17–18, 54, 63–64 for 11B, 20 for 11G, 33 is noted.
-The dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts
-it back. 11B–11J follow when §5 is down to entries that are not defects.
+it is, D101), P11A-15 (one word for one thing — the glossary read by the build, a revision and
+a person each one word, the months sentence with its third branch, D102). Next is P11A-16, a
+test that cannot pass for nothing: 47 (`check:messages` into the stated chain), 49 (the D68
+name test passes when nobody renders), 50 (the view-as test can skip its only write), 62
+(`admin.spec` re-implements Riyadh-today and the weekend). Then 61 (`seed:volume` writes no
+trail); 27, 28, 35, 51 wait for 11H, 34, 40, 41, 53, 66 for 11G, 17–18, 54, 63–64 for 11B, 20
+for 11G, 33 is noted. The dev database is seeded at volume (`seed:demo` then `seed:volume`);
+`seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that are not defects.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -789,6 +789,11 @@ days ago the oldest was last sent back — the same number SQL gets from the tra
 presses Log on a call card and the form opens on the contact the card names; from the drawer's
 header it opens on nobody (D101).
 
+**One word for one thing** — `check:messages`, `tests/figures.spec.ts`
+The English carries no "pick" or "select" (the glossary pass fails the build on one), every
+computed key has a word in both locales, and the months sentence picks up, down or the same
+(D102). The Arabic is read by the reviewer against SPEC §5 each slice.
+
 **Two hands on one row** — `tests/two-hands.spec.ts`
 Rawan issues a request in one tab and again in a second tab that still shows it waiting:
 the second gets "not waiting any more" and the table holds one issue. Faisal asks for the
@@ -1022,7 +1027,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `months.ts:65`, `reports.ts:157`, `standing.ts:59`, `export.ts:193`, a test. One fragment. (11C.)
 - [ ] 47 **`check:messages` is not in the build or the stated pre-commit chain**, though three
   files say a locale gap fails the build. `package.json:12`. Fix: chain it. Reader cites code.
-- [ ] 48 **"Revision" is نسخة on a dispatch error and مراجعة everywhere else.** `messages/ar/
+- [x] 48 **"Revision" is نسخة on a dispatch error and مراجعة everywhere else.** Verified; مراجعة (P11A-15, D102). `messages/ar/
   dispatches.json:44`, `common.json:48`. Reader cites code.
 - [ ] 49 **The D68 name test passes when the person does not render at all.** `reading.spec.ts:
   401-408`. Reader cites code.
@@ -1044,9 +1049,9 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `quotations.ts:629-651`. Fix: name the collision. Reader cites code.
 - [x] 58 **`unused-messages` exempts all of `common.*` off one dynamic call**, — verified; a bare namespace reaches its families only, from the shared table (P11A-14, D101) — hiding a dead
   and wrong key. `unused-messages.mts:28-46`. Reader cites code.
-- [ ] 59 **"picked" in `errors.cityNotInCountry`; the glossary says never pick or select.**
+- [x] 59 **"picked" in `errors.cityNotInCountry`; the glossary says never pick or select.** Verified; "chose", and the glossary pass in `check:messages` (P11A-15, D102).
   `errors.json:12`. Reader cites code.
-- [ ] 60 **"Person" is الموظف on the team screen and الشخص in admin.** `team.json:14`,
+- [x] 60 **"Person" is الموظف on the team screen and الشخص in admin.** Verified; one word, and a glossary row (P11A-15, D102). `team.json:14`,
   `admin.json:61`. Reader cites code.
 - [ ] 61 **`seed:volume` writes no audit trail**, so every trail panel is empty at the one scale
   meant to be walked. `seed-volume.ts`. Reader cites code.

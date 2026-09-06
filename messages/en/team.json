@@ -36,6 +36,7 @@
   "lastMonths": "{count, plural, one {The latest month} other {The last # months}}",
   "monthUp": "{month} was {percent}% up on {previous}",
   "monthDown": "{month} was {percent}% down on {previous}",
+  "monthSame": "{month} matched {previous}",
   "monthFirst": "{month} is the first month with any metres in it",
   "monthAfterEmpty": "{month} had metres again after an empty {previous}",
   "monthNothing": "No metres in {previous} or {month}",

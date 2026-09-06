@@ -86,7 +86,16 @@ for (const file of readdirSync("messages/en").filter((f) => f.endsWith(".json"))
       // Anything that could continue the key means it is a different key that
       // merely starts the same way.
       if (new RegExp(escaped + "(?![A-Za-z0-9_.])").test(code)) continue;
-      if (new RegExp(`["'\`]${key.replace(/\./g, "\\.")}["'\`]`).test(code)) continue;
+      // …and only as the argument of a translator call (t, tc, tq, ta, td, and
+      // t.rich): any quoted word anywhere let `integer("revision")` in the
+      // schema keep common.revision alive for a phase (P11A-15, D102).
+      if (
+        new RegExp(
+          `\\bt[a-z]?(?:\\.(?:rich|raw|markup|has))?\\(\\s*["'\`]${key.replace(/\./g, "\\.")}["'\`]`,
+        ).test(code)
+      ) {
+        continue;
+      }
       unused.push(full);
     }
   };
