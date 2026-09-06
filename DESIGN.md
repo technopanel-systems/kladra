@@ -395,6 +395,10 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   on every screen, and the words it forbids fail the build (`check:messages`). A sentence with a
   sign in it has three branches, and the third — the same — is a sentence of its own, not "0%
   up".
+- **A test that cannot pass for nothing.** Four from the stranger read (P11A, D103). No
+  assertion behind an `if` the page decides; no click that happens only when the button is
+  there; no rule retyped beside the one the app uses — a spec imports it. And a check the
+  documents call part of the build is in the build.
 
 ## §4 Not built until asked
 

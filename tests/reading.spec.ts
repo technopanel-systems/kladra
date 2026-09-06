@@ -387,8 +387,8 @@ test("a person is named in the reader's script, not the account's", async ({ pag
 
   // Seeded on purpose: six accounts carry an Arabic name and one does not, so
   // both the translation and the fallback are things somebody has seen (D68).
-  const people = await query<{ name: string; name_ar: string | null }>(
-    `select name, name_ar from users where active = true`,
+  const people = await query<{ name: string; name_ar: string | null; role: string }>(
+    `select name, name_ar, role from users where active = true`,
   );
   const translated = people.filter((row) => row.name_ar);
   const untranslated = people.filter((row) => !row.name_ar);
@@ -400,11 +400,17 @@ test("a person is named in the reader's script, not the account's", async ({ pag
 
   await test.step("1 · the manager's team table names his reps in Arabic", async () => {
     const table = page.getByRole("table").first();
-    for (const person of translated) {
+    // The rows are the reps (manager.spec: the coordinator, the admin and
+    // marketing have none), so those are the people this asserts for — by
+    // role, decided here, not by whether a name happened to render. The old
+    // `if (count > 0)` passed with nobody on the screen at all (P11A-16, D103).
+    const onTable = translated.filter((person) => person.role === "rep");
+    expect(onTable.length, "no rep in the seed has an Arabic name").toBeGreaterThan(0);
+    for (const person of onTable) {
       // `:visible` again: every row renders twice, a card for the phone and a
       // table for the desk, and `.first()` can land on the hidden one.
       const shown = page.getByText(person.name_ar as string).filter({ visible: true }).first();
-      if ((await shown.count()) > 0) await expect(shown).toBeVisible();
+      await expect(shown, `${person.name} is not named in Arabic`).toBeVisible();
     }
     // And the Latin name of anybody who HAS an Arabic one is nowhere on it.
     for (const person of translated) {

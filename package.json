@@ -5,9 +5,10 @@
   "scripts": {
     "dev": "next dev -H 127.0.0.1 -p 3100",
     "dev:test": "tsx scripts/dev-test.ts",
+    "prebuild": "npm run check:messages",
     "build": "next build",
     "start": "next start -H 127.0.0.1 -p 3100",
-    "lint": "eslint && tsx scripts/one-name.mts && tsx scripts/one-look.mts && tsx scripts/one-figure.mts",
+    "lint": "eslint && tsx scripts/one-name.mts && tsx scripts/one-look.mts && tsx scripts/one-figure.mts && npm run check:messages",
     "typecheck": "tsc --noEmit",
     "check:messages": "tsx scripts/check-messages.ts && tsx scripts/unused-messages.mts && tsx scripts/gendered-arabic.mts",
     "db:generate": "drizzle-kit generate",

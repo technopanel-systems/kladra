@@ -29,7 +29,7 @@ export default async function NotificationsPage() {
           </p>
         </div>
       ) : (
-        <NotificationsList rows={rows} />
+        <NotificationsList rows={rows} canWrite={!user.viewedBy} />
       )}
     </div>
   );

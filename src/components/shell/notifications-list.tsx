@@ -21,7 +21,18 @@ import type { NotificationRow } from "@/lib/notifications";
  * The sentence is built here from the kind and its params, in the reader's
  * language: `notifications.<kind>` (D13). The stored row holds no English.
  */
-export function NotificationsList({ rows }: { rows: NotificationRow[] }) {
+export function NotificationsList({
+  rows,
+  canWrite = true,
+}: {
+  rows: NotificationRow[];
+  /**
+   * False while somebody is viewing as this person (D42): the door refuses
+   * the write anyway, but a control that cannot be used is not offered
+   * (DESIGN §5) — and the honest view-as test found this one was (D103).
+   */
+  canWrite?: boolean;
+}) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -41,7 +52,7 @@ export function NotificationsList({ rows }: { rows: NotificationRow[] }) {
   }
 
   function open(row: NotificationRow) {
-    if (row.read) return;
+    if (row.read || !canWrite) return;
     // Fire and forget: the navigation is the point, and a notice that stayed
     // bold because a write was slow is not worth holding the rep up for.
     startTransition(async () => {
@@ -51,7 +62,7 @@ export function NotificationsList({ rows }: { rows: NotificationRow[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {unread > 0 ? (
+      {unread > 0 && canWrite ? (
         <div className="flex">
           <Button type="button" variant="outline" onClick={markAll} disabled={pending}>
             {t("common.markAllRead")}

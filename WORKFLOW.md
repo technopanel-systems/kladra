@@ -72,7 +72,7 @@
             D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
             walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
             D100); 45, 58, 65, 67 (what it says it is, D101); 48, 59, 60 (one word for one
-            thing, D102)
+            thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103)
       - [ ] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -108,11 +108,12 @@ figure agrees with the figures under it, D95), P11A-9 (the guards, D96), P11A-10
 happened, D97), P11A-11 (a number is a call, D98), P11A-12 (derived from the source, walked in
 the spec, D99), P11A-13 (the database says what the code assumes, D100), P11A-14 (what it says
 it is, D101), P11A-15 (one word for one thing — the glossary read by the build, a revision and
-a person each one word, the months sentence with its third branch, D102). Next is P11A-16, a
-test that cannot pass for nothing: 47 (`check:messages` into the stated chain), 49 (the D68
-name test passes when nobody renders), 50 (the view-as test can skip its only write), 62
-(`admin.spec` re-implements Riyadh-today and the weekend). Then 61 (`seed:volume` writes no
-trail); 27, 28, 35, 51 wait for 11H, 34, 40, 41, 53, 66 for 11G, 17–18, 54, 63–64 for 11B, 20
+a person each one word, the months sentence with its third branch, D102). P11A-16 (a
+test that cannot pass for nothing — the message check in lint and before the build, two specs
+that asserted only when the page let them, one that retyped the day rules, D103) is in. Next is
+P11A-17: 61 (`seed:volume` writes no trail — and, read for it, credits random reps, raises
+dispatches before their quotations, and stamps raised, issued and decided at one instant; the
+script is ready). Then 27, 28, 35, 51 wait for 11H, 34, 40, 41, 53, 66 for 11G, 17–18, 54, 63–64 for 11B, 20
 for 11G, 33 is noted. The dev database is seeded at volume (`seed:demo` then `seed:volume`);
 `seed:demo` alone puts it back. 11B–11J follow when §5 is down to entries that are not defects.
 
@@ -1025,13 +1026,13 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   Fix: an age, said in the caption. Reader cites code.
 - [x] 46 **The round-sum-round m² formula is retyped in six places.** Verified — six files and two specs; `src/lib/sqm.ts` and `one-figure` in the lint (P11A-2, D86). `dispatches.ts:571`,
   `months.ts:65`, `reports.ts:157`, `standing.ts:59`, `export.ts:193`, a test. One fragment. (11C.)
-- [ ] 47 **`check:messages` is not in the build or the stated pre-commit chain**, though three
+- [x] 47 **`check:messages` is not in the build or the stated pre-commit chain**, — verified; in `lint` and `prebuild` (P11A-16, D103) — though three
   files say a locale gap fails the build. `package.json:12`. Fix: chain it. Reader cites code.
 - [x] 48 **"Revision" is نسخة on a dispatch error and مراجعة everywhere else.** Verified; مراجعة (P11A-15, D102). `messages/ar/
   dispatches.json:44`, `common.json:48`. Reader cites code.
-- [ ] 49 **The D68 name test passes when the person does not render at all.** `reading.spec.ts:
+- [x] 49 **The D68 name test passes when the person does not render at all.** Verified; it asserts for the reps by role (P11A-16, D103). `reading.spec.ts:
   401-408`. Reader cites code.
-- [ ] 50 **The "nothing can be written while viewing" test can skip its only write.** `view-as.
+- [x] 50 **The "nothing can be written while viewing" test can skip its only write.** Verified; it asserts the control is absent (P11A-16, D103). `view-as.
   spec.ts:104-120`. Reader cites code.
 - [ ] 51 **The 44px touch rule lives in one file.** `bottom-bar.tsx`, `button.tsx:29-41` tops
   out at 36. Reader cites code. (11H.)
@@ -1055,7 +1056,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `admin.json:61`. Reader cites code.
 - [ ] 61 **`seed:volume` writes no audit trail**, so every trail panel is empty at the one scale
   meant to be walked. `seed-volume.ts`. Reader cites code.
-- [ ] 62 **`admin.spec.ts` re-implements Riyadh-today and the weekend.** `admin.spec.ts:37-58`.
+- [x] 62 **`admin.spec.ts` re-implements Riyadh-today and the weekend.** Verified; imports `@/lib/dates` and `@/lib/workdays` (P11A-16, D103). `admin.spec.ts:37-58`.
   Import the real ones. Reader cites code.
 - [ ] 63 **Nothing automated covers the live channel.** No spec opens `/api/events`. (11B.)
 - [ ] 64 **The NOTIFY chunking branch has never run.** `live.ts:30-51`, 150 per payload against

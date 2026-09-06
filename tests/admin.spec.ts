@@ -1,5 +1,8 @@
 import type { Locator, Page } from "@playwright/test";
 import { ADMIN_PATHS } from "@/components/shell/nav";
+// The app's own day rules, not a second copy of them beside the test (D103).
+import { addDays, todayRiyadh } from "@/lib/dates";
+import { isWeekend } from "@/lib/workdays";
 import { login } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
@@ -35,28 +38,6 @@ function card(page: Page, name: string): Locator {
   return page.getByRole("listitem").filter({ hasText: name }).first();
 }
 
-/** Riyadh's today, as the app computes it (rules/data.md). */
-function todayRiyadh(): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Riyadh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
-}
-
-function addDays(day: string, n: number): string {
-  const [y, m, d] = day.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d + n));
-  return dt.toISOString().slice(0, 10);
-}
-
-/** Friday and Saturday are the weekend (SPEC S47, src/lib/workdays.ts). */
-function isWeekend(day: string): boolean {
-  const [y, m, d] = day.split("-").map(Number);
-  const w = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  return w === 5 || w === 6;
-}
 
 async function openAdmin(page: Page, locale: string, path: string, heading: string) {
   await page.goto(`/${locale}/admin/${path}`);

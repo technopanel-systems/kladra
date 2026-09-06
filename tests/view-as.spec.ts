@@ -96,11 +96,13 @@ test("Jerom checks a rep's screen, changes nothing, and stops", async ({ page, l
     await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
   });
 
-  await test.step("4 · a write on a screen he is looking at does nothing", async () => {
+  await test.step("4 · a screen he is looking at offers no write, and nothing moves", async () => {
     // Marking notifications read is the shortest write in the app — one press,
-    // no form — so it is the one this asks with. What refuses it is not the
-    // button: it is `requireActor`, the single door every write goes through,
-    // which is why a screen that forgot to hide a control is still safe.
+    // no form — so it is the one this asks with. The screen does not offer it
+    // while viewing, and this says so; it used to click the button if it was
+    // there and otherwise do nothing, which passed either way (P11A-16, D103).
+    // The door itself is `requireActor`, the same for every write, and the pure
+    // half of that rule — nobody viewing may move a company — is floor.spec.
     const unread = async () =>
       (
         await one<{ count: string }>(
@@ -116,7 +118,7 @@ test("Jerom checks a rep's screen, changes nothing, and stops", async ({ page, l
     await expect(page.getByRole("heading", { name: t("common.notifications") })).toBeVisible(COLD);
 
     const mark = page.getByRole("button", { name: t("common.markAllRead") });
-    if (await mark.isVisible().catch(() => false)) await mark.click();
+    await expect(mark, "a write was offered while viewing").toHaveCount(0);
     expect(await unread(), "a notification was marked read while viewing").toBe(before);
 
     // And the drawers offer no work at all, the same way they do for a manager
