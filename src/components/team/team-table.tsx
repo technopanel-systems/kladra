@@ -17,11 +17,17 @@ import { cn } from "@/lib/utils";
 /**
  * Everybody, with their month and their habits beside it (SPEC §3, D14).
  *
- * Six columns and no seventh that adds them up. Target, achieved and pace are
- * the month; open quotations, overdue follow-ups and never-contacted companies
- * are the habits — the founder asked for the last one by name, because adding
- * forty companies and working none is a real pattern he wanted visible (S51).
- * Nothing here ranks anybody and there is no score (S46).
+ * Seven figures and no eighth that adds them up. Pipeline, target, achieved and
+ * pace are the month; open quotations, overdue follow-ups and never-contacted
+ * companies are the habits — the founder asked for the last one by name, because
+ * adding forty companies and working none is a real pattern he wanted visible
+ * (S51). Nothing here ranks anybody and there is no score (S46).
+ *
+ * A count is a door (P11E). Each habit count opens the rows it counted on that
+ * person's floor — the same filter the pill there uses, so the number pressed
+ * and the list that opens are one definition (D108); the open-quotations count
+ * opens the floor whose strip carries that figure and its three parts (D95). A
+ * zero is plain text: a door onto an empty room is a dead end.
  *
  * Pace is per person rather than per month because leave is: it is working days
  * elapsed over working days in the month, counted against that person's own
@@ -52,12 +58,16 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
     <>
       <div className="flex flex-col gap-2 md:hidden">
         {members.map((member) => (
-          <Link
-            key={member.userId}
-            href={`/companies?rep=${member.userId}`}
-            className="card-face flex flex-col gap-2 p-3"
-          >
-            <span className="font-medium">{member.name}</span>
+          <div key={member.userId} className="card-face flex flex-col gap-2 p-3">
+            {/* The name is the link, as on the desk. The card used to be one
+                link around everything, which left no room for the counts to
+                be doors of their own (P11E). */}
+            <Link
+              href={`/companies?rep=${member.userId}`}
+              className="font-medium hover:underline"
+            >
+              {member.name}
+            </Link>
             {member.away ? <AwayLine backOn={member.away.backOn} /> : null}
 
             {/* Two figures joined by a slash and no word for either was the
@@ -105,11 +115,23 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                   })}
                 </span>
               </span>
-              <Habit label={t("team.openQuotations")} value={member.openQuotations} />
-              <Habit label={t("team.overdueFollowUps")} value={member.overdueFollowUps} />
-              <Habit label={t("team.neverContacted")} value={member.neverContacted} />
+              <Habit
+                label={t("team.openQuotations")}
+                value={member.openQuotations}
+                href={`/companies?rep=${member.userId}`}
+              />
+              <Habit
+                label={t("team.overdueFollowUps")}
+                value={member.overdueFollowUps}
+                href={`/companies?rep=${member.userId}&filter=overdue`}
+              />
+              <Habit
+                label={t("team.neverContacted")}
+                value={member.neverContacted}
+                href={`/companies?rep=${member.userId}&filter=never`}
+              />
             </span>
-          </Link>
+          </div>
         ))}
       </div>
 
@@ -135,7 +157,10 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                     the same control to say out loud and to click on the day he
                     goes away (DESIGN §5). */}
                 <TableCell className="p-3">
-                  <Link href={`/companies?rep=${member.userId}`} className="font-medium">
+                  <Link
+                    href={`/companies?rep=${member.userId}`}
+                    className="font-medium hover:underline"
+                  >
                     {member.name}
                   </Link>
                   {member.away ? <AwayLine backOn={member.away.backOn} /> : null}
@@ -167,17 +192,24 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                   </span>
                 </TableCell>
                 <TableCell className="p-3 text-end whitespace-nowrap">
-                  {/* His own working days, so leave shortens his month (S48).
-                      `data-slot` names the figure so a spec reads it by name
-                      rather than by column number — inserting Pipeline in front
-                      of it broke three assertions that counted cells. */}
-                  <span data-slot="figure-pace" dir="ltr" className="num">
-                    {member.pace.elapsed} / {member.pace.total}
+                  {/* His own working days, so leave shortens his month (S48),
+                      in the words the month card and the phone card use:
+                      "4 / 22" here was the one reading of the figure with no
+                      unit on it (D59, P11E). `data-slot` names the figure so a
+                      spec reads it by name rather than by column number. */}
+                  <span data-slot="figure-pace" className="text-sm">
+                    {t("team.paceLine", { elapsed: member.pace.elapsed, total: member.pace.total })}
                   </span>
                 </TableCell>
-                <Count value={member.openQuotations} />
-                <Count value={member.overdueFollowUps} />
-                <Count value={member.neverContacted} />
+                <Count value={member.openQuotations} href={`/companies?rep=${member.userId}`} />
+                <Count
+                  value={member.overdueFollowUps}
+                  href={`/companies?rep=${member.userId}&filter=overdue`}
+                />
+                <Count
+                  value={member.neverContacted}
+                  href={`/companies?rep=${member.userId}&filter=never`}
+                />
               </TableRow>
             ))}
           </TableBody>
@@ -187,12 +219,34 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
   );
 }
 
-function Count({ value }: { value: number }) {
-  return (
-    <TableCell className="p-3 text-end">
-      <span dir="ltr" className="num">
+/**
+ * A count that opens what it counted, or a plain nought (P11E). The underline
+ * is what says a number is a door; the follow-up strip's pills do the same job
+ * with a border, and a bare digit that happened to be pressable would be a
+ * secret.
+ */
+const COUNT_LINK =
+  "num underline decoration-muted-foreground/50 underline-offset-2 hover:decoration-current";
+
+function CountFigure({ value, href }: { value: number; href: string }) {
+  if (value === 0) {
+    return (
+      <span dir="ltr" className="num text-muted-foreground">
         {value}
       </span>
+    );
+  }
+  return (
+    <Link href={href} dir="ltr" className={COUNT_LINK}>
+      {value}
+    </Link>
+  );
+}
+
+function Count({ value, href }: { value: number; href: string }) {
+  return (
+    <TableCell className="p-3 text-end">
+      <CountFigure value={value} href={href} />
     </TableCell>
   );
 }
@@ -214,13 +268,10 @@ async function AwayLine({ backOn }: { backOn: Day }) {
   );
 }
 
-function Habit({ label, value }: { label: string; value: number }) {
+function Habit({ label, value, href }: { label: string; value: number; href: string }) {
   return (
-    <span>
-      {label}{" "}
-      <span dir="ltr" className="num text-foreground">
-        {value}
-      </span>
+    <span className="text-foreground">
+      <span className="text-muted-foreground">{label}</span> <CountFigure value={value} href={href} />
     </span>
   );
 }

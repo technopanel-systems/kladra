@@ -81,6 +81,16 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
       await expect(page.getByRole("columnheader", { name: t(key) })).toBeVisible();
     }
 
+    // The pace cell says its unit in words — the sentence the month card and
+    // the phone card use. "4 / 22" on the desk was the one reading of the
+    // figure with no unit on it (D59, P11E).
+    const pace = page
+      .getByRole("row")
+      .filter({ has: page.getByRole("link", { name: faisal.name, exact: true }) })
+      .locator("[data-slot='figure-pace']");
+    const [elapsed, total] = (await pace.innerText()).match(/\d+/g)?.map(Number) ?? [];
+    await expect(pace).toHaveText(t("team.paceLine", { elapsed, total }));
+
     // Exact: a rep's name also appears on the stuck rows underneath, and the
     // one being asked about is the row whose whole label is his name.
     await expect(page.getByRole("link", { name: faisal.name, exact: true })).toBeVisible();

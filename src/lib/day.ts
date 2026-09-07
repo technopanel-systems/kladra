@@ -167,9 +167,33 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
     })),
   ];
 
-  // Longest waiting first, across all three sources. The screen draws the top
-  // of this list and says how many it left out (D83), so the order IS the
-  // list: newest-first would hide the oldest sent-back quotation behind the
-  // count, which is the one that most needs him.
-  return rows.sort((a, b) => a.since.localeCompare(b.since));
+  // Kind first, then longest waiting (P11E). The screen draws the top of this
+  // list and says how many it left out (D83), so the order IS the list — and
+  // sorted by age alone, a quotation the customer had held for thirty days sat
+  // above yesterday's send-back that had the coordinator blocked. Stopped work
+  // comes first: sent back, then refused, then the ones out in the world; the
+  // oldest of each kind first within it, which is the one that most needs him.
+  return rows.sort(
+    (a, b) => KIND_RANK[a.reasonKey] - KIND_RANK[b.reasonKey] || a.since.localeCompare(b.since),
+  );
+}
+
+/** The order of the kinds on the day: what waits on HIM before what waits on a customer. */
+const KIND_RANK: Record<WaitingReason, number> = {
+  "day.sentBack": 0,
+  "day.refused": 1,
+  "day.withCustomer": 2,
+};
+
+/** How many of each kind — the heading's three doors (P11E). */
+export type WaitingCounts = { sentBack: number; refused: number; withCustomer: number };
+
+export function waitingCounts(rows: readonly Waiting[]): WaitingCounts {
+  const counts: WaitingCounts = { sentBack: 0, refused: 0, withCustomer: 0 };
+  for (const row of rows) {
+    if (row.reasonKey === "day.sentBack") counts.sentBack += 1;
+    else if (row.reasonKey === "day.refused") counts.refused += 1;
+    else counts.withCustomer += 1;
+  }
+  return counts;
 }

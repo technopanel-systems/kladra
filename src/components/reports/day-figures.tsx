@@ -66,14 +66,21 @@ export async function MovedLine({ work }: { work: DayWork }) {
     <ul className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
       {figures.map((figure) => (
         <li key={figure.key} data-figure={figure.key} className="flex items-baseline gap-1.5">
+          {/* The m² figure prints bare here: its label carries the unit, and
+              "280.49 m² m² approved" was the unit twice. */}
           {figure.sqm ? (
-            <Sqm value={figure.value} />
+            <Sqm value={figure.value} unit={false} />
           ) : (
             <span dir="ltr" className="num font-medium">
               {figure.value}
             </span>
           )}
-          <span className="text-xs text-muted-foreground">{t(figure.key)}</span>
+          {/* A noun counted, not a heading: "1 Companies" read like a form
+              (P11E). The board above keeps the headings; the line says
+              "1 company added", "6 dispatch requests", "280.49 m² approved". */}
+          <span className="text-xs text-muted-foreground">
+            {t(`${figure.key}Label`, { count: Number(figure.value) })}
+          </span>
         </li>
       ))}
     </ul>

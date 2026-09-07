@@ -77,7 +77,7 @@ export async function UsePanel({ use }: { use: Use }) {
                 </span>
               </span>
               <span className="flex items-baseline gap-x-1.5">
-                {t("admin.useDid")}
+                {t("admin.useDid", { days: USE_WINDOW_DAYS })}
                 <span dir="ltr" className="num text-foreground">
                   {person.did}
                 </span>
@@ -93,7 +93,12 @@ export async function UsePanel({ use }: { use: Use }) {
             <TableRow className="hover:bg-transparent">
               <TableHead className="p-3">{t("admin.person")}</TableHead>
               <TableHead className="p-3">{t("admin.useOpened")}</TableHead>
-              <TableHead className="p-3 text-end">{t("admin.useDid")}</TableHead>
+              {/* The window in words, from the one constant the figure counts
+                  by (P11E): "this week" was three days on a Wednesday and the
+                  figure was seven. */}
+              <TableHead className="p-3 text-end">
+                {t("admin.useDid", { days: USE_WINDOW_DAYS })}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

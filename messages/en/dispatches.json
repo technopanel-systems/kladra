@@ -50,5 +50,6 @@
   "tooMuch": "That is more than the quotation has left.",
   "notOnQuotation": "One of those lines is not on this quotation.",
   "numberRequired": "The SMAC dispatch number is what approves it.",
-  "supersededQuotation": "That quotation has been revised — the dispatch goes against the latest one."
+  "supersededQuotation": "That quotation has been revised — the dispatch goes against the latest one.",
+  "revisedSince": "Quotation revised since"
 }

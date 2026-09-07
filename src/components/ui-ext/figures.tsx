@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { formatMoney, formatSqm } from "@/lib/money";
+import { formatMoney, formatSqm, formatSqmWhole } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,19 +23,27 @@ export function Sqm({
   value,
   className,
   unit = true,
+  whole = false,
 }: {
   /** `null` is not zero: a project with no estimate on it has no figure. */
   value: string | number | null;
   className?: string;
   /** Off inside a column whose heading already says m². */
   unit?: boolean;
+  /**
+   * Whole metres. A quotation's or a dispatch's m² is pieces × width × length
+   * and its decimals are real; a pipeline is a sum of estimates somebody typed
+   * as round numbers, and "1,280,171.00" on the team screen was the one m²
+   * there with a fraction — of nothing (P11E, the same rule as a target box).
+   */
+  whole?: boolean;
 }) {
   const t = useTranslations();
   if (value === null || value === "") return <span className="text-faint">—</span>;
   return (
     <span className={cn("whitespace-nowrap font-medium", className)}>
       <span dir="ltr" className="num">
-        {formatSqm(value)}
+        {whole ? formatSqmWhole(value) : formatSqm(value)}
       </span>
       {unit ? (
         <span className="ms-1 text-xs font-normal text-muted-foreground">{t("common.sqm")}</span>

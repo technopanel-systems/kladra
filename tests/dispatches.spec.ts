@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 import { dispatchLabel } from "@/lib/labels";
 
 /**
@@ -73,8 +74,7 @@ const DESTINATION = "Riyadh — King Fahd Road, site gate";
 const TERMS = "50% advance, balance on delivery";
 
 async function fillTheDetails(form: Locator, t: Translate) {
-  await form.getByRole("combobox", { name: t("common.shipment") }).click();
-  await form.page().getByRole("option").first().click();
+  await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill(DESTINATION);
   await form.getByLabel(t("common.paymentTerms")).fill(TERMS);
 }

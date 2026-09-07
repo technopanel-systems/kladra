@@ -2,6 +2,7 @@ import type { Locator } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query } from "./helpers/db";
 import { test, expect, type Locale } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 
 /**
  * A phone is read in its company's country (SPEC D89).
@@ -58,12 +59,8 @@ test("a Dubai customer's local number is a UAE number", async ({ page, locale, t
       await expect(form.getByLabel(t("common.company"))).toBeVisible();
       await form.getByLabel(t("common.company")).fill(company);
 
-      const category = form.getByRole("combobox", { name: t("common.category") });
-      await category.click();
-      await page.getByRole("option").first().click();
-
-      await form.getByRole("combobox", { name: t("common.leadSource") }).click();
-      await page.getByRole("option").first().click();
+      await pickFirst(form.getByRole("combobox", { name: t("common.category") }));
+      await pickFirst(form.getByRole("combobox", { name: t("common.leadSource") }));
 
       // The country just picked is what the phone is read in (D89); the city
       // switches from the seeded Saudi list to free text the moment it is not

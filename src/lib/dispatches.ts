@@ -92,6 +92,8 @@ export type DispatchRow = {
   /** numeric(12,2) all the way to the screen. */
   totalSqm: string;
   itemCount: number;
+  /** The quotation has a later revision: approval would refuse this (D85, P11E). */
+  superseded: boolean;
 };
 
 export type ListDispatchesInput = {
@@ -217,6 +219,15 @@ function selection(locale: string) {
     createdOn: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
     totalSqm: sql<string>`coalesce(${dispatchTotals.sqm}, 0)`,
     itemCount: sql<number>`coalesce(${dispatchTotals.itemCount}, 0)`,
+    // The paper this is against has been revised since (P11E): approval will
+    // refuse it (D85), and the queue says so before the press. The same test
+    // `isLiveRevision` runs at approval, written out because a correlated
+    // subquery names its tables (rules/data.md).
+    superseded: sql<boolean>`exists (
+      select 1 from quotations later
+       where later.number = quotations.number
+         and later.revision > quotations.revision
+    )`,
   };
 }
 
@@ -244,6 +255,7 @@ type Selected = {
   createdOn: string;
   totalSqm: string;
   itemCount: number;
+  superseded: boolean;
 };
 
 function toRow(row: Selected, shipmentMethod: string): DispatchRow {
@@ -254,6 +266,7 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     status: row.status as DispatchStatus,
     quotationId: row.quotationId,
     quotationLabel: quotationLabel(row.quotationNumber, row.quotationRevision),
+    superseded: row.superseded === true,
     smacNumber: row.smacNumber ?? null,
     companyId: row.companyId,
     companyName: row.companyName,

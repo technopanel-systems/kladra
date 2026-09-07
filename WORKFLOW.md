@@ -82,7 +82,11 @@
             (Enter saves what a person typed, D114); 11D-8: 79, 80, 81 (a form starts from what
             the app knows, a queue row names its person, D115, D116); 11D-9: 82 (a typed line
             starts where its row starts; the targets row wraps alike with or without last
-            month's figure — both seen in the box's own shots)
+            month's figure — both seen in the box's own shots); 11E-1: 83, 84, 91 (a count is
+            a door, the pace cell in words, a sum of estimates whole, D117); 11E-2: 85 (stopped
+            work first, the heading's doors, D118); 11E-3: 86 (the queue says the paper was
+            revised, D119); 11E-4: 87, 88, 89, 92 (the window in words, nouns counted, the m²
+            named, D120)
       - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -91,7 +95,7 @@
             migrations proved from information_schema
       - [x] D The whole flow, creation to oversight, walked step by step: what is retyped,
             how many clicks, what a person must remember, where two screens could disagree
-      - [ ] E Dashboards and reports audited as products: one look, no interpretation,
+      - [x] E Dashboards and reports audited as products: one look, no interpretation,
             every figure saying what it means; charts where a shape is clearer than a number
       - [ ] F A view per screen, chosen not copied, the question each answers written in
             DESIGN; drag only where the drop needs nothing the system does not already have
@@ -136,11 +140,15 @@ the customer; a call card says why; a dispatch line says what already went; leav
 Enter saves; a form starts from what the app knows; a queue row names its person — and one
 more (#82) seen in the box's own shots: a typed line starts where its row starts. The walk's
 own fan-out was the lesson of the box: nine readers rebuilding one context spent two million
-tokens and returned nothing, and the routing rule in §1 came out of it. Next is box 11E,
-dashboards and reports audited as products: one look, no interpretation, every figure saying
-what it means, a chart only where a shape is clearer than a number — with the parked notes in
-scratchpad/todo-later carried in (the Use screen's fortnight plural, the chain card's
-plurals of one, the queue strip's capped counts). The dev database is seeded
+tokens and returned nothing, and the routing rule in §1 came out of it. Box 11E is done in
+five slices, one commit (D117-D120): the five dashboard screens read in the code and shot at
+volume, ten findings (§5 #83-92), eight fixed with a spec each and two refuted with the reason
+written — a count is a door; the pace cell says its unit; a sum of estimates is whole; stopped
+work sorts first and the heading's doors say of what kind; the queue says a paper was revised
+before the press; a figure's window is in its words; a noun after a number is counted; the m²
+is named. Next is box 11F, a view per screen chosen not copied, the question each answers
+written in DESIGN — with the 11D leftover carried in (the duplicate warning cannot open the
+company it names because the form would be lost, §5 refuted paragraph). The dev database is seeded
 at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -813,6 +821,21 @@ keeps it and Enter saves it (D115). Faisal presses Log on a company with one con
 form opens on that person (D115). On Rawan's queue the row names the rep in her script; on
 Faisal's own list no row names him (D116). Every write is taken back.
 
+**A count is a door** — `tests/counts.spec.ts` (step 4), `tests/manager.spec.ts`
+Abdulrahman reads Faisal's overdue count on the team table, presses it, and lands on Faisal's
+floor with the overdue pill active and exactly that many rows under it (D117). The pace cell on
+the desk reads the same sentence as the month card (D117).
+
+**The waiting list, by kind** — `tests/stopped.spec.ts`
+On Faisal's day the heading's three pills count the cards wearing each badge and add up to the
+cards drawn; the stopped kinds come first; the sent-back pill opens the quotations list under
+that status with that many rows (D118). Reads only.
+
+**A revised paper on the queue** — `tests/revised.spec.ts`
+A later revision is written under the seed's waiting dispatch; Rawan's queue row says the
+quotation was revised since, the sheet says the sentence the action would refuse with, Approve
+is disabled and Refuse is not (D119). The revision is deleted after.
+
 **The guards** — `tests/csv.spec.ts`, `tests/guards.spec.ts`
 Pure: a cell that opens with `=`, `@`, a tab, or `+`/`-` before anything but a number is
 apostrophed; a phone, a negative figure, a quoted name and an empty cell are what they were
@@ -1373,3 +1396,68 @@ second definition to find (D95, D102); and the manager's "stuck" is on his home 
 presses. Parked for other boxes: the date picker offers no "tomorrow" or "next week" (11H, the
 phone); the duplicate warning cannot open the company it names because the form would be lost
 (11F, views).
+
+The dashboards and reports audited as products (P11E). The session again, reading the five
+screens a person opens to know how things stand — the team screen, the rep's day, the daily
+report, the coordinator's queue, the admin's Use screen — in the code and then in shots at
+volume on the production build, for four things: one look, no interpretation, every figure
+saying what it means, and a chart only where a shape is clearer than a number. Ranked as above.
+
+- [x] 83 **The desk team table's pace cell drops its unit.** Verified and fixed in P11E-1
+  (D117): `team-table.tsx` printed `4 / 22` on the desk while the phone card and the month card
+  said "4 of 22 working days" — and the phone card's own comment claimed the desk already said
+  the words. Cause: the phone card was fixed in P9.4 against a reference nobody re-read. Fix:
+  the desk cell says `team.paceLine`; `tests/manager.spec.ts` reads it.
+- [x] 84 **The team table's habit counts go nowhere.** Verified and fixed in P11E-1 (D117):
+  open quotations, overdue follow-ups and never-contacted were bare numbers; the row's one link
+  was the name, to the whole floor. Cause: the table predates `?rep=&filter=`. Fix: overdue and
+  never open the floor under that filter, open quotations opens the floor whose strip carries
+  the figure and its parts, zero stays plain; the phone card's link moved onto the name so the
+  counts could be doors. `tests/counts.spec.ts` step 4 presses one and counts the rows.
+- [x] 85 **The day's waiting list ranks a customer's silence above a coordinator's send-back.**
+  Verified and fixed in P11E-2 (D118): `waitingOnRep` merged three kinds and sorted by age, so
+  on the volume floor Faisal's 83 (20 sent back, 24 refused, 39 with the customer) opened on a
+  month-old customer-held quotation and the calls began 2,987px down; the heading said 83 over
+  25 cards and the tail said "and 58 more" with nowhere to go, by its own comment. Fix: kind
+  first then age; the heading's three pills are doors to `/quotations?status=returned`,
+  `/dispatches?status=refused`, `/quotations?status=issued`; `tests/stopped.spec.ts`.
+- [x] 86 **The queue does not say a quotation was revised under a waiting dispatch.** Verified
+  and fixed in P11E-3 (D119), §5 #2's leftover: `selection()` carried the revision and no
+  "superseded" flag; approval refused it (D85) and the queue said nothing. Fix: a `superseded`
+  column from the same `exists (later revision)` test `isLiveRevision` runs, a line on the row
+  and the card, the sentence on the sheet, Approve disabled; `tests/revised.spec.ts`.
+- [x] 87 **The chain card's sentences at one.** Verified and fixed in P11E-4 (D120):
+  `team.chainMeans` "Of the 1 raised … each one", `team.chainAnswered` "1 of them reached a
+  customer, and 0 came back" — no plural forms in English, none in the Arabic of the second
+  (reviewer, P11A-8, P11A-15). Fix: ICU on each half, both locales.
+- [x] 88 **The Use screen's words and its window disagree.** Verified and fixed in P11E-4
+  (D120): "Changed this week" over the trailing `USE_WINDOW_DAYS` (`adoption.ts`); "nothing
+  opened for {days} days" with no English plural (reviewer, P11A-6). Fix: both take `{days}`
+  from the constant, plurals in both locales.
+- [x] 89 **The report's biggest figure has the vaguest name.** Verified and fixed in P11E-4
+  (D120): `reports.moved` "Moved" over the m² of dispatches approved on the floor that day
+  (`reports.ts`, S43). Fix: the board's heading is "m² approved" / «المساحة المعتمدة» and
+  the moved line's label carries the unit over a bare figure («م² معتمدة») — the first cut
+  printed "280.49 m² m² approved", seen in the after-shots.
+- [x] 90 **Fifteen numbers where five bars would do.** Refuted on the shots: a bar per rep
+  under the team table lines five people up for comparison, which is the ranking S46 forbids in
+  spirit; the achieved figure already wears the pace colour, and the company's one bar answers
+  the question the manager asks first. Not built.
+- [x] 91 **The pipeline figure carries ".00" on a screen of whole metres.** Seen in the shots,
+  fixed in P11E-1 (D117): `Sqm` printed two decimals everywhere; the team strip read
+  "1,280,171.00 m²" beside a table of whole figures. Fix: `<Sqm whole>` for a sum of
+  estimates on the team strip, the person strip and the company header; measured m² unchanged.
+- [x] 92 **The report's moved line says "1 Companies".** Seen in the shots, fixed in P11E-4
+  (D120): the moved line borrowed the board's headings as nouns after a number. Fix: a
+  `<key>Label` plural per count figure in both locales (registered as a message family), the
+  headings unchanged, the m² figure keeps its name.
+
+Refuted in the walk, so the next reader does not re-find them: the six-month sentence at 0%
+already says "matched" (`monthSentenceKey`, `team.monthSame`) — the P11A-11 note was stale;
+the queue strip counts the rows on the page on purpose (page comment, D95: a second query once
+named a request neither list showed), the cap is 200 and a desk with two hundred waiting
+requests has a bigger problem than a count — noted, not changed; the manager's strip and the
+table's two "overdue" figures carry their thresholds in words (D95); the current month's bar is
+grey and unjudged by design (D61); the report cards share keys across desk and floor; the Use
+screen's amber is one predicate (`isQuiet`); the rep's day order — month, stopped work, calls —
+is argued in the page and stands, and 11H reads its length on the phone.

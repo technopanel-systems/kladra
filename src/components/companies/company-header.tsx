@@ -237,7 +237,7 @@ export function CompanyHeader({
         items={[
           {
             label: t("drawer.pipeline"),
-            value: <Sqm value={standing.pipelineSqm} />,
+            value: <Sqm value={standing.pipelineSqm} whole />,
           },
           {
             label: t("drawer.approved"),

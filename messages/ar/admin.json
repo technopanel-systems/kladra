@@ -61,7 +61,7 @@
   "usePeople": "أصحاب الحسابات",
   "usePeopleMeans": "الحسابات النشطة، سواء دخلوا أم لا",
   "useOpened": "آخر فتح",
-  "useDid": "تغييرات هذا الأسبوع",
+  "useDid": "{days, plural, zero {تغييرات اليوم} one {تغييرات آخر يوم} two {تغييرات آخر يومين} few {تغييرات آخر # أيام} many {تغييرات آخر # يومًا} other {تغييرات آخر # يوم}}",
   "useNever": "لم يُفتح أبدًا",
   "useDaysAgo": "{count, plural, zero {اليوم} one {قبل يوم} two {قبل يومين} few {قبل # أيام} many {قبل # يومًا} other {قبل # يوم}}",
   "useAway": "في إجازة",

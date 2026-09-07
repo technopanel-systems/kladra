@@ -3,6 +3,7 @@ import { addDays, formatDay, todayRiyadh, type Day } from "@/lib/dates";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 
 /**
  * P11A-7 — a drawer says what it writes (SPEC D94, S18).
@@ -57,8 +58,7 @@ async function choose(page: Page, trigger: Locator, label: string): Promise<void
 async function fillOneItem(form: Locator, t: Translate): Promise<void> {
   await form.getByLabel(t("common.colourCode")).fill("168");
   for (const label of ["common.supplier", "common.fireRating", "common.class"]) {
-    await form.getByRole("combobox", { name: t(label) }).click();
-    await form.page().getByRole("option").first().click();
+    await pickFirst(form.getByRole("combobox", { name: t(label) }));
   }
   await form.getByLabel(t("common.pricePerSqm")).fill("120");
 }

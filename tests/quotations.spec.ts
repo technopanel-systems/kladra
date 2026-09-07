@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 import { quotationLabel } from "@/lib/labels";
 import { quotationEvent } from "@/lib/quotation-events";
 
@@ -84,8 +85,7 @@ async function fillItem(form: Locator, t: Translate, index: number, price: numbe
   // Supplier, fire rating and class have no default — whatever each list
   // offers first proves the field works and keeps the assertion out of English.
   for (const label of ["common.supplier", "common.fireRating", "common.class"]) {
-    await form.getByRole("combobox", { name: t(label) }).nth(index).click();
-    await form.page().getByRole("option").first().click();
+    await pickFirst(form.getByRole("combobox", { name: t(label) }).nth(index));
   }
 
   // Thickness and the sheet's size open on the standard 4 mm, 1.24 × 5.8 m.

@@ -30,7 +30,7 @@ export async function PersonStrip({ standing }: { standing: PersonStanding }) {
       items={[
         {
           label: t("team.pipeline"),
-          value: <Sqm value={standing.pipelineSqm} />,
+          value: <Sqm value={standing.pipelineSqm} whole />,
           caption: t("team.pipelineMeans"),
         },
         {

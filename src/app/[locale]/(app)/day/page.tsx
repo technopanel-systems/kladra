@@ -13,7 +13,7 @@ import { formatDay, todayRiyadh } from "@/lib/dates";
 import { awayOn } from "@/lib/leave";
 import { followUpCounts } from "@/lib/followups";
 import { logTargetsFor } from "@/lib/log-targets";
-import { waitingOnRep } from "@/lib/day";
+import { waitingCounts, waitingOnRep } from "@/lib/day";
 import { monthsBack } from "@/lib/months";
 import { repMonth } from "@/lib/team";
 
@@ -105,7 +105,11 @@ export default async function DayPage() {
       {/* Worst first and capped like the bands below it (D80, D83): sixty-four
           cards above the calls is the calls buried, not shown. */}
       {hasChain ? (
-        <WaitingList rows={waiting.slice(0, BAND_LIMIT)} total={waiting.length} />
+        <WaitingList
+          rows={waiting.slice(0, BAND_LIMIT)}
+          total={waiting.length}
+          counts={waitingCounts(waiting)}
+        />
       ) : null}
       <CallList
         overdue={overdue}

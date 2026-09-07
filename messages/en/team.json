@@ -41,10 +41,10 @@
   "monthAfterEmpty": "{month} had metres again after an empty {previous}",
   "monthNothing": "No metres in {previous} or {month}",
   "monthsMeans": "Approved m² per month, against that month’s target.",
-  "chainMeans": "Of the {raised} raised in the last {days} days, this is where each one got to.",
+  "chainMeans": "{raised, plural, one {Of the one quotation raised in the last {days} days, this is where it got to.} other {Of the # raised in the last {days} days, this is where each one got to.}}",
   "chainEmpty": "Nothing has been raised in the last {days} days.",
   "chainShare": "{percent}%",
-  "chainAnswered": "{reached} of them reached a customer, and {answered} came back with an answer.",
+  "chainAnswered": "{reached, plural, one {One of them reached a customer} other {# of them reached a customer}}{answered, plural, =0 {, and none came back with an answer.} one {, and one came back with an answer.} other {, and # came back with an answer.}}",
   "chainTitle": "Where quotations go",
   "chain": {
     "waiting": "Still on the coordinator’s desk",

@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 import { quotationLabel } from "@/lib/labels";
 
 /**
@@ -85,8 +86,7 @@ const TERMS = "Net 30, per the framework agreement";
 
 /** Fills the shipment, destination and terms every dispatch request needs. */
 async function fillTheDetails(form: Locator, t: Translate): Promise<void> {
-  await form.getByRole("combobox", { name: t("common.shipment") }).click();
-  await form.page().getByRole("option").first().click();
+  await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill(DESTINATION);
   await form.getByLabel(t("common.paymentTerms")).fill(TERMS);
 }
@@ -599,15 +599,14 @@ test("approved against the price the customer holds: a dispatch on a superseded 
 
     const sheet = sheetFor(rawan, dispatchLabelText);
     await expect(sheet).toBeVisible(COLD);
-    await sheet.getByRole("button", { name: t("dispatches.approve") }).click();
-
-    const ask = rawan.getByRole("dialog", {
-      name: t("dispatches.approveTitle", { label: dispatchLabelText }),
-    });
-    await ask.getByLabel(t("common.smacDispatchNumber")).fill(`TWOHANDS-3-${locale.toUpperCase()}`);
-    await ask.getByRole("button", { name: t("dispatches.approve") }).click();
-
-    await expect(ask.getByText(t("dispatches.supersededQuotation"))).toBeVisible(COLD);
+    // Said before the press (D119, P11E): the sheet carries the sentence the
+    // action would refuse with and Approve is disabled, so there is no press to
+    // refuse. The action's own lock (D85, `isLiveRevision`) stands behind it for
+    // a page that was open before the revision landed — the same test, in SQL,
+    // that puts the sentence on this sheet (`selection().superseded`).
+    await expect(sheet.getByText(t("dispatches.supersededQuotation"))).toBeVisible(COLD);
+    await expect(sheet.getByRole("button", { name: t("dispatches.approve") })).toBeDisabled();
+    await expect(sheet.getByRole("button", { name: t("dispatches.refuse") })).toBeEnabled();
   });
 
   await test.step("the dispatch is still submitted — the refusal wrote nothing", async () => {

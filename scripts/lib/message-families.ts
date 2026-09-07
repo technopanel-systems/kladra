@@ -56,6 +56,10 @@ export const families: [string, string[]][] = [
   ["common", union("src/db/schema.ts", "channelEnum")],
   ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
   ["reports", tableKeys("src/lib/report-figures.ts")],
+  // The moved line's labels (P11E): every count figure has a `<key>Label` plural
+  // beside its heading, and the m² figure's label carries the unit the bare
+  // figure on that line leaves off.
+  ["reports", tableKeys("src/lib/report-figures.ts").map((key) => `${key}Label`)],
   ["reports", union("src/components/reports/person-card.tsx", "REPORT_STATES")],
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
   ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
@@ -67,5 +71,9 @@ export const families: [string, string[]][] = [
   [
     "companies",
     union("src/components/companies/follow-up-strip.tsx", "Pill").map((pill) => `${pill}Count`),
+  ],
+  [
+    "day",
+    union("src/components/day/waiting-list.tsx", "WAITING_KINDS").map((kind) => `${kind}Count`),
   ],
 ];

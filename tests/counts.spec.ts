@@ -1,7 +1,7 @@
 import { addDays, todayRiyadh } from "@/lib/dates";
 import { BAND_LIMIT, LIST_LIMIT } from "@/lib/list-size";
 import { login } from "./helpers/auth";
-import { one, query, userId } from "./helpers/db";
+import { one, personName, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -55,6 +55,7 @@ async function pairOf(repId: string): Promise<Pair> {
 
 test("a pill, a chip and a band each count the rows under them", async ({ page, locale, t }) => {
   const faisal = await userId("faisal@technopanel.com.sa");
+  const faisalName = await personName("faisal@technopanel.com.sa", locale);
   const pair = await pairOf(faisal);
   const yesterday = addDays(todayRiyadh(), -1);
   // Late twice over, on one row: the shape that counted as two dates.
@@ -110,6 +111,30 @@ test("a pill, a chip and a band each count the rows under them", async ({ page, 
       // Every company late is on the band, so there is nobody "more": the tail
       // link is the only link in a band that points at the filtered list.
       await expect(band.locator('a[href*="filter=overdue"]')).toHaveCount(0);
+    });
+
+    await test.step("Team: the overdue count on a rep's row opens the rows it counted", async () => {
+      // The manager's table (P11E). Its count for Faisal is the pill's own
+      // definition on Faisal's floor, and pressing it lands on that pill with
+      // that many rows under it — a count is a door, not a figure to go and
+      // check.
+      await login(page, locale, "abdulrahman");
+      await page.goto(`/${locale}/team`);
+      await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
+      const row = page
+        .getByRole("row")
+        .filter({ has: page.getByRole("link", { name: faisalName, exact: true }) });
+      const door = row.locator('a[href*="filter=overdue"]');
+      await expect(door).toHaveCount(1);
+      const said = Number(await door.innerText());
+      expect(said, "Faisal has an overdue company by construction").toBeGreaterThan(0);
+      expect(said, "the list must be under its cap to be counted").toBeLessThan(LIST_LIMIT);
+      await door.click();
+      await expect(page).toHaveURL(/filter=overdue/);
+      await expect(page.locator('a[aria-current="true"]')).toHaveText(
+        t("companies.overdueCount", { count: said }),
+      );
+      await expect(page.locator("table tbody tr")).toHaveCount(said);
     });
   } finally {
     await query(`update companies set next_follow_up = $2::date where id = $1::uuid`, [

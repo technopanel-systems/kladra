@@ -16,7 +16,9 @@ import { PromptDialog } from "@/components/ui-ext/prompt-dialog";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import type { DispatchStatus } from "@/lib/dispatches";
+import { TONE_TEXT } from "@/lib/state-tone";
 import type { ActionResult } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 /**
  * What each person may do to a dispatch, and nothing else (SPEC S39).
@@ -51,6 +53,8 @@ export function DispatchActions({
     quotationLabel: string;
     /** SMAC's dispatch number, once approved — the thing she may correct (D88). */
     smacDispatchNumber: string | null;
+    /** The quotation was revised after this was raised: approval would refuse it (D85). */
+    superseded: boolean;
     draft: DispatchDraft;
   };
   scope: DispatchScope;
@@ -59,7 +63,7 @@ export function DispatchActions({
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
 
-  const { id, label, status } = dispatch;
+  const { id, label, status, superseded } = dispatch;
   const waiting = status === "submitted";
 
   function withId(
@@ -78,12 +82,21 @@ export function DispatchActions({
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Said before the press (D112, P11E): approval refuses a dispatch whose
+          quotation has a later revision (D85), and until now she learned that
+          from the refusal. The button stays, disabled, so the sentence has a
+          subject; refusing is still hers. */}
+      {scope.coordinator && waiting && superseded ? (
+        <p role="status" data-slot="superseded-note" className={cn("basis-full text-sm", TONE_TEXT.wait)}>
+          {t("dispatches.supersededQuotation")}
+        </p>
+      ) : null}
       {scope.coordinator && waiting ? (
         <>
           <PromptDialog
             trigger={
-              <Button variant="brand">
+              <Button variant="brand" disabled={superseded}>
                 <Check aria-hidden="true" />
                 {t("dispatches.approve")}
               </Button>

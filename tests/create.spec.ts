@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 
 /**
  * P8.2 — a primary button of its own on Projects, Quotations and Dispatches
@@ -61,16 +62,14 @@ async function choose(page: Page, trigger: Locator, label: string): Promise<void
 async function fillOneItem(form: Locator, t: Translate): Promise<void> {
   await form.getByLabel(t("common.colourCode")).fill("168");
   for (const label of ["common.supplier", "common.fireRating", "common.class"]) {
-    await form.getByRole("combobox", { name: t(label) }).click();
-    await form.page().getByRole("option").first().click();
+    await pickFirst(form.getByRole("combobox", { name: t(label) }));
   }
   await form.getByLabel(t("common.pricePerSqm")).fill("120");
 }
 
 /** Shipment, destination and payment terms — every dispatch request needs them. */
 async function fillTheDetails(form: Locator, t: Translate): Promise<void> {
-  await form.getByRole("combobox", { name: t("common.shipment") }).click();
-  await form.page().getByRole("option").first().click();
+  await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill("Riyadh — King Fahd Road, site gate");
   await form.getByLabel(t("common.paymentTerms")).fill("50% advance, balance on delivery");
 }

@@ -7,6 +7,9 @@
   "sentBack": "Sent back",
   "refused": "Refused",
   "withCustomer": "With the customer",
+  "sentBackCount": "{count, plural, =0 {none sent back} other {# sent back}}",
+  "refusedCount": "{count, plural, =0 {none refused} other {# refused}}",
+  "withCustomerCount": "{count, plural, =0 {none with a customer} other {# with the customer}}",
   "whoToCall": "Calls due",
   "nobodyToCall": "Nobody is owed a call today.",
   "logFor": "Log what happened with {name}"

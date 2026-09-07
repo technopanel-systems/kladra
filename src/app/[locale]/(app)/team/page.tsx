@@ -74,7 +74,8 @@ export default async function TeamPage() {
         items={[
           {
             label: t("team.pipeline"),
-            value: <Sqm value={month.pipeline} />,
+            // Whole: a sum of estimates, beside a table of whole metres.
+            value: <Sqm value={month.pipeline} whole />,
             caption: t("team.pipelineMeans"),
           },
           {

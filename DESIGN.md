@@ -459,6 +459,26 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 - **A row names its person where the reader is not that person.** Phase 11D (D116). On a
   shared desk a row says whose it is, in the reader's script; on somebody's own list it does
   not tell him his own name.
+- **A count is a door.** Phase 11E (D117). A number that counts rows opens those rows, with
+  the filter the list itself uses, and is underlined so the reader knows it is a door; a zero
+  is plain text, because a door onto an empty room is a dead end. A bare count a person has to
+  go and verify is a figure that made him do the system's work.
+- **A sum of estimates is whole.** Phase 11E (D117). Metres somebody measured — a quotation
+  line, a dispatch — keep their decimals; metres somebody estimated and added up are whole,
+  and ".00" beside a table of whole figures is a fraction of nothing.
+- **A list of waiting says of what kind it waits.** Phase 11E (D118). Work stopped on the
+  reader sorts above a customer's silence, and a heading's total is split into its kinds,
+  each a door to that kind's own list, so twenty-five cards under "83" never again hide
+  which fifty-eight are missing or that most of them are somebody else's turn.
+- **What the action will refuse, the screen says first.** Phase 11E (D119, after D112). A
+  control whose action would be refused is disabled with the sentence the action would refuse
+  with, on the row and on the sheet, before the press — never a live button that fails.
+- **A figure's window is in its words, from the constant it counts by.** Phase 11E (D120).
+  "This week" over a trailing seven days is a second definition in prose; the sentence takes
+  `{days}` from the constant the query uses, with a plural, so the two cannot drift.
+- **A noun after a number is counted.** Phase 11E (D120). "1 Companies" and "Of the 1 raised
+  … each one" are headings borrowed as sentences; a sentence with a number in it carries an
+  ICU plural in both locales, and Arabic's six forms are written out.
 
 ## §4 Not built until asked
 

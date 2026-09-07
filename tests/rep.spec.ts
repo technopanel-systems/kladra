@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { addDays, todayRiyadh } from "@/lib/dates";
 import { login } from "./helpers/auth";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
+import { pickFirst } from "./helpers/pick";
 
 /**
  * Faisal's day, exactly as WORKFLOW.md §3 writes it: sign in, add a company
@@ -133,12 +134,14 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     // reading its text back keeps the assertion out of English.
     const category = form.getByRole("combobox", { name: t("common.category") });
     await category.click();
-    const firstCategory = page.getByRole("option").first();
+    await expect(category).toHaveAttribute("aria-expanded", "true");
+    // The newest list is this combobox's own (tests/helpers/pick.ts).
+    const firstCategory = page.getByRole("listbox").last().getByRole("option").first();
     categoryName = (await firstCategory.innerText()).trim();
     await firstCategory.click();
+    await expect(category).toHaveAttribute("aria-expanded", "false");
 
-    await form.getByRole("combobox", { name: t("common.leadSource") }).click();
-    await page.getByRole("option").first().click();
+    await pickFirst(form.getByRole("combobox", { name: t("common.leadSource") }));
 
     await form.getByLabel(t("common.name"), { exact: true }).fill(fixture.contact);
     await form.getByLabel(t("common.phone")).fill(fixture.phone);
@@ -304,8 +307,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     await khalid.getByRole("button", { name: t("common.edit"), exact: true }).click();
     const contactForm = dialogNamed(page, t("forms.editContact"));
     await expect(contactForm.getByLabel(t("common.phone"))).toHaveValue(fixture.phone);
-    await contactForm.getByLabel(t("common.position")).click();
-    await page.getByRole("option").first().click();
+    await pickFirst(contactForm.getByLabel(t("common.position")));
     await contactForm.getByRole("button", { name: t("common.save") }).click();
     await expect(page.getByText(t("forms.saved", { name: fixture.contact }))).toBeVisible();
 

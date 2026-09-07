@@ -30,7 +30,7 @@ import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatSqm } from "@/lib/money";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
-import { dispatchTone } from "@/lib/state-tone";
+import { dispatchTone, TONE_TEXT } from "@/lib/state-tone";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
 import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
@@ -275,6 +275,13 @@ export function DispatchesTable({
                       {row.repName}
                     </span>
                   ) : null}
+                  {/* The paper was revised after this was raised: approval would
+                      refuse it (D85), so the row says it first (P11E). */}
+                  {waiting && row.superseded ? (
+                    <span data-slot="revised-since" className={cn("text-xs", TONE_TEXT.wait)}>
+                      {t("dispatches.revisedSince")}
+                    </span>
+                  ) : null}
                   {row.projectName ? (
                     <span className="truncate text-xs text-muted-foreground">
                       {row.projectName}
@@ -345,6 +352,14 @@ export function DispatchesTable({
                         <span dir="ltr" className="num text-sm">
                           {row.quotationLabel}
                         </span>
+                        {waiting && row.superseded ? (
+                          <span
+                            data-slot="revised-since"
+                            className={cn("block text-xs", TONE_TEXT.wait)}
+                          >
+                            {t("dispatches.revisedSince")}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="p-3 text-end">
                         <span dir="ltr" className="num">
@@ -540,6 +555,7 @@ export function DispatchSheet({
               quotationId: dispatch.quotationId,
               quotationLabel: dispatch.quotationLabel,
               smacDispatchNumber: dispatch.smacDispatchNumber,
+              superseded: dispatch.superseded,
               draft,
             }}
             scope={scope}
