@@ -895,6 +895,13 @@ wears the light theme offline (`tests/pwa.spec.ts`, D125); the board's open card
 (`tests/board.spec.ts`, D123). A bottom sheet on a phone slides in 250, not the library's 500
 (D129). Reads only.
 
+**What he wrote about the customer** — `tests/notes.spec.ts`
+Faisal opens a company and reads his own note on the drawer, under the buttons and in the words
+he typed; he edits it and the drawer says the new thing; the contact he wrote about carries his
+line on that contact's own card; the project's note is on the project sheet. Abdulrahman opens
+the same company on a floor he does not own and reads the same note with nothing to press
+(D136, D42). Writes nothing that stays: the edit is put back.
+
 **The wire cut** — `tests/unhappy.spec.ts`
 Faisal types a sentence into Log and the server cannot be reached when he presses Save: the
 app says so, the sentence is still in the box, Save is alive, and the screen behind is still the
@@ -1934,3 +1941,19 @@ the layout with its session read; the reads harness counts the document alone an
 them. A refusal toast on the phone covers the sheet's own Save button for the seconds it shows.
 `FormFooter` disables the pressed button while it saves, which is the double-press guard and
 also drops keyboard focus to the page; and its pending word is "Saving…" whatever the verb was.
+
+What a good CRM has that Kladra does not (P11J). Seven readings of the app — the rep's day, the
+coordinator's desk, the manager's week, the founder's question, the feature surface of the CRMs
+of 2026, FACET as it was actually used, and the cladding trade in Saudi Arabia — proposed
+freely; each proposal was then read against the same three questions (whose is it, when in
+their day, what does it replace) and against the code, and most of them died there. What
+survived is below; what did not is in DESIGN §4 and §6, with the reason.
+
+- [x] 142 **Three fields were written by everybody and read by nobody.** Found by the rep's
+  reading, fixed in P11J-1 (D136). The founder asked for Notes on the company, on the contact
+  captured with it and on the project (SPEC §3); all three are kept, queried and carried into the
+  drawer — and the drawer spent them on the Edit form and rendered none of them. A rep in a lobby
+  who wants the sentence he wrote in March has to open a form to read it, which is why the field
+  quietly stopped being used. Fix: each note is read where its record is read. The labelled typed
+  block was already solved once on the quotation sheet, so the pattern became `NoteBlock` and the
+  five sites share it. `tests/notes.spec.ts` walks all three and the manager who may not write.

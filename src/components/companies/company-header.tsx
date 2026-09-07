@@ -27,6 +27,7 @@ import { DatePicker } from "@/components/ui-ext/date-picker";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Sqm } from "@/components/ui-ext/figures";
+import { NoteBlock } from "@/components/ui-ext/note-block";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { useIsPhone } from "@/hooks/use-is-phone";
@@ -116,6 +117,8 @@ export type DrawerCompany = {
   category: string;
   leadSource: string;
   repName: string;
+  /** What the rep wrote about this customer, shown back to him (D136). */
+  notes: string | null;
   /** The same company as form values, so Edit opens on what is already there. */
   editable: CompanyEditable;
   /** A Riyadh day, "YYYY-MM-DD". */
@@ -349,6 +352,18 @@ export function CompanyHeader({
         <ArchiveCompanyDialog companyId={company.id} companyName={company.name} />
       </div>
       ) : null}
+
+      {/* What he wrote about this customer, read back to him (D136). Below the
+          actions, because the primary action is at the top of a drawer
+          (DESIGN §2) and a note of four thousand characters would otherwise
+          push Log off an 88dvh sheet; and clamped for the same reason, with
+          Edit — already in the row above — as the way to the whole of it. */}
+      <NoteBlock
+        title={t("common.notes")}
+        text={company.notes}
+        slot="company-notes"
+        className="line-clamp-4"
+      />
     </div>
   );
 }

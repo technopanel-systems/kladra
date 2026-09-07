@@ -15,6 +15,7 @@ import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-los
 import { Sqm } from "@/components/ui-ext/figures";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
+import { NoteBlock } from "@/components/ui-ext/note-block";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -638,6 +639,16 @@ export function ProjectSheet({
             />
           </div>
           ) : null}
+
+          {/* What was written about this job, read back on it (D136): the
+              only reader until now was the Edit form it was typed in. Below
+              the actions and clamped, for the reason the company's note is. */}
+          <NoteBlock
+            title={t("common.notes")}
+            text={notes}
+            slot="project-notes"
+            className="line-clamp-4"
+          />
         </SheetHeader>
 
         <Tabs defaultValue="activity" className="p-4">

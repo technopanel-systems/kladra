@@ -18,6 +18,7 @@ import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { Prose } from "@/components/ui-ext/prose";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -187,6 +188,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           repName: company.repName,
           nextFollowUp: company.nextFollowUp,
           projectFollowUp: company.projectFollowUp,
+          notes: company.notes,
           // The ids, not the words: Edit opens on the rows the lookups hold,
           // so renaming a category in Lookups cannot move this company.
           editable: {
@@ -290,6 +292,17 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                         <span className="sr-only">{t("common.position")}: </span>
                         {row.position}
                       </span>
+                    ) : null}
+                    {/* What was written about this person — which floor he
+                        sits on, when he is reachable — read back on his own
+                        card (D136). A line under the name, not a paragraph. */}
+                    {row.notes ? (
+                      <Prose
+                        line
+                        text={row.notes}
+                        slot="contact-notes"
+                        className="line-clamp-2 text-xs text-muted-foreground"
+                      />
                     ) : null}
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                       {/* A tap opens WhatsApp and the handset dials; the number

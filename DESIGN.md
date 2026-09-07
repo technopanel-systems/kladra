@@ -91,8 +91,10 @@ shadcn/ui via CLI (Radix, RTL on): Dialog, Sheet, Drawer (phone bottom sheet), C
 (searchable dropdowns), Popover + Calendar (date pickers), Sonner (toasts), Skeleton, Tabs,
 Badge, Table, Field (forms), Select, Tooltip, plus Button, Input, Textarea, Card,
 Dropdown-menu, Switch, Checkbox, Scroll-area, Avatar. On top of them, the app's own
-small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, and `Prose`
-— one `<p dir="auto">` for any block a PERSON typed. Logical utilities only (`ms-`, `pe-`,
+small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, `Prose`
+— one `<p dir="auto">` for any block a PERSON typed — and `NoteBlock`, which is `Prose` under
+the word for what it is, in a face of its own so a paragraph that swings to the other end of a
+wide drawer stays attached to its label. Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
@@ -566,6 +568,10 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
   return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
   typed on the screen to lose — each is disabled at its line with that reason written there.
+- **A field that is written is read somewhere.** Phase 11J (D136). A form that takes something
+  from a person owes them a screen that gives it back; a field whose only reader is the form it
+  was typed in teaches people to stop filling it. Before a field is added, name the screen that
+  reads it, and when one is found with no reader, that is a defect and not a feature request.
 - **Speed is a number with a ceiling.** Phase 11I (D133). What a mid phone pays to draw a screen
   is measured, not felt: `npm run measure:speed` against the production build, cold and warm, and
   `scripts/speed.baseline.json` is the ceiling the next change is held to. A change that touches

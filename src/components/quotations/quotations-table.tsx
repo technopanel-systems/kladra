@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
-import { Prose } from "@/components/ui-ext/prose";
+import { NoteBlock } from "@/components/ui-ext/note-block";
 import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
 import type { Waited } from "@/lib/waiting";
 import { Badge } from "@/components/ui/badge";
@@ -599,13 +599,13 @@ export function QuotationSheet({
           </div>
 
           {quotation.status === "returned" && quotation.returnReason ? (
-            <Reason title={t("quotations.sentBackReason")} text={quotation.returnReason} />
+            <NoteBlock title={t("quotations.sentBackReason")} text={quotation.returnReason} />
           ) : null}
           {quotation.status === "rejected" && quotation.decisionReason ? (
-            <Reason title={t("quotations.rejectedReason")} text={quotation.decisionReason} />
+            <NoteBlock title={t("quotations.rejectedReason")} text={quotation.decisionReason} />
           ) : null}
           {quotation.notes ? (
-            <Reason title={t("quotations.notesToCoordinator")} text={quotation.notes} />
+            <NoteBlock title={t("quotations.notesToCoordinator")} text={quotation.notes} />
           ) : null}
 
           <QuotationActions
@@ -713,18 +713,6 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
     <div className="flex flex-col">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd>{children}</dd>
-    </div>
-  );
-}
-
-function Reason({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="card-face flex flex-col gap-1 p-3">
-      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      {/* Typed by the desk or the rep, so it runs in the writer's direction and
-          not the page's (rules/words.md) — the trail below already did; this
-          box did not, and one sentence read two ways on one sheet. */}
-      <Prose text={text} className="text-sm" />
     </div>
   );
 }

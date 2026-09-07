@@ -176,7 +176,7 @@ export const COMPANIES: CompanySeed[] = [
     city: "Riyadh",
     notes: "يشتري بكميات، اللون فضي ونحاسي، توريد فقط",
     contacts: [
-      { name: "سعود المطرفي", phone: "0551204477", position: "Procurement", email: "s.almutarfi@example.sa" },
+      { name: "سعود المطرفي", phone: "0551204477", position: "Procurement", email: "s.almutarfi@example.sa", notes: "الأفضل الاتصال به الصباح، ما يرد بعد الظهر" },
       { name: "م. خالد الدوسري", phone: "055 331 8842", position: "Engineer" },
     ],
   },
@@ -222,7 +222,7 @@ export const COMPANIES: CompanySeed[] = [
     notes: "Met at the exhibition; the HQ job is the live one",
     contacts: [
       { name: "Ziad Nassar", phone: "0566712093", position: "General manager", email: "ziad@example.com" },
-      { name: "Hassan Odeh", phone: "0561120934", position: "Procurement" },
+      { name: "Hassan Odeh", phone: "0561120934", position: "Procurement", notes: "Asks for the datasheet every time; send it before the visit" },
     ],
   },
   {
