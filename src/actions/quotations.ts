@@ -22,7 +22,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, companies, projects, quotationItems, quotations, users } from "@/db/schema";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
@@ -43,7 +43,7 @@ async function guard<T>(
   try {
     return await run(await requireActor(...roles));
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("quotations action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }

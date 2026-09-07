@@ -8,7 +8,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, users } from "@/db/schema";
 import { getPathname } from "@/i18n/navigation";
-import { requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { THEME_COOKIE } from "@/lib/theme";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
@@ -35,19 +35,31 @@ const pathnameSchema = z
 
 const YEAR = 60 * 60 * 24 * 365;
 
-async function actorOrNull(): Promise<SessionUser | null> {
+/**
+ * The person, or the sentence for why there is none.
+ *
+ * A session that ended while the menu sat open is the commonest failure here,
+ * and it says so rather than "you are not allowed to do that" (D135) — the
+ * menu shows this sentence in a toast, and an accusation is the wrong words
+ * for a sign-in that simply ran out.
+ */
+async function actorOrRefusal(): Promise<
+  { actor: SessionUser; refusal?: never } | { actor?: never; refusal: string }
+> {
+  const t = await getTranslations("common");
   try {
-    return await requireActor();
-  } catch {
-    return null;
+    return { actor: await requireActor() };
+  } catch (error) {
+    if (error instanceof NotAllowed) return { refusal: t(refusalKey(error)) };
+    return { refusal: t("somethingWrong") };
   }
 }
 
 /** Dark or light, for this browser. The root layout reads the cookie. */
 export async function setThemeAction(theme: unknown): Promise<ActionResult> {
   const t = await getTranslations("common");
-  const actor = await actorOrNull();
-  if (!actor) return { ok: false, error: t("notAllowed") };
+  const { actor, refusal } = await actorOrRefusal();
+  if (!actor) return { ok: false, error: refusal };
 
   const parsed = themeSchema.safeParse(theme);
   if (!parsed.success) return { ok: false, error: t("invalid") };
@@ -87,8 +99,8 @@ export async function setLocaleAction(
   pathname: unknown,
 ): Promise<ActionResult<{ href: string }>> {
   const t = await getTranslations("common");
-  const actor = await actorOrNull();
-  if (!actor) return { ok: false, error: t("notAllowed") };
+  const { actor, refusal } = await actorOrRefusal();
+  if (!actor) return { ok: false, error: refusal };
 
   const wanted = localeSchema.safeParse(locale);
   const target = pathnameSchema.safeParse(pathname);

@@ -18,7 +18,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { violatedUnique } from "@/lib/pg-errors";
@@ -41,7 +41,7 @@ async function guard<T>(
   try {
     return await run(await requireActor());
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("contacts action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }

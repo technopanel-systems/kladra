@@ -41,7 +41,13 @@ export type SessionUser = {
 /** Result shape every server action returns; forms read `error` and `fieldErrors`. */
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T }
-  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+  | {
+      ok: false;
+      error: string;
+      fieldErrors?: Record<string, string>;
+      /** Set by `useWireGuard` alone: the request never reached the server. */
+      reason?: "unreachable";
+    };
 
 /** Live-update event pushed over SSE to the users it concerns. */
 export type LiveEvent =

@@ -5,7 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { cities, companies, contacts, projects, quotations } from "@/db/schema";
-import { requireActor, seesAll } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor, seesAll } from "@/lib/authz";
 import { ownsCompanies } from "@/lib/floor";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
@@ -60,9 +60,11 @@ export async function searchAllAction(q: string): Promise<ActionResult<SearchRes
   let actor: SessionUser;
   try {
     actor = await requireActor();
-  } catch {
+  } catch (error) {
     const t = await getTranslations("common");
-    return { ok: false, error: t("notAllowed") };
+    // A session that has ended says so, not "you are not allowed" (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   const parsed = querySchema.safeParse(q);

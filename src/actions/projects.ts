@@ -12,14 +12,15 @@
  * that ends someone's work reaches them with its written reason (S53).
  */
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, projects } from "@/db/schema";
 import { assertCompanyMine, assertProjectMine } from "@/lib/activities";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
+import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
@@ -33,7 +34,7 @@ async function guard<T>(
   try {
     return await run(await requireActor());
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("projects action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }
@@ -111,6 +112,36 @@ export async function createProjectAction(
     const sqm = parseSqm(input.expectedSqm);
     if (sqm === "invalid") {
       return { ok: false, error: t("sqmInvalid"), fieldErrors: { expectedSqm: t("sqmInvalid") } };
+    }
+
+    // Pressed twice is one project (D134): the same name at the same company
+    // inside two minutes is the Save whose answer the wire lost — unless the
+    // metres, the follow-up or the note changed, which makes it the rep's
+    // correction to a Save he was told had not landed, and a new project.
+    const [candidate] = await db
+      .select({
+        id: projects.id,
+        expectedSqm: projects.expectedSqm,
+        nextFollowUp: projects.nextFollowUp,
+        notes: projects.notes,
+      })
+      .from(projects)
+      .where(
+        and(
+          eq(projects.companyId, input.companyId),
+          eq(projects.name, input.name),
+          isNull(projects.archivedAt),
+          gte(projects.createdAt, sinceTwinWindow()),
+        ),
+      )
+      .limit(1);
+    if (
+      candidate &&
+      sameField(sqm, candidate.expectedSqm) &&
+      sameField(input.nextFollowUp, candidate.nextFollowUp) &&
+      sameField(input.notes, candidate.notes)
+    ) {
+      return { ok: true, data: { projectId: candidate.id } };
     }
 
     const projectId = await db.transaction(async (tx) => {

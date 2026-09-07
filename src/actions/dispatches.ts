@@ -36,7 +36,7 @@ import {
   shipmentMethods,
   users,
 } from "@/db/schema";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { mayQuote, SELLING_ROLES } from "@/lib/floor";
@@ -55,7 +55,7 @@ async function guard<T>(
   try {
     return await run(await requireActor(...roles));
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("dispatches action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }

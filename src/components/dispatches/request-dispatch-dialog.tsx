@@ -19,7 +19,7 @@ import {
   sendingSqm,
   type SendDraft,
 } from "@/components/dispatches/dispatch-items";
-import { useSubmitAction } from "@/components/ui-ext/action-outcome";
+import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useDispatchLookups } from "@/components/ui-ext/form-lookups";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
@@ -87,6 +87,7 @@ export function RequestDispatchDialog({
 }) {
   const t = useTranslations();
   const router = useRouter();
+  const guarded = useWireGuard();
   const [open, setOpen] = useState(false);
   const { lookups, failed } = useDispatchLookups(open);
   const [items, setItems] = useState<RemainingItem[] | null>(null);
@@ -124,7 +125,7 @@ export function RequestDispatchDialog({
   useEffect(() => {
     if (!open || !active) return;
     let cancelled = false;
-    remainingItemsAction(active, existing?.dispatchId).then((outcome) => {
+    guarded(remainingItemsAction)(active, existing?.dispatchId).then((outcome) => {
       if (cancelled) return;
       if (outcome.ok && outcome.data) setItems(outcome.data);
       else setItemsFailed(true);
@@ -133,7 +134,7 @@ export function RequestDispatchDialog({
     // is not an error the rep should see — the fields are simply empty, which
     // is what they were before this existed (D81).
     if (mode === "request") {
-      lastDispatchAction(active).then((outcome) => {
+      guarded(lastDispatchAction)(active).then((outcome) => {
         if (cancelled) return;
         setLast(outcome.ok ? (outcome.data ?? null) : null);
       });
@@ -141,7 +142,7 @@ export function RequestDispatchDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, active, existing?.dispatchId, mode]);
+  }, [open, active, existing?.dispatchId, mode, guarded]);
 
   const onSaved = useCallback(
     (dispatchId: string | undefined) => {

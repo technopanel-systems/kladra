@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
+import { useId, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Input } from "@/components/ui/input";
@@ -66,25 +67,35 @@ export function PromptDialog({
   /** Runs after the action succeeds — refresh, or navigate away. */
   onDone?: () => void;
 }) {
+  const guarded = useWireGuard();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [formRefusal, setFormRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function onOpenChange(next: boolean) {
     if (pending) return;
     setOpen(next);
     setValue(next ? (initialValue ?? "") : "");
-    if (!next) setRefusal(null);
+    if (!next) {
+      setRefusal(null);
+      setFormRefusal(null);
+    }
   }
 
   function confirm() {
     startTransition(async () => {
-      const result = await onConfirm(value.trim());
+      // Guarded: no answer at all is a refusal too, not the error card (D132).
+      const result = await guarded(onConfirm)(value.trim());
       if (!result.ok) {
-        // At the field, not only in a toast: the field is where the eye is and
-        // where the fix has to happen.
-        setRefusal(result.fieldErrors ? Object.values(result.fieldErrors)[0] : result.error);
+        // At the field when the field is what was refused — that is where the
+        // eye is and where the fix has to happen — and in the footer when the
+        // whole attempt was, so a server that was not reached does not paint
+        // the number red (D132).
+        const atField = result.fieldErrors ? Object.values(result.fieldErrors)[0] : null;
+        setRefusal(atField ?? null);
+        setFormRefusal(atField ? null : result.error);
         return;
       }
       toast.success(successMessage);
@@ -93,8 +104,9 @@ export function PromptDialog({
     });
   }
 
-  const fieldId = "prompt-field";
-  const errorId = "prompt-error";
+  const ids = useId();
+  const fieldId = `${ids}-field`;
+  const errorId = `${ids}-error`;
 
   return (
     <ResponsiveDialog
@@ -121,7 +133,11 @@ export function PromptDialog({
               <Textarea
                 id={fieldId}
                 rows={3}
-                disabled={pending}
+                // A reason is prose in whichever language it was typed in.
+                dir="auto"
+                // Read-only while it saves, not disabled: the caret stays, so
+                // a refused answer is corrected where the finger already is.
+                readOnly={pending}
                 value={value}
                 placeholder={placeholder}
                 aria-invalid={refusal ? true : undefined}
@@ -140,7 +156,7 @@ export function PromptDialog({
                 // A SMAC number is a Latin run and a reason is Arabic prose: each
                 // takes its own direction, on either locale's page (DESIGN §5).
                 dir="auto"
-                disabled={pending}
+                readOnly={pending}
                 autoComplete="off"
                 // A SMAC number or a new password, never prose: nothing to
                 // correct and nothing to suggest.
@@ -161,6 +177,7 @@ export function PromptDialog({
 
         </FormBody>
         <FormFooter
+          error={formRefusal}
           pending={pending}
           onCancel={() => onOpenChange(false)}
           confirmLabel={confirmLabel}

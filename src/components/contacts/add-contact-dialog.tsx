@@ -11,7 +11,7 @@ import {
   EMPTY_CONTACT,
   type ContactDraft,
 } from "@/components/contacts/contact-fields";
-import { useActionOutcome } from "@/components/ui-ext/action-outcome";
+import { useActionOutcome, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -111,10 +111,11 @@ function ContactForm({
   onCancel: () => void;
 }) {
   const t = useTranslations();
+  const guarded = useWireGuard();
   const [state, formAction, pending] = useActionState<
     ActionResult<{ contactId: string }> | null,
     FormData
-  >(createContactAction, null);
+  >(guarded(createContactAction), null);
 
   const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
   const [isMain, setIsMain] = useState(false);

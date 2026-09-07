@@ -1,0 +1,30 @@
+{
+  "rep /day": {
+    "hydrated": 3156,
+    "bytes": 543042
+  },
+  "rep /companies": {
+    "hydrated": 3498,
+    "bytes": 595817
+  },
+  "rep /quotations": {
+    "hydrated": 3185,
+    "bytes": 535172
+  },
+  "coordinator /queue": {
+    "hydrated": 3183,
+    "bytes": 536887
+  },
+  "coordinator /quotations": {
+    "hydrated": 3320,
+    "bytes": 554222
+  },
+  "manager /team": {
+    "hydrated": 2873,
+    "bytes": 478128
+  },
+  "manager /companies": {
+    "hydrated": 3353,
+    "bytes": 589367
+  }
+}

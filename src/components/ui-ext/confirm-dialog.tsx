@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import type { ActionResult } from "@/lib/types";
@@ -63,13 +64,15 @@ export function ConfirmDialog({
   /** So a caller can clear what it asked when the dialog closes. */
   onOpenChange?: (open: boolean) => void;
 }) {
+  const guarded = useWireGuard();
   const [open, setOpen] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function confirm() {
     startTransition(async () => {
-      const result = await onConfirm();
+      // Guarded: no answer at all is a refusal too, not the error card (D132).
+      const result = await guarded(onConfirm)();
       if (!result.ok) {
         const atField = result.fieldErrors ? Object.values(result.fieldErrors)[0] : null;
         setRefusal(atField ?? null);

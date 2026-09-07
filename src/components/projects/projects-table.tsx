@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { setProjectFollowUpAction } from "@/actions/projects";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
@@ -486,6 +487,7 @@ export function ProjectSheet({
   const close = useCloseDrawer();
   const lossLabel = useLossReasonLabel();
   const [saving, startTransition] = useTransition();
+  const guarded = useWireGuard();
   // The picked date shows at once and the server stays the source of truth: the
   // optimistic value falls back to the prop when the transition settles, so a
   // refused save, a Log entry that moved the date, or somebody else's edit
@@ -497,7 +499,7 @@ export function ProjectSheet({
   function pick(next: string | null) {
     startTransition(async () => {
       showDay(next);
-      const outcome = await setProjectFollowUpAction(projectId, next);
+      const outcome = await guarded(setProjectFollowUpAction)(projectId, next);
       if (!outcome.ok) {
         toast.error(outcome.error);
         return;

@@ -33,6 +33,10 @@ export async function ViewingBanner({ user }: { user: SessionUser }) {
         {t("viewAs.banner", { name: personNameFrom(user, locale), role: t(`common.${user.role}`) })}
       </span>
       <span className="text-xs opacity-80">{t("common.readOnly")}</span>
+      {/* The other standing exception (DESIGN §5): void, ends in a redirect,
+          and this banner renders on the server, so the form works with no
+          JavaScript at all — which is the point of it being a form. */}
+      {/* eslint-disable-next-line no-restricted-syntax */}
       <form action={stopViewingFormAction} className="ms-auto">
         <Button type="submit" size="sm" variant="outline">
           {t("viewAs.stop")}

@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { setMainContactAction } from "@/actions/contacts";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 
@@ -22,10 +23,11 @@ export function MakeMainButton({ contactId, name }: { contactId: string; name: s
   const t = useTranslations();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   function makeMain() {
     startTransition(async () => {
-      const result = await setMainContactAction(contactId);
+      const result = await guarded(setMainContactAction)(contactId);
       if (!result.ok) {
         toast.error(result.error);
         return;

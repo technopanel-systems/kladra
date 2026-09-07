@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { markProjectLostAction } from "@/actions/projects";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
   const [detail, setDetail] = useState("");
   const [errors, setErrors] = useState<{ reason?: string; detail?: string }>({});
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   const needsDetail = reason === "other";
 
@@ -81,7 +83,7 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
       // One text column holds the answer (`projects.lost_reason`): the code for
       // the nine, the rep's own words for "Other". Both read back correctly —
       // a known code is translated, anything else is shown verbatim.
-      const outcome = await markProjectLostAction(projectId, needsDetail ? trimmed : reason);
+      const outcome = await guarded(markProjectLostAction)(projectId, needsDetail ? trimmed : reason);
       if (!outcome.ok) {
         setErrors({ reason: outcome.fieldErrors?.reason });
         toast.error(outcome.error);

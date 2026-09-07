@@ -6,6 +6,7 @@ import { useFormStatus } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { signOutAction } from "@/actions/auth";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { setLocaleAction, setThemeAction } from "@/actions/prefs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
   const locale = useLocale();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   // A refused action says so. Both of these can fail for a reason the person
   // can act on — most often a session that expired while the menu sat open —
@@ -53,7 +55,7 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
   function chooseTheme(value: string) {
     if (value === theme) return;
     startTransition(async () => {
-      const result = await setThemeAction(value);
+      const result = await guarded(setThemeAction)(value);
       if (!result.ok) toast.error(result.error);
     });
   }
@@ -61,7 +63,7 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
   function chooseLocale(value: string) {
     if (value === locale) return;
     startTransition(async () => {
-      const result = await setLocaleAction(value, pathname);
+      const result = await guarded(setLocaleAction)(value, pathname);
       if (!result.ok) {
         toast.error(result.error);
         return;
@@ -133,6 +135,12 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
         </DropdownMenuRadioGroup>
 
         <DropdownMenuSeparator />
+        {/* One of the two standing exceptions to the guard (DESIGN §5): it
+            returns nothing and ends in a redirect, so there is no result to
+            turn a refusal into, and nothing typed is on the screen to lose.
+            With no signal the shell becomes the error card, which offers Try
+            again — the right answer for a press that saved nothing. */}
+        {/* eslint-disable-next-line no-restricted-syntax */}
         <form action={signOutAction}>
           <SignOutItem label={t("common.signOut")} />
         </form>

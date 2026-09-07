@@ -24,7 +24,9 @@
     "restore": "tsx scripts/restore.ts",
     "db:create-test": "tsx scripts/db-create-test.ts",
     "icons": "tsx scripts/icons.ts",
-    "check:build-env": "tsx scripts/build-env-check.ts"
+    "check:build-env": "tsx scripts/build-env-check.ts",
+    "measure:reads": "tsx scripts/reads.ts",
+    "measure:speed": "tsx scripts/speed.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",

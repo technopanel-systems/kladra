@@ -17,7 +17,7 @@
 
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { findPossibleDuplicates } from "@/lib/companies";
 import {
   lastDispatchForQuotation,
@@ -111,8 +111,11 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
   const t = await getTranslations("common");
   try {
     await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   try {
@@ -173,8 +176,11 @@ export async function quotationLookupsAction(): Promise<ActionResult<QuotationLo
   const t = await getTranslations("common");
   try {
     await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   try {
@@ -222,8 +228,11 @@ export async function dispatchLookupsAction(): Promise<ActionResult<DispatchLook
   const t = await getTranslations("common");
   try {
     await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   try {
@@ -260,8 +269,11 @@ export async function lastQuotationAction(
   let actor;
   try {
     actor = await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   const parsed = z.uuid().safeParse(companyId);
@@ -270,8 +282,11 @@ export async function lastQuotationAction(
   try {
     const last = await lastQuotationForCompany(actor, parsed.data);
     return last ? { ok: true, data: last } : { ok: true };
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 }
 
@@ -293,8 +308,11 @@ export async function lastDispatchAction(
   let actor;
   try {
     actor = await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   const parsed = z.uuid().safeParse(quotationId);
@@ -303,8 +321,11 @@ export async function lastDispatchAction(
   try {
     const last = await lastDispatchForQuotation(actor, parsed.data);
     return last ? { ok: true, data: last } : { ok: true };
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 }
 
@@ -324,8 +345,11 @@ export async function remainingItemsAction(
   let actor;
   try {
     actor = await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   const parsed = z
@@ -342,8 +366,11 @@ export async function remainingItemsAction(
       ok: true,
       data: await remainingOnQuotation(parsed.data.quotationId, parsed.data.dispatchId),
     };
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 }
 
@@ -373,8 +400,11 @@ export async function duplicateCheckAction(
   let actor: Awaited<ReturnType<typeof requireActor>>;
   try {
     actor = await requireActor();
-  } catch {
-    return { ok: false, error: t("notAllowed") };
+  } catch (error) {
+    // A session that has ended says so, and a failure that is not a refusal at
+    // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
   }
 
   const parsed = duplicateInput.safeParse({ name, phone, country });

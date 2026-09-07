@@ -18,7 +18,7 @@ import {
   type LineDraft,
 } from "@/components/quotations/quotation-lines";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
-import { useSubmitAction } from "@/components/ui-ext/action-outcome";
+import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
@@ -178,6 +178,7 @@ function RequestForm({
   const { submit, pending, error, fieldErrors } = useSubmitAction(ACTIONS[mode], (data) =>
     onSaved(data?.quotationId),
   );
+  const guarded = useWireGuard();
 
   // The picker carries both ids in one option, so choosing a project chooses
   // its company too. When the caller already knew them, it is not rendered.
@@ -206,7 +207,7 @@ function RequestForm({
   useEffect(() => {
     if (mode !== "request" || !company) return;
     let cancelled = false;
-    lastQuotationAction(company).then((outcome) => {
+    guarded(lastQuotationAction)(company).then((outcome) => {
       if (!cancelled && outcome.ok && outcome.data) {
         setAnswer({ companyId: company, last: outcome.data });
       }
@@ -214,7 +215,7 @@ function RequestForm({
     return () => {
       cancelled = true;
     };
-  }, [mode, company]);
+  }, [mode, company, guarded]);
 
   // The answer says which company it is about, so changing the project in the
   // picker takes the offer away with it rather than leaving the last customer's

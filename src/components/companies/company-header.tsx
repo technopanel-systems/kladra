@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { setCompanyFollowUpAction } from "@/actions/companies";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
 import { HandOverDialog } from "@/components/companies/hand-over-dialog";
@@ -152,6 +153,7 @@ export function CompanyHeader({
   const router = useRouter();
   const ids = useId();
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
   const [day, setDay] = useState<string | null>(company.nextFollowUp);
 
   const followUpLabelId = `${ids}-follow-up`;
@@ -168,7 +170,7 @@ export function CompanyHeader({
     const previous = day;
     setDay(next);
     startTransition(async () => {
-      const result = await setCompanyFollowUpAction(company.id, next);
+      const result = await guarded(setCompanyFollowUpAction)(company.id, next);
       if (!result.ok) {
         setDay(previous);
         toast.error(result.error);

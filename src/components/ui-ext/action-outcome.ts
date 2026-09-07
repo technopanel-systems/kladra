@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -82,6 +83,46 @@ export type Refusal = {
   answer: unknown;
 };
 
+/**
+ * Wraps a server action so that a call the wire refused answers as a refusal.
+ *
+ * A server action's promise has three ends: a result that is ok, a result that
+ * refuses (every action guards its own work and answers with the app's
+ * sentence), and a rejection when nothing came back at all — no signal in a
+ * lobby, a deploy in the second Save was pressed. React 19 hands that third
+ * end to the nearest error boundary, whether the action was a form's
+ * `useActionState` or awaited inside `startTransition`: the whole screen
+ * became the error card with the rep's sentence still inside the form it
+ * replaced (P11I, D132).
+ *
+ * So no client code calls an action bare. `const guarded = useWireGuard()`,
+ * then `guarded(someAction)(…)` — the rejection becomes `{ ok: false, error:
+ * common.unreachable }`, which every site already shows where the eye is (the
+ * footer, under the question, a toast), with the form as it was and Save
+ * alive. `tests/unhappy.spec.ts` cuts the wire under three of them.
+ */
+export function useWireGuard(): <A extends unknown[], T>(
+  action: (...args: A) => Promise<ActionResult<T>>,
+) => (...args: A) => Promise<ActionResult<T>> {
+  const t = useTranslations("common");
+  const unreachable = t("unreachable");
+  const somethingWrong = t("somethingWrong");
+  return useCallback(
+    <A extends unknown[], T>(action: (...args: A) => Promise<ActionResult<T>>) =>
+      (...args: A) =>
+        action(...args).catch(
+          (error: unknown): ActionResult<T> =>
+            // A rejection carrying a digest was thrown ON the server, which was
+            // therefore reached and may have written; only the bare failure is
+            // the wire, and only that one may claim nothing was saved.
+            typeof error === "object" && error !== null && "digest" in error
+              ? { ok: false, error: somethingWrong }
+              : { ok: false, error: unreachable, reason: "unreachable" },
+        ),
+    [unreachable, somethingWrong],
+  );
+}
+
 export function useSubmitAction<T>(
   action: (prev: ActionResult<T> | null, form: FormData) => Promise<ActionResult<T>>,
   onSuccess: (data: T | undefined) => void,
@@ -90,6 +131,7 @@ export function useSubmitAction<T>(
   const [refused, setRefused] = useState<
     { error: string; fieldErrors?: Record<string, string> } | null
   >(null);
+  const guarded = useWireGuard();
 
   // Read through a ref for the same reason as above: next-intl's router makes a
   // new object every render, so anything closing over it changes identity.
@@ -102,7 +144,8 @@ export function useSubmitAction<T>(
     (form: FormData) => {
       setRefused(null);
       startTransition(async () => {
-        const result = await action(null, form);
+        // Guarded: a call the wire refused is a refusal like any other (D132).
+        const result = await guarded(action)(null, form);
         if (!result.ok) {
           setRefused({ error: result.error, fieldErrors: result.fieldErrors });
           return;
@@ -111,7 +154,7 @@ export function useSubmitAction<T>(
         run.current(result.data);
       });
     },
-    [action],
+    [action, guarded],
   );
 
   const fieldErrors = refused?.fieldErrors ?? {};

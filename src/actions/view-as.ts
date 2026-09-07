@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, users } from "@/db/schema";
-import { NotAllowed, requireRealActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireRealActor } from "@/lib/authz";
 import type { ActionResult } from "@/lib/types";
 import { mayViewAs, VIEW_AS_COOKIE } from "@/lib/view-as";
 
@@ -37,7 +37,7 @@ export async function startViewingAction(
   try {
     admin = await requireRealActor("admin");
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     throw error;
   }
   // Belt and braces: the role check above is the gate, and this is the rule it
@@ -90,7 +90,7 @@ export async function stopViewingAction(): Promise<ActionResult<undefined>> {
   try {
     admin = await requireRealActor("admin");
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     throw error;
   }
 

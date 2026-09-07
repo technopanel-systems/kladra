@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { signInAction } from "@/actions/auth";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +31,15 @@ const ERROR_ID = "login-error";
 export function LoginForm() {
   const t = useTranslations();
   const [email, setEmail] = useState("");
+  const guarded = useWireGuard();
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
-    signInAction,
+    guarded(signInAction),
     null,
   );
   const failed = state !== null && !state.ok;
+  // The fields are wrong only when the server said so; a server that was not
+  // reached says nothing about them.
+  const wrong = state !== null && !state.ok && state.reason !== "unreachable";
 
   return (
     // noValidate: the browser's own bubble is in the browser's language, not
@@ -54,7 +59,7 @@ export function LoginForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          aria-invalid={failed || undefined}
+          aria-invalid={wrong || undefined}
           aria-describedby={failed ? ERROR_ID : undefined}
           // An address is Latin script and reads left to right in both locales.
           dir="ltr"
@@ -73,7 +78,7 @@ export function LoginForm() {
           // A password is typed in Latin, like the address above it. Left to
           // the page it inherited RTL and started its dots from the right.
           dir="ltr"
-          aria-invalid={failed || undefined}
+          aria-invalid={wrong || undefined}
           aria-describedby={failed ? ERROR_ID : undefined}
           className="h-9"
         />
@@ -84,12 +89,12 @@ export function LoginForm() {
           is centred on the canvas the wordmark jumped UP eighteen pixels and
           the language link jumped DOWN eighteen — the page moving under
           somebody at the exact moment they are reading why they were refused
-          (D67). One line is enough: the sentence is the same one every time
-          and fits on one at 375. */}
+          (D67). Two lines: the credentials sentence fits on one at 375, and
+          the wire's — "could not reach the server" (D132) — takes two. */}
       <p
         id={ERROR_ID}
         role="alert"
-        className="min-h-5 text-sm leading-5 text-destructive"
+        className="min-h-10 text-sm leading-5 text-destructive"
         dir="auto"
       >
         {failed ? state.error : null}

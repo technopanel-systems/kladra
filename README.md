@@ -70,6 +70,14 @@ never runs it.
 
 ## Tests and checks
 
+Two measurements sit beside the tests and run by hand, against the production build on 3102
+(`npx next start -H 127.0.0.1 -p 3102`, stopped again before any `npm run build`): `npm run
+measure:reads -- --check` counts what every screen asks the database and refuses a screen that grew
+past `scripts/reads.baseline.json`; `npm run measure:speed -- --check` loads the main screens on a
+slowed phone and refuses one that got a fifth slower or a tenth heavier than
+`scripts/speed.baseline.json`. The `--` is npm's own, not ours: without it npm keeps the flag. Run
+the one that matches the change before committing it, and `-- --write` to move a baseline on purpose.
+
 ```bash
 npm run typecheck && npm run lint && npm run build
 npm run check:messages        # every key in both locales, every key used, no gendered Arabic

@@ -112,7 +112,7 @@
       - [x] G Identity, motion and feel audited as one thing; loading, empty, error and
             offline states on every screen; reduced-motion honoured
       - [x] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
-      - [ ] I Speed and reliability, measured: first paint on a mid phone, ten thousand
+      - [x] I Speed and reliability, measured: first paint on a mid phone, ten thousand
             rows, queries that grow, the unhappy paths — nothing silent, nothing lost
       - [ ] J What a good CRM has that Kladra does not: proposed freely, then deleted down
             to what names a person, a day and what it replaces; the rejected list kept
@@ -166,10 +166,24 @@ commit (D128–D130): the four parked findings closed — one phone line named o
 lint, every form a bottom sheet with Save lowest and a thumb tall, 44px on everything a thumb
 presses — and what walking the four flows at 375 found on top: the Add project sheet named no
 company, the library's sheet slid in 500 ms, and a sheet with words in it could be swiped away
-(§5 #108–#127). Next is box 11I, speed and reliability measured: first paint on a mid phone,
-the round-trip count parked in 11C (§5 #71), ten thousand rows, the unhappy paths; the "picker
-race" of the 11G gate turned out to be the trigger swap (#127) and is closed. The dev
-database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
+(§5 #108–#127). Box 11I is done in one commit (D131–D135): two harnesses with a baseline the
+next change is held to — `measure:reads` (459 → 400 statements over 43 screens once the session
+user and the calendar were once-per-request reads) and `measure:speed` (a cold screen live in
+2.9–3.5 s on a slowed phone for 467–582 kB once the fourth font weight was dropped) — and the unhappy
+paths walked with the wire cut: a rejected action was the error card with the words inside it
+and is one guard on every call now, a Save pressed twice after a lost answer is one write, a
+session that ended says so (§5 #128–#135). The figures measured and not acted on — the 500 kB
+list document, the twenty prefetches a screen fires, the two request writes with no twin guard —
+are under "Left" in §5. Two critic passes ran over the slice and both were acted on: the first
+found the guard's holes (§5 #136–#138), the second found that the speed harness could print green
+having measured nothing and that an interrupted reads run left the whole container logging every
+statement (§5 #139–#141).
+
+Next is box 11J, the last of Phase 11: what a good CRM has that Kladra does not — proposed
+freely, then deleted down to what names a person, a day and what it replaces; the rejected list
+kept. Two things are already parked for it (§5 #121: four hand-drawn search boxes; the quotations
+chips that wrap round the list/board switch at 375). The dev database is seeded at volume
+(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -881,6 +895,20 @@ wears the light theme offline (`tests/pwa.spec.ts`, D125); the board's open card
 (`tests/board.spec.ts`, D123). A bottom sheet on a phone slides in 250, not the library's 500
 (D129). Reads only.
 
+**The wire cut** — `tests/unhappy.spec.ts`
+Faisal types a sentence into Log and the server cannot be reached when he presses Save: the
+app says so, the sentence is still in the box, Save is alive, and the screen behind is still the
+drawer, not the error card; the wire comes back and the same press writes it into the
+company's history (D132). The same with a company half-filled — the footer says it and the
+fields keep their values — and with the archive question — the sentence is the toast a
+confirmation uses for every whole-form refusal, and the question stays open with its reason.
+Then the answer is lost instead of the request: the row lands, Faisal is told nothing did, and
+his second press finds the row instead of making a twin — one row in the table (D134). Then
+his session ends while he types: the refusal says so and keeps the words, and the screen behind
+is still the drawer (D135). Last, the entry filed on the wrong day: he unfiles it and writes the
+same words again, and the row that is off the floor does not answer for the one replacing it
+(D70 with D134). Six tests, both locales; writes four activities per locale, one of them unfiled.
+
 **One hand at 375** — `tests/thumb.spec.ts`
 At 767 wide the rail is gone and Add company opens as a bottom sheet; at 768 the rail is there
 and it opens as a dialog — the shell and the forms change on the same pixel (D128). At 375
@@ -939,8 +967,45 @@ manager's day 48 statements and 29 ms of database time; rep's day 32 and 22 ms; 
 log_min_duration_statement = 0` and a `%d` in `log_line_prefix` on the kladra database, one
 marker statement per screen, `docker logs kladra-db-1 --since`, then EXPLAIN (ANALYZE, BUFFERS)
 of each distinct statement with the parameters the log recorded; both settings reset after.
-11I builds the repeatable harness and re-measures after any change to a read; a screen may not
-grow past these numbers without a sentence here saying why.
+11I built the repeatable harness — `npm run measure:reads` (`scripts/reads.ts`), the same method
+scripted: logging on for the run, a marker statement either side of each screen fetched with a
+real session cookie, the container's log cut at the markers, four roles, forty-three screens
+including one open drawer per list — and re-measured on 7 Sep 2026 against the same floor.
+It counts the server's rendering of the document alone, nothing the browser asks for after
+(the bell's count, the live channel), which is why its figures sit under the ones above: 459
+statements over 43 screens before P11I-1, 400 after the session user and the calendar became
+once-per-request reads (D131) — the rep's day 20 → 19, the manager's team screen 29 → 27, the
+open company drawer 25 → 23, every screen at least one fewer. Worst statement 4.3 ms, the
+customer list's company query with its standing figures; no screen over 17 ms of database
+time. `scripts/reads.baseline.json` holds the count per screen; `npm run measure:reads -- --check`
+refuses a screen that asks more than its baseline (the bare `--check` is eaten by npm itself). A screen may not grow past these numbers
+without a sentence here saying why, and then `--write`.
+
+**Speed on a mid phone** (D133) — `npm run measure:speed` (`scripts/speed.ts`) against the
+production build on 3102: Chromium with the CPU four times slower and a slow 4G (1.6 Mb/s
+down, 150 ms each way — Lighthouse's "mobile"), 375 by 812, signed in through the real form in
+a throwaway context and only the cookie carried into a fresh one, so nothing is cached; then
+the same screen warm. Medians of three, measured 7 Sep 2026 after the fourth font weight went
+(#131), in milliseconds and kilobytes over the wire:
+
+| screen | paint | largest | live | cold kB | script | warm live | warm kB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| rep, day | 1460 | 1552 | 3156 | 530 | 286 | 365 | 61 |
+| rep, companies | 1580 | 2148 | 3498 | 582 | 308 | 401 | 86 |
+| rep, quotations | 1300 | 1512 | 3185 | 523 | 265 | 373 | 76 |
+| coordinator, queue | 1316 | 1316 | 3183 | 524 | 269 | 429 | 68 |
+| coordinator, quotations | 1164 | 1680 | 3320 | 541 | 265 | 358 | 86 |
+| manager, team | 1216 | 1216 | 2873 | 467 | 237 | 378 | 44 |
+| manager, companies | 1564 | 2120 | 3353 | 576 | 308 | 388 | 82 |
+
+"Live" is the `html[data-hydrated]` mark the suite waits for. The document itself is 37–78 kB
+compressed and 500 kB decoded on the volume floor; the rest of a cold load is script (237–308
+kB) and fonts with styles (about 160 kB, five font files preloaded). Before the font weight
+went the same screens were 500–611 kB and live in 3.2–3.8 s. `scripts/speed.baseline.json`
+holds the cold "live" and bytes per screen; `--check` refuses a fifth slower or a tenth heavier.
+Two traps the script documents in its header: tsx wraps every named function in `__name`, which
+the browser lacks, so browser-side code has no named inner functions; and `request.sizes()`
+reads a cache hit as a negative number, so bytes come from the page's own resource timing.
 
 **The flow, counted** — baseline for 11D
 Walked 6 Sep 2026 in the code, creation to oversight, the shortest honest path a person who
@@ -1306,8 +1371,8 @@ P10d before this list was written (D83).
   Fixed in P11A-12: both boxes are `Prose`, and `one-look` now refuses a hand-laid typed block
   (`whitespace-pre-*` outside `prose.tsx`).
 
-- [ ] 71 **One screen asks the database forty-eight questions, and every screen reads the session
-  row seven times over.** Measured in 11C-2 (D107): the manager's day is 48 statements — seven of
+- [x] 71 **One screen asks the database forty-eight questions, and every screen reads the session
+  row seven times over.** Verified by the harness and halved where it was repetition: the session user and the calendar are once-per-request reads (P11I-1, D131); the rest of a screen's count is one statement per figure, each under 4 ms, and stays. `npm run measure:reads` keeps the baseline. Measured in 11C-2 (D107): the manager's day is 48 statements — seven of
   them the session, six the non-working-days calendar, one per band — the rep's day 32, and each
   statement is under 4 ms, so what a screen costs is round trips, not work. For 11I: read the
   session once per request and let a screen's bands share one calendar; then re-measure against
@@ -1746,3 +1811,126 @@ development build measures a redirected or missing page with a timestamp Chromiu
 ("cannot have a negative time stamp"), and nine specs failed on it in one warm run without a
 line of the app in the trace; the fixture names that one message and no other, and a
 production build never emits it (`tests/helpers/i18n.ts`).
+
+Speed and reliability, measured (P11I). Two harnesses first — what every screen asks the
+database (`npm run measure:reads`) and what a mid phone pays to draw the main screens
+(`npm run measure:speed`) — both against the production build, both keeping a baseline file
+the next change is held to; then the reads halved where they were repetition, and the unhappy
+paths walked with the wire cut.
+
+- [x] 128 **Every screen read the signed-in user twice and the calendar once per band.** Measured
+  by the harness (459 statements over 43 screens on the volume floor), fixed in P11I-1 (D131).
+  `getRealUser`, `getUser` and `listNonWorkingDays` are React `cache` functions now: 400
+  statements over the same 43 screens, every screen at least one fewer, the team screen two.
+  What remains is one statement per figure, each under 4 ms.
+- [x] 129 **A write with no signal became the error card, with the words inside it.** Found reading
+  the submit paths for the unhappy walk, fixed in P11I-3 (D132). Every client call of a server
+  action — the submit helper, the four forms and the sign-in on `useActionState`, fourteen
+  `startTransition` sites — awaited it bare; a rejected call, not a refused one, went to the
+  boundary. The first fix caught it in four places and the company form still became the error
+  card, because a form's action rejects the same way; the cause is one guard, `useWireGuard`,
+  twenty-three calls go through it, and a lint rule refuses a bare one. `tests/unhappy.spec.ts`
+  cuts the wire under a log, the company form and the archive question.
+- [x] 130 **Nobody knew what a rep's phone paid to draw a screen.** The 11C measurement was of
+  the database alone; the phone was a feeling. P11I-4 built `npm run measure:speed` (D133) and
+  measured: a cold screen is live in 2.9–3.5 s on a slow 4G with the CPU held four times slower,
+  for 467–582 kB, of which 237–308 kB is script and about 160 kB fonts and styles. The first two
+  cuts of the script lied — "cold" had the sign-in page's chunks in the cache (65 kB for the day
+  screen), the hydration mark read 0 because tsx's `__name` wrapper threw silently inside the
+  init script, and `request.sizes()` reported cache hits as negative bytes — and each lie is a
+  sentence in the script's header now. The baseline is written; `--check` holds the next change.
+- [x] 131 **Four font weights shipped for one bold letter.** Found by the figures in #130: seven
+  font files preloaded on every cold load, and weight 700 used once, on the brand mark. Fixed in
+  P11I-4: three weights, the mark is 600, one file fewer per family on every first visit —
+  re-measured, every cold screen is 35–40 kB lighter and live about 300 ms sooner.
+- [x] 132 **A Save whose answer the wire lost made a twin.** Found walking the unhappy paths after
+  #129: with the sentence "nothing was saved" on the screen the rep presses Save again, and the
+  log — or the company, or the project — that had landed was written twice. Fixed in P11I-5
+  (D134): the creating actions answer the same words from the same person to the same record
+  inside two minutes with the row that exists (`src/lib/writes.ts`). `tests/unhappy.spec.ts` lets
+  the request through, drops the answer, and counts one row.
+- [x] 133 **A session that ended mid-form said "you are not allowed to do that."** Found reading
+  `NotAllowed`: it carried the reason (`signedOut`) and every guard threw the reason away. Fixed in
+  P11I-5 (D135): `refusalKey` in `src/lib/authz.ts`, nine guards answer through it, and the
+  sentence says the session ended, nothing was saved, and the way back — sign in again in a new
+  tab, press Save here once more. `tests/unhappy.spec.ts` deletes the page's own session row
+  mid-form and reads the sentence with the words still in the box.
+- [x] 134 **The prompt dialog painted the number red when the server was not reached.** Found by
+  the guidelines review: every whole-form refusal was shown as the field's, with `aria-invalid`
+  and the ring. Fixed in P11I-5: a field's refusal at the field, a whole attempt's in the footer,
+  the field read-only rather than disabled while it saves so the caret stays, ids from `useId`,
+  and `dir="auto"` on the reason.
+- [x] 135 **The sign-in card jumped when the server was out of reach.** Found by the guidelines
+  review: the error slot was one line, sized for the credentials sentence (D67), and the wire's
+  sentence takes two at 375. Fixed in P11I-5: two lines are reserved, and the fields are marked
+  invalid only when the server said they were.
+- [x] 136 **The twin swallowed the correction it was meant to protect.** Found by the critic over
+  the 11I diff, fixed in P11I-6 (D134). The twin matched on the words alone, so a second entry in
+  the same words against another project of the same company, or the same words written again
+  with the follow-up the rep had forgotten, was answered with the first row and its own row never
+  written — while the screen said "Logged". Worse, it did not exclude archived rows, so unfiling
+  an entry and writing it again — the only way to fix a wrong day (D70) — put the unfiled row's
+  id back and nothing appeared. Fix: every stored field is compared (`sameField`), archived rows
+  are excluded, and the company and project twins compare their whole form, the first contact's
+  phone included. `tests/unhappy.spec.ts` unfiles an entry and writes it again.
+- [x] 137 **Three reads called an action bare, and the lint could not see them.** Found by the
+  critic, fixed in P11I-6. The dispatch dialog's remaining items and last dispatch, and the
+  quotation dialog's last quotation, were `.then` chains with no catch: with the wire cut and the
+  lookups already cached, the dispatch form sat on its skeleton for ever with no sentence. The
+  rule only matched `await`, so it called this shape guarded when it was not. Fix: the three go
+  through `useWireGuard`, and the rule gained the `.then` shape and the JSX `action=` shape —
+  proved by linting a file that has both.
+- [x] 138 **The user menu told an expired session it was not allowed.** Found by the critic, fixed
+  in P11I-6 (D135). The theme and language actions, the search and the ten form lookups guard
+  themselves instead of through a shared `guard()`, and each one caught everything and answered
+  "You are not allowed to do that" — including the session that had simply run out while the menu
+  sat open, which is the commonest failure there. Fix: all thirteen answer through `refusalKey`,
+  and a failure that is not a refusal says `somethingWrong` rather than accusing anyone.
+- [x] 139 **The speed harness could print green having measured nothing.** Found by the second
+  critic pass, fixed in P11I-7. Its options were only understood as `--runs=3`; written the way its
+  own header showed, `--runs 3`, the value became the string "true", the count NaN, the loop ran
+  zero times — and the table of empty cells passed `--check` with "no screen is slower or heavier"
+  and exit 0, while `--write` saved a baseline of `{}` that made every later check pass for ever.
+  Fix: the parser takes both forms, refuses an option it does not know, and a figure that is not a
+  number fails the run before anything is written or compared. A guard that cannot fail is not a
+  guard.
+- [x] 140 **An interrupted reads run left the whole cluster logging every statement.** Found by the
+  second critic pass, fixed in P11I-7. `alter system` writes the container's own configuration
+  file, not the connection's, and the only undo was a `finally` — which Ctrl+C during a run of
+  forty-three screens never reaches. Statement logging would have stayed on for every database in
+  that container, the test suite's included, across restarts, and the four sessions the run made
+  would have stayed alive. Fix: one `putBack`, called from the `finally` and from SIGINT, SIGTERM,
+  SIGHUP and SIGBREAK. In the same pass the check learned to fail on a screen that answered with
+  an error or whose markers never reached the log: zero statements is a measurement that did not
+  happen, not the best figure in the table.
+- [x] 141 **Three smaller things the second pass found.** All fixed in P11I-7. The company twin
+  compared the whole company but only the contact's name and phone, so a corrected position, email
+  or note on the second press was swallowed — it compares all five now. `common.signedOut` is
+  reached only through `refusalKey`, so no call site writes it and `unused-messages` was blind to
+  it: `REFUSAL_KEYS` is exported from `src/lib/authz.ts` and read as a message family, the way
+  every other computed key is. And the docs said `npm run measure:reads --check`, which npm eats
+  before the script sees it; both here and in README it is `-- --check`.
+
+Left for the founder, from the measurements and the critic. A request for a quotation or a
+dispatch has no twin guard: those two writes carry line items, so "the same write" means comparing
+every line of two papers, and it was not worth doing half. If the wire eats the answer to a
+request, the coordinator can get two identical papers seconds apart; the rep may withdraw his own
+(D32) and she may send one back, so nothing is stuck, but nobody is told why there are two.
+
+Refuted this box. The withdraw test's `pickFirst` hang (I6, seen once in the 11G gate) did not
+come back in eight runs of `tests/quotations.spec.ts:608` after the 11H opener fix (#127); it is
+treated as the same defect and closed. The pinned weekday (P10b) is decided against: the
+tests that depend on the working week branch on today's weekday and assert both sides
+(leave, reports, figures, manager), and a clock pinned in the app while the database keeps
+its own `now()` would split the one definition of today (rules/data.md) — the suite runs on
+the day it runs.
+
+Left for the founder, measured and not fixed. The document of a list screen is 500 kB decoded
+on the volume floor — the server-rendered HTML and the same tree again as the payload React
+takes over — and the phone parses both; the fix is fewer client components per row and less
+per row, which is a design change to the tables and not a box-11I one. Every screen also fires
+some twenty prefetches on load (one per link in view, in two flavours), each a server render of
+the layout with its session read; the reads harness counts the document alone and does not see
+them. A refusal toast on the phone covers the sheet's own Save button for the seconds it shows.
+`FormFooter` disables the pressed button while it saves, which is the double-press guard and
+also drops keyboard focus to the page; and its pending word is "Saving…" whatever the verb was.

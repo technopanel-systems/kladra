@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { setTargetAction } from "@/actions/admin";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -107,6 +108,7 @@ function TargetBox({
   const [typed, setTyped] = useState(value === null ? "" : String(Number(value)));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   function save() {
     startTransition(async () => {
@@ -114,7 +116,7 @@ function TargetBox({
       form.set("month", month);
       if (userId) form.set("userId", userId);
       form.set("sqm", typed.trim());
-      const result = await setTargetAction(null, form);
+      const result = await guarded(setTargetAction)(null, form);
       if (!result.ok) {
         setError(result.error);
         return;

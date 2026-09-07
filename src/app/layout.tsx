@@ -12,15 +12,17 @@ import "./globals.css";
 
 // Static families: weights listed explicitly. Arabic gets its own family and
 // the per-locale switch is one CSS variable on <html> (see globals.css).
+// Three weights, not four: nothing on a screen is bolder than 600, the brand
+// mark included, and the 700 file was 36 kB on every cold load (P11I, D133).
 const plexLatin = IBM_Plex_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-latin",
   display: "swap",
 });
 const plexArabic = IBM_Plex_Sans_Arabic({
   subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-arabic",
   display: "swap",
 });

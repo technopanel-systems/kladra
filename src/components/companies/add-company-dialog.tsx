@@ -23,7 +23,7 @@ import {
   EMPTY_CONTACT,
   type ContactDraft,
 } from "@/components/contacts/contact-fields";
-import { useActionOutcome } from "@/components/ui-ext/action-outcome";
+import { useActionOutcome, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -127,10 +127,11 @@ function CompanyForm({
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  const guarded = useWireGuard();
   const [state, formAction, pending] = useActionState<
     ActionResult<{ companyId: string }> | null,
     FormData
-  >(createCompanyAction, null);
+  >(guarded(createCompanyAction), null);
 
   const [company, setCompany] = useState<CompanyDraft>(() => blankCompany(lookups));
   const [contact, setContact] = useState<ContactDraft>(EMPTY_CONTACT);
@@ -166,7 +167,7 @@ function CompanyForm({
         setDuplicate(null);
         return;
       }
-      const outcome = await duplicateCheckAction(typedName, typedPhone, countryCode);
+      const outcome = await guarded(duplicateCheckAction)(typedName, typedPhone, countryCode);
       if (cancelled) return;
       setDuplicate(outcome.ok ? (outcome.data ?? null) : null);
     }, DEBOUNCE_MS);
@@ -174,7 +175,7 @@ function CompanyForm({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [company.name, contact.phone, countryCode]);
+  }, [company.name, contact.phone, countryCode, guarded]);
 
   // What the rep decides by, on the form: a live match says where it is and
   // when it was last worked; an archived one says when it left and why (D109).

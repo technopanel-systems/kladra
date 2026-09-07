@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { markReadAction } from "@/actions/notifications";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { Link, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
@@ -37,12 +38,13 @@ export function NotificationsList({
   const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   const unread = rows.filter((row) => !row.read).length;
 
   function markAll() {
     startTransition(async () => {
-      const outcome = await markReadAction();
+      const outcome = await guarded(markReadAction)();
       if (!outcome.ok) {
         toast.error(outcome.error);
         return;
@@ -56,7 +58,7 @@ export function NotificationsList({
     // Fire and forget: the navigation is the point, and a notice that stayed
     // bold because a write was slow is not worth holding the rep up for.
     startTransition(async () => {
-      await markReadAction(row.id);
+      await guarded(markReadAction)(row.id);
     });
   }
 

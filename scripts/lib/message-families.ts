@@ -53,6 +53,10 @@ export function tableKeys(file: string): string[] {
 // there were five of eleven). Finding them: grep src for "t(`".
 export const families: [string, string[]][] = [
   ["common", union("src/lib/types.ts", "ROLES")],
+  // The sentence a refused actor is answered with is computed too — every
+  // action guard says `t(refusalKey(error))` and no call site writes either
+  // key, so without this family `signedOut` is a key the checks cannot see.
+  ["common", union("src/lib/authz.ts", "REFUSAL_KEYS")],
   ["common", union("src/db/schema.ts", "channelEnum")],
   ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
   ["reports", tableKeys("src/lib/report-figures.ts")],

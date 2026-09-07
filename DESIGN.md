@@ -549,6 +549,42 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   dialog's `aria-haspopup` and `aria-expanded`, and the two faces hand focus back to it on close
   because Radix hands it back only to its own trigger. Anything else that swaps on the phone
   line — the drawer's side, the sheet's face — swaps while closed and holds no finger.
+- **A read is asked once per request.** Phase 11I (D131). Anything a layout, a page and the
+  figures under it all need — who is signed in, the calendar of non-working days — is a
+  function wrapped in React's `cache`, so the request reads it once however many components
+  ask. A new kind of shared read goes in `src/lib` behind `cache` from the day it is written,
+  and `npm run measure:reads` says what every screen costs before the commit that touches it.
+- **No answer is an answer.** Phase 11I (D132). A server action's promise has three ends — a
+  result that is ok, a result that refuses, and a rejection when nothing came back at all — and
+  React hands the third to the error boundary, from a form's `useActionState` as much as from a
+  `startTransition`, which throws away the screen and everything typed on it. No client code
+  calls an action bare: `const guarded = useWireGuard()` and `guarded(action)(…)` turn the
+  rejection into a refusal that says `common.unreachable`, and every refusal path already puts
+  its sentence where the person is looking — the footer, the field, a toast — with the form as
+  it was. `useSubmitAction` goes through the guard; so does a site that awaits an action itself,
+  one that reads it with `.then`, and a form that passes one to `action=`. `npm run lint` refuses
+  all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
+  return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
+  typed on the screen to lose — each is disabled at its line with that reason written there.
+- **Speed is a number with a ceiling.** Phase 11I (D133). What a mid phone pays to draw a screen
+  is measured, not felt: `npm run measure:speed` against the production build, cold and warm, and
+  `scripts/speed.baseline.json` is the ceiling the next change is held to. A change that touches
+  what every screen ships — a font, a library in the shell, a client component on every row — is
+  measured before it is committed, and a screen that got a fifth slower or a tenth heavier is
+  explained in WORKFLOW §3 or not committed.
+- **A write pressed twice is one write, and only when it is the same write.** Phase 11I (D134).
+  A creating action answers the same words from the same person to the same record inside two
+  minutes with the row that exists (`src/lib/writes.ts`), because the press that follows "could
+  not reach the server" is the same press. Every field the form stores is compared with
+  `sameField`, and a row that has been archived is never a twin: what the rep changed before
+  pressing again is a correction, and a twin that ignored it would lose it silently. A new
+  creating action copies the twin read before its insert.
+- **A session that ended is said as such.** Phase 11I (D135). `NotAllowed` carries its reason and
+  every action's guard answers through `refusalKey`: signed out is its own sentence, with the way
+  back in it; everything else is a real refusal and says so. That includes the actions that guard
+  themselves rather than through a shared `guard()` — the two preferences, the search, the form
+  lookups — and a failure that is not a refusal at all says `somethingWrong` instead of claiming
+  the person was not allowed.
 - **A kit cap is read before a class is written over it.** Phase 11H (§5 #122). The sheet said
   `max-h-[92dvh]` and stood 80vh tall, because the kit's own cap is an attribute selector and a
   plain class never beat it; the stated height was fiction for a whole box. The utility that

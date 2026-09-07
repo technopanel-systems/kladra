@@ -16,7 +16,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog } from "@/db/schema";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { parseDay } from "@/lib/dates";
 import { REPORTING_ROLES } from "@/lib/floor";
@@ -95,7 +95,7 @@ export async function saveReportAction(day: unknown, note: unknown): Promise<Act
     revalidatePath("/[locale]/day", "page");
     return { ok: true };
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: tc("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: tc(refusalKey(error)) };
     console.error("report action failed", error);
     return { ok: false, error: tc("somethingWrong") };
   }

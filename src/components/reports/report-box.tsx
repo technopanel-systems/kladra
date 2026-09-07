@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { saveReportAction } from "@/actions/reports";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { Prose } from "@/components/ui-ext/prose";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,6 +51,7 @@ export function ReportBox({
   const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
   const [text, setText] = useState(note ?? "");
 
   if (!canWrite) {
@@ -61,7 +63,7 @@ export function ReportBox({
 
   function save() {
     startTransition(async () => {
-      const result = await saveReportAction(day, text);
+      const result = await guarded(saveReportAction)(day, text);
       if (!result.ok) {
         toast.error(result.error);
         return;

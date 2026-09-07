@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "@/i18n/navigation";
@@ -23,13 +24,33 @@ export class NotAllowed extends Error {
 }
 
 /**
+ * The sentence key a refused actor is answered with (`common.*`). A session
+ * that has ended is said as such: "you are not allowed to do that" told a rep
+ * whose sign-in had expired mid-form that he was doing something wrong, when
+ * all he has to do is sign in again in another tab and press Save once more
+ * (P11I, D135). Every other reason a NotAllowed carries is a real refusal.
+ */
+export const REFUSAL_KEYS = ["notAllowed", "signedOut"] as const;
+
+export function refusalKey(error: NotAllowed): (typeof REFUSAL_KEYS)[number] {
+  return error.message === "signedOut" ? "signedOut" : "notAllowed";
+}
+
+/**
  * The person actually signed in, whatever they are looking at. Never throws.
  *
  * Everything that decides whether view-as is ALLOWED reads this and not
  * `getUser`, so a forged cookie can never widen anybody's powers: the role
  * being checked is always the one in the session.
  */
-export async function getRealUser(): Promise<SessionUser | null> {
+/**
+ * Once per request. The layout, the page, the shell's bell and every figure on
+ * a screen ask who is signed in, and each ask was a session row and a user row
+ * from the database — seven times on the manager's day (§5 #71, D131). React's
+ * `cache` is scoped to one server request, so the first answer serves them all
+ * and a second request starts clean.
+ */
+export const getRealUser = cache(async function getRealUser(): Promise<SessionUser | null> {
   const session = await auth();
   const u = session?.user as (SessionUser & { active?: boolean }) | undefined;
   if (!u?.id || u.active === false) return null;
@@ -41,7 +62,7 @@ export async function getRealUser(): Promise<SessionUser | null> {
     role: u.role,
     locale: u.locale ?? "en",
   };
-}
+});
 
 /**
  * Whose eyes the app is being read through — the signed-in user, or the person
@@ -50,7 +71,7 @@ export async function getRealUser(): Promise<SessionUser | null> {
  * An inactive account cannot be viewed either: a deactivated user cannot sign
  * in, and a screen that renders as them would be a way around that.
  */
-export async function getUser(): Promise<SessionUser | null> {
+export const getUser = cache(async function getUser(): Promise<SessionUser | null> {
   const real = await getRealUser();
   if (!real) return null;
 
@@ -82,7 +103,7 @@ export async function getUser(): Promise<SessionUser | null> {
     locale: (row.locale as "en" | "ar") ?? real.locale,
     viewedBy: { id: real.id, name: real.name, nameAr: real.nameAr },
   };
-}
+});
 
 /** For server components: redirect to login when signed out. */
 export async function requireUser(): Promise<SessionUser> {

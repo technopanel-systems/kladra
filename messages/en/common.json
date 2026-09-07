@@ -91,6 +91,8 @@
   "notANumber": "Must be a number.",
   "notADate": "Must be a valid date.",
   "somethingWrong": "Something went wrong. Try again.",
+  "unreachable": "Could not reach the server, so nothing was saved. Try again in a moment.",
+  "signedOut": "Your session has ended, so nothing was saved. Sign in again in a new tab, then press Save here once more.",
   "notAllowed": "You are not allowed to do that.",
   "theme": "Theme",
   "dark": "Dark",

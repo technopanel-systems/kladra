@@ -9,7 +9,7 @@ import {
   ContactFields,
   type ContactDraft,
 } from "@/components/contacts/contact-fields";
-import { useActionOutcome } from "@/components/ui-ext/action-outcome";
+import { useActionOutcome, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -103,10 +103,11 @@ function EditForm({
 }) {
   const t = useTranslations();
   const router = useRouter();
+  const guarded = useWireGuard();
   const [state, formAction, pending] = useActionState<
     ActionResult<{ contactId: string }> | null,
     FormData
-  >(updateContactAction, null);
+  >(guarded(updateContactAction), null);
 
   const [draft, setDraft] = useState<ContactDraft>(() => draftOf(contact));
   const form = useRef<HTMLFormElement>(null);

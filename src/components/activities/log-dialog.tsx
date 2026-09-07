@@ -14,6 +14,7 @@ import type { ComponentProps, ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { editActivityAction, logActivityAction } from "@/actions/activities";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -205,6 +206,7 @@ function LogPanel({
   const router = useRouter();
   const ids = useId();
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   // A fresh entry every time it opens (the host remounts this per press), and
   // today is today in Riyadh — never the browser's day (src/lib/dates.ts).
@@ -272,9 +274,9 @@ function LogPanel({
       fields.set("nextFollowUp", nextFollowUp ?? "");
 
       if (entry) fields.set("activityId", entry.id);
-      const result = entry
-        ? await editActivityAction(null, fields)
-        : await logActivityAction(null, fields);
+      // Guarded: no signal in the lobby is a refusal too, with the words kept
+      // and not the error card over them (D132).
+      const result = await guarded(entry ? editActivityAction : logActivityAction)(null, fields);
       if (!result.ok) {
         setTextError(result.fieldErrors?.text ?? null);
         toast.error(result.error);

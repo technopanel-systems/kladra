@@ -4,6 +4,7 @@ import { Building2, FileText, FolderKanban, Search, UserRound } from "lucide-rea
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { searchAllAction, type SearchResults } from "@/actions/search";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import {
   Command,
   CommandGroup,
@@ -64,6 +65,7 @@ const notMac = () => false;
 
 export function SearchCommand() {
   const t = useTranslations();
+  const guarded = useWireGuard();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState("");
@@ -86,7 +88,7 @@ export function SearchCommand() {
     if (!open || query.length < MIN_TERM) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
-      const outcome = await searchAllAction(query);
+      const outcome = await guarded(searchAllAction)(query);
       if (cancelled) return;
       setAnswer({
         query,
@@ -97,7 +99,7 @@ export function SearchCommand() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [term, open]);
+  }, [term, open, guarded]);
 
   function onOpenChange(next: boolean) {
     setOpen(next);

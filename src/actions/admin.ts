@@ -36,7 +36,7 @@ import {
 import { ARCHIVE_KINDS } from "@/lib/admin";
 import { holdsFloor } from "@/lib/floor";
 import { isLookupKind, LOOKUP_FIELDS, tableName } from "@/lib/lookup-kinds";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { addDays, diffDays, firstOfMonth, type Day } from "@/lib/dates";
 import type { ActionResult, SessionUser } from "@/lib/types";
@@ -51,7 +51,7 @@ async function guard<T>(
   try {
     return await run(await requireActor("admin"));
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("admin action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }

@@ -16,14 +16,15 @@
  * figure — the drift trap rules/data.md names.
  */
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { activities, auditLog, companies, contacts, projects } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
+import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { parseDay, todayRiyadh, type Day } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
@@ -37,7 +38,7 @@ async function guard<T>(
   try {
     return await run(await requireActor());
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("activities action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }
@@ -134,6 +135,44 @@ export async function logActivityAction(
     }
 
     const happenedOn = input.happenedOn ?? todayRiyadh();
+
+    // Pressed twice is one write (D134): the wire can lose the answer after the
+    // row has landed, and the rep presses Save again with the same words. It
+    // has to be the SAME write, though — the same entry against the same
+    // project and contact, on the same day, with the same follow-up. A second
+    // visit to a company with two projects is two entries in the same words,
+    // and a follow-up he had forgotten is a correction, not a repeat. An
+    // unfiled row is not a twin either: unfiling and writing it again is how a
+    // wrong day is fixed (the correction dialog cannot move one), so an
+    // archived entry must never answer for the one replacing it.
+    const recent = await db
+      .select({
+        id: activities.id,
+        projectId: activities.projectId,
+        contactId: activities.contactId,
+        happenedOn: activities.happenedOn,
+        nextFollowUp: activities.nextFollowUp,
+      })
+      .from(activities)
+      .where(
+        and(
+          eq(activities.companyId, input.companyId),
+          eq(activities.userId, actor.id),
+          eq(activities.text, input.text),
+          eq(activities.channel, input.channel),
+          isNull(activities.archivedAt),
+          gte(activities.createdAt, sinceTwinWindow()),
+        ),
+      )
+      .limit(5);
+    const twin = recent.find(
+      (row) =>
+        sameField(input.projectId, row.projectId) &&
+        sameField(input.contactId, row.contactId) &&
+        sameField(happenedOn, row.happenedOn) &&
+        sameField(input.nextFollowUp, row.nextFollowUp),
+    );
+    if (twin) return { ok: true, data: { activityId: twin.id } };
 
     const activityId = await db.transaction(async (tx) => {
       const [row] = await tx

@@ -5,6 +5,7 @@ import { useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { updateProjectAction } from "@/actions/projects";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { ProjectFields, type ProjectDraft } from "@/components/projects/project-fields";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -52,6 +53,7 @@ export function EditProjectDialog({
   const [form, setForm] = useState<ProjectDraft>(() => draftOf(project));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   function onOpenChange(next: boolean) {
     setOpen(next);
@@ -89,7 +91,7 @@ export function EditProjectDialog({
       fields.set("nextFollowUp", form.nextFollowUp ?? "");
       fields.set("notes", form.notes.trim());
 
-      const outcome = await updateProjectAction(null, fields);
+      const outcome = await guarded(updateProjectAction)(null, fields);
       if (!outcome.ok) {
         setErrors(outcome.fieldErrors ?? {});
         toast.error(outcome.error);

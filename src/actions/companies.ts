@@ -18,14 +18,15 @@
  * src/actions/forms.ts, over the one matcher in src/lib/companies.ts.
  */
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, cities, companies, contacts, countries, users } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
-import { NotAllowed, requireActor } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
+import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { FLOOR_ROLES, holdsFloor, mayHandOver } from "@/lib/floor";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
@@ -55,7 +56,7 @@ async function guard<T>(
   try {
     return await run(await requireActor(...roles));
   } catch (error) {
-    if (error instanceof NotAllowed) return { ok: false, error: t("notAllowed") };
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("companies action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }
@@ -184,6 +185,66 @@ export async function createCompanyAction(
         error: t("emailInvalid"),
         fieldErrors: { contactEmail: t("emailInvalid") },
       };
+    }
+
+    // Pressed twice is one company (D134): the same name from the same rep
+    // inside two minutes is the Save whose answer the wire lost — but only if
+    // the whole form is the same one. A rep told nothing was saved may fix a
+    // digit in the phone before pressing again, and answering that with the
+    // company he typed first would lose the fix without saying so.
+    const [candidate] = await db
+      .select({
+        id: companies.id,
+        categoryId: companies.categoryId,
+        leadSourceId: companies.leadSourceId,
+        countryId: companies.countryId,
+        cityId: companies.cityId,
+        cityText: companies.cityText,
+        notes: companies.notes,
+      })
+      .from(companies)
+      .where(
+        and(
+          eq(companies.repId, actor.id),
+          eq(companies.name, input.name),
+          isNull(companies.archivedAt),
+          gte(companies.createdAt, sinceTwinWindow()),
+        ),
+      )
+      .limit(1);
+    if (
+      candidate &&
+      sameField(input.categoryId, candidate.categoryId) &&
+      sameField(input.leadSourceId, candidate.leadSourceId) &&
+      sameField(input.countryId, candidate.countryId) &&
+      sameField(place.cityId, candidate.cityId) &&
+      sameField(place.cityText, candidate.cityText) &&
+      sameField(input.notes, candidate.notes)
+    ) {
+      const [contact] = await db
+        .select({
+          id: contacts.id,
+          position: contacts.position,
+          email: contacts.email,
+          notes: contacts.notes,
+        })
+        .from(contacts)
+        .where(
+          and(
+            eq(contacts.companyId, candidate.id),
+            eq(contacts.name, input.contactName),
+            eq(contacts.phoneNormalized, phoneNormalized),
+          ),
+        )
+        .limit(1);
+      if (
+        contact &&
+        sameField(input.contactPosition, contact.position) &&
+        sameField(input.contactEmail, contact.email) &&
+        sameField(input.contactNotes, contact.notes)
+      ) {
+        return { ok: true, data: { companyId: candidate.id } };
+      }
     }
 
     // The company, its first contact (main by D18) and the audit row commit

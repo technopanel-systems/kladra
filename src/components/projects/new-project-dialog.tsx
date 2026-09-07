@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { createProjectAction } from "@/actions/projects";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import {
   BLANK_PROJECT,
   ProjectFields,
@@ -54,6 +55,7 @@ export function NewProjectDialog({
   const [chosen, setChosen] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
+  const guarded = useWireGuard();
 
   const asks = companyId === undefined;
   const company = companyId ?? chosen;
@@ -101,7 +103,7 @@ export function NewProjectDialog({
       fields.set("nextFollowUp", form.nextFollowUp ?? "");
       fields.set("notes", form.notes.trim());
 
-      const outcome = await createProjectAction(null, fields);
+      const outcome = await guarded(createProjectAction)(null, fields);
 
       if (!outcome.ok) {
         setErrors(outcome.fieldErrors ?? {});

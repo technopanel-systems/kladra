@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { updateCompanyAction } from "@/actions/companies";
 import type { FormLookups } from "@/actions/forms";
 import { CompanyFields, type CompanyDraft } from "@/components/companies/company-fields";
-import { useActionOutcome } from "@/components/ui-ext/action-outcome";
+import { useActionOutcome, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -111,10 +111,11 @@ function EditForm({
 }) {
   const t = useTranslations();
   const router = useRouter();
+  const guarded = useWireGuard();
   const [state, formAction, pending] = useActionState<
     ActionResult<{ companyId: string }> | null,
     FormData
-  >(updateCompanyAction, null);
+  >(guarded(updateCompanyAction), null);
 
   const [draft, setDraft] = useState<CompanyDraft>(() => draftOf(company));
   const form = useRef<HTMLFormElement>(null);
