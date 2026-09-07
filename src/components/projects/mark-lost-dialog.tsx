@@ -5,17 +5,9 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { markProjectLostAction } from "@/actions/projects";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -104,27 +96,25 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button variant="destructive">{t("common.markLost")}</Button>}
-      </DialogTrigger>
-
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t("projects.markLostTitle")}</DialogTitle>
-          <DialogDescription>{t("projects.markLostDescription")}</DialogDescription>
-        </DialogHeader>
-
-        {/* A form, so the written detail can be confirmed from the keyboard
-            (D114): Enter stays a new line in the box, Ctrl/Cmd+Enter marks it. */}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!pending) submit();
-          }}
-          noValidate
-          className="flex flex-col gap-4"
-        >
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={trigger ?? <Button variant="destructive">{t("common.markLost")}</Button>}
+      title={t("projects.markLostTitle")}
+      description={t("projects.markLostDescription")}
+    >
+      {/* A form, so the written detail can be confirmed from the keyboard
+          (D114): Enter stays a new line in the box, Ctrl/Cmd+Enter marks it. */}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!pending) submit();
+        }}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <FormBody>
           <FieldGroup>
             <Field data-invalid={errors.reason ? true : undefined}>
               <FieldLabel htmlFor="loss-reason">{t("projects.lossReasonLabel")}</FieldLabel>
@@ -174,18 +164,14 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
             ) : null}
           </FieldGroup>
 
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" type="button">
-                {t("common.cancel")}
-              </Button>
-            </DialogClose>
-            <Button type="submit" variant="destructive" disabled={pending}>
-              {pending ? t("common.saving") : t("common.markLost")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FormBody>
+        <FormFooter
+          pending={pending}
+          onCancel={() => onOpenChange(false)}
+          confirmLabel={t("common.markLost")}
+          confirmVariant="destructive"
+        />
+      </form>
+    </ResponsiveDialog>
   );
 }

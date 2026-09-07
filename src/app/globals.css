@@ -369,6 +369,19 @@
   }
 }
 
+/* vaul slides a bottom sheet in 500 ms; DESIGN §2's band for a drawer is
+   150–250 ms (D123), and every form on a phone is one of these now (D129).
+   The library injects its own stylesheet and writes the drag-release
+   transition inline, so this is the one place `!important` is the honest
+   tool. 250, the top of the band: a sheet travels the height of the screen.
+   Before the reduced-motion block on purpose: that block names the sheet
+   too, and among equals the later rule wins. */
+[data-vaul-drawer],
+[data-vaul-overlay] {
+  animation-duration: 250ms !important;
+  transition-duration: 250ms !important;
+}
+
 /*
  * Motion is a preference the operating system already knows. Sheets slide in
  * from an edge and dialogs zoom; that movement is what triggers vestibular
@@ -383,6 +396,14 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* The sheet is held to 250 ms above by an attribute selector, which
+     outranks the `*` here whatever the source order, both being important;
+     named again, later, so "less motion" is less motion on a phone as well. */
+  [data-vaul-drawer],
+  [data-vaul-overlay] {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 
   /*
@@ -420,5 +441,18 @@
   label,
   summary {
     touch-action: manipulation;
+  }
+}
+
+/* A thing a thumb presses is 44px on a phone (DESIGN §5, D130). The kit's
+   controls carry it — button, input, select, tab, menu and list items — and
+   the two links a rep presses on a card, so the rule is written here and
+   nowhere else (§5 #51). The glyph may be small; the hit area is not. `md`
+   is the phone line (src/lib/breakpoint.ts); min-* so a control's own height
+   still wins from md up and a taller one is never shrunk. */
+@utility touch {
+  @variant max-md {
+    min-height: calc(var(--spacing) * 11);
+    min-width: calc(var(--spacing) * 11);
   }
 }

@@ -10,18 +10,11 @@ import {
   ProjectFields,
   type ProjectDraft,
 } from "@/components/projects/project-fields";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useRouter } from "@/i18n/navigation";
 import type { PickerOption } from "@/lib/picker-option";
 
@@ -125,29 +118,26 @@ export function NewProjectDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? <Button variant="brand">{t("projects.newProject")}</Button>}
-      </DialogTrigger>
-
-      <DialogContent className="max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            {companyName
-              ? t("projects.newProjectIn", { company: companyName })
-              : t("projects.newProject")}
-          </DialogTitle>
-        </DialogHeader>
-
-        {/* A form, so Enter in the name saves it (D114). */}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!pending) submit();
-          }}
-          noValidate
-          className="flex flex-col gap-4"
-        >
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={trigger ?? <Button variant="brand">{t("projects.newProject")}</Button>}
+      title={
+        companyName ? t("projects.newProjectIn", { company: companyName }) : t("projects.newProject")
+      }
+      description={t("projects.newProjectHint")}
+    >
+      {/* A form, so Enter in the name saves it (D114). */}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!pending) submit();
+        }}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <FormBody>
           {asks ? (
             <div className="flex flex-col gap-1.5">
               <Label id="project-company-label">{t("common.company")}</Label>
@@ -182,18 +172,9 @@ export function NewProjectDialog({
             disabled={pending}
           />
 
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" type="button" disabled={pending}>
-                {t("common.cancel")}
-              </Button>
-            </DialogClose>
-            <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? t("common.saving") : t("common.save")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FormBody>
+        <FormFooter pending={pending} onCancel={() => onOpenChange(false)} />
+      </form>
+    </ResponsiveDialog>
   );
 }

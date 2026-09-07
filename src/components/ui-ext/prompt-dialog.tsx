@@ -1,18 +1,9 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -75,7 +66,6 @@ export function PromptDialog({
   /** Runs after the action succeeds — refresh, or navigate away. */
   onDone?: () => void;
 }) {
-  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -107,27 +97,24 @@ export function PromptDialog({
   const errorId = "prompt-error";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          {context ? (
-            <p data-slot="prompt-context" className="text-sm font-medium">
-              <bdi>{context}</bdi>
-            </p>
-          ) : null}
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!pending) confirm();
-          }}
-          noValidate
-          className="flex flex-col gap-4"
-        >
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={trigger}
+      title={title}
+      context={context}
+      description={description}
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!pending) confirm();
+        }}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <FormBody>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={fieldId}>{label}</Label>
             {multiline ? (
@@ -155,6 +142,9 @@ export function PromptDialog({
                 dir="auto"
                 disabled={pending}
                 autoComplete="off"
+                // A SMAC number or a new password, never prose: nothing to
+                // correct and nothing to suggest.
+                spellCheck={false}
                 value={value}
                 placeholder={placeholder}
                 aria-invalid={refusal ? true : undefined}
@@ -169,21 +159,13 @@ export function PromptDialog({
             ) : null}
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => onOpenChange(false)}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? t("common.saving") : confirmLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FormBody>
+        <FormFooter
+          pending={pending}
+          onCancel={() => onOpenChange(false)}
+          confirmLabel={confirmLabel}
+        />
+      </form>
+    </ResponsiveDialog>
   );
 }

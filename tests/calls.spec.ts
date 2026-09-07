@@ -16,7 +16,7 @@ import { test, expect } from "./helpers/i18n";
  * draws the same "No contact yet" a card with nobody to call. Separately, the
  * SMAC-number prompts (issue, approve, both corrections) now carry the
  * customer's name under the title, in `PromptDialog`'s
- * `[data-slot="prompt-context"]`.
+ * `[data-slot="dialog-context"]`.
  *
  * House style follows tests/rep.spec.ts (Faisal's day, the drawer's Contacts
  * tab) and tests/smac.spec.ts (the Issue and Approve prompts, `t()` for every
@@ -286,7 +286,7 @@ test("the number prompts name the customer", async ({ page, locale, t }) => {
 
     await sheet.getByRole("button", { name: t("quotations.issue") }).click();
     const ask = page.getByRole("dialog", { name: t("quotations.issueTitle", { label }) });
-    await expect(ask.locator('[data-slot="prompt-context"]')).toHaveText(quotation.company_name);
+    await expect(ask.locator('[data-slot="dialog-context"]')).toHaveText(quotation.company_name);
 
     // Cancel — the number is never typed, so there is nothing to undo.
     await ask.getByRole("button", { name: t("common.cancel") }).click();
@@ -301,7 +301,7 @@ test("the number prompts name the customer", async ({ page, locale, t }) => {
 
     await sheet.getByRole("button", { name: t("dispatches.approve") }).click();
     const ask = page.getByRole("dialog", { name: t("dispatches.approveTitle", { label }) });
-    await expect(ask.locator('[data-slot="prompt-context"]')).toHaveText(dispatch.company_name);
+    await expect(ask.locator('[data-slot="dialog-context"]')).toHaveText(dispatch.company_name);
 
     await ask.getByRole("button", { name: t("common.cancel") }).click();
     await expect(ask).toBeHidden();

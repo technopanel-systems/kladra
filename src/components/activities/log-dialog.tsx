@@ -15,15 +15,6 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { editActivityAction, logActivityAction } from "@/actions/activities";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -34,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui-ext/date-picker";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { useBackGuard } from "@/components/ui-ext/use-back-guard";
 import { useRouter } from "@/i18n/navigation";
 import { todayRiyadh } from "@/lib/dates";
@@ -106,15 +99,6 @@ const CHANNELS: readonly { value: ActivityChannel; Icon: typeof MapPin }[] = [
   { value: "whatsapp", Icon: MessageCircle },
   { value: "other", Icon: Ellipsis },
 ];
-
-/**
- * At 375 a dialog is a bottom sheet — the thumb reaches the bottom (DESIGN §2).
- * These land on top of DialogContent's own centring, which is why they are
- * important: the base classes carry an attribute selector and would otherwise
- * win on specificity.
- */
-const BOTTOM_SHEET_AT_375 =
-  "max-sm:inset-x-0! max-sm:top-auto! max-sm:bottom-0! max-sm:translate-x-0! max-sm:translate-y-0! max-sm:max-w-none! max-sm:rounded-b-none!";
 
 const LogContext = createContext<((request: LogRequest) => void) | null>(null);
 
@@ -263,6 +247,8 @@ function LogPanel({
 
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    // React carries a submit through a portal to any form above it.
+    event.stopPropagation();
     const written = text.trim();
     if (!written || !happenedOn) {
       setTextError(t("common.required"));
@@ -304,31 +290,22 @@ function LogPanel({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* A sentence typed in a lobby is not lost to a thumb landing beside the
-          sheet, nor to one swiping back from its edge: once something is
-          written, a tap outside does nothing and the back gesture stays on the
-          screen (useBackGuard above), while Cancel and Escape — deliberate —
-          still close it (D84, D96). */}
-      <DialogContent
-        className={cn(
-          "max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md",
-          BOTTOM_SHEET_AT_375,
-        )}
-        onInteractOutside={(event) => {
-          if (dirty) event.preventDefault();
-        }}
-      >
-        <DialogHeader>
-          <DialogTitle>{t(editing ? "drawer.correctTitle" : "drawer.logTitle")}</DialogTitle>
-          <DialogDescription>
-            {t(editing ? "drawer.correctSubtitle" : "drawer.logSubtitle")}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Validation is ours, so the message is translated and announced
-            rather than shown in the browser's own bubble. */}
-        <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t(editing ? "drawer.correctTitle" : "drawer.logTitle")}
+      description={t(editing ? "drawer.correctSubtitle" : "drawer.logSubtitle")}
+      // A sentence typed in a lobby is not lost to a thumb landing beside the
+      // sheet, nor to one swiping it away or back from its edge: once something
+      // is written, a tap outside does nothing, the sheet does not drag, and
+      // the back gesture stays on the screen (useBackGuard above), while Cancel
+      // and Escape — deliberate — still close it (D84, D96).
+      guardOutside={dirty}
+    >
+      {/* Validation is ours, so the message is translated and announced
+          rather than shown in the browser's own bubble. */}
+      <form onSubmit={submit} noValidate className="flex min-h-0 flex-1 flex-col">
+        <FormBody>
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t("common.company")}</span>
             <p className="rounded-lg border border-line bg-surface-2 px-2.5 py-2 text-sm">
@@ -373,7 +350,8 @@ function LogPanel({
                 <label
                   key={value}
                   className={cn(
-                    "inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+                    // `touch`: the label is the control, and not a kit one (D130).
+                    "touch inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
                     "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
                     // Chosen is not a state: the five colours mean what
                     // happened to a record, and painting the selected chip red
@@ -469,18 +447,9 @@ function LogPanel({
             </div>
           ) : null}
 
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="outline" disabled={pending}>
-                {t("common.cancel")}
-              </Button>
-            </DialogClose>
-            <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? t("common.saving") : t("common.save")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FormBody>
+        <FormFooter pending={pending} onCancel={() => onOpenChange(false)} />
+      </form>
+    </ResponsiveDialog>
   );
 }

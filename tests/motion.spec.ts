@@ -85,3 +85,38 @@ test.describe("a person who asked the operating system for less motion", () => {
     expect(seconds(flash), `flash ${flash}`).toBe(2);
   });
 });
+
+test("a bottom sheet slides inside the band too", async ({ page, locale, t }) => {
+  // vaul's own figure is 500 ms; globals.css holds it to the top of the band,
+  // and from P11H every form on a phone is one of these (D129).
+  await page.setViewportSize({ width: 375, height: 812 });
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/companies`);
+  await page.getByRole("button", { name: t("forms.addCompany") }).click();
+  const sheet = page.locator('[data-slot="drawer-content"]');
+  await expect(sheet).toBeVisible(COLD);
+  const slide = await sheet.evaluate((el) => getComputedStyle(el).animationDuration);
+  expect(seconds(slide), `sheet ${slide}`).toBeGreaterThanOrEqual(0.15);
+  expect(seconds(slide), `sheet ${slide}`).toBeLessThanOrEqual(0.25);
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+});
+
+test.describe("a bottom sheet, for a person who asked the operating system for less motion", () => {
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
+
+  test("appears without the slide", async ({ page, locale, t }) => {
+    // The 250 ms rule is an attribute selector and outranks the `*` that
+    // zeroes everything else; the reduced-motion block names the sheet too.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/companies`);
+    await page.getByRole("button", { name: t("forms.addCompany") }).click();
+    const sheet = page.locator('[data-slot="drawer-content"]');
+    await expect(sheet).toBeVisible(COLD);
+    const slide = await sheet.evaluate((el) => getComputedStyle(el).animationDuration);
+    expect(seconds(slide), `sheet ${slide}`).toBeLessThan(0.001);
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+  });
+});

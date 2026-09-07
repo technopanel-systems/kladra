@@ -69,7 +69,9 @@ function Button({
       data-slot="button"
       data-variant={variant}
       data-size={size}
-      className={cn(buttonVariants({ variant, size, className }))}
+      // `touch`, outside the variants: every button is 44px on a phone (D130),
+      // while `buttonVariants` alone — the calendar's day cells — is not.
+      className={cn(buttonVariants({ variant, size }), "touch", className)}
       {...props}
     />
   )

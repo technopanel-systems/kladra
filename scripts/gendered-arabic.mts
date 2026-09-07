@@ -34,6 +34,13 @@ import { join } from "node:path";
  * often; the verb is written `سجّل` and that is what is listed.
  */
 const ADDRESSED_TO_A_MAN = [
+  // "leave it" with its object attached, which whole-word matching cannot
+  // see through: "فاتركه" shipped in admin.lastDayHint until the P11H reviewer read it.
+  "اترك",
+  "اتركه",
+  "اتركها",
+  "فاتركه",
+  "فاتركها",
   "اتصل",
   "اتّصل",
   "اختر",

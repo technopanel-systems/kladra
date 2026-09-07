@@ -17,6 +17,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
+/** `allow`: a path exempts the file; `path#text` exempts only its lines containing `text`. */
 type Rule = { name: string; pattern: RegExp; allow: string[]; fix: string };
 
 const RULES: Rule[] = [
@@ -31,6 +32,19 @@ const RULES: Rule[] = [
     pattern: /ring-1 ring-foreground/,
     allow: [],
     fix: "use border border-line",
+  },
+  {
+    // 4. The line between a phone and everything else is Tailwind's `md`, and the
+    //    JavaScript query that has to agree with it is derived once
+    //    (src/lib/breakpoint.ts). It was 639, 640 and 768 in three files, and a
+    //    tablet between them had a bottom bar under centred dialogs (P11H, §5 #35).
+    //    globals.css is allowed through for its one other threshold, the blur
+    //    strength at 980px, which is about the machine and not the hand — that
+    //    line and no other.
+    name: "the phone line is written once",
+    pattern: /max-width:\s*\d+px|\bmax-(?:sm|lg|xl|2xl|\[[^\]]+\]):|\(width\s*<=?\s*\d/,
+    allow: ["src/lib/breakpoint.ts", "src/app/globals.css#980px"],
+    fix: "use useIsPhone() from @/hooks/use-is-phone, or max-md: in CSS",
   },
   {
     // 3. A block somebody typed runs in the writer's direction (rules/words.md).
@@ -60,9 +74,13 @@ function walk(dir: string): void {
     const source = readFileSync(full, "utf8");
     for (const rule of RULES) {
       if (rule.allow.includes(rel)) continue;
+      const markers = rule.allow
+        .filter((entry) => entry.startsWith(`${rel}#`))
+        .map((entry) => entry.slice(rel.length + 1));
       source.split("\n").forEach((line, i) => {
         // A comment explaining the rule is not a breach of it.
-        if (/^\s*(\*|\/\/)/.test(line)) return;
+        if (/^\s*(\*|\/\/|\/\*)/.test(line)) return;
+        if (markers.some((marker) => line.includes(marker))) return;
         if (rule.pattern.test(line)) {
           problems.push(`${rel}:${i + 1} — ${rule.name}; ${rule.fix}`);
         }
@@ -79,5 +97,5 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(
-  "one-look — the primary button, the surface edge and typed text are each written once",
+  "one-look — the primary button, the surface edge, typed text and the phone line are each written once",
 );

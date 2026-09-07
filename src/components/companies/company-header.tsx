@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarClock, Pencil, Plus } from "lucide-react";
-import { useId, useState, useSyncExternalStore, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { Sqm } from "@/components/ui-ext/figures";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
+import { useIsPhone } from "@/hooks/use-is-phone";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import type { PickerOption } from "@/lib/picker-option";
 import type { CompanyStanding } from "@/lib/standing";
@@ -48,21 +49,6 @@ import { cn } from "@/lib/utils";
 
 /* ---- the sheet ----------------------------------------------------------- */
 
-const COMPACT = "(max-width: 639px)";
-
-let compactQuery: MediaQueryList | null = null;
-function media(): MediaQueryList {
-  compactQuery ??= window.matchMedia(COMPACT);
-  return compactQuery;
-}
-function subscribeCompact(onChange: () => void) {
-  const query = media();
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-const readCompact = () => media().matches;
-/** The server has no viewport; the phone corrects itself right after hydration. */
-const readCompactOnServer = () => false;
 
 /**
  * Driven by `?open=<id>` (SPEC §3: the open drawer lives in the URL, so a
@@ -80,11 +66,12 @@ export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
   const params = useSearchParams();
   const [open, setOpen] = useState(true);
   const [, startTransition] = useTransition();
-  const compact = useSyncExternalStore(subscribeCompact, readCompact, readCompactOnServer);
+  const phone = useIsPhone();
 
   // A drawer belongs on the inline-end edge; `side` is physical, so Arabic
-  // takes the mirror image. At 375 it is a bottom sheet instead.
-  const side = compact ? "bottom" : locale === "ar" ? "left" : "right";
+  // takes the mirror image. On a phone it is a bottom sheet instead — on the
+  // same line the shell and every form change on (src/lib/breakpoint.ts).
+  const side = phone ? "bottom" : locale === "ar" ? "left" : "right";
 
   function onOpenChange(next: boolean) {
     if (next) return;
@@ -102,7 +89,9 @@ export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
         side={side}
         className={cn(
           "gap-0 p-0",
-          side === "bottom" ? "max-h-[88svh] rounded-t-xl" : "sm:max-w-lg!",
+          side === "bottom"
+            ? "max-h-[88svh] rounded-t-xl pb-[env(safe-area-inset-bottom)]"
+            : "sm:max-w-lg!",
           // side="left" borders its outer edge; in Arabic the content-facing
           // edge is the inline-start one.
           side === "left" && "border-s",
@@ -324,8 +313,11 @@ export function CompanyHeader({
           {t("common.log")}
         </LogButton>
 
+        {/* Named in the title: on a phone the sheet covers the drawer, and
+            "Add project" alone says nothing about where (P11H). */}
         <NewProjectDialog
           companyId={company.id}
+          companyName={company.name}
           trigger={
             <Button variant="outline">
               <Plus aria-hidden="true" />

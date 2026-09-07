@@ -81,7 +81,7 @@ back to, so the one string on the screen that mixes two scripts would also mix t
 - The screen tells you what changed: toasts for your actions, live arrival and a 2 s highlight for other people's; a bell with a count — nobody refreshes.
 - Motion where it explains (150–250 ms): dialogs, drawers, row changes. Menus, popovers and selects at 100 ms — a menu is not a dialog. No loops — motion that repeats is noise; the one exception is the pending mark inside a pressed link, which says "working". Under `prefers-reduced-motion` the travel goes and the information stays: the arrived flash keeps its two seconds because it is a colour, not a movement.
 - Loading states always; never a blank — a blank reads as broken. A pressed link shows it is working after 150 ms (`LinkPending`); a screen that cannot draw itself, or an address that names none, is one card inside the shell in the reader's language, never the framework's page and never a digest.
-- Sidebar collapses; on a phone it is a bottom bar and dialogs are bottom sheets — the thumb reaches the bottom.
+- Sidebar collapses; on a phone it is a bottom bar and dialogs are bottom sheets — the thumb reaches the bottom. A phone is everything below `md`, one line for the shell and the forms (D128); in a sheet the primary action is the lowest button, and anything a thumb presses is 44px (D129, D130).
 - Money and m² in tabular figures (`.num`, Plex Mono); everything else normal text — columns of numbers must line up.
 - Anything daily is two clicks from home — log a visit, add a company, check follow-ups.
 
@@ -512,6 +512,47 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   number = ''::int` failed on the cast before the guard was read, and any search term without a
   digit took the quotations, dispatches and queue lists down. The decision is made in TypeScript
   (`numberInTerm`), and the integer is bound only when there is one (rules/data.md).
+- **The phone line is drawn once.** Phase 11H (D128). `src/lib/breakpoint.ts` names it in Tailwind's
+  own words, `(width < 48rem)`, `useIsPhone` reads it, the stylesheet says `md:` and `max-md:`,
+  and `one-look` refuses any other width query in src — `max-width:`, `max-sm:`, `max-[…]:`, a
+  range. It was 639, 640 and 768 in three files, and the pixel between two of them had a bottom
+  bar under a centred dialog; `(max-width: 767px)` would have put the half-pixel between 767 and
+  768 there too. The one exception is the blur strength at 980px, allowed by that line alone.
+- **Every form is a sheet on a phone, and Save is the lowest thing in it.** Phase 11H (D129).
+  `ResponsiveDialog` is the only way a form opens; the raw `Dialog` is for the search palette. A
+  bottom sheet's footer stacks Cancel above Save — the thumb rests at the bottom, and the kit's
+  `flex-col-reverse` had put Cancel there — and pads for the home indicator with
+  `env(safe-area-inset-bottom)`, like the bottom bar and every other thing that touches the
+  bottom edge of a phone. A sheet that covers what it was opened from names it in the title.
+- **A thing a thumb presses is 44px; the glyph may be small.** Phase 11H (D130). The `touch`
+  utility is the rule, written once in globals.css and carried by the kit's controls and the two
+  links on a card; a control's own height still wins from `md` up. Apple's and Android's figure,
+  not ours. A stretched link under raised controls is allowed because the controls are that
+  size; below it, a miss opens the wrong thing.
+- **A library's motion is held to the band.** Phase 11H (D129). vaul slides a sheet in 500 ms and
+  injects its own stylesheet; globals.css holds it to 250 with `!important`, the one place that
+  word is the honest tool, because the library writes the drag-release transition inline. The
+  motion spec measures the sheet like it measures the dialog and the drawer.
+- **A sheet that carries words does not swipe away.** Phase 11H (D129). Moving the log onto vaul
+  brought a gesture the dialog never had: a drag down dismisses. `ResponsiveDialog` hears every
+  `input` event under it, and once something is typed — in any of the fifteen forms — the sheet
+  does not drag (`handleOnly` with no handle), the pill goes, and a tap beside it does nothing
+  (`onPointerDownOutside`, which vaul reads before Radix does); Cancel and Escape — deliberate —
+  still close it, as D84 says. A form that knows more than its inputs say — the log's chips and
+  dates — adds `guardOutside`. The first cut held the log alone, and the critic swiped a
+  half-typed project into nothing.
+- **What a finger is on is never swapped under it.** Phase 11H (D129, §5 #127). `useIsPhone` is
+  false on the server and true a moment after hydration, and everything inside the branch it
+  chooses is unmounted and remounted on that moment. A Radix trigger inside the branch was a
+  new button by the time the press finished — one open in thirty on a loaded machine, at a
+  phone width, in three gates. The opener stands outside the branch, a plain button with the
+  dialog's `aria-haspopup` and `aria-expanded`, and the two faces hand focus back to it on close
+  because Radix hands it back only to its own trigger. Anything else that swaps on the phone
+  line — the drawer's side, the sheet's face — swaps while closed and holds no finger.
+- **A kit cap is read before a class is written over it.** Phase 11H (§5 #122). The sheet said
+  `max-h-[92dvh]` and stood 80vh tall, because the kit's own cap is an attribute selector and a
+  plain class never beat it; the stated height was fiction for a whole box. The utility that
+  has to win over the kit says so with `!`, and the figure is the company drawer's, 88.
 
 ## §4 Not built until asked
 

@@ -18,7 +18,7 @@ export function NotificationBell() {
   const label = unread > 0 ? t("shell.unreadCount", { count: unread }) : t("common.notifications");
 
   return (
-    <Button asChild variant="ghost" size="icon" className="size-11 md:size-8" aria-label={label}>
+    <Button asChild variant="ghost" size="icon" aria-label={label}>
       <Link href="/notifications">
         <span className="relative inline-flex">
           <Bell className="size-5 md:size-4" />

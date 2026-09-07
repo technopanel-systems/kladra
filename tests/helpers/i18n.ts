@@ -107,11 +107,24 @@ type Fixtures = {
  * on the exception itself, naming it.
  *
  * Only `pageerror` — a genuinely uncaught throw. Console noise is not a failure.
+ *
+ * One throw is not the app's: React's development build draws a "Components"
+ * track in the profiler with `performance.measure`, using the server's own
+ * timestamps, and a document reached by a server `redirect()` has a clock that
+ * started after them — Chromium refuses the negative number. The suite runs on
+ * `next dev`, where that instrumentation is on; a production build never
+ * calls it. Seen on the admin gate and the two reading sweeps in P11H, every
+ * time on a page that redirected (`AdminUsersPage`, `AppIndex`).
  */
+const DEV_INSTRUMENTATION = /^Failed to execute 'measure' on 'Performance': .* negative time stamp/;
+
 function watchForRuntimeErrors(page: Page): () => void {
   const errors: string[] = [];
   const firstLine = (error: Error): string => error.message.split(/\r?\n/)[0];
-  page.on("pageerror", (error) => errors.push(firstLine(error)));
+  page.on("pageerror", (error) => {
+    const line = firstLine(error);
+    if (!DEV_INSTRUMENTATION.test(line)) errors.push(line);
+  });
   return () => {
     if (errors.length === 0) return;
     const many = errors.length === 1 ? "an uncaught error" : `${errors.length} uncaught errors`;

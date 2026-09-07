@@ -12,6 +12,7 @@
   "todayChip": "{count, plural, zero {لا متابعات اليوم} one {متابعة اليوم} two {متابعتان اليوم} few {# متابعات اليوم} many {# متابعة اليوم} other {# متابعة اليوم}}",
   "newProject": "إضافة مشروع",
   "newProjectIn": "إضافة مشروع لدى {company}",
+  "newProjectHint": "الاسم، والمساحة المتوقعة، وموعد المتابعة.",
   "pickCompany": "اختيار الشركة",
   "noCompanies": "لا توجد شركات على قائمتك بعد.",
   "namePlaceholder": "برج A",
@@ -48,5 +49,6 @@
   },
   "activity": "النشاط",
   "emptyActivity": "لم يُسجَّل شيء على هذا المشروع بعد — يبدأ السجل بأول زيارة أو اتصال.",
-  "editProject": "تعديل المشروع"
+  "editProject": "تعديل المشروع",
+  "editProjectHint": "بيانات المشروع نفسه كما هي الآن."
 }

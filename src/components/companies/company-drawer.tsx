@@ -315,7 +315,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         <TabsContent value="projects" className="flex flex-col gap-3">
           {mine ? (
             <div className="flex">
-              <NewProjectDialog companyId={company.id} trigger={newProjectTrigger} />
+              <NewProjectDialog
+                companyId={company.id}
+                companyName={company.name}
+                trigger={newProjectTrigger}
+              />
             </div>
           ) : null}
           {projects.length === 0 ? (

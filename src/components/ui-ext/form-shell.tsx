@@ -46,30 +46,40 @@ export function FormFooter({
   error,
   pending,
   onCancel,
+  confirmLabel,
+  confirmVariant = "brand",
 }: {
   error?: string | null;
   pending: boolean;
   onCancel: () => void;
+  /** The verb on the primary button when it is not Save — "Archive", "Issue", "Mark lost". */
+  confirmLabel?: string;
+  /** Destructive when the verb takes something off the floor. */
+  confirmVariant?: "brand" | "destructive";
 }) {
   const t = useTranslations("common");
 
   return (
-    <div data-slot="form-footer" className="border-t border-line bg-surface-2 p-4">
+    <div
+      data-slot="form-footer"
+      // The bottom padding is the home indicator's when there is one: on a
+      // phone this bar is the lowest thing on the screen (D129).
+      className="border-t border-line bg-surface-2 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+    >
       {error ? (
         <p role="alert" className="mb-3 text-sm text-destructive">
           {error}
         </p>
       ) : null}
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+      {/* Stacked on a phone with the primary LOWEST — the thumb rests at the
+          bottom of a sheet, and the kit's reverse order put Cancel there
+          (DESIGN §2, D129). From md they sit in a row, Save at the inline end. */}
+      <div className="flex flex-col gap-2 md:flex-row md:justify-end">
         <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
           {t("cancel")}
         </Button>
-        <Button
-          type="submit"
-          disabled={pending}
-          variant="brand"
-        >
-          {pending ? t("saving") : t("save")}
+        <Button type="submit" disabled={pending} variant={confirmVariant}>
+          {pending ? t("saving") : (confirmLabel ?? t("save"))}
         </Button>
       </div>
     </div>

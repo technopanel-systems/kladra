@@ -1,18 +1,9 @@
 "use client";
 
 import { useState, useTransition, type ReactNode } from "react";
-import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -72,7 +63,6 @@ export function ConfirmDialog({
   /** So a caller can clear what it asked when the dialog closes. */
   onOpenChange?: (open: boolean) => void;
 }) {
-  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -99,28 +89,39 @@ export function ConfirmDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={pending ? undefined : change}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        {children}
-        {refusal ? (
-          <p role="alert" className="text-xs text-destructive">
-            {refusal}
-          </p>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!pending) change(next);
+      }}
+      trigger={trigger}
+      title={title}
+      description={description}
+    >
+      {/* A form, so Enter confirms it (D114). It stops at itself: a
+          confirmation opened from inside another form must not submit that
+          one too — React carries a submit through a portal to the tree above. */}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!pending) confirm();
+        }}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        {children || refusal ? (
+          <FormBody>
+            {children}
+            {refusal ? (
+              <p role="alert" className="text-xs text-destructive">
+                {refusal}
+              </p>
+            ) : null}
+          </FormBody>
         ) : null}
-        <DialogFooter>
-          <Button type="button" variant="outline" disabled={pending} onClick={() => change(false)}>
-            {t("common.cancel")}
-          </Button>
-          <Button type="button" variant="brand" disabled={pending} onClick={confirm}>
-            {pending ? t("common.saving") : confirmLabel}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <FormFooter pending={pending} onCancel={() => change(false)} confirmLabel={confirmLabel} />
+      </form>
+    </ResponsiveDialog>
   );
 }

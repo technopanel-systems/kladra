@@ -67,7 +67,9 @@ function DrawerContent({
         )}
         {...props}
       >
-        <div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+        {/* `data-drag="off"` on the content (ResponsiveDialog, a held sheet): no
+            handle for a swipe that would do nothing. */}
+        <div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block group-data-[drag=off]/drawer-content:hidden!" />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>

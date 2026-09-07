@@ -225,7 +225,8 @@ export function DispatchesTable({
           onChange={(event) => onTerm(event.target.value)}
           aria-label={t("dispatches.searchLabel")}
           placeholder={t("dispatches.searchPlaceholder")}
-          className="h-10 px-10"
+          // The clear is a thumb wide on a phone (D130): room for it.
+          className="h-10 px-10 max-md:pe-12"
         />
         {term ? (
           <Button

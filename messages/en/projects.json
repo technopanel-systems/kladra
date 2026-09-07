@@ -12,6 +12,7 @@
   "todayChip": "{count} today",
   "newProject": "Add project",
   "newProjectIn": "Add project at {company}",
+  "newProjectHint": "The name, your m² estimate and when to follow up.",
   "pickCompany": "Choose a company",
   "noCompanies": "No companies on your list yet.",
   "namePlaceholder": "Tower A",
@@ -48,5 +49,6 @@
   },
   "activity": "Activity",
   "emptyActivity": "Nothing logged on this project yet — log the first visit or call.",
-  "editProject": "Edit project"
+  "editProject": "Edit project",
+  "editProjectHint": "The project’s own details, as they stand now."
 }

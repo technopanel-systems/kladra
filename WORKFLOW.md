@@ -111,7 +111,7 @@
             DESIGN; drag only where the drop needs nothing the system does not already have
       - [x] G Identity, motion and feel audited as one thing; loading, empty, error and
             offline states on every screen; reduced-motion honoured
-      - [ ] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
+      - [x] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
       - [ ] I Speed and reliability, measured: first paint on a mid phone, ten thousand
             rows, queries that grow, the unhappy paths — nothing silent, nothing lost
       - [ ] J What a good CRM has that Kladra does not: proposed freely, then deleted down
@@ -161,11 +161,15 @@ missing screens inside the shell, no default look on a button or a badge, the bo
 card a wash, the rail's width and the browser's chrome and the offline splash decided from the
 cookie before the first byte — and what the two inventories found on top: a pressed link says
 it is working, every empty state says why, and a search term with no digit in it no longer
-takes the quotations, dispatches and queue lists down (§5 #94–#102). Next is box 11H, the phone:
-a rep with one hand free at 375 — log, call, quote, read what came back — with the parked notes
-carried in (§5 #35, the breakpoint written three times; the 375 second looks from 11E; the
-sheets' scroll hint and the bottom bar's reach). The dev database is seeded
-at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
+takes the quotations, dispatches and queue lists down (§5 #94–#102). Box 11H is done in one
+commit (D128–D130): the four parked findings closed — one phone line named once and held by the
+lint, every form a bottom sheet with Save lowest and a thumb tall, 44px on everything a thumb
+presses — and what walking the four flows at 375 found on top: the Add project sheet named no
+company, the library's sheet slid in 500 ms, and a sheet with words in it could be swiped away
+(§5 #108–#127). Next is box 11I, speed and reliability measured: first paint on a mid phone,
+the round-trip count parked in 11C (§5 #71), ten thousand rows, the unhappy paths; the "picker
+race" of the 11G gate turned out to be the trigger swap (#127) and is closed. The dev
+database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -874,7 +878,18 @@ and a pressed row shows its mark until the answer lands (D126). Restores the rai
 A dialog zooms in 150 ms and a drawer slides in 200 ms; with the operating system asked for
 less motion, both are instant and the arrived flash is still two seconds (D123). The splash
 wears the light theme offline (`tests/pwa.spec.ts`, D125); the board's open card is a wash
-(`tests/board.spec.ts`, D123). Reads only.
+(`tests/board.spec.ts`, D123). A bottom sheet on a phone slides in 250, not the library's 500
+(D129). Reads only.
+
+**One hand at 375** — `tests/thumb.spec.ts`
+At 767 wide the rail is gone and Add company opens as a bottom sheet; at 768 the rail is there
+and it opens as a dialog — the shell and the forms change on the same pixel (D128). At 375
+Faisal opens his company: Log, Add project and, from the Quotations tab, Request quotation are
+each a bottom sheet with Save the lowest button, on the screen without scrolling and a thumb
+tall (D129); he writes a visit from the log sheet and it is in the company's history. On his
+day the first call card's Log, number and handset are each 44 by 44, and every door on the bar
+is a thumb tall (D130); what came back to him is read before the calls, each row a thumb tall
+and nothing wider than the screen. Writes one activity.
 
 **The guards** — `tests/csv.spec.ts`, `tests/guards.spec.ts`
 Pure: a cell that opens with `=`, `@`, a tab, or `+`/`-` before anything but a number is
@@ -1172,9 +1187,9 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `LINE_FIELDS` on the revision-diff screen. `scripts/check-messages.ts:186-192`. Two readers.
 - [x] 26 **A rep who works a Saturday cannot write that day's report.** Verified; the box is offered on an open off day and says nothing is owed (P11A-10, D97). `workdays.ts:13-16`,
   `reports.ts:374-389`; S47 allows recorded Saturday work. Reader cites code.
-- [ ] 27 **The day's Log and WhatsApp controls are small and sit over a whole-card link.**
+- [x] 27 **The day's Log and WhatsApp controls are small and sit over a whole-card link.** Verified — 28px over a stretched link; each is 44 by 44 on a phone now, measured in `tests/thumb.spec.ts` (P11H, D130).
   `call-band.tsx:66-120`. A rushed thumb opens the drawer. Reader cites code. (11H.)
-- [ ] 28 **New Project and Edit Project never become bottom sheets.** They call the raw Dialog;
+- [x] 28 **New Project and Edit Project never become bottom sheets.** Verified, and four more with them — mark lost, the log, confirm and prompt; all six are `ResponsiveDialog` (P11H, D129). They call the raw Dialog;
   nine others use `ResponsiveDialog`. Reader cites code. (11H.)
 - [x] 29 **"Calls due" has no way to place a call.** Verified; every number is a message and a call, drawn once (P11A-11, D98). `phone.ts:61-63` exports WhatsApp only;
   `tel:` appears nowhere. Reader cites code.
@@ -1188,7 +1203,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   `/dispatches` counts. Unreachable at fourteen people; wrong shape all the same. Reader cites code.
 - [x] 34 **The board's "current card" ring is the alert red DESIGN already retired once.** Verified; the `bg-surface-2` wash the lists give their open row (P11G-2, D123).
   `board.tsx:98`, `globals.css:181`. Reader cites code. (11G.)
-- [ ] 35 **The phone breakpoint is written three times — 639, 640 and 768.** `responsive-dialog.
+- [x] 35 **The phone breakpoint is written three times — 639, 640 and 768.** Verified, four with the log dialog's `max-sm:`; one constant, one hook, one lint rule, and the spec opens the same form at 767 and 768 (P11H, D128). `responsive-dialog.
   tsx:35`, `company-header.tsx:56`, `bottom-bar.tsx:34`; between 641 and 767 the shell is a
   phone and the dialogs are not. Two readers. (11H.)
 - [x] 36 **The admin gate is hand-copied into seven pages, and both test sweeps miss `admin/use`.** Verified; one `requireAdmin`, and both sweeps read `ADMIN_PATHS` off the rail (P11A-12, D99).
@@ -1221,7 +1236,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   401-408`. Reader cites code.
 - [x] 50 **The "nothing can be written while viewing" test can skip its only write.** Verified; it asserts the control is absent (P11A-16, D103). `view-as.
   spec.ts:104-120`. Reader cites code.
-- [ ] 51 **The 44px touch rule lives in one file.** `bottom-bar.tsx`, `button.tsx:29-41` tops
+- [x] 51 **The 44px touch rule lives in one file.** Verified — two, the bar and the bell by hand; it is the `touch` utility now, written once and carried by the kit (P11H, D130). `bottom-bar.tsx`, `button.tsx:29-41` tops
   out at 36. Reader cites code. (11H.)
 - [x] 52 **The hand-over warning for marketing names what never moves and not what does.** Rewritten with D86: what moves, and that approved metres stay (P11A-2).
   `drawer.json:46`, `companies.ts:407-422`. Reader cites code.
@@ -1601,3 +1616,133 @@ the shared component and `check:messages`; the pressed-row spec cannot be pre-em
 prefetch, because the suite runs on `next dev`, where a Link prefetches nothing; and the
 archive dialog's `router.push("/companies")` does drop `?rep=`, but only the company's own rep
 sees that button, and his URL never carries one.
+
+The phone, one-handed (P11H). The four parked findings first (#27, #28, #35, #51), then the
+four flows walked at 375 in a spec and looked at in both locales and themes, then the reviews.
+What the walk found on top:
+
+- [x] 108 **The Add project sheet named no company.** Found walking the drawer at 375, fixed in
+  P11H. `newProjectIn` ("Add project at {company}") existed and nobody passed the name, so the
+  sheet — which on a phone covers the drawer entirely — said "Add project" over a blank. Fix:
+  both call sites in the drawer pass `company.name`; the spec opens it by that title.
+- [x] 109 **vaul slides a sheet in 500 ms, twice DESIGN's band.** Found by the motion spec's
+  sibling, fixed in P11H (D129). Moving six forms onto vaul would have put every form on a
+  phone outside the band 11G had just measured. Fix: globals.css holds `[data-vaul-drawer]` and
+  its overlay to 250 ms with `!important`, because the library injects its own stylesheet and
+  writes the drag-release transition inline; `tests/motion.spec.ts` measures the sheet.
+- [x] 110 **A dirty log sheet could be swiped away.** Introduced by the move and closed in the
+  same slice (D129). The dialog's `onInteractOutside` guard (D84) did not survive the move:
+  vaul reads `onPointerDownOutside` first and stops only when it is already prevented, and a
+  drag down is a gesture Radix never had. Fix: `guardOutside` on `ResponsiveDialog` — no drag
+  (`handleOnly` with no handle) and no outside tap while dirty; Escape and Cancel still close.
+  The critic then found the other five sheets open to the same swipe (#118).
+- [x] 111 **The bell wrote the 44px rule by hand.** `size-11 md:size-8` on one button, the same
+  rule the bar wrote its own way (#51). Fix: the class goes; `Button` carries `touch`.
+- [x] 112 **A confirmation's Enter did nothing, and its buttons were not a form.** Found
+  converting `ConfirmDialog`, fixed in P11H. The confirm button was `type="button"` with an
+  `onClick`, so Enter in the question under it (the hand-over picker, an archive reason) did
+  not confirm (D114 says it should). Fix: a form, whose submit stops at itself — React carries
+  a submit through a portal to the form above it, and three admin panels open these from
+  inside one.
+- [x] 113 **The prompt's "whose record" line was read by nobody.** Found by the guidelines
+  review, fixed in P11H. The customer's name sat in a paragraph between the title and the
+  description; Radix wires only those two to the dialog, so a screen reader heard "Issue Q-12"
+  and the sentence and never the company — the whole point of D98. Fix: the name is the first
+  line of the description, in both faces of `ResponsiveDialog`.
+- [x] 114 **The sheet's 250 ms outranked "less motion".** Found by the guidelines review, fixed
+  in P11H. The vaul override is an attribute selector, which beats the reduced-motion block's
+  `*` whatever the source order, both being `!important`; a person who asked for less motion
+  still got the slide. Fix: the sheet is named inside the reduced-motion block too, and
+  `tests/motion.spec.ts` opens one at 375 with motion reduced.
+- [x] 115 **A held sheet still showed the handle that invites a swipe.** Found by the guidelines
+  review, fixed in P11H. With words typed the sheet does not drag (#110) and the pill at its
+  top said it would. Fix: the content carries `data-drag="off"` while held and the kit hides
+  the pill.
+- [x] 116 **The log's channel chips were the one control in the sheet under 44.** Found by the
+  guidelines review, fixed in P11H (D130). Native radios inside a label, and the label is not a
+  kit control, so `touch` never reached it. Fix: `touch` on the label.
+- [x] 117 **Four forms' submit did not stop at itself, and the SMAC box could be autocorrected.**
+  Found by the guidelines review, fixed in P11H. `stopPropagation` on the log, project and
+  mark-lost forms as on confirm and prompt (#112); `spellCheck` off on the number box.
+
+- [x] 118 **Five sheets could still be swiped away with words in them.** Found by the critic,
+  fixed in P11H (D129). #110 held the log by its own `dirty`; New and Edit project, Mark lost,
+  Prompt and Confirm — and the nine forms that were sheets before this box — passed nothing, so
+  a half-typed project was one downward swipe from gone. Fix: `ResponsiveDialog` hears `input`
+  under it and holds itself once anything is typed, on every form; `guardOutside` stays for what
+  inputs do not say.
+- [x] 119 **`(max-width: 767px)` is not `max-md:`.** Found by the critic, fixed in P11H (D128).
+  Tailwind compiles `max-md:` to `(width < 48rem)`; at a fractional width — zoom, an odd pixel
+  ratio — 767.5 was a phone to the stylesheet and a desktop to the hook, the very defect D128
+  closed, and the spec at 767 and 768 could not see it. Fix: `PHONE_QUERY` is `(width < 48rem)`;
+  `PHONE_MAX_PX` stays for the spec's viewport.
+- [x] 120 **The tab a thumb presses was 37px inside a 44px list.** Found by the critic, fixed in
+  P11H (D130). `touch` sat on the list; the trigger is `calc(100% - 1px)` of a padded list. Fix:
+  `touch` on the trigger, and the list lets go of its height on a phone.
+- [x] 121 **Three search boxes' clear grew over the text.** Found by the critic, fixed in P11H.
+  The projects, quotations and dispatches searches each draw their own clear button — a
+  `Button`, so 44 wide now — inside an input that reserved 40px; the tail of a long term sat
+  under the X. Fix: `max-md:pe-12` on the three. Four hand-drawn search boxes is the cause and
+  is parked for 11J with the picker race.
+- [x] 122 **The sheet's stated height was fiction.** Found by the critic, fixed in P11H. The kit's
+  `max-h-[80vh]` is an attribute selector and the sheet's `max-h-[92dvh]` never applied. Fix:
+  `max-h-[88dvh]!`, the company drawer's figure, in dvh.
+- [x] 123 **Six dialogs grew four rem on the desktop and nobody wrote it down.** Found by the
+  critic, recorded in P11H (D129). The one responsive dialog is `sm:max-w-lg`; the six it took
+  over were `sm:max-w-md`. One width for every form is the point of one dialog; the change is
+  recorded rather than reversed.
+- [x] 124 **`one-look` had a hole the width of a file, and failed a block comment.** Found by the
+  critic, fixed in P11H. The whole of globals.css was exempt from the phone-line rule, so a
+  second hand-written query there passed; `max-[767px]:` and a range query were not matched; a
+  line opening with `/*` counted as a breach. Fix: `path#text` allowances that exempt only the
+  lines carrying the text (the 980px blur line), the pattern widened, `/*` skipped.
+- [x] 125 **A comment lied about a field.** Found by the critic, fixed in P11H. `spellCheck`
+  off on the prompt's single-line box was explained as "a number", and the same box takes the
+  admin's new password. The behaviour was right; the comment says both now.
+
+- [x] 127 **A press on Add company opened nothing, one time in thirty, at a phone width.** Seen
+  in the 11G gate (forms at 375, quotations), in the 11H gate (`reading.spec.ts:85`, Arabic, 375)
+  and once in 32 repeats of those two tests; fixed in P11H (D129). Cause: the trigger was a
+  Radix `DialogTrigger` inside the Dialog branch and a `DrawerTrigger` inside the Drawer branch,
+  and `useIsPhone` swaps the branch on the first render after hydration — the fixture waits for
+  `html[data-hydrated]`, which is the root's effect, and the swap commits a beat later, so the
+  button Playwright (or a thumb) had resolved was unmounted between press and release. Fix: the
+  opener stands outside the swap, a `Slot` that sets `open`, with `aria-haspopup` and
+  `aria-expanded`; the faces hand focus back to it on close (Radix only hands it to its own
+  trigger). Thirty-two repeats after: none failed. Was parked for 11I as "the picker race"; the
+  picker was innocent. The first cut of this fix handed the trigger to a raw `Slot` and skipped
+  the kit's `useSlotChild`: a button built in a server component crosses as a lazy wrapper, and
+  the Arabic company drawer went to the error card twice in the next gate; the opener resolves
+  its child first, as every trigger in the kit does.
+- [x] 126 **Six Arabic strings, and one imperative the lint did not list.** Found by the Arabic
+  reviewer on the 375 shots, fixed in P11H. «الأمتار» is linear metres where the field says
+  م²; "the number **on** Q-7" was an English calque twice («على {label}» → «لعرض السعر {label}»
+  and «للتوريد {label}»); «تُبلَّغ لصاحب» took the wrong preposition; the log's subtitle called
+  the entry «إدخال» where every other screen says «تسجيل»; and «فاتركه» — "leave it", to a man —
+  had shipped in the admin's last-day hint because the lint matches whole words and the
+  imperative wore a prefix and a suffix. Fix: the strings, and `gendered-arabic.mts` lists
+  «اترك» with its attached forms.
+
+Seen on the 375 shots and left, with the reason: the quotations list's status chips wrap round
+the list/board switch, so «الكل» lands on a second row that reads as another group — the row is
+one flex-wrap from before this box and is the search-box question's neighbour, parked for 11J;
+«أبريل 2026» is the one month label on two lines, which is D65's rule (the year only where it
+changes) and not a fault; the focused textarea's ring peeks over the top of the scrolling body,
+which is the ring doing its job at an edge.
+
+Refuted or confirmed by the critic, so the next reader does not re-find them: `@variant max-md`
+inside `@utility touch` compiles on Tailwind 4.3 to `@media (width < 48rem)`; the calendar's day
+cells use `buttonVariants` and stay small; the bell's hand-written `size-11 md:size-8` is exactly
+`size-8` plus `touch`; vaul's `handleOnly` with no handle is "no drag", `dismissible` stays true
+so Escape and the overlay work, and `onPointerDownOutside` prevented does stop it closing; the
+250 ms `!important` beats vaul's inline transition and not its `transition: none` during a drag;
+`useIsPhone` reads a server snapshot, so nothing mismatches on hydration, and every form holds
+its state above the Dialog↔Drawer swap, so a rotation mid-form loses nothing.
+
+Left on purpose, so the next reader does not re-find it: `transition-all` on the kit's button
+animates colour, a shadow and a one-pixel translate and nothing that lays out, which is what
+the guideline's warning is about; it stays. And one throw the suite now ignores: React's
+development build measures a redirected or missing page with a timestamp Chromium refuses
+("cannot have a negative time stamp"), and nine specs failed on it in one warm run without a
+line of the app in the trace; the fixture names that one message and no other, and a
+production build never emits it (`tests/helpers/i18n.ts`).

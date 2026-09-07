@@ -31,7 +31,7 @@ export function PhoneLinks({
 }) {
   const t = useTranslations();
   const link = cn(
-    "relative z-10 inline-flex items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+    "touch relative z-10 inline-flex items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
     chip
       ? "rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs hover:bg-surface"
       : "rounded-sm text-muted-foreground transition-colors hover:text-foreground hover:underline",
@@ -54,7 +54,7 @@ export function PhoneLinks({
       <a
         href={telHref(phone)}
         aria-label={t("companies.callContact", { name })}
-        className={cn(link, chip ? "px-2.5" : "p-1")}
+        className={cn(link, "justify-center", chip ? "px-2.5" : "p-1")}
       >
         <PhoneIcon aria-hidden="true" className={icon} />
       </a>

@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
  * the same reason (D9).
  */
 const PILL =
-  "inline-flex h-7 items-center rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+  "touch inline-flex h-7 items-center rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 /** Exported for the message check: `day.<kind>Count` is a computed family (D96). */
 export const WAITING_KINDS = ["sentBack", "refused", "withCustomer"] as const;

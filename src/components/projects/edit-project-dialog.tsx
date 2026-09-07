@@ -6,16 +6,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { updateProjectAction } from "@/actions/projects";
 import { ProjectFields, type ProjectDraft } from "@/components/projects/project-fields";
+import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { useRouter } from "@/i18n/navigation";
 
 /**
@@ -110,30 +103,31 @@ export function EditProjectDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>
-        {trigger ?? (
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={
+        trigger ?? (
           <Button variant="outline">
             <Pencil aria-hidden="true" />
             {t("common.edit")}
           </Button>
-        )}
-      </DialogTrigger>
-
-      <DialogContent className="max-h-[88svh] overflow-y-auto overscroll-contain sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t("projects.editProject")}</DialogTitle>
-        </DialogHeader>
-
-        {/* A form, so Enter in a field saves it (D114). */}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (!pending) submit();
-          }}
-          noValidate
-          className="flex flex-col gap-4"
-        >
+        )
+      }
+      title={t("projects.editProject")}
+      description={t("projects.editProjectHint")}
+    >
+      {/* A form, so Enter in a field saves it (D114). */}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!pending) submit();
+        }}
+        noValidate
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <FormBody>
           <ProjectFields
             idPrefix="edit-project"
             value={form}
@@ -142,18 +136,9 @@ export function EditProjectDialog({
             disabled={pending}
           />
 
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline" type="button" disabled={pending}>
-                {t("common.cancel")}
-              </Button>
-            </DialogClose>
-            <Button type="submit" variant="brand" disabled={pending}>
-              {pending ? t("common.saving") : t("common.save")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </FormBody>
+        <FormFooter pending={pending} onCancel={() => onOpenChange(false)} />
+      </form>
+    </ResponsiveDialog>
   );
 }

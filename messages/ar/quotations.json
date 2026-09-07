@@ -21,7 +21,7 @@
   "smacTaken": "الرقم {number} مسجّل بالفعل على {label}.",
   "smacTakenSomewhere": "الرقم {number} مسجّل بالفعل على عرض سعر آخر.",
   "correctNumber": "تصحيح الرقم",
-  "correctNumberTitle": "تصحيح رقم سماك على {label}",
+  "correctNumberTitle": "تصحيح رقم سماك لعرض السعر {label}",
   "correctNumberHint": "الرقم كما أصدره سماك. يبقى الرقم القديم في «ما حدث».",
   "numberCorrected": "تم تصحيح رقم {label}",
   "sameNumber": "هذا هو الرقم الحالي.",

@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 export type Pill = Extract<FollowUpFilter, "overdue" | "today" | "never" | "quiet">;
 
 const PILL =
-  "inline-flex h-7 items-center gap-1.5 rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+  "touch inline-flex h-7 items-center gap-1.5 rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export async function FollowUpStrip({
   counts,
