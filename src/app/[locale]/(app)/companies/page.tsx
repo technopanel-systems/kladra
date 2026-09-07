@@ -156,18 +156,19 @@ export default async function CompaniesPage({
           still in play and what has stopped on the way. */}
       {standing ? <PersonStrip standing={standing} /> : null}
 
-      <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} />
+      <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} rep={repId} />
 
-      <ListSearch q={q} filter={filter ?? null} open={open} />
+      <ListSearch q={q} filter={filter ?? null} open={open} rep={repId} />
 
       {tableRows.length === 0 ? (
-        <EmptyList q={q} filtered={filter !== undefined} mayAdd={mayAdd} />
+        <EmptyList q={q} filtered={filter !== undefined} mayAdd={mayAdd} rep={repId} />
       ) : (
         <CompaniesTable
           rows={tableRows}
           q={q}
           filter={filter ?? null}
           openId={open}
+          rep={repId}
           today={todayRiyadh()}
         />
       )}
@@ -194,19 +195,27 @@ async function EmptyList({
   q,
   filtered,
   mayAdd,
+  rep,
 }: {
   q: string;
   filtered: boolean;
   mayAdd: boolean;
+  /** Whose floor a manager is reading (S8); the way back keeps him on it (P11G). */
+  rep: string | null;
 }) {
   const t = await getTranslations();
+  // Built the way the strip, the search and the table build theirs.
+  const params = new URLSearchParams();
+  if (rep) params.set("rep", rep);
+  const query = params.toString();
+  const back = query ? `/companies?${query}` : "/companies";
 
   if (q) {
     return (
       <Panel
         sentence={t("shell.searchNoResults", { q })}
         action={t("companies.clearSearch")}
-        href="/companies"
+        href={back}
       />
     );
   }
@@ -215,7 +224,7 @@ async function EmptyList({
       <Panel
         sentence={t("companies.emptyFilter")}
         action={t("companies.clearFilter")}
-        href="/companies"
+        href={back}
       />
     );
   }

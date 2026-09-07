@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Sqm } from "@/components/ui-ext/figures";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
 import { TONE_CLASS, TONE_TEXT, type StateTone } from "@/lib/state-tone";
@@ -94,13 +95,16 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
                     href={card.href}
                     aria-current={card.current ? "true" : undefined}
                     className={cn(
-                      "card-face flex flex-col gap-1.5 p-3 transition-colors hover:bg-surface-2",
-                      card.current && "ring-2 ring-ring/60",
+                      "card-face flex flex-col gap-1.5 p-3 transition-colors",
+                      card.current && "bg-surface-2",
                     )}
                   >
                     <span className="flex items-baseline justify-between gap-2">
-                      <span dir="ltr" className="num text-sm font-medium">
-                        {card.label}
+                      <span className="flex items-center gap-1.5">
+                        <span dir="ltr" className="num text-sm font-medium">
+                          {card.label}
+                        </span>
+                        <LinkPending />
                       </span>
                       <Sqm value={card.sqm} className="text-xs" />
                     </span>

@@ -16,10 +16,19 @@ import { isActive, navFor, type NavItem } from "./nav";
  * The brand gradient is deliberately absent here — DESIGN §1 keeps it on the
  * primary button — so the active row is a wash plus stronger text.
  */
-export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "rtl" }) {
+export function Sidebar({
+  role,
+  direction,
+  collapsed: initialCollapsed,
+}: {
+  role: Role;
+  direction: "ltr" | "rtl";
+  /** What the cookie said when the page was served: the width of the first paint (§5 #40). */
+  collapsed: boolean;
+}) {
   const t = useTranslations();
   const pathname = usePathname();
-  const { collapsed, ready, toggle } = useSidebar();
+  const { collapsed, toggle } = useSidebar(initialCollapsed);
   const groups = navFor(role);
   const tooltipSide = direction === "rtl" ? "left" : "right";
   // The chevron points the way the rail is about to move; RTL mirrors it.
@@ -65,7 +74,7 @@ export function Sidebar({ role, direction }: { role: Role; direction: "ltr" | "r
         data-collapsed={collapsed}
         className={cn(
           "sticky top-0 z-30 hidden h-svh shrink-0 flex-col overflow-hidden border-e border-line bg-rail glass md:flex",
-          ready && "transition-[width] duration-200 ease-out",
+          "transition-[width] duration-200 ease-out",
           collapsed ? "w-[4.5rem]" : "w-60",
         )}
       >

@@ -339,13 +339,34 @@
   }
 }
 
-/* A row that just arrived or changed because of someone else (DESIGN §2). */
+/*
+ * A row that just arrived or changed because of someone else (DESIGN §2). It
+ * starts from the amber TEXT colour at a third, not from the amber tint: the
+ * tint is 14% over a dark canvas, and on the queue's dark rows the flash was
+ * barely a change (P11B-1, P11G). Still a colour and nothing else — no travel.
+ */
 @utility row-arrived {
   animation: row-arrived 2s ease-out 1;
 }
 @keyframes row-arrived {
-  0% { background-color: var(--a-amber-bg); }
+  0% { background-color: color-mix(in oklab, var(--a-amber-fg) 32%, transparent); }
   100% { background-color: transparent; }
+}
+
+/*
+ * The mark inside a link whose answer has not come yet (ui-ext/link-pending.tsx).
+ * Invisible for the first 150 ms, so a fast answer never shows it; the delay
+ * survives reduced motion because only durations are shortened there.
+ */
+@utility link-pending {
+  display: inline-flex;
+  opacity: 0;
+  animation: link-pending-show 1ms linear 150ms forwards;
+}
+@keyframes link-pending-show {
+  to {
+    opacity: 1;
+  }
 }
 
 /*

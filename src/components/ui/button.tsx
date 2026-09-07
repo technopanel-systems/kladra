@@ -9,7 +9,6 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
@@ -41,7 +40,6 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
       size: "default",
     },
   }
@@ -49,12 +47,19 @@ const buttonVariants = cva(
 
 function Button({
   className,
-  variant = "default",
+  variant,
   size = "default",
   asChild = false,
   ...props
 }: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
+  Omit<VariantProps<typeof buttonVariants>, "variant"> & {
+    /**
+     * Named at every site, never defaulted. The fallback was a flat brand red —
+     * a second primary look that seven dialog footers wore without anybody
+     * choosing it (P11G, §5 #66). `brand` is the one primary action on a
+     * screen; every other button says what it is.
+     */
+    variant: NonNullable<VariantProps<typeof buttonVariants>["variant"]>
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot.Root : "button"

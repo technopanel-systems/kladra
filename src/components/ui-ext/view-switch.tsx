@@ -4,6 +4,7 @@ import { LayoutGrid, List as ListIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
 import { viewCookie, type ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
@@ -77,6 +78,7 @@ function Choice({
       <Link href={href} aria-current={active ? "true" : undefined}>
         {children}
         {label}
+        <LinkPending />
       </Link>
     </Button>
   );

@@ -9,7 +9,6 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground [a]:hover:bg-primary/80",
         secondary:
           "bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80",
         destructive:
@@ -21,19 +20,20 @@ const badgeVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
       },
     },
-    defaultVariants: {
-      variant: "default",
-    },
   }
 )
 
 function Badge({
   className,
-  variant = "default",
+  variant,
   asChild = false,
   ...props
 }: React.ComponentProps<"span"> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+  Omit<VariantProps<typeof badgeVariants>, "variant"> & {
+    /** Named at every site, as on Button: the fallback was the flat brand red (P11G). */
+    variant: NonNullable<VariantProps<typeof badgeVariants>["variant"]>
+    asChild?: boolean
+  }) {
   const Comp = asChild ? Slot.Root : "span"
 
   return (

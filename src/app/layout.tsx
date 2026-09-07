@@ -7,7 +7,7 @@ import { Hydrated } from "@/components/shell/hydrated";
 import { ServiceWorker } from "@/components/shell/service-worker";
 import { Toaster } from "@/components/ui/sonner";
 import { dirOf } from "@/i18n/routing";
-import { getTheme } from "@/lib/theme";
+import { CANVAS, getTheme } from "@/lib/theme";
 import "./globals.css";
 
 // Static families: weights listed explicitly. Arabic gets its own family and
@@ -43,15 +43,22 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Kladra", statusBarStyle: "black-translucent" },
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: dark)", color: "#0f0d0c" },
-    { media: "(prefers-color-scheme: light)", color: "#f5f2ef" },
-  ],
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-};
+/**
+ * The browser's own chrome — the address bar on a phone, the title bar of an
+ * installed window — follows Kladra's theme, not the phone's. `themeColor` was
+ * a pair of media queries on the operating system's setting, so a rep who had
+ * chosen light on a dark phone got a black bar over a white page (§5 #41). The
+ * same cookie the layout below reads decides it.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  const theme = await getTheme();
+  return {
+    themeColor: CANVAS[theme],
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
+  };
+}
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [locale, theme] = await Promise.all([getLocale(), getTheme()]);

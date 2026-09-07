@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
 
 /**
@@ -35,6 +36,7 @@ export function FilterChip({
     >
       <Link href={href} aria-current={active ? "true" : undefined}>
         {children}
+        <LinkPending />
       </Link>
     </Button>
   );

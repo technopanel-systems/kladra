@@ -6,7 +6,7 @@
   "shortQueue": "Queue",
   "shortQuotations": "Quotes",
   "shortReports": "Report",
-  "accountMenu": "Your account",
+  "accountMenuFor": "Your account, {name}",
   "searchDialog": "Search Kladra",
   "searchHint": "Type a name, a phone number or a quotation number.",
   "searchNoResults": "Nothing matched “{q}”.",
@@ -15,5 +15,11 @@
   "emptyTeam": "No reps yet — the admin adds people under Users.",
   "emptyNotifications": "Nothing to read — you are up to date.",
   "emptyUsers": "No users yet — add the first one.",
-  "emptyHolidays": "No holidays or leave yet — add the first one."
+  "emptyHolidays": "No holidays or leave yet — add the first one.",
+  "failedTitle": "This screen could not be drawn",
+  "failedBody": "Whatever was already saved is safe. Try again; if it happens again, tell the admin.",
+  "missingTitle": "There is no screen at this address",
+  "missingBody": "The link may be old or mistyped. Start again from your first screen.",
+  "tryAgain": "Try again",
+  "goHome": "Home"
 }

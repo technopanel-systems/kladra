@@ -1,95 +1,84 @@
 "use client";
 
 import { useCallback, useSyncExternalStore } from "react";
+import { SIDEBAR_COOKIE, sidebarCollapsed } from "@/lib/sidebar";
 
 /**
  * Whether the rail is collapsed to icons. Saved per browser, not per user (the
  * same reasoning as the theme cookie, SPEC D16) — a rep on a laptop and on a
  * shared desk machine want different widths.
  *
- * localStorage is an external store, so it is read through
- * `useSyncExternalStore` rather than copied into state by an effect: the
- * server snapshot is "expanded", the client snapshot is what was saved, and
- * another tab's change arrives through the `storage` event. The value is also
- * held in memory, so the toggle still works where storage is blocked — a
- * private window would otherwise read back the old answer and never move.
+ * The cookie is an external store, so it is read through `useSyncExternalStore`
+ * rather than copied into state by an effect. The server snapshot is what the
+ * layout read from the request, so the first paint is already the saved width
+ * and hydration has nothing to correct. It was localStorage, which the server
+ * cannot see, and every load of a collapsed rail began with an expanded one
+ * that snapped shut a frame later (§5 #40). The value is also held in memory,
+ * and every touch of `document.cookie` is guarded, so the toggle still works
+ * where cookies are refused — for this page's lifetime, at least — and a
+ * refusal can never throw inside a render and take the shell down with it.
+ *
+ * A cookie has no change event, so another tab's toggle is not pushed here the
+ * way a `storage` event used to push it; it is read again whenever this tab
+ * comes back into focus, which is the moment anybody would notice.
  */
-const KEY = "kladra.sidebar";
+const YEAR = 60 * 60 * 24 * 365;
 
 const listeners = new Set<() => void>();
 let cached: boolean | null = null;
 
 function subscribe(onChange: () => void): () => void {
   listeners.add(onChange);
-  const onStorage = (event: StorageEvent) => {
-    if (event.key !== null && event.key !== KEY) return;
+  const onFocus = () => {
     cached = null;
     onChange();
   };
-  window.addEventListener("storage", onStorage);
+  window.addEventListener("focus", onFocus);
   return () => {
     listeners.delete(onChange);
-    window.removeEventListener("storage", onStorage);
+    window.removeEventListener("focus", onFocus);
   };
 }
 
-function readCollapsed(): boolean {
-  if (cached === null) {
-    try {
-      cached = window.localStorage.getItem(KEY) === "collapsed";
-    } catch {
-      cached = false; // private mode or blocked storage: expanded is the default
-    }
+function readCookie(): string | undefined {
+  try {
+    const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${SIDEBAR_COOKIE}=([^;]*)`));
+    return match?.[1];
+  } catch {
+    return undefined; // cookies refused: expanded is the default
   }
-  return cached;
 }
 
-function serverCollapsed(): boolean {
-  return false;
+function readCollapsed(): boolean {
+  if (cached === null) cached = sidebarCollapsed(readCookie());
+  return cached;
 }
 
 function writeCollapsed(next: boolean): void {
   cached = next;
   try {
-    window.localStorage.setItem(KEY, next ? "collapsed" : "expanded");
+    const secure = window.location.protocol === "https:" ? "; secure" : "";
+    document.cookie =
+      `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=${YEAR}; ` +
+      `samesite=lax${secure}`;
   } catch {
-    // Nothing to persist to; the choice still applies to this browser session.
+    // Nothing to persist to; the choice still applies to this page.
   }
   for (const onChange of listeners) onChange();
 }
 
-/**
- * True from the first frame AFTER hydration has painted. The stored width
- * cannot be known on the server, so the rail's first client render may change
- * its width; enabling the transition a frame later makes that a snap instead
- * of an unasked-for animation on every page load (DESIGN §2: motion where it
- * explains, never motion for its own sake).
- */
-let painted = false;
-function subscribePainted(onChange: () => void): () => void {
-  const frame = requestAnimationFrame(() => {
-    painted = true;
-    onChange();
-  });
-  return () => cancelAnimationFrame(frame);
-}
-const readPainted = () => painted;
-const serverPainted = () => false;
-
 export type SidebarState = {
   collapsed: boolean;
-  /** False until the first frame after hydration; gates the width transition. */
-  ready: boolean;
   toggle: () => void;
 };
 
-export function useSidebar(): SidebarState {
-  const collapsed = useSyncExternalStore(subscribe, readCollapsed, serverCollapsed);
-  const ready = useSyncExternalStore(subscribePainted, readPainted, serverPainted);
+/** `initial` is what the server read from the cookie: the width of the first paint. */
+export function useSidebar(initial: boolean): SidebarState {
+  const collapsed = useSyncExternalStore(subscribe, readCollapsed, () => initial);
 
   const toggle = useCallback(() => {
     writeCollapsed(!readCollapsed());
   }, []);
 
-  return { collapsed, ready, toggle };
+  return { collapsed, toggle };
 }

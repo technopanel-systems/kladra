@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { Money, Sqm } from "@/components/ui-ext/figures";
@@ -266,10 +267,17 @@ export function QuotationsTable({
       </div>
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
-        {view === "board" && showFilters ? (
+        {rows.length === 0 ? (
+          // Before the board: six empty columns say nothing about why (P11G).
+          <EmptyQuotations
+            base={base}
+            q={q}
+            status={status}
+            fixed={!showFilters}
+            onClear={clearTerm}
+          />
+        ) : view === "board" && showFilters ? (
           <Board columns={columns} />
-        ) : rows.length === 0 ? (
-          <EmptyQuotations base={base} q={q} status={status} onClear={clearTerm} />
         ) : (
           <>
             {/* 375: cards. Six columns on a phone is a horizontal scroll. */}
@@ -284,8 +292,11 @@ export function QuotationsTable({
                   )}
                 >
                   <span className="flex items-center justify-between gap-2">
-                    <span dir="ltr" className="num font-medium">
-                      {row.label}
+                    <span className="flex items-center gap-1.5">
+                      <span dir="ltr" className="num font-medium">
+                        {row.label}
+                      </span>
+                      <LinkPending />
                     </span>
                     {waiting?.[row.id] ? (
                       <WaitedFor waited={waiting[row.id]} />
@@ -343,8 +354,11 @@ export function QuotationsTable({
                           aria-current={openId === row.id ? "true" : undefined}
                           className="block p-3"
                         >
-                          <span dir="ltr" className="num font-medium">
-                            {row.label}
+                          <span className="flex items-center gap-1.5">
+                            <span dir="ltr" className="num font-medium">
+                              {row.label}
+                            </span>
+                            <LinkPending />
                           </span>
                           {row.smacNumber ? (
                             <span dir="ltr" className="num block text-xs text-muted-foreground">
@@ -405,11 +419,14 @@ function EmptyQuotations({
   base,
   q,
   status,
+  fixed,
   onClear,
 }: {
   base: string;
   q: string;
   status: QuotationStatus | null;
+  /** The page chose the status (the queue): there is no "All" to go to (P11G). */
+  fixed: boolean;
   onClear: () => void;
 }) {
   const t = useTranslations();
@@ -427,9 +444,11 @@ function EmptyQuotations({
   if (status) {
     return (
       <EmptyCard sentence={t("quotations.emptyStatus", { status: t(STATUS_KEYS[status]) })}>
-        <Button asChild variant="outline">
-          <Link href={base}>{t("common.all")}</Link>
-        </Button>
+        {fixed ? null : (
+          <Button asChild variant="outline">
+            <Link href={base}>{t("common.all")}</Link>
+          </Button>
+        )}
       </EmptyCard>
     );
   }

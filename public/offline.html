@@ -15,7 +15,19 @@
       when there is no server to ask which language this person uses, and two
       short lines cost less than getting it wrong. Styles are inline because
       there is no network to fetch a stylesheet from.
+
+      The theme is the reader's, not the default: the app's theme cookie is left
+      readable so this page can follow it (src/lib/theme.ts, src/actions/prefs.ts).
+      Dark unless the cookie says light (SPEC D16). The two canvas colours are
+      the ones in globals.css and src/lib/theme.ts, repeated here by hand
+      because nothing bundles this file.
     -->
+    <script>
+      if (/(?:^|;\s*)theme=light(?:;|$)/.test(document.cookie)) {
+        document.documentElement.classList.add("light");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f5f2ef");
+      }
+    </script>
     <style>
       :root {
         color-scheme: dark;
@@ -69,6 +81,19 @@
         width: 40px;
         height: 1px;
         background: #332c28;
+      }
+      .light {
+        color-scheme: light;
+      }
+      .light body {
+        background: #f5f2ef;
+        color: #1a1614;
+      }
+      .light .quiet {
+        color: #6b615c;
+      }
+      .light .rule {
+        background: rgba(26, 22, 20, 0.13);
       }
     </style>
   </head>

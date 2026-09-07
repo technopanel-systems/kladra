@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { CANVAS } from "@/lib/theme";
 
 /**
  * What a phone needs to install Kladra (SPEC §3: "installable on a phone — PWA
@@ -29,8 +30,8 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     // Dark is the default theme (D16), so this is the colour the splash and
     // the status bar wear before any CSS has loaded.
-    background_color: "#0f0d0c",
-    theme_color: "#0f0d0c",
+    background_color: CANVAS.dark,
+    theme_color: CANVAS.dark,
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },

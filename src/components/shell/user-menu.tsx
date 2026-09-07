@@ -2,6 +2,7 @@
 
 import { ChevronsUpDown, LogOut, Moon, Sun } from "lucide-react";
 import { useTransition } from "react";
+import { useFormStatus } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { signOutAction } from "@/actions/auth";
@@ -78,7 +79,10 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
         <Button
           variant="ghost"
           size="lg"
-          aria-label={t("shell.accountMenu")}
+          // Named with the person, not only the purpose: the visible name is
+          // hidden below `md`, and a label that replaces it would leave a screen
+          // reader with "your account" and no idea whose (P11G).
+          aria-label={t("shell.accountMenuFor", { name })}
           className="h-11 gap-2 px-1.5 md:h-9 md:px-2"
         >
           <Avatar className="size-7">
@@ -130,14 +134,26 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
 
         <DropdownMenuSeparator />
         <form action={signOutAction}>
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full">
-              <LogOut className="size-4 text-muted-foreground" />
-              {t("common.signOut")}
-            </button>
-          </DropdownMenuItem>
+          <SignOutItem label={t("common.signOut")} />
         </form>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * The one submit in the menu. `useFormStatus` reads the form it sits in, so
+ * the item goes quiet while the sign-out is on its way rather than taking a
+ * second press that lands on a session already gone (P11G).
+ */
+function SignOutItem({ label }: { label: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <DropdownMenuItem asChild disabled={pending}>
+      <button type="submit" className="w-full" disabled={pending} aria-busy={pending || undefined}>
+        <LogOut className="size-4 text-muted-foreground" />
+        {label}
+      </button>
+    </DropdownMenuItem>
   );
 }

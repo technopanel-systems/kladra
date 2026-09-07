@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { getLocale, getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 import { LiveProvider } from "@/components/live/live-provider";
 import { BottomBar } from "@/components/shell/bottom-bar";
 import { Sidebar } from "@/components/shell/sidebar";
@@ -10,6 +11,7 @@ import { notifications } from "@/db/schema";
 import { dirOf } from "@/i18n/routing";
 import { personNameFrom } from "@/lib/people";
 import { homeFor, requireUser } from "@/lib/authz";
+import { SIDEBAR_COOKIE, sidebarCollapsed } from "@/lib/sidebar";
 import { getTheme } from "@/lib/theme";
 
 /**
@@ -32,13 +34,17 @@ async function unreadCount(userId: string): Promise<number> {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [locale, theme, unread, t] = await Promise.all([
+  const [locale, theme, unread, t, jar] = await Promise.all([
     getLocale(),
     getTheme(),
     unreadCount(user.id),
     getTranslations(),
+    cookies(),
   ]);
   const direction = dirOf(locale);
+  // The rail's saved width, so the first byte of HTML is already the right
+  // shape and nothing snaps after hydration (§5 #40).
+  const railCollapsed = sidebarCollapsed(jar.get(SIDEBAR_COOKIE)?.value);
 
   return (
     <LiveProvider userId={user.id} initialUnread={unread}>
@@ -50,7 +56,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </a>
 
       <div className="flex min-h-svh">
-        <Sidebar role={user.role} direction={direction} />
+        <Sidebar role={user.role} direction={direction} collapsed={railCollapsed} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar

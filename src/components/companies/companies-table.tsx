@@ -13,6 +13,7 @@ import {
 import { useArrived, useLanded } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import type { E164 } from "@/lib/phone";
 import { followUpClass } from "@/lib/state-tone";
@@ -70,7 +71,10 @@ function DeskRow({ row, href, today, current }: RowProps) {
           aria-label={t("companies.openCompany", { name: row.name })}
           className={ROW_LINK}
         >
-          <span className="block truncate">{row.name}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="min-w-0 truncate">{row.name}</span>
+            <LinkPending />
+          </span>
         </Link>
       </TableCell>
       <TableCell className="max-w-[10rem] text-muted-foreground">
@@ -118,7 +122,10 @@ function CardRow({ row, href, today, current }: RowProps) {
           aria-label={t("companies.openCompany", { name: row.name })}
           className={cn(ROW_LINK, "min-w-0 flex-1 font-medium")}
         >
-          <span className="block truncate">{row.name}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="min-w-0 truncate">{row.name}</span>
+            <LinkPending />
+          </span>
         </Link>
         <span className={cn("shrink-0 text-xs", followUpClass(row.nextFollowUp, today))}>
           <span className="sr-only">{t("common.nextFollowUp")}</span>
@@ -155,12 +162,15 @@ export function CompaniesTable({
   q,
   filter,
   openId,
+  rep,
   today,
 }: {
   rows: CompanyRow[];
   q: string;
   filter: string | null;
   openId: string | null;
+  /** Whose floor a manager is reading (S8): opening a row keeps him on it (P11G). */
+  rep: string | null;
   today: string;
 }) {
   const t = useTranslations();
@@ -174,6 +184,7 @@ export function CompaniesTable({
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (filter) params.set("filter", filter);
+    if (rep) params.set("rep", rep);
     params.set("open", id);
     return `/companies?${params.toString()}`;
   }

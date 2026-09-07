@@ -26,3 +26,29 @@ export function quotationLabel(number: number, revision: number): string {
 export function dispatchLabel(number: number): string {
   return `D-${number}`;
 }
+
+/**
+ * The number a person typed when looking for Q-12 or D-3, with or without the
+ * prefix — or null when what they typed has no number in it, or one Postgres
+ * cannot hold in an int. The list queries bind this as an integer only when it
+ * is one. It was `'' <> '' and number = ''::int` in SQL, which does not
+ * short-circuit: the cast failed before the guard was read, and a company name
+ * typed into the quotations search took the whole screen down (P11G).
+ */
+export function numberInTerm(term: string): number | null {
+  // The FIRST run of digits: "Q-12/3" is quotation 12, revision 3 — stripping
+  // every non-digit would have asked for number 123. Screens write Western
+  // digits (D6), but a phone's Arabic keyboard types ٤٥, and a search that
+  // quietly never finds Q-45 for it is the same defect in a quieter voice.
+  const digits = /\d+/.exec(westernDigits(term))?.[0];
+  if (!digits) return null;
+  const n = Number(digits);
+  return Number.isSafeInteger(n) && n <= 2_147_483_647 ? n : null;
+}
+
+/** Arabic-Indic (٠–٩) and Extended Arabic-Indic (۰–۹) digits as 0–9. */
+const EASTERN_DIGITS = /[٠-٩۰-۹]/g;
+function westernDigits(text: string): string {
+  // Both ranges end in the digit's own value: U+0660 & 0xF is 0, U+06F9 & 0xF is 9.
+  return text.replace(EASTERN_DIGITS, (d) => String(d.charCodeAt(0) & 0xf));
+}

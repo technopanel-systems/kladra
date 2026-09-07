@@ -82,6 +82,14 @@ export function LookupsPanel({
         />
       </div>
 
+      {/* A list with nothing on it says so; an empty column reads as a screen
+          that failed to load (DESIGN §2, P11G). */}
+      {rows.length === 0 ? (
+        <p className="card-face px-6 py-8 text-center text-sm text-muted-foreground">
+          {t("admin.emptyLookups")}
+        </p>
+      ) : null}
+
       <ul className="flex flex-col gap-2">
         {rows.map((row) => (
           <li

@@ -57,7 +57,10 @@ export async function setThemeAction(theme: unknown): Promise<ActionResult> {
     path: "/",
     maxAge: YEAR,
     sameSite: "lax",
-    httpOnly: true,
+    // Readable by the browser on purpose: the offline splash (public/offline.html)
+    // has no server to ask and reads this cookie to paint the right theme
+    // (§5 #53). There is nothing in it to protect.
+    httpOnly: false,
     secure: process.env.NODE_ENV === "production",
   });
   revalidatePath("/", "layout");

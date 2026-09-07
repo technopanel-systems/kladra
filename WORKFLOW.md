@@ -88,7 +88,15 @@
             revised, D119); 11E-4: 87, 88, 89, 92 (the window in words, nouns counted, the m²
             named, D120); 11F-1: the question each screen answers and every board move
             written as tables in DESIGN §6; 11F-2: 93 (a warning that names a record is a
-            door to it, D121)
+            door to it, D121); 11G-1: 20 (error and missing screens are Kladra's, D122);
+            11G-2: 34, 66, 102 (a look asked for by name, current is a wash, dialogs in the
+            band, D123); 11G-3: 40, 41, 53 (the rail, the chrome and the splash decided
+            before the first byte, D124, D125); 11G-4: 94, 101 (a pressed link says it is
+            working, D126); 11G-5: 95, 96, 97, 98, 100 (empty says why, D127); 11G-6: 99
+            (a search term without a digit took three lists down); 11G-7: 103, 104, 105
+            (the guidelines pass: the hover is not the wash, the mark speaks, the menu
+            is named); 11G-8: 106, 107 (the critic's pass: the cookie guarded, the
+            Arabic digit found)
       - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -101,7 +109,7 @@
             every figure saying what it means; charts where a shape is clearer than a number
       - [x] F A view per screen, chosen not copied, the question each answers written in
             DESIGN; drag only where the drop needs nothing the system does not already have
-      - [ ] G Identity, motion and feel audited as one thing; loading, empty, error and
+      - [x] G Identity, motion and feel audited as one thing; loading, empty, error and
             offline states on every screen; reduced-motion honoured
       - [ ] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
       - [ ] I Speed and reliability, measured: first paint on a mid phone, ten thousand
@@ -148,14 +156,15 @@ volume, ten findings (§5 #83-92), eight fixed with a spec each and two refuted 
 written — a count is a door; the pace cell says its unit; a sum of estimates is whole; stopped
 work sorts first and the heading's doors say of what kind; the queue says a paper was revised
 before the press; a figure's window is in its words; a noun after a number is counted; the m²
-is named. Box 11F is done in two slices, one commit (D121): the question each screen
-answers and the view chosen for it are a table in DESIGN §6, with every move the board could
-offer and what its drop would need — none qualifies for drag, and the two confirmations are
-dialogs, so the rule stands on evidence rather than on the Never list; and the duplicate
-warning is a door to the company it names, opened over the still-open form (§5 #93). Next is
-box 11G, identity, motion and feel audited as one thing; loading, empty, error and offline
-states on every screen; reduced-motion honoured — with the parked notes carried in (the
-arrived-row flash barely visible on the dark queue, P11B-1; §5 #34, 40, 41, 53, 66, 20). The dev database is seeded
+is named. Box 11G is done in one commit (D122–D127): the six parked findings closed — error and
+missing screens inside the shell, no default look on a button or a badge, the board's current
+card a wash, the rail's width and the browser's chrome and the offline splash decided from the
+cookie before the first byte — and what the two inventories found on top: a pressed link says
+it is working, every empty state says why, and a search term with no digit in it no longer
+takes the quotations, dispatches and queue lists down (§5 #94–#102). Next is box 11H, the phone:
+a rep with one hand free at 375 — log, call, quote, read what came back — with the parked notes
+carried in (§5 #35, the breakpoint written three times; the 375 second looks from 11E; the
+sheets' scroll hint and the bottom bar's reach). The dev database is seeded
 at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -848,6 +857,25 @@ Faisal types a company somebody else already has: the warning names it and its r
 no door (S8). He types one of his own: "Open {name}" opens that company's drawer over the form;
 Escape closes the drawer and the form is still open with the name typed (D121). Reads only.
 
+**The missing screen and the empty ones** — `tests/states.spec.ts`
+Faisal opens an address that names no screen: the card says so inside the shell, names no code,
+and Home takes him to his day (D122). He types a word into the project picker that matches
+nothing: "Nothing matched", never "no projects yet" (D127). Rawan searches the board and the queue
+for a word nothing carries: a sentence with its Clear, no empty columns, no "desk is clear", no
+"All" (D127, #99). Abdulrahman reads Faisal's floor, types, opens a row and takes the way back
+from an empty search: `?rep=` survives all three (D127). Reads only.
+
+**The pressed row, the rail and the chrome** — `tests/feel.spec.ts`
+Faisal collapses the rail: the next page's HTML is already narrow (D124). The theme cookie
+flips to light: the browser's chrome colour follows (D124). The drawer's answer is held back
+and a pressed row shows its mark until the answer lands (D126). Restores the rail after.
+
+**Less motion** — `tests/motion.spec.ts`
+A dialog zooms in 150 ms and a drawer slides in 200 ms; with the operating system asked for
+less motion, both are instant and the arrived flash is still two seconds (D123). The splash
+wears the light theme offline (`tests/pwa.spec.ts`, D125); the board's open card is a wash
+(`tests/board.spec.ts`, D123). Reads only.
+
 **The guards** — `tests/csv.spec.ts`, `tests/guards.spec.ts`
 Pure: a cell that opens with `=`, `@`, a tab, or `+`/`-` before anything but a number is
 apostrophed; a phone, a negative figure, a quoted name and an empty cell are what they were
@@ -1129,7 +1157,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   15-20`. Fix: a read-only identity check for reads. Reader cites code. (11B.)
 - [x] 19 **CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`.** Verified; a cell Excel would run is written as text, numbers pass (P11A-9, D96). `src/lib/
   export.ts:28-32`. Reader cites code.
-- [ ] 20 **No error boundary in the signed-in app.** No `error.tsx` anywhere; `loading.tsx`
+- [x] 20 **No error boundary in the signed-in app.** Verified; one card inside the shell for the screen that threw and the address that names none, a bare one above the shell, a static one above the root (P11G-1, D122). No `error.tsx` anywhere; `loading.tsx`
   exists. Fix: a themed, bilingual error page in the shell. Reader cites absence. (11G.)
 - [x] 21 **Edit and unfile of a log entry never call `notifyLive`.** Verified; both send the event a new entry sends (P11A-7, D94). `activities.ts:276-296,
   320-337`; every other write does. Reader cites code. (11B.)
@@ -1158,7 +1186,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   412-432, 516-532`, `calendar.ts:21-27`. Reader cites code.
 - [ ] 33 **The queue's headline counts are a capped array's length.** `queue/page.tsx:71-134`;
   `/dispatches` counts. Unreachable at fourteen people; wrong shape all the same. Reader cites code.
-- [ ] 34 **The board's "current card" ring is the alert red DESIGN already retired once.**
+- [x] 34 **The board's "current card" ring is the alert red DESIGN already retired once.** Verified; the `bg-surface-2` wash the lists give their open row (P11G-2, D123).
   `board.tsx:98`, `globals.css:181`. Reader cites code. (11G.)
 - [ ] 35 **The phone breakpoint is written three times — 639, 640 and 768.** `responsive-dialog.
   tsx:35`, `company-header.tsx:56`, `bottom-bar.tsx:34`; between 641 and 767 the shell is a
@@ -1171,9 +1199,9 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   shape. Reader cites code.
 - [x] 39 **A call card with no contact says nothing; the customer list says "no contact".** Verified; the card says the list's words (P11A-11, D98).
   `call-band.tsx` vs `companies-table.tsx:101-111`. Reader cites code.
-- [ ] 40 **A collapsed sidebar snaps open on every load.** `use-sidebar.ts`: localStorage only,
+- [x] 40 **A collapsed sidebar snaps open on every load.** Verified; a cookie the layout reads, so the first byte is the saved width and the `ready` frame is gone (P11G-3, D124). `use-sidebar.ts`: localStorage only,
   no cookie like theme and locale. Reader cites code. (11G.)
-- [ ] 41 **The browser chrome colour follows the OS, not Kladra's theme.** `layout.tsx:46-54`.
+- [x] 41 **The browser chrome colour follows the OS, not Kladra's theme.** Verified; `generateViewport` reads the theme cookie and answers with the theme's canvas, named once with the manifest's (P11G-3, D124). `layout.tsx:46-54`.
   Reader cites code. (11G.)
 - [x] 42 **`notifications.subject_type` is free text pretending to be a closed type.** Verified; a check that reads the one list (P11A-13, D100). `schema.
   ts:592, 611`. Fix: a pgEnum or CHECK. Reader cites code. (11C.)
@@ -1197,7 +1225,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   out at 36. Reader cites code. (11H.)
 - [x] 52 **The hand-over warning for marketing names what never moves and not what does.** Rewritten with D86: what moves, and that approved metres stay (P11A-2).
   `drawer.json:46`, `companies.ts:407-422`. Reader cites code.
-- [ ] 53 **The offline page is always dark.** `public/offline.html:20-33`; the theme cookie is
+- [x] 53 **The offline page is always dark.** Verified; the cookie is readable now and an inline script paints light before the first paint; the reader's claim that it already was readable was wrong — it was httpOnly (P11G-3, D125). `public/offline.html:20-33`; the theme cookie is
   readable without a server. Reader cites code. (11G.)
 - [x] 54 **The coordinator's queue never highlights an arrived row.** Verified; the quotations and dispatches lists, and so the queue, mark arrivals (11B-1, D105). `use-arrived.ts` is wired
   into two tables, not hers. Reader cites code. (11B.)
@@ -1222,7 +1250,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   fourteen people. A unit test with a synthetic audience. (11B.)
 - [x] 65 **The log dialog does not preselect the contact the card shows.** Verified; `contactId` from the card (P11A-14, D101). `log-dialog.tsx`,
   `call-band.tsx`: a `projectId` prop exists, no `contactId`. Reader cites code.
-- [ ] 66 **Eleven primary buttons fall back to a flat red instead of the brand gradient.**
+- [x] 66 **Eleven primary buttons fall back to a flat red instead of the brand gradient.** Verified for seven that remained; the `default` variant is deleted from `Button` and `Badge` and `variant` is required, so the fallback cannot come back (P11G-2, D123).
   `button.tsx:12`, `globals.css:169`: `default` aliases `--primary` to the brand hue. (11G.)
 - [x] 67 **`archivedCount()` is dead code whose comment describes a badge that was never — deleted (P11A-14, D101) —
   built.** `admin.ts:275-282`. Reader cites code.
@@ -1497,3 +1525,79 @@ same view on a narrower page, not a second one (D59); the queue has one state an
 board; the projects screen has no states to make columns of; the admin panels are opened too
 rarely to earn a choice; the day and the team screen are one column on purpose (DESIGN §6,
 "a dashboard answers one question").
+
+Identity, motion and feel as one thing (P11G). Two inventories were taken first — every empty
+state on every screen, and every place a press waits for the server — and then the six parked
+findings and what the inventories added were fixed together, so that the error card, the
+pending mark, the wash on a current card and the flash on an arrived row are one hand's work.
+Every slice ended in the browser: the new error boundary was seen for the first time in the
+suite, drawn by a defect nobody knew about (#99).
+
+- [x] 94 **A pressed row said nothing until the drawer answered.** Fixed in P11G-4 (D126).
+  Rows, chips, the view switch, board cards and the follow-up pills are Links to a search
+  parameter; between the click and the streamed answer nothing on the page changed. Cause: no
+  Link in the app read its own status. Fix: `LinkPending` (`useLinkStatus`) inside each,
+  invisible for 150 ms; `tests/feel.spec.ts` holds the answer back and watches the mark.
+- [x] 95 **A picker's search miss said the list was empty.** Fixed in P11G-5 (D127). Three
+  request dialogs passed "no projects / quotations / companies yet" as `SearchableSelect`'s only
+  empty sentence, and it was shown for a typo. Cause: one slot for two states. Fix: the caller's
+  sentence only when `options` is empty; `forms.noMatch` for a miss; `tests/states.spec.ts`.
+- [x] 96 **An empty board was six columns of "Nothing here."** Fixed in P11G-5 (D127). The
+  board rendered whenever the view said so, past the empty branch. Fix: no rows, no board — the
+  list's sentence with its Clear; `tests/states.spec.ts`.
+- [x] 97 **The queue called the desk clear under a search that missed, and offered an "All"
+  that led nowhere.** Fixed in P11G-5 (D127). `waiting` counted the filtered rows, so a miss
+  read as a clear desk with two empty tables under it; the tables' status branch offered a link
+  to `/queue`, which fixes the status itself. Fix: the clear-desk sentence needs no search term
+  and replaces the tables; `fixed` on the empty branch drops the door; `tests/states.spec.ts`.
+- [x] 98 **A manager's `?rep=` was dropped by a search, a row and the way back.** Fixed in
+  P11G-5 (D127). Four URL builders on the companies screen, none carrying `rep`. Fix: the page
+  hands `repId` to the strip, the search, the table and the empty panel; `tests/states.spec.ts`.
+- [x] 99 **Any search term without a digit took the quotations, dispatches and queue lists
+  down.** Found by the new board test, which met the new error page instead of a sentence.
+  Fixed in P11G-6. Cause: `(${digits} <> '' and number = ${digits}::int)` — Postgres casts
+  before it guards, and `''::int` fails. Fix: `numberInTerm` decides in TypeScript, the first
+  run of digits (so "Q-12/3" asks for 12, not 123), bound only when it is an int; the rule is
+  in rules/data.md and DESIGN §5; `tests/states.spec.ts` searches all three for a word.
+- [x] 100 **The lookups list said nothing when a kind had no rows.** Fixed in P11G-5 (D127). An
+  unguarded `.map` — an empty column that reads as a screen that failed to load. Fix: one
+  sentence, `admin.emptyLookups`. Unreachable through the app today (rows are hidden, never
+  deleted), so no walk; the sentence is in both locales.
+- [x] 101 **The sign-out could be pressed twice.** Fixed in P11G-4 (D126). A plain form submit
+  with no pending state. Fix: `useFormStatus` on the item.
+- [x] 102 **Dialogs zoomed in 100 ms, outside the band DESIGN names.** Fixed in P11G-2 (D123).
+  shadcn's default, never revisited. Fix: 150 ms for dialogs, 200 ms for the drawer's overlay
+  to match its slide; menus keep 100 ms and the principle now says why; `tests/motion.spec.ts`.
+- [x] 103 **The board's hover wash was the current wash.** Found by the guidelines pass, fixed in
+  P11G-7. `hover:bg-surface-2` on every card made the card under the pointer look like the
+  open one. Fix: the hover is the lift `card-face` already has; the wash means open.
+- [x] 104 **The pending mark said nothing to a screen reader.** Found by the guidelines pass,
+  fixed in P11G-7 (D126). `aria-hidden` on the glyph and nothing else in the link changed. Fix:
+  a polite live region that is always in the link and says "Loading…" only while the answer is
+  out — present before it speaks, because a region added and filled in one breath is not read.
+- [x] 105 **The account menu was named "Your account" and nobody's.** Found by the guidelines
+  pass, fixed in P11G-7. The `aria-label` replaced the visible name, which is hidden below
+  `md` anyway. Fix: `shell.accountMenuFor`, "Your account, {name}", both locales.
+- [x] 106 **The rail's cookie could throw inside a render, and another tab's toggle was lost.**
+  Found by the critic, fixed in P11G-8. The first cut read `document.cookie` unguarded in the
+  store's snapshot — a refusal there is a render error, and the new boundary would have replaced
+  the whole shell with the error card; and the `storage` event that used to carry a second tab's
+  toggle has no cookie equivalent. Fix: both touches guarded, expanded as the fallback; the cookie
+  is read again when the tab comes back into focus.
+- [x] 107 **A quotation number typed on an Arabic keyboard was never found.** Found by the critic,
+  fixed in P11G-8. `numberInTerm` matched Western digits only, so ٤٥ asked for nothing — the
+  same defect as #99 in a quieter voice. Fix: Arabic-Indic and Extended Arabic-Indic digits are
+  read as 0–9 before the match; the pure test in `tests/states.spec.ts` types both.
+
+Refuted, so the next reader does not re-find them: the report screen's empty "others" list is
+an empty `<ul>` under a heading that already says the count, invisible and honest; the users and
+use panels cannot be empty while the admin reading them is a user; `QuotationHistory` returns
+null on zero events, which raising a quotation makes unreachable; the sign-in group has no
+`loading.tsx` because there is nothing to load; a missing screen under a streamed shell answers
+200, because the status line has gone out before the page says so — what a person gets is the
+card, and the spec reads the card; rendering the error card inside the Playwright runner is not
+possible (it compiles imported JSX for its own component tests), so the failed face is covered by
+the shared component and `check:messages`; the pressed-row spec cannot be pre-empted by a
+prefetch, because the suite runs on `next dev`, where a Link prefetches nothing; and the
+archive dialog's `router.push("/companies")` does drop `?rep=`, but only the company's own rep
+sees that button, and his URL never carries one.

@@ -126,10 +126,14 @@ if (isSrcCode) {
 
   // H5 — raw Next navigation imports drop the locale prefix, silently.
   if (!rel.startsWith("src/i18n/")) {
-    const nextLink = /from\s+["']next\/link["']/;
+    // The Link is what drops the prefix. `useLinkStatus` lives only in next/link
+    // and carries no URL, so a named import that is not Link is allowed through.
+    const nextLinkDefault = /import\s+[A-Za-z_$][\w$]*\s*(?:,[^;]*)?\s*from\s+["']next\/link["']/;
+    const nextLinkNamed =
+      /import\s+(?:type\s+)?\{[^}]*\bLink\b[^}]*\}\s*from\s+["']next\/link["']/s;
     const nextNav =
       /import\s+(?:type\s+)?\{[^}]*\b(?:redirect|useRouter|usePathname|Link)\b[^}]*\}\s*from\s+["']next\/navigation["']/s;
-    if (introduces(nextLink) || introduces(nextNav)) {
+    if (introduces(nextLinkDefault) || introduces(nextLinkNamed) || introduces(nextNav)) {
       deny(
         "H5 (README § Both locales)",
         `raw next/link or next/navigation import of Link/redirect/usePathname/` +

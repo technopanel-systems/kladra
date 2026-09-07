@@ -180,7 +180,13 @@ export function SearchableSelect({
           />
           <CommandList>
             {pinned.length === 0 && rest.length === 0 && custom === null ? (
-              <p className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</p>
+              // `emptyText` is what the caller says when there is nothing to choose
+              // from at all. A search that matched nothing is a different sentence:
+              // the callers' "no projects yet" was being shown to a rep whose
+              // projects were all still there, one typo away (P11G).
+              <p role="status" className="px-3 py-6 text-center text-sm text-muted-foreground">
+                {options.length === 0 ? emptyText : t("forms.noMatch")}
+              </p>
             ) : null}
 
             {pinned.length > 0 ? (

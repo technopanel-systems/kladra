@@ -79,8 +79,8 @@ back to, so the one string on the screen that mixes two scripts would also mix t
 - Dropdowns over ~8 entries are searchable, common values pinned, likeliest preselected — Riyadh, Saudi Arabia, 1.24 m, 4 mm are what is typed nine times in ten.
 - Dates are picked, shown 04/Aug/2026 — unambiguous in both languages; no 08/04 confusion.
 - The screen tells you what changed: toasts for your actions, live arrival and a 2 s highlight for other people's; a bell with a count — nobody refreshes.
-- Motion where it explains (150–250 ms): dialogs, drawers, row changes. No loops — motion that repeats is noise.
-- Loading states always; never a blank — a blank reads as broken.
+- Motion where it explains (150–250 ms): dialogs, drawers, row changes. Menus, popovers and selects at 100 ms — a menu is not a dialog. No loops — motion that repeats is noise; the one exception is the pending mark inside a pressed link, which says "working". Under `prefers-reduced-motion` the travel goes and the information stays: the arrived flash keeps its two seconds because it is a colour, not a movement.
+- Loading states always; never a blank — a blank reads as broken. A pressed link shows it is working after 150 ms (`LinkPending`); a screen that cannot draw itself, or an address that names none, is one card inside the shell in the reader's language, never the framework's page and never a digest.
 - Sidebar collapses; on a phone it is a bottom bar and dialogs are bottom sheets — the thumb reaches the bottom.
 - Money and m² in tabular figures (`.num`, Plex Mono); everything else normal text — columns of numbers must line up.
 - Anything daily is two clicks from home — log a visit, add a company, check follow-ups.
@@ -485,6 +485,33 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   dialog is two layers, and the top one closes first — and the form is still there, still
   full, when the record closes. Where the reader may not open X (another rep's floor, S8) the
   door is not drawn, and the warning names the person who can.
+- **A screen that cannot draw itself is still a screen.** Phase 11G (D122). No `error.tsx`, no
+  `not-found.tsx`: a failed query or an old link handed the reader Next's own page. One card,
+  two faces, inside the shell, in the reader's language; Try again where there is something to
+  try; Home as a full load; nothing internal on it.
+- **A look is asked for by name.** Phase 11G (D123). A `default` variant is a look nobody
+  chose: six dialog footers wore a flat brand red because nobody had written `brand`. `Button`
+  and `Badge` require `variant`, and a missing name is a type error rather than a second primary.
+- **Current is a wash, never a ring.** Phase 11G (D123). The board's open card wore a ring in the
+  alert red §1 had retired; the open row of a list is a `bg-surface-2` wash, and so is the card.
+- **What the server can decide, it decides before the first byte.** Phase 11G (D124, D125). The
+  rail's width, the browser's chrome colour and the offline splash's theme all used to be decided
+  in the browser after the first paint, and each snapped. Each is a cookie the server reads — or,
+  for the splash that has no server, a cookie the browser may read.
+- **A pressed link says it is working.** Phase 11G (D126). Every navigation to a search parameter
+  — a row, a chip, a view, a card, a pill — carries `LinkPending`, invisible for 150 ms so a fast
+  answer shows nothing. It is not a spinner on the page; it is a mark on the thing that was pressed.
+- **Empty says why.** Phase 11G (D127). "Nothing matched" and "nothing yet" are two sentences; a
+  board of empty columns is not a sentence; a clear desk needs no search term; a status the page
+  fixed offers no "All"; the way back from an empty list keeps whose floor it was.
+- **A colour that reads on a light row may not read on a dark one.** Phase 11G (D123, P11B-1).
+  The arrived flash began from the amber tint, 14% over the canvas, and on the queue's dark rows
+  it was invisible. It begins from the amber text colour at a third: still a colour, no travel,
+  and visible in both themes. Every colour that carries information is looked at in both.
+- **A guard written in SQL does not short-circuit a cast.** Phase 11G (§5 #99). `'' <> '' and
+  number = ''::int` failed on the cast before the guard was read, and any search term without a
+  digit took the quotations, dispatches and queue lists down. The decision is made in TypeScript
+  (`numberInTerm`), and the integer is bound only when there is one (rules/data.md).
 
 ## §4 Not built until asked
 

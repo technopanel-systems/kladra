@@ -121,3 +121,24 @@ test("with no signal the splash appears, and nothing about a customer was kept",
     await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 15_000 });
   });
 });
+
+test("the splash wears the reader's theme", async ({ page, context, locale }) => {
+  await login(page, locale, "faisal");
+  await expect(page.getByRole("heading").first()).toBeVisible();
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  const origin = new URL(page.url()).origin;
+  try {
+    // The app's own theme cookie, which is left readable for exactly this
+    // page: it has no server to ask (§5 #53).
+    await context.addCookies([{ name: "theme", value: "light", url: origin }]);
+    await context.setOffline(true);
+    await page.reload().catch(() => {});
+    await expect(page.getByText("No connection")).toBeVisible({ timeout: 15_000 });
+    const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(background, "the splash ignored the light theme").toBe("rgb(245, 242, 239)");
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f5f2ef");
+  } finally {
+    await context.setOffline(false);
+    await context.clearCookies({ name: "theme" });
+  }
+});

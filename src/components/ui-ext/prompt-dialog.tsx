@@ -178,7 +178,7 @@ export function PromptDialog({
             >
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" variant="brand" disabled={pending}>
               {pending ? t("common.saving") : confirmLabel}
             </Button>
           </DialogFooter>

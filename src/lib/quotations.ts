@@ -48,7 +48,7 @@ import {
 import { NotAllowed, seesAll } from "@/lib/authz";
 import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
-import { quotationLabel } from "@/lib/labels";
+import { numberInTerm, quotationLabel } from "@/lib/labels";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
 import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotation-diff";
 import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
@@ -319,13 +319,15 @@ function narrowTo(input: ListQuotationsInput): (SQL | undefined)[] {
 
   if (term) {
     const anywhere = `%${escapeLike(term)}%`;
-    const digits = term.replace(/\D/g, "");
+    // Bound as an integer only when there is one (numberInTerm): a guard
+    // written in SQL does not short-circuit the cast (P11G).
+    const number = numberInTerm(term);
     conditions.push(
       sql`(
         ${companies.name} ilike ${anywhere}
         or ${projects.name} ilike ${anywhere}
         or ${quotations.smacNumber} ilike ${anywhere}
-        or (${digits} <> '' and quotations.number = ${digits}::int)
+        or ${number === null ? sql`false` : sql`quotations.number = ${number}::int`}
       )`,
     );
   }

@@ -32,6 +32,14 @@ broken at least once in FACET, Kladra's predecessor.
   rather than failing** — a text id INNER-JOINed against a uuid silently
   returns nothing forever.
 
+- **A guard written in SQL does not protect a cast.** `(${digits} <> '' and
+  quotations.number = ${digits}::int)` looks safe and is not: Postgres does not
+  promise short-circuit evaluation, the cast of `''` to int fails first, and a
+  company name typed into the quotations search took the whole screen down —
+  the dispatches list and the queue with it (P11G). Decide in TypeScript
+  (`numberInTerm` in `src/lib/labels.ts`) and interpolate a literal `false`
+  fragment or the bound integer; never a value whose cast may fail.
+
 - **A JS array interpolated into a `sql` template is ONE parameter, not a
   list.** Drizzle binds it as a single value whose text is the members joined by
   commas, so `where u.id = any(${ids}::uuid[])` reaches Postgres as

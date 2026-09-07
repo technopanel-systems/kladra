@@ -49,7 +49,7 @@ import {
   users,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
-import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { lineSqm, sumSqm } from "@/lib/sqm";
@@ -337,16 +337,18 @@ function narrowTo(input: ListDispatchesInput): (SQL | undefined)[] {
 
   if (term) {
     const anywhere = `%${escapeLike(term)}%`;
-    const digits = term.replace(/\D/g, "");
     // What somebody would say out loud about one: the customer, the job, either
     // SMAC number, or Kladra's own D-number typed with or without its prefix.
+    // The number is bound as an integer only when there is one (numberInTerm):
+    // a guard written in SQL does not short-circuit the cast (P11G).
+    const number = numberInTerm(term);
     conditions.push(
       sql`(
         ${companies.name} ilike ${anywhere}
         or ${projects.name} ilike ${anywhere}
         or ${dispatches.smacDispatchNumber} ilike ${anywhere}
         or ${quotations.smacNumber} ilike ${anywhere}
-        or (${digits} <> '' and dispatches.number = ${digits}::int)
+        or ${number === null ? sql`false` : sql`dispatches.number = ${number}::int`}
       )`,
     );
   }

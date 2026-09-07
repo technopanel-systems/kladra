@@ -164,3 +164,18 @@ test("in Arabic the first column is the one on the right", async ({ page, locale
     expect(lefts[i], `column ${i} is not to the left of column ${i - 1}`).toBeLessThan(lefts[i - 1]);
   }
 });
+
+test("the open card is a wash on the board, never a ring", async ({ page, locale }) => {
+  await login(page, locale, "rawan");
+  await page.goto(`/${locale}/quotations?view=board`);
+  const card = page.locator("[data-slot='board'] a[href*='open=']").first();
+  await expect(card).toBeVisible(COLD);
+  await card.click();
+
+  // The same wash the list gives its open row. A ring was the alert red DESIGN
+  // §1 had already retired from every surface (P11G, §5 #34).
+  const current = page.locator("[data-slot='board'] a[aria-current='true']");
+  await expect(current).toHaveCount(1, COLD);
+  await expect(current).toHaveClass(/\bbg-surface-2\b/);
+  await expect(current).not.toHaveClass(/\bring-/);
+});

@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
 import type { FollowUpCounts, FollowUpFilter } from "@/lib/followups";
 import { TONE_CLASS } from "@/lib/state-tone";
@@ -25,18 +26,21 @@ import { cn } from "@/lib/utils";
 export type Pill = Extract<FollowUpFilter, "overdue" | "today" | "never" | "quiet">;
 
 const PILL =
-  "inline-flex h-7 items-center rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+  "inline-flex h-7 items-center gap-1.5 rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
 
 export async function FollowUpStrip({
   counts,
   filter,
   q,
   open,
+  rep,
 }: {
   counts: FollowUpCounts;
   filter: FollowUpFilter | null;
   q: string;
   open: string | null;
+  /** Whose floor a manager is reading (S8): every pill keeps him on it (P11G). */
+  rep: string | null;
 }) {
   const t = await getTranslations();
 
@@ -47,6 +51,7 @@ export async function FollowUpStrip({
     if (q) params.set("q", q);
     if (next) params.set("filter", next);
     if (open) params.set("open", open);
+    if (rep) params.set("rep", rep);
     const query = params.toString();
     return query ? `/companies?${query}` : "/companies";
   }
@@ -73,6 +78,7 @@ export async function FollowUpStrip({
         )}
       >
         {label}
+        <LinkPending />
       </Link>
     );
   }
@@ -125,6 +131,7 @@ export async function FollowUpStrip({
           )}
         >
           {t("common.all")}
+          <LinkPending />
         </Link>
       )}
     </div>

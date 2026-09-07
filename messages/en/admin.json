@@ -68,6 +68,7 @@
   "person": "Person",
   "archive": "Archive",
   "emptyArchive": "Nothing is archived. Anything taken off the floor turns up here.",
+  "emptyLookups": "Nothing on this list yet — add the first row.",
   "archivedOn": "Archived",
   "restore": "Restore",
   "restoreTitle": "Restore {name}?",

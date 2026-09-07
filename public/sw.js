@@ -18,7 +18,7 @@
  * the current name, so an old splash cannot outlive a deploy.
  */
 
-const CACHE = "kladra-shell-v1";
+const CACHE = "kladra-shell-v2";
 const OFFLINE = "/offline.html";
 const SHELL = [OFFLINE, "/icons/icon-192.png"];
 

@@ -116,7 +116,7 @@ export function ConfirmDialog({
           <Button type="button" variant="outline" disabled={pending} onClick={() => change(false)}>
             {t("common.cancel")}
           </Button>
-          <Button type="button" disabled={pending} onClick={confirm}>
+          <Button type="button" variant="brand" disabled={pending} onClick={confirm}>
             {pending ? t("common.saving") : confirmLabel}
           </Button>
         </DialogFooter>

@@ -283,6 +283,9 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     // It is advice, not a gate: Save is still there to press.
     await expect(form.getByRole("button", { name: t("common.save") })).toBeEnabled();
     await form.getByRole("button", { name: t("common.cancel") }).click();
+    // The warning's door and the row below are both "Open {company}": until
+    // the form has finished leaving (150 ms, DESIGN §2) the page has two.
+    await expect(form).toBeHidden();
   });
 
   await test.step("7 · Edit the company, the contact and the project", async () => {

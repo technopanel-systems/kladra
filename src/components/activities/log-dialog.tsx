@@ -475,7 +475,7 @@ function LogPanel({
                 {t("common.cancel")}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" variant="brand" disabled={pending}>
               {pending ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>

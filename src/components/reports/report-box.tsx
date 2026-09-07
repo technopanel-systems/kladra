@@ -94,6 +94,7 @@ export function ReportBox({
         </span>
         <Button
           type="button"
+          variant="brand"
           onClick={save}
           disabled={pending || !changed || text.trim() === ""}
           className="w-full sm:w-auto"

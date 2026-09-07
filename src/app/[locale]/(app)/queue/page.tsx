@@ -173,38 +173,47 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
         ]}
       />
 
-      {waiting === 0 ? (
+      {/* A clear desk is one sentence, not a sentence with two empty tables under
+          it. A search that matched nothing is not a clear desk: each table keeps
+          its own sentence and its Clear, so the term can be taken back (P11G). */}
+      {waiting === 0 && !q ? (
         <p className="card-face px-6 py-8 text-center text-sm text-muted-foreground">
           {t("queue.clear")}
         </p>
-      ) : null}
+      ) : (
+        <>
+          <section className="flex flex-col gap-4">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              {t("common.quotations")}
+            </h2>
+            <QuotationsTable
+              base="/queue"
+              rows={quotationRows}
+              q={q}
+              status="requested"
+              openId={open}
+              showFilters={false}
+              waiting={waits(quotationRows)}
+            />
+          </section>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("common.quotations")}</h2>
-        <QuotationsTable
-          base="/queue"
-          rows={quotationRows}
-          q={q}
-          status="requested"
-          openId={open}
-          showFilters={false}
-          waiting={waits(quotationRows)}
-        />
-      </section>
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("common.dispatches")}</h2>
-        <DispatchesTable
-          base="/queue"
-          param="dispatch"
-          rows={dispatchRows}
-          q={q}
-          status="submitted"
-          openId={openDispatch}
-          showFilters={false}
-          waiting={waits(dispatchRows)}
-        />
-      </section>
+          <section className="flex flex-col gap-4">
+            <h2 className="text-sm font-medium text-muted-foreground">
+              {t("common.dispatches")}
+            </h2>
+            <DispatchesTable
+              base="/queue"
+              param="dispatch"
+              rows={dispatchRows}
+              q={q}
+              status="submitted"
+              openId={openDispatch}
+              showFilters={false}
+              waiting={waits(dispatchRows)}
+            />
+          </section>
+        </>
+      )}
 
       <Suspense key={open ?? "closed"} fallback={open ? <QuotationSheetSkeleton /> : null}>
         <QuotationDrawer quotationId={open} />

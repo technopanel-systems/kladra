@@ -12,6 +12,7 @@ import { ArchiveProjectDialog } from "@/components/projects/archive-project-dial
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-lost-dialog";
 import { Sqm } from "@/components/ui-ext/figures";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +130,7 @@ function ProjectTableRow({
         <Link href={href} className="after:absolute after:inset-0 hover:underline">
           <span className="sr-only">{t("projects.openProject", { name: row.name })}</span>
           <span aria-hidden="true">{row.name}</span>
+          <LinkPending className="ms-1.5 align-middle" />
         </Link>
       </TableCell>
       <TableCell className="max-w-[14rem] truncate p-3 text-muted-foreground">
@@ -156,7 +158,10 @@ function ProjectCard({ row, href }: { row: ProjectRow; href: string }) {
       className={cn("card-face flex flex-col gap-2 p-3", arrived && "row-arrived")}
     >
       <div className="flex items-start justify-between gap-3">
-        <span className="font-medium">{row.name}</span>
+        <span className="flex min-w-0 items-center gap-1.5 font-medium">
+          <span className="truncate">{row.name}</span>
+          <LinkPending />
+        </span>
         <StateCell lostAt={row.lostAt} lostReason={row.lostReason} />
       </div>
       <span className="text-xs text-muted-foreground">{row.companyName}</span>

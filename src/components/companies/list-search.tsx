@@ -27,10 +27,13 @@ export function ListSearch({
   q,
   filter,
   open,
+  rep,
 }: {
   q: string;
   filter: string | null;
   open: string | null;
+  /** Whose floor a manager is reading (S8): typing must not drop him off it (P11G). */
+  rep: string | null;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -56,13 +59,14 @@ export function ListSearch({
       if (trimmed) params.set("q", trimmed);
       if (filter) params.set("filter", filter);
       if (open) params.set("open", open);
+      if (rep) params.set("rep", rep);
       const query = params.toString();
       startTransition(() => {
         routerRef.current.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
       });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [term, filter, open, pathname]);
+  }, [term, filter, open, rep, pathname]);
 
   function change(value: string) {
     typed.current = true;
