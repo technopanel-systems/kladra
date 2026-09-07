@@ -108,4 +108,45 @@ test("a live match says where the company is and when it was last worked", async
     t("forms.duplicateLastActivity", { date: formatDay(known.last_activity, locale) }),
   );
   await expect(form.getByRole("button", { name: t("common.save") })).toBeEnabled();
+
+  // Somebody else's company is not his to open (S8): no door, and the warning
+  // has already named who has it (D121).
+  await expect(warning.locator('[data-slot="open-match"]')).toHaveCount(0);
+});
+
+test("a match on his own floor is a door: the company opens over the form, and the form stays", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // One of Faisal's own live companies, by name.
+  const mine = await one<{ name: string }>(
+    `select c.name
+       from companies c
+       join users u on u.id = c.rep_id
+      where c.archived_at is null and u.email = 'faisal@technopanel.com.sa'
+      order by c.name
+      limit 1`,
+  );
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/companies`);
+  await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
+  await page.getByRole("button", { name: t("forms.addCompany") }).first().click();
+  const form = page.getByRole("dialog", { name: t("forms.addCompany") });
+  await form.getByLabel(t("common.company")).fill(mine.name);
+
+  // The warning is a door (D121, P11F): the company it names opens over the
+  // form, and the form is still there, still full, when the drawer closes —
+  // deciding "is this the same firm" needs the record, not a memory of it.
+  const warning = form.getByRole("status");
+  const door = warning.locator('[data-slot="open-match"]');
+  await expect(door).toHaveText(t("forms.openMatch", { name: mine.name }));
+  await door.click();
+  const drawer = page.getByRole("dialog", { name: mine.name });
+  await expect(drawer).toBeVisible(COLD);
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+  await expect(form).toBeVisible();
+  await expect(form.getByLabel(t("common.company"))).toHaveValue(mine.name);
 });

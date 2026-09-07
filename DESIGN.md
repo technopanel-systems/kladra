@@ -479,6 +479,12 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 - **A noun after a number is counted.** Phase 11E (D120). "1 Companies" and "Of the 1 raised
   … each one" are headings borrowed as sentences; a sentence with a number in it carries an
   ICU plural in both locales, and Arabic's six forms are written out.
+- **A warning that names a record is a door to it, where the reader may open it.** Phase 11F
+  (D121). "This looks like X" with no way to look at X asks the reader to remember, or to
+  abandon what they were typing. The name opens the record over the form — a drawer over a
+  dialog is two layers, and the top one closes first — and the form is still there, still
+  full, when the record closes. Where the reader may not open X (another rep's floor, S8) the
+  door is not drawn, and the warning names the person who can.
 
 ## §4 Not built until asked
 
@@ -525,6 +531,47 @@ daily question, and a column with a count answers it in one look. Everything els
 Where there are two, the list stays the default because it is the one that answers "mine,
 oldest first"; the choice lives in the URL (`?view=board`) and is remembered per person, so a
 link still opens what the sender saw.
+
+**The question each screen answers, and the view chosen for it (P11F).** Every screen was
+read against its own question; a view is kept because it answers that question in one look,
+not because another screen has it. At 375 every table becomes a card per row carrying the
+same columns in the same order (D59); that is the same view on a narrower page, not a second
+one.
+
+| Screen | Who opens it | The question | The view, and why |
+|---|---|---|---|
+| Companies | rep; manager drilling in | Who do I call today, and where is this company standing? | A follow-up strip of doors over a list sorted by the date the call is owed, a drawer for the record. A grid shows a third as many rows and hides the date column. |
+| Projects | rep | What is live, what is it worth, what is due on it? | The same strip and list, projects as rows, a drawer. One view: a project has no states to make columns of. |
+| Quotations | rep, coordinator, manager | Where is each paper, mine oldest first? — and: what is stuck, and for how long? | Two: the list for the first question, the board of states for the second, with a count on every column and the arrival day on every card. |
+| Dispatches | the same | The same two questions, one step later | The same two views, for the same reasons; the choice is remembered per screen, not shared. |
+| Queue | coordinator | What is on my desk, oldest first, and how late is it? | Two lists under one strip — requests and dispatches — each row wearing its wait in working days. No board: a desk has one state, and one column is a list. |
+| Day | rep | What has come back to me and is stopped, and who is owed a call? | One column in the order the work is done: the month, stopped work by kind (D118), the calls in bands by how late. Not a grid of cards: every figure here is acted on before lunch. |
+| Team | manager, admin | How is the month, who is doing it, what has stopped moving? | The company's month and its six months, a strip of what is stuck, one row per person, the chain as a population, then the stuck lists. Not a dashboard of tiles: the order is the order the questions come in. |
+| Daily report | everybody | What did each person do today, and what did they say it meant? | Your own card with the box, then everybody's, alphabetically — one list the whole floor reads (D56), not a manager's inbox. |
+| Notifications | everybody | What came back to me? | A list, newest first, each row naming the customer (D110); read is a state, not a view. |
+| Admin: users, targets, lookups, holidays, use, archive, export | admin | One question each: who may sign in; what is each person aiming at; what words the pickers offer; which days are off; who is using it; what left the floor; what finance wants. | One panel each — a table or a row of boxes with its one action beside it. No second view: none of these is opened often enough to earn a choice. |
+
+**Every move on the board, and what the drop would need (P11F).** The rule in §4 says drag
+only where the drop needs nothing the system does not already have. Read against every
+transition the actions allow:
+
+| Move | What the action needs | So |
+|---|---|---|
+| Requested → Issued | SMAC's quotation number, typed | a prompt, not a drop |
+| Requested → Sent back | the coordinator's reason, typed | a prompt |
+| Sent back → Requested | the rep's edits, then asking again | the edit form |
+| Issued → Accepted | the customer's answer — a confirmation | a dialog, and a drag that opens a dialog is a worse button than a button |
+| Issued → Rejected | the customer's reason, typed | a prompt |
+| Issued → a revision | new lines, typed | the edit form |
+| Requested / Sent back → Withdrawn | a confirmation (D32) | a dialog |
+| Submitted → Approved | SMAC's dispatch number, typed | a prompt |
+| Submitted → Refused | the coordinator's reason, typed | a prompt |
+
+Nothing qualifies, and the two confirmations do not qualify either: a card dropped into a
+column and then asked "did the customer accept?" is the dialog with a longer gesture in front
+of it, and at 375 — where the coordinator's queue is read — there is no drag at all. The card
+opens its record and the record carries its actions; the rule stands on this table rather
+than on the Never list.
 
 **The five state colours.** One set, two themes, used the same way on every screen. Colour
 never carries meaning alone: every coloured thing also says its word.

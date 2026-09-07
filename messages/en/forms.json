@@ -20,6 +20,7 @@
   "duplicateLastActivity": "Last activity {date}",
   "duplicateNeverContacted": "Never contacted",
   "duplicateArchived": "{name} was archived on {date} ({rep}). An admin can restore it.",
+  "openMatch": "Open {name}",
   "added": "{name} added",
   "listsUnavailable": "The lists could not be loaded. Close this and open it again.",
   "editCompany": "Edit company",

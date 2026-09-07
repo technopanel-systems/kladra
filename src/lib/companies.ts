@@ -487,6 +487,8 @@ export async function getCompany(
 export type PossibleDuplicate = {
   id: string;
   name: string;
+  /** Whose floor it is on — the asker's own is the one he may open (S8, D121). */
+  repId: string;
   repName: string;
   /** Which of the two signs matched, so the warning sits under that field. */
   matchedOn: "phone" | "name";
@@ -562,6 +564,7 @@ export async function findPossibleDuplicates(input: {
     .select({
       id: companies.id,
       name: companies.name,
+      repId: companies.repId,
       repName: personName(locale),
       matchedOn: sql<"phone" | "name">`case when ${phoneMatch ?? sql`false`} then 'phone' else 'name' end`,
       city: sql<string | null>`coalesce(${cityLabel}, ${companies.cityText})`,

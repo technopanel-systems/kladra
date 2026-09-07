@@ -30,7 +30,7 @@ import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/respon
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { Prose } from "@/components/ui-ext/prose";
 import { Button } from "@/components/ui/button";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatDay } from "@/lib/dates";
 import { normalizePhone } from "@/lib/phone";
 import { TONE_CLASS } from "@/lib/state-tone";
@@ -214,6 +214,23 @@ function CompanyForm({
           )}
           {duplicate.archived?.reason ? (
             <Prose line text={duplicate.archived.reason} className="opacity-80" />
+          ) : null}
+          {/* A warning that names a record is a door to it where the reader may
+              open it (D121, P11F): his own company's drawer opens over this
+              form, the form stays full behind it, and closing the drawer comes
+              back here. Another rep's company is not his to read (S8) — the
+              warning has already named who has it, and that name is the door.
+              `scroll={false}` because the list underneath must not jump while
+              both are open. */}
+          {duplicate.mine ? (
+            <Link
+              href={`/companies?open=${duplicate.id}`}
+              scroll={false}
+              data-slot="open-match"
+              className="w-fit underline underline-offset-2 hover:text-foreground"
+            >
+              {t("forms.openMatch", { name: duplicate.name })}
+            </Link>
           ) : null}
         </span>
       </div>

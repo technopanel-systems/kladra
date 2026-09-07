@@ -86,7 +86,9 @@
             a door, the pace cell in words, a sum of estimates whole, D117); 11E-2: 85 (stopped
             work first, the heading's doors, D118); 11E-3: 86 (the queue says the paper was
             revised, D119); 11E-4: 87, 88, 89, 92 (the window in words, nouns counted, the m²
-            named, D120)
+            named, D120); 11F-1: the question each screen answers and every board move
+            written as tables in DESIGN §6; 11F-2: 93 (a warning that names a record is a
+            door to it, D121)
       - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
             notifications; a dropped connection, a sleeping laptop, two tabs, a server
             restart — and make it a permanent test
@@ -97,7 +99,7 @@
             how many clicks, what a person must remember, where two screens could disagree
       - [x] E Dashboards and reports audited as products: one look, no interpretation,
             every figure saying what it means; charts where a shape is clearer than a number
-      - [ ] F A view per screen, chosen not copied, the question each answers written in
+      - [x] F A view per screen, chosen not copied, the question each answers written in
             DESIGN; drag only where the drop needs nothing the system does not already have
       - [ ] G Identity, motion and feel audited as one thing; loading, empty, error and
             offline states on every screen; reduced-motion honoured
@@ -146,9 +148,14 @@ volume, ten findings (§5 #83-92), eight fixed with a spec each and two refuted 
 written — a count is a door; the pace cell says its unit; a sum of estimates is whole; stopped
 work sorts first and the heading's doors say of what kind; the queue says a paper was revised
 before the press; a figure's window is in its words; a noun after a number is counted; the m²
-is named. Next is box 11F, a view per screen chosen not copied, the question each answers
-written in DESIGN — with the 11D leftover carried in (the duplicate warning cannot open the
-company it names because the form would be lost, §5 refuted paragraph). The dev database is seeded
+is named. Box 11F is done in two slices, one commit (D121): the question each screen
+answers and the view chosen for it are a table in DESIGN §6, with every move the board could
+offer and what its drop would need — none qualifies for drag, and the two confirmations are
+dialogs, so the rule stands on evidence rather than on the Never list; and the duplicate
+warning is a door to the company it names, opened over the still-open form (§5 #93). Next is
+box 11G, identity, motion and feel audited as one thing; loading, empty, error and offline
+states on every screen; reduced-motion honoured — with the parked notes carried in (the
+arrived-row flash barely visible on the dark queue, P11B-1; §5 #34, 40, 41, 53, 66, 20). The dev database is seeded
 at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -836,6 +843,11 @@ A later revision is written under the seed's waiting dispatch; Rawan's queue row
 quotation was revised since, the sheet says the sentence the action would refuse with, Approve
 is disabled and Refuse is not (D119). The revision is deleted after.
 
+**The warning's door** — `tests/known.spec.ts`
+Faisal types a company somebody else already has: the warning names it and its rep and offers
+no door (S8). He types one of his own: "Open {name}" opens that company's drawer over the form;
+Escape closes the drawer and the form is still open with the name typed (D121). Reads only.
+
 **The guards** — `tests/csv.spec.ts`, `tests/guards.spec.ts`
 Pure: a cell that opens with `=`, `@`, a tab, or `+`/`-` before anything but a number is
 apostrophed; a phone, a negative figure, a quoted name and an empty cell are what they were
@@ -1461,3 +1473,27 @@ table's two "overdue" figures carry their thresholds in words (D95); the current
 grey and unjudged by design (D61); the report cards share keys across desk and floor; the Use
 screen's amber is one predicate (`isQuiet`); the rep's day order — month, stopped work, calls —
 is argued in the page and stands, and 11H reads its length on the phone.
+
+A view per screen, chosen not copied (P11F). Every screen read against its own question in
+the code and in the 11D-11E shots at volume, and the answer written where the views argument
+already lived: DESIGN §6 now carries the table of screens, questions and views, and the table
+of every move the board could offer with what its drop would need. The second table is the
+drag rule closed on evidence: nine transitions, seven needing typed data, two needing a
+confirmation, which is a dialog with a longer gesture in front of it — nothing qualifies, and
+at 375 there is no drag at all. One fix came out of the walk.
+
+- [x] 93 **The duplicate warning cannot open the company it names.** Parked from the 11D walk
+  and fixed in P11F-2 (D121): the warning said "looks like an existing company: X (rep)" and
+  the only way to look at X was to close the form and lose it. Cause: the form and the drawer
+  are two overlays on one screen and nothing had ever opened one over the other. Fix: "Open
+  {name}" in the warning opens the company's drawer over the form (`?open=`, `scroll={false}`);
+  the form keeps its state, Escape closes the top layer only. The first cut drew the door for
+  every match and the spec found the drawer empty: another rep's company is not his to read
+  (S8, `mayOpen`), so the hit now says whether it is his and the door is drawn only then;
+  `tests/known.spec.ts`.
+
+Refuted in the walk, so the next reader does not re-find them: the phone's card-per-row is the
+same view on a narrower page, not a second one (D59); the queue has one state and therefore no
+board; the projects screen has no states to make columns of; the admin panels are opened too
+rarely to earn a choice; the day and the team screen are one column on purpose (DESIGN §6,
+"a dashboard answers one question").

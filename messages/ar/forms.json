@@ -20,6 +20,7 @@
   "duplicateLastActivity": "آخر نشاط {date}",
   "duplicateNeverContacted": "دون تواصل",
   "duplicateArchived": "تمت أرشفة {name} بتاريخ {date} ({rep}). يمكن لمدير النظام استرجاعها.",
+  "openMatch": "فتح {name}",
   "added": "تمت إضافة {name}",
   "listsUnavailable": "تعذّر تحميل القوائم. الرجاء إغلاق النافذة وفتحها من جديد.",
   "editCompany": "تعديل الشركة",

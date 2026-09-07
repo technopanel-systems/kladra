@@ -93,6 +93,8 @@ export type DuplicateHit = {
   lastActivityOn: string | null;
   /** Off the floor: the Riyadh day it left, and the reason typed then (S16, D109). */
   archived: { on: string; reason: string | null } | null;
+  /** On the asker's own floor, so the warning may be a door to it (S8, D121). */
+  mine: boolean;
 };
 
 /**
@@ -368,8 +370,9 @@ export async function duplicateCheckAction(
   country?: unknown,
 ): Promise<ActionResult<DuplicateHit | null>> {
   const t = await getTranslations("common");
+  let actor: Awaited<ReturnType<typeof requireActor>>;
   try {
-    await requireActor();
+    actor = await requireActor();
   } catch {
     return { ok: false, error: t("notAllowed") };
   }
@@ -395,6 +398,8 @@ export async function duplicateCheckAction(
         city: hit.city,
         lastActivityOn: hit.lastActivityOn,
         archived: hit.archivedOn ? { on: hit.archivedOn, reason: hit.archiveReason } : null,
+        // His own floor is the one he may open (S8): the warning is a door only then (D121).
+        mine: hit.repId === actor.id,
       },
     };
   } catch {
