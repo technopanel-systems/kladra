@@ -626,6 +626,65 @@ export const dispatchItems = pgTable(
   ],
 );
 
+// ---- credit -----------------------------------------------------------------
+// Whose these metres are (SPEC §3, D148). Two reps can work one job now, and
+// the founder's rule is that credit is chosen per quotation and per dispatch
+// and never inherited: some reps genuinely share a job, some are only helping,
+// and a helper writes his own daily report without taking the metres.
+//
+// Rows, not a column. A column naming one rep, with "split" as its empty case,
+// would make a finished month move the day somebody joined or left the job —
+// a share list is a permission and changes, and what a month was worth does
+// not. These rows freeze WHO at the moment of the raise.
+//
+// And they hold only the who. How much each person's share IS is computed from
+// the record's own lines by `src/lib/credit.ts`, so a dispatch whose quantities
+// are corrected cannot end up carrying stored shares that no longer add back to
+// it — the same trap as a reason column outliving the state it explains (D72),
+// one table along.
+//
+// The user is referenced without a cascade, unlike a share. A share is a
+// permission and vanishes with the person; a credit is what a month was made
+// of, and it outlives everybody.
+
+export const quotationCredits = pgTable(
+  "quotation_credits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quotationId: uuid("quotation_id")
+      .notNull()
+      .references(() => quotations.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    ...stamps,
+  },
+  (t) => [
+    // One person is credited on one record once. Twice would count his own
+    // quotation twice in his own funnel.
+    uniqueIndex("quotation_credits_quotation_user_idx").on(t.quotationId, t.userId),
+    // Every figure asks it this way round: what is this person's?
+    index("quotation_credits_user_idx").on(t.userId),
+  ],
+);
+
+export const dispatchCredits = pgTable(
+  "dispatch_credits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    dispatchId: uuid("dispatch_id")
+      .notNull()
+      .references(() => dispatches.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("dispatch_credits_dispatch_user_idx").on(t.dispatchId, t.userId),
+    index("dispatch_credits_user_idx").on(t.userId),
+  ],
+);
 // ---- targets ----------------------------------------------------------------
 // `month` is the first day of the month. Targets are m², never money.
 

@@ -54,7 +54,8 @@ import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotat
 import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
-import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
+import { creditOnQuotation } from "@/lib/credit-rows";
+import { maySeeCompany, onCompanySql, onProjectSql, seesCompany } from "@/lib/visibility";
 
 export type QuotationStatus =
   | "requested"
@@ -440,6 +441,21 @@ export type QuotationDetail = QuotationRow & {
   /** Every revision of this number, newest first, this one included (S34). */
   revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
   isLatest: boolean;
+  /**
+   * Who it counts for (D148). Names only, and no division: a quotation's m² is
+   * what was offered rather than what moved, and splitting an offer would put a
+   * figure on a screen that nothing is ever measured against.
+   */
+  credit: { userId: string; name: string }[];
+  /**
+   * Whose JOB it is, and whether this reader is on it (D147). What decides
+   * whether the drawer offers to send goods against this paper: §3 says every
+   * rep on a shared project raises dispatches against it, so the button asks
+   * the same question `requestDispatchAction` asks and not a narrower one
+   * (§5 #163).
+   */
+  projectRepId: string | null;
+  onProject: boolean;
 };
 
 /**
@@ -459,6 +475,10 @@ export async function getQuotation(
       // Whether this reader is on the company's share list, asked in the same
       // statement as its owner (D147).
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+      // And whether he is on the JOB, which is the other way to be allowed to
+      // work it (D147). Two different permissions, asked in one statement.
+      projectRepId: projects.repId,
+      onProject: onProjectSql(user, sql`quotations.project_id`).mapWith(Boolean),
       notes: quotations.notes,
       revisionOf: quotations.revisionOf,
     })
@@ -521,6 +541,9 @@ export async function getQuotation(
     ...base,
     notes: row.notes ?? null,
     revisionOf: row.revisionOf ?? null,
+    credit: await creditOnQuotation(id),
+    projectRepId: row.projectRepId ?? null,
+    onProject: Boolean(row.onProject),
     items: items.map((item) => ({
       id: item.id,
       position: item.position,

@@ -86,9 +86,26 @@ broken at least once in FACET, Kladra's predecessor.
   tests/quotations.spec.ts).
 
 - **One definition per figure.** Achieved m² (approved dispatch items, month
-  of approval), pace, overdue follow-ups — each has exactly one query
-  function that every screen calls. A second derivation beside it is the
-  drift trap that produced two answers on two screens.
+  of approval, divided between the people CREDITED on the dispatch since D148),
+  pace, overdue follow-ups — each has exactly one query function that every
+  screen calls. A second derivation beside it is the drift trap that produced
+  two answers on two screens. The credit split is `src/lib/credit.ts`, the pure
+  function and its SQL twin together, and `scripts/one-figure.mts` refuses a
+  second copy of either the way it already does for the m² formula: the division
+  rounds DOWN and gives the leftover hundredth to the last name, and a copy that
+  rounds to nearest puts the manager's table a hundredth under the dispatch it
+  came from.
+
+- **A UNION of two selects, read back through an alias, answers the underlying
+  column names.** Drizzle renders `db.select({u: a.x}).from(a).unionAll(...)` as
+  a subquery whose column is `x`, so the outer `select u` raises `column "u"
+  does not exist` — at run time, on every call. It surfaced nowhere, because the
+  one caller was a form's courtesy read whose failure means "nothing to ask", so
+  the question simply stopped being asked and the screen looked exactly as it had
+  before the feature existed (§5 #164). Two rules: **a read whose failure is
+  invisible is written as plain SQL**, where what it asks for is what it selects;
+  and **a read that decides whether a control exists is not a courtesy** — it is
+  the control, and its failure has to be as loud as any other write path's.
 
 - **One authorization layer, in application code** — `src/lib/authz.ts`.
   Data-integrity invariants (what a row may contain) belong in the database;

@@ -1,18 +1,11 @@
 import "server-only";
 
-import { and, desc, eq, sql, type SQL } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import {
-  companies,
-  companyCategories,
-  dispatchItems,
-  dispatches,
-  quotationItems,
-  quotations,
-} from "@/db/schema";
+import { creditedDispatch, creditedQuotation } from "@/lib/credit-rows";
+import { CREDITED_METRES } from "@/lib/sqm";
 import type { Day } from "@/lib/dates";
-import { sumSqm } from "@/lib/sqm";
 
 /**
  * The proportion questions, over a window (SPEC §3, D152).
@@ -36,11 +29,6 @@ export type SegmentShare = {
   sqm: string;
 };
 
-/** One rep's work, or the whole company's when the id is null. */
-function raisedBy(repId: string | null): SQL | undefined {
-  return repId ? eq(dispatches.repId, repId) : undefined;
-}
-
 /**
  * Where the window's metres went, by customer segment, largest first (D152).
  *
@@ -49,37 +37,32 @@ function raisedBy(repId: string | null): SQL | undefined {
  * those are three of the ten, and a second grouping beside the one the admin
  * already edits would be a second answer to one question (rules/data.md).
  *
- * Attributed by the rep who RAISED the dispatch, exactly as achieved metres are
- * (D86): a hand-over moves the customer and his open work, never the metres
- * already approved in somebody's month. The two figures therefore add up — the
- * segments of a rep's window sum to what his month card says he moved, and that
- * is the property that makes this worth drawing.
+ * Attributed by CREDIT, exactly as achieved metres are (D148): a rep's segments
+ * add up to what his month card says he moved, and the whole company's add up
+ * to the month itself, because the shares of one dispatch add back to it. That
+ * is the property that makes this worth drawing, and it is why this reads the
+ * same rows `achievedByRep` does rather than summing the dispatches again.
  */
 export async function metresBySegment(from: Day, repId: string | null): Promise<SegmentShare[]> {
   const ar = (await getLocale()).startsWith("ar");
-  const name = ar ? companyCategories.nameAr : companyCategories.nameEn;
 
-  const rows = await db
-    .select({ id: companyCategories.id, name, sqm: sumSqm })
-    .from(dispatches)
-    .innerJoin(dispatchItems, eq(dispatchItems.dispatchId, dispatches.id))
-    .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .innerJoin(companyCategories, eq(companyCategories.id, companies.categoryId))
-    .where(
-      and(
-        eq(dispatches.status, "approved"),
-        // The approval is the event that moves metres (S41), read as a Riyadh
-        // day in the shape the hooks allow (rules/data.md, H6/H7).
-        sql`(dispatches.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date`,
-        raisedBy(repId),
-      ),
-    )
-    .groupBy(companyCategories.id, name)
-    .orderBy(desc(sumSqm));
+  const rows = await db.execute<{ id: number; name: string; sqm: string }>(sql`
+    with credited as (${sql.raw(CREDITED_METRES)})
+    select cat.id,
+           ${ar ? sql`cat.name_ar` : sql`cat.name_en`} as name,
+           round(sum(credited.sqm), 2) as sqm
+      from credited
+      join companies co on co.id = credited.company_id
+      join company_categories cat on cat.id = co.category_id
+      -- The approval is the event that moves metres (S41), read as a Riyadh
+      -- day in the shape the hooks allow (rules/data.md, H6/H7).
+     where (credited.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date
+       and (${repId}::uuid is null or credited.user_id = ${repId}::uuid)
+     group by cat.id
+     order by sqm desc
+  `);
 
-  return rows.map((row) => ({ id: row.id, name: row.name, sqm: String(row.sqm ?? "0") }));
+  return rows.rows.map((row) => ({ id: row.id, name: row.name, sqm: String(row.sqm ?? "0") }));
 }
 
 /**
@@ -139,6 +122,9 @@ export async function chainRatios(from: Day, repId: string | null): Promise<Chai
        where (pp.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
          and c.archived_at is null
          and pp.archived_at is null
+         -- A project is not credited: it has an owner and it has people put
+         -- on it (D147), and the row asks how many of HIS jobs got as far as
+         -- a price. Whether the price was his is the row below's question.
          and (${repId}::uuid is null or pp.rep_id = ${repId}::uuid)
     ),
     q as (
@@ -147,7 +133,12 @@ export async function chainRatios(from: Day, repId: string | null): Promise<Chai
         join companies c on c.id = qq.company_id
        where (qq.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
          and c.archived_at is null
-         and (${repId}::uuid is null or qq.rep_id = ${repId}::uuid)
+         -- Whose paper, which since D148 is who it was CREDITED to and not
+         -- who typed it: a rep who raised a quotation on a shared job and
+         -- gave the credit to the man whose job it is did not raise it for
+         -- himself, and his own funnel should not say he did. One question,
+         -- one answer, and the same one the metres beside it are counted by.
+         and ${creditedQuotation("qq", repId)}
     )
     select
       (select count(*)::int from p) as projects,
@@ -165,7 +156,7 @@ export async function chainRatios(from: Day, repId: string | null): Promise<Chai
          join companies c on c.id = qq.company_id
         where (dd.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
           and c.archived_at is null
-          and (${repId}::uuid is null or dd.rep_id = ${repId}::uuid)) as dispatches
+          and ${creditedDispatch("dd", repId)}) as dispatches
   `);
 
   const row = result.rows[0];

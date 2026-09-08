@@ -15,14 +15,16 @@
  * Every figure here is `achievedSqm`'s own definition and `targets`' own rows —
  * this reads them per month rather than defining anything (S43, S44,
  * rules/data.md). A second arithmetic for "achieved, but historically" is how a
- * figure ends up with two answers.
+ * figure ends up with two answers, and it nearly did: when credit replaced the
+ * raiser (D148) every reader moved except this one, which would have drawn six
+ * bars that do not add up to the figure printed above them.
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
-import { SUM_SQM } from "@/lib/sqm";
+import { CREDITED_METRES } from "@/lib/sqm";
 
 /** How many months a card shows, this one included. */
 export const MONTHS_SHOWN = 6;
@@ -61,15 +63,17 @@ export async function monthsBack(
     with months as (
       select generate_series(${from}::date, ${firstOfMonth(today)}::date, interval '1 month')::date as m
     ),
+    credited as (${sql.raw(CREDITED_METRES)}),
     moved as (
-      select date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)::date as m,
-             ${sql.raw(SUM_SQM)} as sqm
-        from dispatches d
-        join dispatch_items di on di.dispatch_id = d.id
-        join quotation_items qi on qi.id = di.quotation_item_id
-       where d.status = 'approved'
-         and (d.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-         and (${userId}::uuid is null or d.rep_id = ${userId}::uuid)
+      select date_trunc('month', (credited.approved_at at time zone 'Asia/Riyadh')::date)::date as m,
+             round(sum(credited.sqm), 2) as sqm
+        from credited
+       where (credited.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date
+         -- Whoever the dispatch was CREDITED to (D148), which is what the month
+         -- card above these bars says and what the manager's table says. Read
+         -- by the raiser instead, a rep who shares a job would see six bars
+         -- that do not add up to the figure printed over them.
+         and (${userId}::uuid is null or credited.user_id = ${userId}::uuid)
        group by 1
     )
     select to_char(months.m, 'YYYY-MM-DD') as month,

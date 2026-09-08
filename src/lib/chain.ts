@@ -22,6 +22,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import { creditedQuotation } from "@/lib/credit-rows";
 import { diffDays, todayRiyadh, type Day } from "@/lib/dates";
 
 /**
@@ -102,10 +103,11 @@ export async function chainCohort(
          -- Whose quotation, not whose customer. They were the same person
          -- until a project could be shared, and since P12 a rep may raise one
          -- on somebody else's company (D147) — so a cohort scoped by the
-         -- company would count his paper under a man who never touched it,
-         -- while the metres beside it on the same tab are counted by the
-         -- raiser (D86). One question, one answer.
-         and (${repId}::uuid is null or q.rep_id = ${repId}::uuid)
+         -- company would count his paper under a man who never touched it.
+         -- Whose it is means whose it was CREDITED to (D148), which is the
+         -- same rule the metres beside it on this tab are counted by, and the
+         -- same answer as the raiser for every quotation nobody shared.
+         and ${creditedQuotation("q", repId)}
     ),
     sent_back as (
       -- The day each sent-back one was LAST sent back: its latest sendBack row.

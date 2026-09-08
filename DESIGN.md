@@ -353,6 +353,21 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   so where it sits — the drawer names the project and its date under the picker, and the clear
   toast says what still stands. And every write that moves a count sends the live event the
   first write sent: a correction is news exactly as the entry was.
+- **A width that fits in English is not a width, it is a coincidence.** `StandingStrip` truncated
+  its value, and an Arabic month name is wider than "Aug": «31/أغسطس/2026» in a 103px cell at 375
+  read "31/أغسطس/6…", a date that does not exist, with an ellipsis nobody reads as a warning (§5
+  #165). The file's own caption rule was one line below it — a sentence that truncates says
+  something else — and the value needed it more, because **a figure that truncates IS something
+  else**. Anything whose whole job is to be exact wraps rather than clips, and a width is measured
+  in the locale that needs the most of it.
+- **And the mirror is a defect too: a screen never HIDES work the action would allow.** The
+  quotation drawer gated its Send button on the raiser alone while the action behind it asks the
+  wider question §3 actually states — the customer's rep, or anybody put on the job (§5 #163).
+  Until a project could be shared the two predicates named one person, so the narrow one looked
+  right for eleven phases. A refused button says why; a missing one is a permission nobody can
+  find and nobody will report. **A control and its action ask the same question, in the same
+  words, from the same function** — and when a permission splits in two, every screen that read
+  it has to be asked which half it meant.
 - **A figure agrees with the figures under it.** Three strips in the stranger read where the
   number and the sentence beneath it were two different reads (P11A, D95): six open quotations
   over "3 with the customer", a headline of quiet people over rows that excused some of them,

@@ -802,6 +802,12 @@ export type QuotationSeed = {
   company: string;
   project?: string;
   rep: RepKey;
+  /**
+   * Who it counts for (D148). Absent means the rep who raised it, which is the
+   * answer for every job one man works; naming two people splits the metres
+   * between them in equal parts.
+   */
+  creditTo?: RepKey[];
   status: "requested" | "returned" | "issued" | "accepted" | "rejected";
   notes?: string;
   smacNumber?: string;
@@ -982,6 +988,39 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "1020", supplier: "N", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 60, width: "1.24", length: "5.8", pricePerSqm: "127.00" },
     ],
   },
+  {
+    /*
+     * The one piece of paper two reps share (SPEC §3, D148).
+     *
+     * Saad works the Anmaa tower with Faisal — p2 is the shared job and f2 the
+     * shared customer — so he raised this one himself on another rep's company,
+     * which sharing exists for, and said it counts for them both. Without a row
+     * like this the split is a branch only a test has ever taken: every screen
+     * that says who was credited what would have shown one name on every row
+     * since the day it was built.
+     *
+     * One line, and its quantity is chosen so the division is not clean: 21
+     * sheets of 1.24 × 5.8 are 151.03 m², which halves to 75.51 and 75.52. A
+     * demo where every split comes out even proves nothing about the rounding
+     * rule underneath it.
+     */
+    key: "q9",
+    company: "f2",
+    project: "p2",
+    rep: "saad",
+    creditTo: ["faisal", "saad"],
+    status: "accepted",
+    createdBack: 7,
+    issuedBack: 6,
+    decidedBack: 5,
+    smacNumber: "4535",
+    // Thirty quoted and twenty-one sent, so the tower still has sheets left on
+    // it: a quotation with nothing left offers no Send button, and the walk
+    // that opens the credit question would have had nothing to open.
+    items: [
+      { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 30, width: "1.24", length: "5.8", pricePerSqm: "119.00" },
+    ],
+  },
 ];
 
 // ---- dispatches ---------------------------------------------------------------
@@ -990,6 +1029,12 @@ export type DispatchSeed = {
   key: string;
   quotation: string;
   rep: RepKey;
+  /**
+   * Who it counts for (D148). Absent means the rep who raised it, which is the
+   * answer for every job one man works; naming two people splits the metres
+   * between them in equal parts.
+   */
+  creditTo?: RepKey[];
   status: "submitted" | "approved" | "refused";
   /** The desk's reason, for a refused one — in her words (S28). */
   refuseReason?: string;
@@ -1064,6 +1109,30 @@ export const DISPATCHES: DispatchSeed[] = [
     paymentTerms: "50% مقدم والباقي عند التسليم",
     createdBack: 4,
     items: [{ item: 1, qty: 10 }],
+  },
+  {
+    /*
+     * The metres two reps split (D148). Every sheet of q9 goes out at once and
+     * the credit rides with it: 151.03 m² becomes 75.51 to Faisal and 75.52 to
+     * Saad, the odd hundredth going to the last of them in the fixed order so
+     * the two shares add back to the dispatch exactly.
+     *
+     * Approved this month, so the manager's table, both reps' month cards and
+     * the metrics all show a row that is not one person's — which is the only
+     * way anybody sees the feature before the pilot.
+     */
+    key: "d5",
+    quotation: "q9",
+    rep: "saad",
+    creditTo: ["faisal", "saad"],
+    status: "approved",
+    shipmentMethod: "ct",
+    destination: "موقع البرج — طريق الملك فهد، الرياض",
+    paymentTerms: "50% مقدم والباقي عند التسليم",
+    smacDispatchNumber: "8877",
+    approvedOnDayOfMonth: 4,
+    createdBack: 3,
+    items: [{ item: 0, qty: 21 }],
   },
 ];
 

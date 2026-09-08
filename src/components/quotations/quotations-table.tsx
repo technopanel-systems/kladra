@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, type ReactNode } from "react";
+import { Fragment, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
@@ -482,6 +482,12 @@ function useCloseDrawer(): () => void {
 
 export type QuotationSheetProps = {
   quotation: QuotationRow & { notes: string | null; isLatest: boolean };
+  /**
+   * Who it counts for (D148). Said only when it is worth saying — more than one
+   * name, or one name that is not the man who raised it — so the ordinary
+   * quotation is not made to answer a question nobody asked.
+   */
+  credit: { userId: string; name: string }[];
   items: QuotationItemRow[];
   revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
   draft: QuotationDraft;
@@ -508,6 +514,7 @@ export type QuotationSheetProps = {
 
 export function QuotationSheet({
   quotation,
+  credit,
   items,
   revisions,
   draft,
@@ -598,6 +605,19 @@ export function QuotationSheet({
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Fact label={t("common.raisedBy")}>{quotation.repName}</Fact>
+              {credit.length > 0 && (credit.length > 1 || credit[0].userId !== quotation.repId) ? (
+                <Fact label={t("common.credit.label")}>
+                  {/* Each name in its own bdi: the separator is neutral and
+                      would otherwise settle against the paragraph rather than
+                      against the name beside it (rules/words.md). */}
+                  {credit.map((line, index) => (
+                    <Fragment key={line.userId}>
+                      {index > 0 ? " · " : null}
+                      <bdi>{line.name}</bdi>
+                    </Fragment>
+                  ))}
+                </Fact>
+              ) : null}
             </dl>
           </div>
 

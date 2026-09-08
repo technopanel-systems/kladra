@@ -54,7 +54,8 @@ import { NotAllowed, seesAll } from "@/lib/authz";
 import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
-import { lineSqm, sumSqm } from "@/lib/sqm";
+import { creditOnDispatch, type CreditLine } from "@/lib/credit-rows";
+import { CREDITED_METRES, lineSqm, sumSqm } from "@/lib/sqm";
 import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
 
 export type DispatchStatus = "submitted" | "approved" | "refused";
@@ -102,6 +103,12 @@ export type DispatchRow = {
   /** numeric(12,2) all the way to the screen. */
   totalSqm: string;
   itemCount: number;
+  /**
+   * Who the metres count for, named in the reader's script, in the fixed order
+   * the shares are divided by (D148). One name on every dispatch a rep raised
+   * for himself; the row says so only when there is more than one.
+   */
+  creditNames: string[];
   /** The quotation has a later revision: approval would refuse this (D85, P11E). */
   superseded: boolean;
 };
@@ -233,6 +240,18 @@ function selection(locale: string) {
     createdOn: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
     totalSqm: sql<string>`coalesce(${dispatchTotals.sqm}, 0)`,
     itemCount: sql<number>`coalesce(${dispatchTotals.itemCount}, 0)`,
+    // Whose metres these are, on the row rather than only inside the drawer
+    // (SPEC §3, D148): a rep who sees 151 m² here and 75 against his target has
+    // to be able to see why without opening anything. Named outright inside the
+    // correlated subquery, because a Drizzle column in one renders bare and
+    // resolves against the inner table (rules/data.md).
+    creditNames: sql<string[]>`(
+      select coalesce(array_agg(${personNameOf("cu", locale)}
+                                order by ${personNameOf("cu", locale)}), '{}')
+        from dispatch_credits dc
+        join users cu on cu.id = dc.user_id
+       where dc.dispatch_id = dispatches.id
+    )`,
     // The paper this is against has been revised since (P11E): approval will
     // refuse it (D85), and the queue says so before the press. The same test
     // `isLiveRevision` runs at approval, written out because a correlated
@@ -271,6 +290,7 @@ type Selected = {
   createdOn: string;
   totalSqm: string;
   itemCount: number;
+  creditNames: string[] | null;
   superseded: boolean;
 };
 
@@ -303,6 +323,7 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     createdOn: row.createdOn,
     totalSqm: String(row.totalSqm ?? "0"),
     itemCount: Number(row.itemCount ?? 0),
+    creditNames: row.creditNames ?? [],
   };
 }
 
@@ -423,6 +444,13 @@ export type DispatchItemRow = {
 
 export type DispatchDetail = DispatchRow & {
   items: DispatchItemRow[];
+  /**
+   * Who its metres count for, and how much each takes (D148). One name on
+   * every dispatch a single rep raised; two or more on a shared job, and then
+   * the drawer is the only place a rep can see why his target moved by less
+   * than the figure at the top of this card.
+   */
+  credit: CreditLine[];
 };
 
 /**
@@ -487,8 +515,10 @@ export async function getDispatch(
   // This dispatch holds its own share only while it is waiting or approved; a
   // refused or cancelled one gave its quantities back (D12).
   const holds = row.status === "submitted" || row.status === "approved";
+  const detail = toRow(row, row.shipmentMethod);
   return {
-    ...toRow(row, row.shipmentMethod),
+    ...detail,
+    credit: await creditOnDispatch(id, detail.totalSqm),
     items: items.map((item) => ({
       ...item,
       elsewhereQty: Number(item.elsewhereQty ?? 0),
@@ -657,35 +687,29 @@ const approvedSqm = sumSqm;
  *
  * `month` is any day in it. Approval is the event, so the month is the month
  * `approved_at` fell in, in Riyadh, and neither the request nor the SMAC number
- * moves it (S41). Counted against the rep who RAISED it, never against whoever
- * owns the company today: a hand-over moves the customer and his open work and
- * leaves the metres in the month somebody already earned them (D86). This block
- * said the opposite for three phases while the code four lines down did the
- * right thing, which is how a stale comment becomes a defect in the next thing
- * somebody builds on it.
+ * moves it (S41).
+ *
+ * Counted against whoever the dispatch was CREDITED to, which is chosen when it
+ * is raised and never inherited (D148) — never against whoever owns the company
+ * today, because a hand-over moves the customer and his open work and leaves
+ * the metres in the month somebody already earned them (D86). For a dispatch
+ * with one name on it, which is every dispatch until a rep shares a job, that
+ * is the rep who raised it and the figure is unchanged.
  *
  * One statement for the whole team: the manager's table and a rep's own card
  * read the same row, so they cannot disagree.
  */
 export async function achievedByRep(month: string): Promise<Map<string, string>> {
-  const rows = await db
-    // The rep who RAISED the dispatch (D86), not whoever holds the company
-    // today: a hand-over moves the customer and his open work, never the
-    // metres already approved in somebody's month.
-    .select({ repId: dispatches.repId, sqm: approvedSqm })
-    .from(dispatches)
-    .innerJoin(dispatchItems, eq(dispatchItems.dispatchId, dispatches.id))
-    .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
-    .where(
-      and(
-        eq(dispatches.status, "approved"),
-        sql`date_trunc('month', (dispatches.approved_at at time zone 'Asia/Riyadh')::date)
-              = date_trunc('month', ${month}::date)`,
-      ),
-    )
-    .groupBy(dispatches.repId);
+  const rows = await db.execute<{ user_id: string; sqm: string }>(sql`
+    with credited as (${sql.raw(CREDITED_METRES)})
+    select user_id, round(sum(sqm), 2) as sqm
+      from credited
+     where date_trunc('month', (approved_at at time zone 'Asia/Riyadh')::date)
+             = date_trunc('month', ${month}::date)
+     group by user_id
+  `);
 
-  return new Map(rows.map((row) => [row.repId, String(row.sqm ?? "0")]));
+  return new Map(rows.rows.map((row) => [row.user_id, String(row.sqm ?? "0")]));
 }
 
 /** One rep's achieved m², from the same statement (S43). */

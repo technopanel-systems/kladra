@@ -91,7 +91,16 @@ export function StandingStrip({
           >
             {item.label}
           </dt>
-          <dd className={cn("truncate text-sm leading-tight", item.tone && TONE_TEXT[item.tone])}>
+          {/* Wraps too, and for a harder reason than the caption below it: a
+              SENTENCE that truncates says something else, and a FIGURE that
+              truncates IS something else. «31/أغسطس/2026» in a 103px cell read
+              "31/أغسطس/6…" on the quotation drawer at 375 — a date that does not
+              exist, printed with no sign that anything had been cut (§5 #165).
+              An Arabic month name is wider than "Aug" and nothing in a grid
+              cell's width knows that. */}
+          <dd
+            className={cn("text-sm leading-tight break-words", item.tone && TONE_TEXT[item.tone])}
+          >
             {item.value}
           </dd>
           {/* Wraps, because a sentence that truncates says something else. */}

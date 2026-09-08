@@ -4,7 +4,12 @@ import { Copy, FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { lastQuotationAction, type QuotationLookups } from "@/actions/forms";
+import {
+  creditChoicesAction,
+  lastQuotationAction,
+  type CreditChoices,
+  type QuotationLookups,
+} from "@/actions/forms";
 import {
   requestQuotationAction,
   reviseQuotationAction,
@@ -21,6 +26,7 @@ import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
+import { CreditField } from "@/components/ui-ext/credit-field";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
@@ -50,6 +56,8 @@ import { splitProjectOption, type PickerOption } from "@/lib/picker-option";
  */
 
 export type QuotationDraft = {
+  /** What it says it counts for: one person's id, or `split` (D148). */
+  creditTo?: string;
   quotationId: string;
   notes: string;
   lines: Omit<LineDraft, "key">[];
@@ -196,6 +204,46 @@ function RequestForm({
   const form = useRef<HTMLFormElement>(null);
 
   /*
+   * Who this one counts for (D148), asked only where the job has more than one
+   * rep on it. The list follows the project the way the copy offer above
+   * follows the company: on the Quotations screen the job is not known until he
+   * picks it, and a question about a job nobody has named yet has no answers.
+   *
+   * Both the answers and his choice carry the project they belong to, and the
+   * two are compared rather than reset. Clearing them when the project changes
+   * would be a setState inside an effect, which is the cascading render the
+   * lint refuses and, worse, would leave the field naming a person who is not
+   * on the job he has just picked.
+   */
+  const [credit, setCredit] = useState<{ projectId: string; choices: CreditChoices } | null>(null);
+  const [creditPick, setCreditPick] = useState<{ projectId: string; value: string } | null>(
+    // An EDIT opens on what it already says; a REVISION does not. A revision is
+    // a new quotation, and §3's rule is that nothing is ever carried forward
+    // from a previous record — credit least of all, since carrying it is
+    // exactly the inheriting D148 forbids.
+    project && mode === "edit" && existing?.creditTo
+      ? { projectId: project, value: existing.creditTo }
+      : null,
+  );
+  useEffect(() => {
+    if (!project) return;
+    let cancelled = false;
+    // A failure here is not an error the rep should see: the question is simply
+    // not asked, and the metres go to the man raising it, as they did before.
+    guarded(creditChoicesAction)({ projectId: project }).then((outcome) => {
+      if (!cancelled && outcome.ok && outcome.data) {
+        setCredit({ projectId: project, choices: outcome.data });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [project, guarded]);
+
+  const choices = credit?.projectId === project ? credit.choices : null;
+  const countsFor = (creditPick?.projectId === project ? creditPick.value : "") || choices?.mine || "";
+
+  /*
    * The last thing this customer was quoted, and one button to start from it
    * (D74). Only on a first ask: Edit already opens on its own lines and Revise
    * on its parent's, and an offer to overwrite those is an offer to lose work.
@@ -249,6 +297,7 @@ function RequestForm({
       {/* One field for all the lines: FormData has no shape for a list of
           objects that survives the round trip (src/actions/quotations.ts). */}
       <input type="hidden" name="items" value={linesPayload(lines)} />
+      <input type="hidden" name="credit" value={countsFor} />
 
       <FormBody>
         {projects ? (
@@ -308,6 +357,15 @@ function RequestForm({
           subtotal={totals.subtotal}
           vat={totals.vat}
           total={totals.total}
+        />
+
+        {/* Under the totals, because that is the sentence it finishes: this
+            much paper, and it counts for him (D148). */}
+        <CreditField
+          people={choices?.people ?? []}
+          value={countsFor}
+          onChange={(next) => setCreditPick(project ? { projectId: project, value: next } : null)}
+          id="quotation-credit"
         />
 
         <div className="flex flex-col gap-1.5">

@@ -24,22 +24,47 @@ import { DEFAULT_RANGE, rangeStart, type Range } from "@/lib/ranges";
 
 const COLD = { timeout: 30_000 };
 
-/** The metres approved in the window, by segment, largest first. */
+/**
+ * The metres approved in the window, by segment, largest first — and since
+ * D148, by whoever the dispatch was CREDITED to rather than whoever raised it.
+ *
+ * The division is written a second way on purpose, as the sqm formula is:
+ * `trunc(x, 2)` here against the app's `floor(x * 100) / 100`, and the leftover
+ * given to the last person by subtracting the others rather than by a
+ * remainder. Two expressions that must agree to the hundredth on every row is
+ * the whole reason this spec computes anything at all.
+ */
 async function segments(from: string, repId: string | null) {
   return query<{ name_en: string; name_ar: string; sqm: string }>(
-    `select cc.name_en, cc.name_ar,
-            round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm
-       from dispatches d
-       join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
-       join quotations q on q.id = d.quotation_id
-       join companies c on c.id = q.company_id
-       join company_categories cc on cc.id = c.category_id
-      where d.status = 'approved'
-        and (d.approved_at at time zone 'Asia/Riyadh')::date >= $1::date
-        and ($2::uuid is null or d.rep_id = $2::uuid)
+    `with d as (
+       select dd.id, c.category_id,
+              round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2) as sqm
+         from dispatches dd
+         join dispatch_items di on di.dispatch_id = dd.id
+         join quotation_items qi on qi.id = di.quotation_item_id
+         join quotations q on q.id = dd.quotation_id
+         join companies c on c.id = q.company_id
+        where dd.status = 'approved'
+          and (dd.approved_at at time zone 'Asia/Riyadh')::date >= $1::date
+        group by dd.id, c.category_id
+     ),
+     cr as (
+       select dispatch_id, user_id,
+              count(*) over (partition by dispatch_id) as n,
+              row_number() over (partition by dispatch_id order by user_id) as k
+         from dispatch_credits
+     )
+     select cc.name_en, cc.name_ar, round(sum(share), 2)::text as sqm
+       from (
+         select d.category_id, cr.user_id,
+                case when cr.k < cr.n then trunc(d.sqm / cr.n, 2)
+                     else d.sqm - trunc(d.sqm / cr.n, 2) * (cr.n - 1) end as share
+           from d join cr on cr.dispatch_id = d.id
+       ) parts
+       join company_categories cc on cc.id = parts.category_id
+      where ($2::uuid is null or parts.user_id = $2::uuid)
       group by cc.id, cc.name_en, cc.name_ar
-      order by sum(round(qi.width * qi.length * di.qty, 2)) desc`,
+      order by sum(share) desc`,
     [from, repId],
   );
 }
@@ -76,19 +101,25 @@ async function ratios(from: string, repId: string | null) {
           join companies c on c.id = q.company_id
          where (q.created_at at time zone 'Asia/Riyadh')::date >= $1::date
            and c.archived_at is null
-           and ($2::uuid is null or q.rep_id = $2::uuid)) as quotations,
+           and ($2::uuid is null
+                or exists (select 1 from quotation_credits qc
+                            where qc.quotation_id = q.id and qc.user_id = $2::uuid))) as quotations,
        (select count(*)::int from quotations q
           join companies c on c.id = q.company_id
          where (q.created_at at time zone 'Asia/Riyadh')::date >= $1::date
            and c.archived_at is null
-           and ($2::uuid is null or q.rep_id = $2::uuid)
+           and ($2::uuid is null
+                or exists (select 1 from quotation_credits qc
+                            where qc.quotation_id = q.id and qc.user_id = $2::uuid))
            and exists (select 1 from dispatches d where d.quotation_id = q.id)) as dispatched,
        (select count(*)::int from dispatches d
           join quotations q on q.id = d.quotation_id
           join companies c on c.id = q.company_id
          where (d.created_at at time zone 'Asia/Riyadh')::date >= $1::date
            and c.archived_at is null
-           and ($2::uuid is null or d.rep_id = $2::uuid)) as dispatches`,
+           and ($2::uuid is null
+                or exists (select 1 from dispatch_credits dc
+                            where dc.dispatch_id = d.id and dc.user_id = $2::uuid))) as dispatches`,
     [from, repId],
   );
 }

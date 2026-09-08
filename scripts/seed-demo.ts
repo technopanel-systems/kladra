@@ -29,6 +29,7 @@ import {
   parseDay,
   todayRiyadh,
 } from "../src/lib/dates";
+import { creditOrder } from "../src/lib/credit";
 import { normalizePhone } from "../src/lib/phone";
 import { type QuotationEventName, quotationEvent } from "../src/lib/quotation-events";
 import { isWeekend, nextWorkingDay } from "../src/lib/workdays";
@@ -101,6 +102,7 @@ const {
   contacts,
   countries,
   dailyReports,
+  dispatchCredits,
   dispatchItems,
   dispatches,
   fireRatings,
@@ -110,6 +112,7 @@ const {
   positions,
   projectShares,
   projects,
+  quotationCredits,
   quotationItems,
   quotations,
   shipmentMethods,
@@ -183,6 +186,24 @@ function must<T>(map: Map<string, T>, key: string, what: string): T {
   const v = map.get(key);
   if (v === undefined) throw new Error(`${what} "${key}" is not in the seeded lookups`);
   return v;
+}
+
+/**
+ * Who a seeded record counts for (D148).
+ *
+ * Every record names one person — the rep who raised it — unless the seed says
+ * otherwise, which is the answer for every job one rep works alone. The one job
+ * two reps are on has a dispatch that says otherwise, so the split is a thing
+ * somebody has SEEN rather than a branch only a test has ever taken
+ * (rules/data.md: a figure the demo always shows as zero is a figure nobody has
+ * ever seen work).
+ */
+function creditedTo(
+  userIds: Map<string, string>,
+  rep: string,
+  creditTo: readonly string[] | undefined,
+): string[] {
+  return creditOrder((creditTo ?? [rep]).map((who) => must(userIds, who, "user")));
 }
 
 function phone(typed: string): string {
@@ -826,6 +847,9 @@ async function seedQuotations(
         })
         .returning({ id: quotations.id });
       quotationIds.set(q.key, row.id);
+      await tx.insert(quotationCredits).values(
+        creditedTo(userIds, q.rep, q.creditTo).map((userId) => ({ quotationId: row.id, userId })),
+      );
       await writeTrail(tx, row.id, trail);
 
       // `sqm` is GENERATED (width × length × qty) — never in the column list.
@@ -922,6 +946,10 @@ async function seedDispatches(
           updatedAt: ended ?? created,
         })
         .returning({ id: dispatches.id });
+
+      await tx.insert(dispatchCredits).values(
+        creditedTo(userIds, d.rep, d.creditTo).map((userId) => ({ dispatchId: row.id, userId })),
+      );
 
       // The trail (D72, D77): the desk's day counts what it refused from the
       // audit log, so a seeded refusal without its row is one she never made.
@@ -1036,6 +1064,8 @@ async function seedHistory(
         })
         .returning({ id: quotations.id });
 
+      await tx.insert(quotationCredits).values({ quotationId: quotation.id, userId: him });
+
       // A month behind us reads with the same queries this month reads with, and
       // its trail is written the same way too — otherwise the history is a set of
       // quotations that were never asked for and never issued by anybody.
@@ -1084,6 +1114,8 @@ async function seedHistory(
           updatedAt: approved,
         })
         .returning({ id: dispatches.id });
+
+      await tx.insert(dispatchCredits).values({ dispatchId: dispatch.id, userId: him });
 
       await tx.insert(dispatchItems).values({
         dispatchId: dispatch.id,
@@ -1177,6 +1209,8 @@ async function seedHistory(
           updatedAt: instant(on(21), 16, 5),
         })
         .returning({ id: quotations.id });
+
+      await tx.insert(quotationCredits).values({ quotationId: quotation.id, userId: him });
 
       await writeTrail(tx, quotation.id, trail);
 

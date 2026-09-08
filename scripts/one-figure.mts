@@ -20,6 +20,17 @@ const RULES: Rule[] = [
     allow: ["src/lib/sqm.ts"],
     fix: "use LINE_SQM / SUM_SQM or lineSqm / sumSqm from src/lib/sqm.ts",
   },
+  {
+    // The same rule, one figure along (D148). Dividing a record's metres
+    // between the people credited on it has a rounding decision inside it —
+    // down, with the leftover to the last of them — and a second copy that
+    // rounds to nearest gives a manager's table that is a hundredth short of
+    // the dispatch it came from.
+    name: "the credit split is written once",
+    pattern: /\* 100 \/ (parts|\$\{parts\})|Math\.floor\([a-zA-Z]+ \/ (people|userIds)\.length\)/,
+    allow: ["src/lib/credit.ts"],
+    fix: "use creditShares or shareOf from src/lib/credit.ts",
+  },
 ];
 
 const root = resolve(import.meta.dirname, "..");
@@ -56,4 +67,4 @@ if (problems.length > 0) {
   for (const line of problems) console.error("  " + line);
   process.exit(1);
 }
-console.log("one-figure — the square-metre formula is written once");
+console.log(`one-figure — ${RULES.length} figure(s) written once: ${RULES.map((r) => r.name).join("; ")}`);

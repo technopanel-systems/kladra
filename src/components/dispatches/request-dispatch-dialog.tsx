@@ -5,8 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  creditChoicesAction,
   lastDispatchAction,
   remainingItemsAction,
+  type CreditChoices,
   type DispatchLookups,
 } from "@/actions/forms";
 // A type, never a value: importing anything runnable from a server lib into a
@@ -19,6 +21,7 @@ import {
   sendingSqm,
   type SendDraft,
 } from "@/components/dispatches/dispatch-items";
+import { CreditField } from "@/components/ui-ext/credit-field";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useDispatchLookups } from "@/components/ui-ext/form-lookups";
@@ -58,6 +61,12 @@ export type DispatchDraft = {
   paymentTerms: string;
   /** Quantities already on this request, by quotation line. */
   sending: { quotationItemId: string; qty: number }[];
+  /**
+   * What it says it counts for: one person's id, or `split` (D148). A dispatch
+   * still waiting has earned nobody anything yet, so the answer is editable for
+   * exactly as long as the quantities beside it are.
+   */
+  creditTo?: string;
 };
 
 export type DispatchMode = "request" | "edit";
@@ -104,6 +113,14 @@ export function RequestDispatchDialog({
    * the first pass, and it looked like a query that had found nothing.
    */
   const [last, setLast] = useState<LastDispatch | null | undefined>(undefined);
+  /**
+   * Who this one may count for (D148), read when the dialog opens for the same
+   * reason what-is-left is: a rep can be put on the job or taken off it while
+   * the screen sits there. `undefined` is "not answered yet" and the form waits
+   * for it, because a field that appears after the form has mounted is a field
+   * a rep has already scrolled past.
+   */
+  const [credit, setCredit] = useState<CreditChoices | null | undefined>(undefined);
 
   // The quotation the form is being built for: the caller's, or the one picked
   // in the field above it.
@@ -119,6 +136,7 @@ export function RequestDispatchDialog({
       setItemsFailed(false);
       setChosen("");
       setLast(undefined);
+      setCredit(undefined);
     }
   }, []);
 
@@ -129,6 +147,13 @@ export function RequestDispatchDialog({
       if (cancelled) return;
       if (outcome.ok && outcome.data) setItems(outcome.data);
       else setItemsFailed(true);
+    });
+    // A failure here is not an error the rep should see: the question simply is
+    // not asked, and the metres go to the man raising it, which is what they
+    // did before this existed.
+    guarded(creditChoicesAction)({ quotationId: active }).then((outcome) => {
+      if (cancelled) return;
+      setCredit(outcome.ok ? (outcome.data ?? null) : null);
     });
     // Only for a NEW one: an edit opens on what it already says. A failure here
     // is not an error the rep should see — the fields are simply empty, which
@@ -190,6 +215,7 @@ export function RequestDispatchDialog({
               setItems(null);
               setItemsFailed(false);
               setLast(undefined);
+              setCredit(undefined);
               setChosen(next);
             }}
             placeholder={t("dispatches.pickQuotation")}
@@ -207,11 +233,12 @@ export function RequestDispatchDialog({
         <p className="px-4 pb-4 text-sm text-muted-foreground">
           {t("dispatches.pickQuotationFirst")}
         </p>
-      ) : lookups && items && (mode !== "request" || last !== undefined) ? (
+      ) : lookups && items && credit !== undefined && (mode !== "request" || last !== undefined) ? (
         <DispatchForm
           quotationId={active}
           mode={mode}
           existing={existing}
+          credit={credit}
           last={last ?? null}
           lookups={lookups}
           items={items}
@@ -229,6 +256,7 @@ function DispatchForm({
   quotationId,
   mode,
   existing,
+  credit,
   last,
   lookups,
   items,
@@ -238,6 +266,8 @@ function DispatchForm({
   quotationId: string;
   mode: DispatchMode;
   existing?: DispatchDraft;
+  /** Who it may count for, or null where the job has one rep and nothing is asked. */
+  credit: CreditChoices | null;
   /** The last dispatch on this quotation, where there is one (D81). */
   last: LastDispatch | null;
   lookups: DispatchLookups;
@@ -284,6 +314,14 @@ function DispatchForm({
     existing?.paymentTerms ?? last?.paymentTerms ?? "",
   );
 
+  /*
+   * Whose metres these are (D148). It starts on the man filling the form in,
+   * which is the answer for every job one rep works and the answer he wants
+   * most of the time on the one he shares — a helper chooses otherwise, and
+   * choosing is the whole point of the field.
+   */
+  const [countsFor, setCountsFor] = useState(existing?.creditTo ?? credit?.mine ?? "");
+
   const sqm = useMemo(() => sendingSqm(items, lines), [items, lines]);
 
   return (
@@ -302,6 +340,7 @@ function DispatchForm({
       )}
       <input type="hidden" name="items" value={itemsPayload(lines)} />
       <input type="hidden" name="shipmentMethodId" value={method} />
+      <input type="hidden" name="credit" value={countsFor} />
 
       <FormBody>
         <DispatchItems items={items} lines={lines} onChange={setLines} disabled={pending} />
@@ -312,6 +351,16 @@ function DispatchForm({
             {formatSqm(sqm)}
           </span>
         </div>
+
+        {/* Directly under the figure it decides, because that is the sentence:
+            this many metres, and they count for him (D148). */}
+        <CreditField
+          people={credit?.people ?? []}
+          value={countsFor}
+          onChange={setCountsFor}
+          sqm={sqm}
+          id="dispatch-credit"
+        />
 
         <div className="flex flex-col gap-1.5">
           <Label id="shipment-label">{t("common.shipment")}</Label>

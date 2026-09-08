@@ -1,6 +1,7 @@
 import { getLocale } from "next-intl/server";
 import { z } from "zod";
 import { DispatchHistory } from "@/components/dispatches/dispatch-history";
+import { CREDIT_SPLIT } from "@/lib/credit";
 import { DispatchSheet } from "@/components/dispatches/dispatches-table";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayQuote } from "@/lib/floor";
@@ -53,6 +54,7 @@ export async function DispatchDrawer({
     <DispatchSheet
       param={param}
       dispatch={dispatch}
+      credit={dispatch.credit}
       items={dispatch.items}
       // What Edit opens on: the quantities as they are, by quotation line id.
       draft={{
@@ -64,6 +66,10 @@ export async function DispatchDrawer({
           quotationItemId: item.quotationItemId,
           qty: item.qty,
         })),
+        // What the field opens on: the name it already says, or the word that
+        // means everybody on the job (D148).
+        creditTo:
+          dispatch.credit.length > 1 ? CREDIT_SPLIT : (dispatch.credit[0]?.userId ?? undefined),
       }}
       // A node, not data: it is built on the server, where the audit log and
       // the reader's own language both live — the same reason the quotation

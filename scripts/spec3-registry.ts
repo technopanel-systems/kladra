@@ -277,10 +277,13 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "chosen per quotation and per dispatch and is never inherited",
-    owed: "P12-4 credit — every metre goes to whoever raised the record and no dialog asks who it counts for.",
+    tests: ["credit is chosen per record, and a job one rep works is asked nothing"],
   },
   {
     says: "the rep's target, the manager's table, the metrics",
-    owed: "P12-4 credit — no row anywhere says who was credited what, because no metre is ever split.",
+    tests: [
+      "a shared job's metres are split, and the drawer says who took what",
+      "the month a rep is shown is the month he was credited",
+    ],
   },
 ];

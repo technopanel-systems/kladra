@@ -134,5 +134,11 @@
     "quarter": "Last 3 months",
     "year": "This year"
   },
-  "percent": "{percent}%"
+  "percent": "{percent}%",
+  "credit": {
+    "label": "Counts for",
+    "split": "Split between everyone on the project",
+    "help": "Chosen for this one, and never carried to the next.",
+    "notOnProject": "That person is not on this project."
+  }
 }

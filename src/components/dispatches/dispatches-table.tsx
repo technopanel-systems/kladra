@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, type ReactNode } from "react";
+import { Fragment, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
@@ -30,6 +30,7 @@ import { Sqm } from "@/components/ui-ext/figures";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatSqm } from "@/lib/money";
+import type { CreditLine } from "@/lib/credit-rows";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
 import { dispatchTone, TONE_TEXT } from "@/lib/state-tone";
 import { formatDay } from "@/lib/dates";
@@ -287,6 +288,7 @@ export function DispatchesTable({
                     </span>
                     <span className="ms-1 text-xs text-muted-foreground">{t("common.sqm")}</span>
                   </span>
+                  <SplitNames names={row.creditNames} />
                 </Link>
               ))}
             </div>
@@ -369,6 +371,7 @@ export function DispatchesTable({
                         <span dir="ltr" className="num">
                           {formatSqm(row.totalSqm)}
                         </span>
+                        <SplitNames names={row.creditNames} />
                       </TableCell>
                       <TableCell className="p-3">
                         <span className="flex flex-col gap-1">
@@ -476,6 +479,12 @@ function useCloseDrawer(param: string): () => void {
 export type DispatchSheetProps = {
   dispatch: DispatchRow;
   /**
+   * Who its metres count for (D148). Drawn only when it is worth saying —
+   * more than one name, or one name that is not the man who raised it — so an
+   * ordinary dispatch is not made to answer a question nobody asked.
+   */
+  credit: CreditLine[];
+  /**
    * What happened to it, oldest first (D143). A node rather than data, for the
    * reason `QuotationSheetProps.history` gives.
    */
@@ -489,6 +498,7 @@ export type DispatchSheetProps = {
 
 export function DispatchSheet({
   dispatch,
+  credit,
   history,
   items,
   draft,
@@ -654,6 +664,28 @@ export function DispatchSheet({
                 {formatSqm(dispatch.totalSqm)}
               </dd>
             </div>
+            {credit.length > 0 && (credit.length > 1 || credit[0].userId !== dispatch.repId) ? (
+              <>
+                <div className="border-t border-line pt-1" />
+                {/* Why his target moved by less than the figure above it. A
+                    rep who cannot see this on the row has to be told (D148). */}
+                <div className="flex flex-col gap-1">
+                  <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {t("common.credit.label")}
+                  </dt>
+                  <dd className="flex flex-col gap-1" data-slot="credit-lines">
+                    {credit.map((line) => (
+                      <span key={line.userId} className="flex items-baseline justify-between gap-4">
+                        <bdi>{line.name}</bdi>
+                        <span dir="ltr" className="num">
+                          {formatSqm(line.sqm)}
+                        </span>
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              </>
+            ) : null}
             <div className="border-t border-line pt-1" />
             <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
             <Row label={t("common.destination")}>{dispatch.destination}</Row>
@@ -667,6 +699,33 @@ export function DispatchSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * The names a split dispatch's metres go to, under the figure itself (D148).
+ *
+ * Only when there is more than one, which is the only case anybody needs told:
+ * a rep reading 151 m² here and 75 against his target can see why without
+ * opening anything, and the manager can read a shared job down the column.
+ *
+ * Each name in its own bdi. The separator is neutral, so in an Arabic page it
+ * would otherwise settle against the paragraph rather than against the name
+ * beside it (rules/words.md).
+ */
+function SplitNames({ names }: { names: string[] }) {
+  if (names.length < 2) return null;
+  return (
+    <span data-slot="split-names" className="block text-xs text-balance text-muted-foreground">
+      {names.map((name, index) => (
+        <Fragment key={name}>
+          {/* A non-breaking space BEFORE the separator: the caption wraps now,
+              and a break there would start a line with a bare middot. */}
+          {index > 0 ? " · " : null}
+          <bdi>{name}</bdi>
+        </Fragment>
+      ))}
+    </span>
   );
 }
 

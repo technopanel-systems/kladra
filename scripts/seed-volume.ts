@@ -38,9 +38,11 @@ const {
   auditLog,
   companies,
   contacts,
+  dispatchCredits,
   dispatchItems,
   dispatches,
   projects,
+  quotationCredits,
   quotationItems,
   quotations,
   users,
@@ -283,6 +285,11 @@ async function main(): Promise<void> {
       })
       .returning({ id: quotations.id });
 
+    // Whose it is (D148). One name at this scale: the volume seed exists to
+    // time the queries, and a split changes what the figures mean, not how
+    // long they take to read.
+    await db.insert(quotationCredits).values({ quotationId: row.id, userId: project.repId });
+
     // Its trail, one row per thing that happened to it (D72, D104).
     const events: { name: Parameters<typeof quotationEvent>[0]; by: string; on: Day; details?: Record<string, unknown> }[] = [
       { name: "request", by: project.repId, on: created },
@@ -356,6 +363,8 @@ async function main(): Promise<void> {
         updatedAt: at(decided ?? created),
       })
       .returning({ id: dispatches.id });
+
+    await db.insert(dispatchCredits).values({ dispatchId: row.id, userId: source.repId });
 
     // Its trail (D72, D104): who raised it and who decided it, as the desk's
     // day and every trail panel read them.

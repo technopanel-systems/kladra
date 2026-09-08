@@ -19,6 +19,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { findPossibleDuplicates } from "@/lib/companies";
+import { creditPoolNamed } from "@/lib/credit-rows";
 import {
   lastDispatchForQuotation,
   remainingOnQuotation,
@@ -42,6 +43,7 @@ import {
   listThicknesses,
 } from "@/lib/lookups";
 import type { LastQuotation } from "@/lib/quotation-draft";
+import { getProject } from "@/lib/projects";
 import { getQuotation, lastQuotationForCompany } from "@/lib/quotations";
 import type { ActionResult } from "@/lib/types";
 
@@ -369,6 +371,68 @@ export async function remainingItemsAction(
   } catch (error) {
     // A session that has ended says so, and a failure that is not a refusal at
     // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
+  }
+}
+
+/**
+ * Who a quotation or a dispatch may be credited to, for the dialog that asks
+ * (SPEC §3, D148).
+ *
+ * Empty means do not ask. A job one rep works has one possible answer and a
+ * question with one answer on a form is a tap a rep pays for every day for
+ * nothing — the founder's own line is that where the project has one rep the
+ * question is not asked at all.
+ *
+ * Read fresh when the dialog opens, like everything else these forms fetch: a
+ * rep can be put on a job or taken off it while the screen is open, and the
+ * action behind the Save re-derives this list inside its own transaction. This
+ * is the courtesy; that is the law.
+ */
+export type CreditChoices = {
+  /** Everybody on the job, named in the reader's script (D68). Empty when there is nothing to ask. */
+  people: Option[];
+  /** The one the form starts on: whoever is filling it in. */
+  mine: string;
+};
+
+export async function creditChoicesAction(
+  input: unknown,
+): Promise<ActionResult<CreditChoices>> {
+  const t = await getTranslations("common");
+  let actor;
+  try {
+    actor = await requireActor();
+  } catch (error) {
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
+  }
+
+  const parsed = z
+    .object({ quotationId: z.uuid().optional(), projectId: z.uuid().optional() })
+    .safeParse(input ?? {});
+  if (!parsed.success) return { ok: false, error: t("invalid") };
+
+  try {
+    // Authorized the same way the record itself is read, never by a query of
+    // its own: a rep who may not open the quotation may not learn who works
+    // the job behind it either.
+    let projectId = parsed.data.projectId ?? null;
+    if (parsed.data.quotationId) {
+      const quotation = await getQuotation(actor, parsed.data.quotationId);
+      if (!quotation) return { ok: false, error: t("somethingWrong") };
+      projectId = quotation.projectId;
+    } else if (projectId) {
+      const project = await getProject(actor, projectId);
+      if (!project) return { ok: false, error: t("somethingWrong") };
+    }
+    const people = await creditPoolNamed(projectId, actor.id);
+    // One name is not a question. The founder's own line: where the project
+    // has one rep the dialog asks nothing at all.
+    if (people.length < 2) return { ok: true, data: { people: [], mine: actor.id } };
+    return { ok: true, data: { people, mine: actor.id } };
+  } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     return { ok: false, error: t("somethingWrong") };
   }

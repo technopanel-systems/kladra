@@ -11,48 +11,67 @@ import {
 import { test, expect, type Translate } from "./helpers/i18n";
 
 /**
- * Achieved m² stay with the rep who raised the dispatch, not with whoever
- * ends up holding the company (SPEC D86).
+ * Achieved m² stay with the person they were CREDITED to, not with whoever
+ * ends up holding the company (SPEC D86, D148).
  *
  * A hand-over moves a customer and his open work — the coordinator's queue,
  * the follow-up date, the next quotation — but never the metres a rep already
- * had approved in his month. `achievedByRep` (src/lib/dispatches.ts) now
- * attributes every approved dispatch by `dispatches.rep_id`, the person who
- * raised it, and the six-month figures (src/lib/months.ts) and the daily
- * report figure (src/lib/reports.ts) read the same map. The quotation and
- * dispatch drawers name that same person "Raised by" (`common.raisedBy`)
- * rather than "Rep", because a company's rep is a different question from who
- * asked for a given paper — the hand-over warning (`drawer.handOverWarning`)
- * says so in words.
+ * had approved in his month. `achievedByRep` (src/lib/dispatches.ts) sums each
+ * person's credited share of every approved dispatch, and the six-month figures
+ * (src/lib/months.ts) and the daily report figure (src/lib/reports.ts) read the
+ * same map. The quotation and dispatch drawers name the man who asked for the
+ * paper "Raised by" (`common.raisedBy`) rather than "Rep", because a company's
+ * rep is a different question from who asked for a given paper — the hand-over
+ * warning (`drawer.handOverWarning`) says so in words.
  *
- * The seed gives this exactly one company to prove it with: f1 is Faisal's,
- * its quotation was raised by him, and its one dispatch was approved this
- * Riyadh month — the only approved dispatch this month besides Saad's own.
- * Handing f1 to Saad is the whole test: under the OLD, wrong definition (by
- * `companies.rep_id`, whoever holds the company today) Faisal's month would
- * drop by exactly what that company earned and Saad's would rise by it; under
- * the one now in force, by `dispatches.rep_id`, neither number moves and the
+ * D148 moved the definition one step and left this test's point exactly where
+ * it was. Until credit existed, "credited" and "raised" were the same person on
+ * every record; they still are on the one this walk moves, which is chosen to
+ * be a dispatch with one name on it. What a hand-over must not touch is the
+ * month somebody has already earned, whichever of the two words names him.
+ *
+ * The seed gives this a company to prove it with: f1 is Faisal's, its quotation
+ * was raised by him, and its one dispatch was approved this Riyadh month and
+ * credited to him alone. Handing f1 to Saad is the whole test: under the OLD,
+ * wrong definition (by `companies.rep_id`, whoever holds the company today)
+ * Faisal's month would drop by exactly what that company earned and Saad's
+ * would rise by it; under the one now in force neither number moves and the
  * quotation still says Faisal raised it.
  */
 
 const COLD = { timeout: 30_000 };
 
 /**
- * Achieved this Riyadh month by the person who RAISED the dispatch — the one
- * definition (D86, `achievedByRep` in src/lib/dispatches.ts), computed
- * straight from the tables with the same arithmetic tests/manager.spec.ts
- * uses, so the app is what is on trial and not a second copy of its own SQL.
+ * Achieved this Riyadh month by the person the dispatch was CREDITED to — the
+ * one definition (D86, D148; `achievedByRep` in src/lib/dispatches.ts),
+ * computed straight from the tables with its own arithmetic, so the app is
+ * what is on trial and not a second copy of its own SQL. The division itself
+ * is tested in tests/credit.spec.ts; what matters here is only that a
+ * hand-over does not move it.
  */
-async function achievedByRaiser(repId: string): Promise<number> {
+async function achievedByCredit(repId: string): Promise<number> {
   const row = await one<{ sqm: string }>(
-    `select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm
-       from dispatches d
-       join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
-      where d.status = 'approved'
-        and d.rep_id = $1::uuid
-        and date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)
-            = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)`,
+    `with d as (
+       select dd.id, round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2) as sqm
+         from dispatches dd
+         join dispatch_items di on di.dispatch_id = dd.id
+         join quotation_items qi on qi.id = di.quotation_item_id
+        where dd.status = 'approved'
+          and date_trunc('month', (dd.approved_at at time zone 'Asia/Riyadh')::date)
+              = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)
+        group by dd.id
+     ),
+     cr as (
+       select dispatch_id, user_id,
+              count(*) over (partition by dispatch_id) as n,
+              row_number() over (partition by dispatch_id order by user_id) as k
+         from dispatch_credits
+     )
+     select round(coalesce(sum(
+              case when cr.k < cr.n then trunc(d.sqm / cr.n, 2)
+                   else d.sqm - trunc(d.sqm / cr.n, 2) * (cr.n - 1) end), 0), 2)::text as sqm
+       from d join cr on cr.dispatch_id = d.id
+      where cr.user_id = $1::uuid`,
     [repId],
   );
   return Number(row.sqm);
@@ -127,6 +146,10 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
       where d.rep_id = $1::uuid
         and d.status = 'approved'
         and c.rep_id = $1::uuid
+        -- Credited to him alone, so "raised" and "credited" name one man on
+        -- the record this walk moves (D148).
+        and not exists (select 1 from dispatch_credits dc
+                         where dc.dispatch_id = d.id and dc.user_id <> $1::uuid)
         and date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)
             = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)
       order by q.number
@@ -135,19 +158,33 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
   );
 
   // Computed ONCE, by the one definition, before anything moves — comparing
-  // it against itself after the hand-over would be circular.
-  const faisalByRaiser = await achievedByRaiser(faisal.id);
-  const saadByRaiser = await achievedByRaiser(saad.id);
-  expect(faisalByRaiser, "Faisal has no approved dispatches raised by him this month — the seed changed").toBeGreaterThan(0);
-  expect(saadByRaiser, "Saad has no approved dispatches raised by him this month — the seed changed").toBeGreaterThan(0);
+  // it against itself after the hand-over would be circular. And the old,
+  // wrong definition is read before as well as after, because since D148 the
+  // two no longer coincide across the whole floor: a rep can be credited a
+  // share of a dispatch on his own customer that his colleague raised. What
+  // proves the point is that the wrong one MOVES with the company and the
+  // right one does not.
+  const faisalByCredit = await achievedByCredit(faisal.id);
+  const saadByCredit = await achievedByCredit(saad.id);
+  const faisalByOwnerBefore = await achievedByCurrentOwner(faisal.id);
+  expect(faisalByCredit, "Faisal is credited nothing this month — the seed changed").toBeGreaterThan(0);
+  expect(saadByCredit, "Saad is credited nothing this month — the seed changed").toBeGreaterThan(0);
 
-  // Before the move, both definitions still agree about this company — the
-  // divergence in step 2 is the hand-over's doing, not a difference that was
-  // already there.
+  // The dispatch this walk moves has one name on it, so for THAT record the
+  // two definitions still say the same man and the divergence in step 2 is the
+  // hand-over's doing rather than a split that was already there.
+  const onTheTarget = await one<{ n: number }>(
+    `select count(*)::int as n
+       from dispatches d
+       join dispatch_credits dc on dc.dispatch_id = d.id
+       join quotations q on q.id = d.quotation_id
+      where q.company_id = $1::uuid and d.status = 'approved' and dc.user_id <> $2::uuid`,
+    [target.company_id, faisal.id],
+  );
   expect(
-    await achievedByCurrentOwner(faisal.id),
-    "the two definitions already disagree before anything moved — the target company is wrong",
-  ).toBe(faisalByRaiser);
+    onTheTarget.n,
+    "the target company's approved metres are shared with somebody — pick another",
+  ).toBe(0);
 
   // The floor as it stands before anything moves. A hand-over takes the
   // company's projects and contacts with it (src/actions/companies.ts), so
@@ -226,7 +263,7 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
       expect(
         await achievedByCurrentOwner(faisal.id),
         "the old, company-owner definition did not move even though the company did",
-      ).not.toBe(faisalByRaiser);
+      ).not.toBe(faisalByOwnerBefore);
 
       // The team table is its own tab now (D151): the manager's screen answers three
       // questions and this is the third one, people rather than work.
@@ -236,11 +273,11 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
       expect(
         await teamAchieved(page, t, faisal.name),
         "Faisal's achieved figure moved when the company did",
-      ).toBe(Math.round(faisalByRaiser));
+      ).toBe(Math.round(faisalByCredit));
       expect(
         await teamAchieved(page, t, saad.name),
         "Saad's achieved figure moved when the company did",
-      ).toBe(Math.round(saadByRaiser));
+      ).toBe(Math.round(saadByCredit));
     });
 
     await test.step("3 · the quotation still says Faisal raised it, not Saad", async () => {

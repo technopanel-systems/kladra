@@ -27,6 +27,16 @@ destroyed invariants.
   `drizzle.__drizzle_migrations`, never from the success line.** To see a
   real error, pipe the migration's SQL through psql inside the db container.
 
+  That third one is not hypothetical and it does not need a hand-written entry:
+  a clock that ran ahead once puts EVERY later migration behind the mark until
+  real time catches up, and 0015 was skipped in P12 because 0014 was dated a day
+  in the future (§5 #162). `npm run db:migrate` now compares the ledger's row
+  count against the journal's entries and fails naming what was never applied,
+  so the fix is to raise the new entry's `when` past the newest applied one in
+  `drizzle/meta/_journal.json` and run it again. **A guard that names a failure
+  mode in its comment and only checks for an empty database is a comment, not a
+  guard.**
+
 - **Removing an enum value a CHECK mentions needs two extra statements**
   drizzle-kit does not generate: drop the constraint before the swap, add it
   back after, or the rebuild fails with `operator does not exist`.

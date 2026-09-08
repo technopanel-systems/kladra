@@ -133,7 +133,7 @@
       - [x] 2 A gate on founder decisions: §3 reachable from a test, `npm run check:spec3`
       - [x] 3 One door, then sharing: a shared company, a shared project, owners on projects
             and contacts, and the eleven visibility clauses re-pointed at one predicate
-      - [ ] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
+      - [x] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
             visible wherever the m² is, and no metre counted twice
       - [ ] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
       - [x] 6 The three-tab shell: today's work · metrics · the team
@@ -541,17 +541,25 @@ the quantity column's position, the manager's target box, the long-press number 
 per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
 which is what slice 2 is for.
 
-**Where P12 has got to.** Boxes 1, 2, 3, 6 and 12 are done and pushed. The freeze was fixed at
+**Where P12 has got to.** Boxes 1, 2, 3, 4, 6 and 12 are done. The freeze was fixed at
 its cause and the same picker shape swept out of the company form; `npm run lint` now fails on a
-§3 sentence with no test behind it and prints what is owed (25 proved, 6 proved another way, 13
+§3 sentence with no test behind it and prints what is owed (27 proved, 6 proved another way, 11
 owed); sharing is built end to end — a shared company, a shared project, an owner on every
 contact and every project, and the eleven visibility clauses re-pointed at one predicate — with
 four defects found in the building of it (§5 #155–#157, #159) and a fifth, the half-restored
 floor, found in the gate. The three-tab shell is on the rep's day and the manager's screen, and
 the metrics tab under it now answers the founder's proportion questions: where the metres went by
 kind of customer, how the work narrows, over a window chosen once for everything under it, for
-the whole floor or one person (D152, D154). Boxes 4, 5, 7, 8, 9, 10, 11, 13 and 14 are next, in
-that order; credit (box 4) is the one the sharing schema was written for and is the first.
+the whole floor or one person (D152, D154). And credit is built on top of the sharing the schema
+was written for: a quotation and a dispatch each say who they count for, chosen when they are
+raised and never inherited, asked only where a job has more than one rep on it; the metres of a
+shared dispatch divide exactly, with the odd hundredth given to a fixed name so the shares always
+add back; and achieved metres — the rep's card, the manager's table, the metrics tab, the daily
+report — are the sum of what a person was credited rather than of what he raised (D148, D155).
+Three defects came out of building it, none of them about credit: a migration that reported
+success and did nothing, a drawer that hid a button the action would have allowed, and a query
+whose failure made a question stop being asked (§5 #162–#164). Boxes 5, 7, 8, 9, 10, 11, 13 and
+14 are next, in that order.
 
 ## §4 Five days, walked (P9.1)
 
@@ -867,6 +875,17 @@ Saad. On the team screen Faisal's Achieved is what it was and Saad's is what it 
 metres stayed with the person who raised the dispatch, as D86 says, and the quotation drawer
 under that company says "Raised by Faisal" rather than naming its new owner. The company is
 handed back by SQL afterwards, with the hand-over's own audit row and notification removed.
+
+**Whose metres these are, when two reps worked for them** — `tests/credit.spec.ts`
+The division is asked directly: 151.03 m² between two people is 75.51 and 75.52, three on a
+hundred is 33.33, 33.33 and 33.34, and the parts add back to the whole every time. Then the
+app's own SQL is run beside a second expression that reaches the same figure another way, on
+every approved dispatch there is, and the two have to agree to the hundredth. Then the whole
+month, both ways round: what the company moved, and what its people were credited. Then the
+screens — the shared tower's dispatch drawer names both reps and what each took, and Faisal's
+month card shows the credited figure, which is deliberately NOT the sum of what he raised.
+Last, the question itself: Faisal opens a dispatch on a job he works alone and is asked
+nothing, opens one on the job he shares with Saad and is offered both names and "split".
 
 **A floor is a role and an id; a child comes back onto its company** — `tests/floor.spec.ts`, `tests/restore.spec.ts`
 Pure: every role writes on its own floor exactly when a company can sit on that role (D91).
@@ -2340,3 +2359,50 @@ actually needed.
   untouched, because only the customer changed. rules/data.md already had the rule — every band,
   count and threshold needs a row on the wrong side of it — and this is the same rule for a shape:
   **a card whose shape the demo cannot show is a card nobody has seen work.**
+
+- [x] 162 **A migration was generated, recorded, reported successful and never applied.** Found in
+  P12-4, by asking the catalogue for the indexes it had just created and getting nothing back. The
+  migrator applies a journal entry only when its `when` is past the newest one already in the
+  ledger, and 0014 carried a timestamp a day into the future, so 0015 — generated with the real
+  clock — was silently behind it and skipped. Every layer said everything was fine: `drizzle-kit`
+  wrote the file, the journal listed it, `db:migrate` printed a table count and exited 0. The
+  script's own docstring had named this exact failure for eleven migrations and the code below it
+  only ever refused an EMPTY database, which is the shape a defect takes when a comment is treated
+  as a guard. It compares the ledger against the journal now and fails naming the migrations that
+  were never run. The rule generalises past Drizzle: **a check that knows the failure mode by name
+  must refuse it, not describe it** — and rules/migrations.md's "confirm from information_schema"
+  is what caught it, which is the second time that habit has paid for itself.
+
+- [x] 163 **A drawer refused work the action behind it would have allowed.** Found by the credit
+  walk in P12-4, which could not press a button that should have been there. Sending goods against
+  a quotation was gated on `mayWrite(actor, quotation.repId)` — its raiser, and nobody else — while
+  `requestDispatchAction` asks `mayRaiseFor`: the customer's rep, or anybody put on the job. §3 is
+  explicit that every rep on a shared project raises quotations and dispatches against it, so the
+  rep whose customer it is could not send against paper his colleague had raised on his own job.
+  Until P12 the two predicates named one person and nothing was visible. DESIGN §5 has said since
+  P4 that a screen never offers work the action behind it would refuse; this is that rule in the
+  mirror, and it is worth writing down that **the mirror is also a defect** — a button missing where
+  the write would have said yes is a permission nobody can find and nobody will report.
+
+- [x] 164 **A UNION subquery answered a name that did not exist, and the screen just asked less.**
+  Same slice. "Everybody on this job" was built with the query builder as a union of two selects
+  read back through an alias, and Drizzle renders a union subquery with the underlying column
+  names — so the statement raised `column "u" does not exist` on every call. Nothing showed it: the
+  one caller is the dialog's courtesy read, whose failure means "there is nothing to ask", so the
+  credit question silently stopped being asked and every dispatch went to whoever raised it, which
+  is exactly what the screen looked like before the feature existed. A missing question looks like
+  a question with one answer. Two rules out of it: **write a read whose failure is invisible as
+  plain SQL**, where what it asks for is what it selects; and a courtesy read that decides whether a
+  control exists is not a courtesy — it is the control.
+
+- [x] 165 **A figure truncated into a different figure.** Found by shot-looker in P12-4's own
+  screenshots, on a screen the slice had not touched. `StandingStrip`'s value cell carried
+  `truncate`, and an Arabic date needs more room than an English one: «31/أغسطس/2026» in a 103px
+  grid cell at 375 rendered "31/أغسطس/6…" — a date that does not exist, printed with an ellipsis
+  small enough that nobody reads it as a warning. English never showed it, because "31/Aug/2026"
+  fits. The file already had the rule one line below the bug, on the caption: "wraps, because a
+  sentence that truncates says something else." The value gets it now too, and harder: **a sentence
+  that truncates says something else; a figure that truncates IS something else.** Every strip in
+  the app — the queue, the team, the company header, the project and quotation drawers — reads from
+  the one component, so it was one line. The general form is the reason DESIGN §4 measures both
+  locales: **a width that fits in English is not a width, it is a coincidence.**

@@ -39,6 +39,7 @@ import {
   users,
 } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
+import { creditDispatch, resolveCredit } from "@/lib/credit-rows";
 import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { SELLING_ROLES } from "@/lib/floor";
@@ -340,6 +341,14 @@ export async function requestDispatchAction(
     const asked = askedFor(items);
     if (asked.length === 0) return { ok: false, error: td("needsItems") };
 
+    // Whose metres these are (D148). Resolved from the job rather than trusted
+    // from the form: the answer arrived as a name the dialog offered a minute
+    // ago, and a share is a permission that can be taken away in a minute. A
+    // name that is not on the job now is a refusal, not a silent fallback —
+    // the rep chose a person and the app must not quietly choose another.
+    const credit = await resolveCredit(quotation.projectId, actor.id, field(formData, "credit"));
+    if (!credit) return { ok: false, error: tc("credit.notOnProject") };
+
     const outcome = await db.transaction(async (tx) => {
       // The quotation row is held for the rest of the transaction, so two
       // requests against it run one after the other and the second reads the
@@ -365,6 +374,11 @@ export async function requestDispatchAction(
         .returning({ id: dispatches.id, number: dispatches.number });
 
       await replaceItems(tx, row.id, asked);
+
+      // Whose metres these are, frozen at the raise and never inherited
+      // (D148): one name on a job one rep works, and on a shared one whatever
+      // he answered above.
+      await creditDispatch(tx, row.id, credit);
 
       const label = dispatchLabel(row.number);
       await tx.insert(auditLog).values({
@@ -454,6 +468,13 @@ export async function updateDispatchAction(
     const asked = askedFor(items);
     if (asked.length === 0) return { ok: false, error: td("needsItems") };
 
+    // The same question the raise asked, answered again (D148). A dispatch
+    // still waiting has moved nothing and earned nobody anything, so for as
+    // long as a rep may correct its quantities he may correct who they count
+    // for; the approval is what freezes both.
+    const credit = await resolveCredit(dispatch.projectId, actor.id, field(formData, "credit"));
+    if (!credit) return { ok: false, error: tc("credit.notOnProject") };
+
     const failure = await db.transaction(async (tx) => {
       // Held: the dispatch must still be waiting, and the lines of the
       // quotation are read after the hold, as for a new request (D85).
@@ -462,6 +483,7 @@ export async function updateDispatchAction(
       const check = await checkQuantities(tx, dispatch.quotationId, asked, dispatch.id);
       if (check !== "ok") return check;
       await replaceItems(tx, dispatch.id, asked);
+      await creditDispatch(tx, dispatch.id, credit);
 
       await tx
         .update(dispatches)

@@ -23,6 +23,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, companies, projects, quotationItems, quotations, users } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
+import { creditQuotation, resolveCredit } from "@/lib/credit-rows";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
@@ -299,6 +300,12 @@ export async function requestQuotationAction(
     // A lost project is finished work (S20): nothing new hangs off it.
     if (project.lostAt) return { ok: false, error: t("alreadyLost") };
 
+    // Whose paper this is (D148). Resolved from the job rather than trusted
+    // from the form, and a name that is not on the job is a refusal rather than
+    // a silent fallback to the man who typed it.
+    const credit = await resolveCredit(input.projectId, actor.id, field(formData, "credit"));
+    if (!credit) return { ok: false, error: tc("credit.notOnProject") };
+
     const created = await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(quotations)
@@ -312,6 +319,11 @@ export async function requestQuotationAction(
         .returning({ id: quotations.id, number: quotations.number });
 
       await insertItems(tx, row.id, items);
+
+      // Who this one counts for, frozen at the raise and never inherited
+      // (D148). One name on a job one rep works — a project nobody shares has
+      // only ever had one answer to this question, and is asked nothing.
+      await creditQuotation(tx, row.id, credit);
 
       await tx.insert(auditLog).values({
         userId: actor.id,
@@ -378,6 +390,11 @@ export async function updateQuotationAction(
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
     const notes = field(formData, "notes") ?? null;
 
+    // Asked again, exactly as long as the lines beside it may be changed
+    // (D148). Nothing has been priced or approved while it waits in the queue.
+    const credit = await resolveCredit(quotation.projectId, actor.id, field(formData, "credit"));
+    if (!credit) return { ok: false, error: tc("credit.notOnProject") };
+
     const held = await db.transaction(async (tx) => {
       // Held for the rest of the transaction; issued meanwhile is not ours to edit (D85).
       const status = await holdQuotation(tx, quotation.id);
@@ -385,6 +402,7 @@ export async function updateQuotationAction(
 
       await tx.delete(quotationItems).where(eq(quotationItems.quotationId, quotation.id));
       await insertItems(tx, quotation.id, items);
+      await creditQuotation(tx, quotation.id, credit);
       // The reason dies with the state it explained. It was left on the row, so
       // a quotation he had already fixed still carried "the sizes are missing"
       // in the database, and every later reader had to remember that the words
@@ -812,6 +830,16 @@ export async function reviseQuotationAction(
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
 
+    // Asked again, on the new paper. Copying the old one's answer would be the
+    // one thing §3 forbids outright — nothing is carried forward from a
+    // previous record — and a revision is a previous record (D148).
+    const revisionCredit = await resolveCredit(
+      quotation.projectId,
+      actor.id,
+      field(formData, "credit"),
+    );
+    if (!revisionCredit) return { ok: false, error: tc("credit.notOnProject") };
+
     const created = await db.transaction(async (tx) => {
       // Held: two revisions raised at once take consecutive numbers rather
       // than colliding on the unique index and crashing the second (D85).
@@ -840,6 +868,11 @@ export async function reviseQuotationAction(
         .returning({ id: quotations.id, revision: quotations.revision });
 
       await insertItems(tx, row.id, items);
+
+      // A revision is a new quotation, so credit is decided again rather than
+      // copied off the one it replaces: §3 says nothing is ever carried forward
+      // from a previous record, and credit least of all (D148).
+      await creditQuotation(tx, row.id, revisionCredit);
 
       await tx.insert(auditLog).values({
         userId: actor.id,

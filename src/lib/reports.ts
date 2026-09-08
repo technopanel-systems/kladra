@@ -26,12 +26,12 @@
 import { sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { CREDITED_METRES } from "@/lib/sqm";
 import { personNameOf } from "@/lib/people";
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
 import { sells, writesReports } from "@/lib/floor";
 import type { Role } from "@/lib/types";
 import { isWorkingDay, type NonWorking } from "@/lib/workdays";
-import { SUM_SQM } from "@/lib/sqm";
 
 /** What a person on a floor did with customers on one day. */
 export type FloorDay = {
@@ -51,12 +51,14 @@ export type FloorDay = {
   answersRecorded: number;
   dispatchesRaised: number;
   /**
-   * Dispatches HE raised that the desk approved that day — counted through
-   * `dispatches.rep_id`, the same way the metres beside it are (D86), so the
-   * count and the m² can never disagree about which dispatches they mean. This
-   * said `companies.rep_id` while the query below filtered on the raiser, and a
-   * comment that contradicts the code under it is the trap the next builder
-   * falls into.
+   * Dispatches approved that day that he was CREDITED on — counted the same way
+   * the metres beside it are (D86, D148), so the count and the m² can never
+   * disagree about which dispatches they mean. It has been wrong in this exact
+   * way twice: it said `companies.rep_id` while the query filtered on the
+   * raiser, and then the metres moved to credit and this would have been left
+   * behind. A comment that contradicts the code under it is the trap the next
+   * builder falls into; a count beside a figure that answers a different
+   * question is the same trap with no comment at all.
    */
   dispatchesApproved: number;
   /** The m² an approved dispatch moved on his floor that day (S41, S43). */
@@ -132,7 +134,8 @@ async function floorDay(userId: string, role: Role, day: Day): Promise<FloorDay>
     calls_due: number;
     calls_made: number;
   }>(sql`
-    with logs as (
+    with credited as (${sql.raw(CREDITED_METRES)}),
+    logs as (
       select count(*)::int as logged, count(distinct activities.company_id)::int as companies
         from activities
        where activities.user_id = ${userId}::uuid
@@ -163,17 +166,17 @@ async function floorDay(userId: string, role: Role, day: Day): Promise<FloorDay>
        where dispatches.rep_id = ${userId}::uuid
          and (dispatches.created_at at time zone 'Asia/Riyadh')::date = ${day}::date
     ),
+    -- The metres are the one figure on this card that is CREDITED rather than
+    -- done (D148): a rep who helped on somebody else's job writes his own
+    -- report about what he did — the logs, the paper, the calls, all counted
+    -- by who did them, above and below this — and does not take the metres
+    -- unless the man whose job it is said he should.
     moved as (
-      select ${sql.raw(SUM_SQM)} as sqm,
-             count(distinct d.id)::int as approved
-        from dispatches d
-        join dispatch_items di on di.dispatch_id = d.id
-        join quotation_items qi on qi.id = di.quotation_item_id
-        join quotations q on q.id = d.quotation_id
-        join companies c on c.id = q.company_id
-       where d.status = 'approved'
-         and (d.approved_at at time zone 'Asia/Riyadh')::date = ${day}::date
-         and d.rep_id = ${userId}::uuid
+      select round(coalesce(sum(cm.sqm), 0), 2) as sqm,
+             count(distinct cm.dispatch_id)::int as approved
+        from credited cm
+       where (cm.approved_at at time zone 'Asia/Riyadh')::date = ${day}::date
+         and cm.user_id = ${userId}::uuid
     ),
     due as (
       select c.id as company_id from companies c

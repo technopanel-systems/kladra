@@ -4,10 +4,12 @@ import { DispatchMiniList } from "@/components/dispatches/dispatch-mini-list";
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { QuotationHistory } from "@/components/quotations/quotation-history";
 import { RevisionChanges } from "@/components/quotations/revision-changes";
+import { CREDIT_SPLIT } from "@/lib/credit";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayWrite } from "@/lib/floor";
+import { mayRaiseFor } from "@/lib/visibility";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { draftLinesFrom } from "@/lib/quotation-draft";
 import { getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
@@ -71,8 +73,16 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   // And only against the revision that is live: once a quotation has been
   // revised the customer holds the new paper, and sending against the old one
   // would move goods on a price nobody agreed (S34, S35).
+  //
+  // And "may send" is not "may edit". Sending goods against a quotation is new
+  // work on the job, which §3 gives to every rep on a shared project — not an
+  // edit of somebody's record, which is only its raiser's. Read as the raiser's
+  // alone, the rep whose CUSTOMER it is could not send against paper his
+  // colleague had raised on his own job, while the action behind the button
+  // would have allowed it: the screen refusing work the write permits, which
+  // is the same defect as offering work it refuses, one mirror over (§5 #163).
   const canSend =
-    owner &&
+    mayRaiseFor(user, quotation.companyRepId, quotation.projectRepId, quotation.onProject) &&
     quotation.isLatest &&
     (quotation.status === "issued" || quotation.status === "accepted");
 
@@ -102,6 +112,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       history={<QuotationHistory history={history} />}
       changes={changes ? <RevisionChanges changes={changes} /> : null}
       quotation={quotation}
+      credit={quotation.credit}
       standing={standing}
       items={quotation.items}
       revisions={quotation.revisions}
@@ -111,6 +122,12 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         quotationId: quotation.id,
         notes: quotation.notes ?? "",
         lines: draftLinesFrom(quotation.items),
+        // What the credit field opens on: the name it already says, or the
+        // word that means everybody on the job (D148). A REVISION ignores it
+        // and asks again, because nothing is carried forward from a previous
+        // record (SPEC §3).
+        creditTo:
+          quotation.credit.length > 1 ? CREDIT_SPLIT : (quotation.credit[0]?.userId ?? undefined),
       }}
       scope={{
         coordinator: user.role === "coordinator",
