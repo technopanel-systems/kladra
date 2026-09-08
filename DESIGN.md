@@ -767,3 +767,53 @@ person's own words, put the answer under it, and make every figure on it somethi
 person can act on today. A number nobody can act on is a report, and reports live on the
 team screen.
 
+## §7 Depth (P11J) — what a good CRM has that Kladra does not
+
+**How it was asked.** Seven readings of the app, proposing freely and separately: the rep's day,
+the coordinator's desk, the manager's week, the founder's question, the feature surface of the
+CRMs of 2026, FACET as it was actually used, and the cladding trade in Saudi Arabia. Sixty
+proposals came back, and each was then held against the same three questions before anything was
+written — WHO is it for, by name; WHEN in their day or week does it happen; and WHAT does it
+replace that they do today. A proposal that cannot answer all three is not a small proposal, it
+is not a proposal.
+
+**What survived, and where it went.** Ten decisions, in WORKFLOW §5 #142–#153 with their
+causes — eight of them proposals that came through the readings and two of them older entries this
+box was the last chance to close:
+notes read back where the record is read (D136); one search box per screen, and the coordinator's
+desk in the order she works it (D137); a quotation and a dispatch that say when the project under
+them has been given up (D138); a search hit that opens something for whoever pressed it (D139);
+why we lose (D140); one clock for lateness (D141); whose customers have gone quiet (D142); a
+dispatch that says what happened to it (D143); a figure that is not the length of a capped list
+(D144); and one chip over a list, in one row (D145). Every one of them turned out to be something
+the app had already half-built — a field written and never read, a rule kept on one screen, an
+audit log nobody displayed, a figure counted off a capped array, a component copied a fifth time
+— which is what those three questions select for, and it is the reason the list is short.
+
+**What was refused, by class.** Most of the sixty died against the three questions. The classes
+are worth keeping, because the next reading will propose them again:
+
+- **Anything that could not name a person.** "The team", "management", "users": a screen for
+  everybody is a screen for nobody, and this business has fourteen people doing four jobs.
+- **Anything §6 already refused, unchanged.** AI summaries on a record, drag-and-drop on the
+  board, a separate timeline of follow-ups — re-proposed by the CRM-of-2026 reading and rejected
+  again for the reasons written there. Reopening one is allowed; it has to say what has changed.
+- **Anything SMAC owns.** Invoices, payments, credit, stock levels. Kladra holds square metres and
+  the conversation; a second copy of a figure the accounting system is the record for is the drift
+  trap with a customer's name on it (S31).
+- **Anything on the Never list**, which is the founder's and not open to a proposal.
+- **Screens for states this business does not have.** Two were put to Jerom rather than decided
+  here, and he answered both no (SPEC §3): a screen for covering the coordinator's desk while she
+  is away, because there are two coordinators and the queue is a desk they share; and a
+  lapsed-customer screen, because "gone quiet" already says that on the rep's own list, and a
+  second name for one silence is the two-figures defect.
+- **Anything whose honest answer to "what does it replace" was "nothing, it is just better".**
+  The largest class by far.
+
+**What the box found that nobody proposed.** Two of the ten were not proposals at all: the
+capped-list figure was the stranger read's own #33, open since box A, and the chip row was a 375
+shot finding parked for this box in P11H. Two more came out of critic passes over slices that
+were already green — a demo record that had been impossible for five phases and that no screen
+had ever read in order until the dispatch trail did, and a test that could have signed in as the
+wrong person and reported an empty drawer as a broken one. The pattern is worth keeping: the
+reading proposes, and the building finds.

@@ -54,10 +54,10 @@
             that scrolls does not say so, and a dispatch is typed from nothing too
       - [x] d The pilot: the acceptance scripts walked at the founder's volumes
             (`npm run seed:volume`), what broke fixed, what was measured written here
-- [ ] P11 Independent review and hard polish — a different model reads it as a stranger,
+- [x] P11 Independent review and hard polish — a different model reads it as a stranger,
       owns it, and does not stop. The specs stay green; a rule that changes takes its test
       and its reason with it, said out loud.
-      - [ ] A Read it as a stranger, build nothing yet: schema, actions, screens, seed,
+      - [x] A Read it as a stranger, build nothing yet: schema, actions, screens, seed,
             tests, a full day for each of the five people; a ranked findings list in §5
             with the cause of each, not the symptom; then fixed worst first in slices
             — the list is written (§5, sixty-seven entries, unverified); fixed so far:
@@ -114,8 +114,17 @@
       - [x] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
       - [x] I Speed and reliability, measured: first paint on a mid phone, ten thousand
             rows, queries that grow, the unhappy paths — nothing silent, nothing lost
-      - [ ] J What a good CRM has that Kladra does not: proposed freely, then deleted down
+      - [x] J What a good CRM has that Kladra does not: proposed freely, then deleted down
             to what names a person, a day and what it replaces; the rejected list kept
+            (DESIGN §7) — 11J-1: 142 (a field that is written is read somewhere, D136);
+            11J-2: 143 (one search box per screen, her desk in her order, D137); 11J-3:
+            144, 145, 146 (the desk knows what it is holding, a stored code is never a
+            word on a screen, a hit opens something for whoever pressed it, D138, D139);
+            11J-4: 147 (why we lose, D140); 11J-5: 148, 149 (one clock for lateness,
+            whose customers have gone quiet, D141, D142); 11J-6: 150, 152 (a dispatch says
+            what happened to it, D143; and the demo record it turned out nothing had ever
+            read in order); 11J-7: 33, 151 (a figure is not the length of a capped list,
+            D144); 11J-8: 153 (one chip over a list, in one row, D145)
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
@@ -132,7 +141,9 @@ number is a call; derived from the source, walked in the spec; the database says
 assumes; what it says it is; one word for one thing; a test that cannot pass for nothing; the
 volume floor has a past). What remains in §5 is parked on purpose: 17–18, 54, 63–64 are 11B
 (live updates), 34, 40, 41, 53, 66 are 11G (identity, motion, states), 27, 28, 35, 51 are 11H
-(the phone at 375), 20 is 11G, 33 is noted, 68 is observed. Box 11B is done in one
+(the phone at 375), 20 is 11G. The last two were carried to the end of the phase: 33 is
+fixed in 11J-7 (D144) and 68 is closed below as what it is, a rule about long-lived dev
+servers rather than a defect in Kladra. Box 11B is done in one
 slice (D105): two people, no reload, in `tests/live.spec.ts`, timed; every list marks an
 arrived row, and the mark's two seconds start when the row is on screen (timed on the page's
 own clock); the channel and the count open for a viewer; a listener outage ends with one
@@ -179,11 +190,23 @@ found the guard's holes (§5 #136–#138), the second found that the speed harne
 having measured nothing and that an interrupted reads run left the whole container logging every
 statement (§5 #139–#141).
 
-Next is box 11J, the last of Phase 11: what a good CRM has that Kladra does not — proposed
-freely, then deleted down to what names a person, a day and what it replaces; the rejected list
-kept. One of the two things parked for it is done (§5 #121 → #143: the four hand-drawn search boxes
-are one component); the quotations chips that wrap round the list/board switch at 375 are not. The dev database is seeded at volume
-(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
+Box 11J is done in eight slices, eight commits, and Phase 11 closes with it. Seven readings
+proposed sixty things and eight survived the three questions — who, when, and what does it
+replace. Two more decisions came with them from older entries the box was the last chance to
+close, so §5 #142–#153 carries ten with their causes, and the refused list is kept by class in
+DESIGN §7. Both things parked for the box are done: the four hand-drawn search boxes are one
+component (§5 #121 → #143) and the quotations chips that wrapped round the list/board switch at
+375 are one component in one row (§5 #153, D145). Two defects were found by critic passes over slices that were
+already green, which is the habit worth keeping. §5 has no open entry left: 33
+is fixed in 11J-7 and 68 is closed as a rule about dev servers rather than a defect.
+
+**What is not done, and it is not code.** Not one of these screens has been in front of the
+person it was built for. The process rule in CLAUDE.md says a screen is done when its user has
+tried it — Faisal, Rawan, Abdulrahman, Jerom — and a suite of 475 checks in two languages is not
+that. The next phase begins there.
+
+The dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it
+back. A dev server that has served a session's edits is restarted, not reused (§5 #68).
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
 figures added: a URL filter that parsed to nothing because the vocabulary lived in two
@@ -1391,7 +1414,7 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
 Merged: the quantity race (two readers), the SMAC pair, the six blind transitions, the
 computed-key families, the breakpoint trio. Dropped: the un-capped waiting list, fixed in
 P10d before this list was written (D83).
-- [ ] 68 **The dev server on 3100 hung with one core pinned and 3.5 GB resident, and stayed hung.**
+- [x] 68 **The dev server on 3100 hung with one core pinned and 3.5 GB resident, and stayed hung.**
   Seen once, P11A-3, while a screenshot pass signed Faisal in and opened `/en/companies` on the
   volume-seeded dev database: no request logged after the login, `curl` to any route got
   nothing, CPU time climbed without plateau for fifteen minutes. A fresh `next dev` served the
@@ -1409,7 +1432,15 @@ P10d before this list was written (D83).
   when the script does, on a signal, on exit, or on finding its parent gone. The 3100 hang
   above is the same shape — a long-lived dev compiler that has hot-reloaded through hours of
   edits — so the rule for both is a dev server that has served one session's edits is restarted,
-  not reused.
+  not reused. **Seen twice more in one session, P11J**, and it cost two full gate runs: a
+  `dev:test` server started by hand for a screenshot pass — outside the tree-kill the script does
+  when IT owns the server — sat there through nine shot passes and reached 6.7 GB, and the
+  machine killed a running acceptance suite twenty minutes in to get the memory back. Freed, it
+  grew again over the next two hours and took the next suite down the same way. Closed here
+  rather than left open, because four sightings say one thing and none of them is a defect in
+  Kladra's code: `scripts/dev-test.ts` now caps the compiler's heap at 4 GB, which
+  is six times a healthy run, so the next one dies at once and says why instead of starving
+  whatever else is running; and the rule is in README where a person reads it (P11J-7).
 - [x] 69 **`seed:volume` drew its SMAC numbers at random from four digits and collided with
   itself.** Seen P11A-12, restoring the dev database after the demo reseed: `between(1000, 9999)`
   for every issued quotation and approved dispatch, hundreds of each, so a duplicate under
