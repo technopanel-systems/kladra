@@ -129,8 +129,8 @@
 - [ ] P12 First real user feedback — reps, the coordinator and the manager have used it, and the
       founder's list from that use is SPEC §3 authority: it overrides any earlier default it
       touches, including D1, D12, D15, D51 and D81. His answer on sharing and credit is part of it.
-      - [ ] 1 The hang, and its whole class: a picker that fires on a value that did not change
-      - [ ] 2 A gate on founder decisions: §3 reachable from a test, `npm run check:spec3`
+      - [x] 1 The hang, and its whole class: a picker that fires on a value that did not change
+      - [x] 2 A gate on founder decisions: §3 reachable from a test, `npm run check:spec3`
       - [ ] 3 One door, then sharing: a shared company, a shared project, owners on projects
             and contacts, and the eleven visibility clauses re-pointed at one predicate
       - [ ] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
