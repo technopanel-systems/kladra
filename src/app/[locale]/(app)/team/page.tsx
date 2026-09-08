@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { MonthCard } from "@/components/team/month-card";
 import { ChainCard } from "@/components/team/chain-card";
+import { LossCard } from "@/components/team/loss-card";
 import { MonthsCard } from "@/components/team/months-card";
 import { StuckList } from "@/components/team/stuck-list";
 import { Sqm } from "@/components/ui-ext/figures";
@@ -16,6 +17,7 @@ import {
 } from "@/lib/team";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { chainCohort } from "@/lib/chain";
+import { lossCohort } from "@/lib/losses";
 import { monthsBack } from "@/lib/months";
 
 /**
@@ -37,12 +39,13 @@ export default async function TeamPage() {
   // nothing here for him to be told off about (S8).
   if (!seesAll(user)) redirect({ href: homeFor(user.role), locale });
 
-  const [t, month, stuck, months, cohort] = await Promise.all([
+  const [t, month, stuck, months, cohort, losses] = await Promise.all([
     getTranslations(),
     teamMonth(),
     stuckList(),
     monthsBack(null),
     chainCohort(null),
+    lossCohort(null),
   ]);
 
   return (
@@ -138,6 +141,11 @@ export default async function TeamPage() {
           end up (D62). One is a list to work through today, the other is a
           number to think about. */}
       <ChainCard cohort={cohort} />
+
+      {/* The other half of the same question, over the same quarter: the chain
+          says what became of the paper, this says what became of the work
+          (D140). */}
+      <LossCard cohort={losses} />
 
       <StuckList stuck={stuck} />
     </div>

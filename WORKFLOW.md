@@ -825,6 +825,14 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**Why we lose** — `tests/losses.spec.ts`
+Abdulrahman opens his screen and the card under "Where quotations go" names every reason the
+quarter's projects were given up for, largest metres first, each row carrying its own metres and
+its own count — all of it asked again in the spec's own SQL, so the card and the database cannot
+drift. Its sentence counts the same projects its rows do. A reason somebody wrote by hand counts
+under "Other" and is not a row of its own, because that line belongs on the project (D140).
+Reads only.
+
 **The desk knows what it is holding** — `tests/lost.spec.ts`
 The seeded queue holds a request whose project was marked lost after it was raised. Rawan opens
 her queue and the row says the project was marked lost; she opens it and the drawer says which
@@ -2018,3 +2026,14 @@ deep, and the harm it prevents is a glance now that her desk says it. It is wort
 the project drawer next opens for another reason. And the queue's own row links still carry
 `?status=requested`, which the queue does not read: harmless, and not worth moving the parameter
 that decides which drawer opens mid-slice.
+
+- [x] 147 **Nothing said what we lose to.** Found by the founder's reading, fixed in P11J-4
+  (D140). Jerom's five questions got the chain card in P9 — of a quarter's quotations, where did
+  each end up — and the half underneath it was never built: when a project dies, what killed it.
+  The data was there the whole time, because Mark lost has refused a save without a reason since
+  P3, and the column had exactly one reader, on the project it belonged to. Fix: `lossCohort` in
+  `src/lib/losses.ts` over the chain card's own window, the nine codes bound from the constant
+  rather than written again in SQL, anything else folded into `other` by the same rule
+  `lossReasonLabel` reads by; `LossCard` beside `ChainCard`, metres first, one neutral tone. The
+  demo carried no lost project at all before P11J-3 and now carries five, on three floors, for
+  four different reasons and one written line.

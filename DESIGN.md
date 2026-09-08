@@ -570,6 +570,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
   return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
   typed on the screen to lose — each is disabled at its line with that reason written there.
+- **Two cards on one screen answer over one window.** Phase 11J (D140). "Where quotations go"
+  and "Why we lose" are two halves of one question and both read `CHAIN_WINDOW_DAYS`, from the
+  module that defines it. A reader cannot hold two quarters, and the next card added to that
+  screen must take the same window or say in its own sentence why it does not — which is the
+  two-figures rule (rules/words.md) applied to time rather than to thresholds.
 - **A stored code is never a word on a screen.** Phase 11J (D138). `projects.lost_reason` holds
   one of nine codes or, for "Other", the rep's own line — one column, two kinds of value, and the
   rule for reading it back lived in a client hook on one screen. The company drawer printed the

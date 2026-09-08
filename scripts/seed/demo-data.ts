@@ -568,6 +568,46 @@ export const PROJECTS: ProjectSeed[] = [
     expectedSqm: "1450.00",
     lost: { daysAgo: 2, reason: "competitor" },
   },
+  /*
+   * Three more given up inside the quarter, on three floors and for three
+   * different reasons, so "why we lose" (D140) has a shape rather than a single
+   * bar. The reasons are the ones a cladding job actually dies of: the price,
+   * the lead time, and a customer who simply stopped answering.
+   */
+  {
+    key: "p14",
+    company: "f6",
+    name: "أبراج الياسمين - المرحلة الثالثة",
+    expectedSqm: "2100.00",
+    lost: { daysAgo: 20, reason: "price" },
+  },
+  {
+    key: "p15",
+    company: "s4",
+    name: "Jeddah Gate Office Tower",
+    expectedSqm: "3000.00",
+    lost: { daysAgo: 45, reason: "leadTime" },
+  },
+  {
+    key: "p16",
+    company: "f7",
+    name: "معرض السيارات - الفرع الشمالي",
+    expectedSqm: "640.00",
+    lost: { daysAgo: 9, reason: "quiet" },
+  },
+  /*
+   * And one given up for a reason nobody had a code for, which is what "Other"
+   * is: the column holds the rep's own line. It reads as itself on the project
+   * and counts under "Other" on the card — the fold every screen that reads
+   * this column has to do (`@/lib/loss-reason`).
+   */
+  {
+    key: "p17",
+    company: "s5",
+    name: "توسعة فندق العزيزية - الجناح الشرقي",
+    expectedSqm: "880.00",
+    lost: { daysAgo: 30, reason: "العميل اختار مورّدًا محليًا" },
+  },
 ];
 
 // ---- the log ------------------------------------------------------------------

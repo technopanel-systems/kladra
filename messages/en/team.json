@@ -1,4 +1,8 @@
 {
+  "lossTitle": "Why we lose",
+  "lossMeans": "{projects, plural, one {One project was marked lost in the last {days} days — {sqm} m².} other {# projects were marked lost in the last {days} days — {sqm} m² in all.}}",
+  "lossEmpty": "Nothing has been marked lost in the last {days} days.",
+  "lossProjects": "{projects, plural, one {# project} other {# projects}}",
   "companyMonth": "Company this month",
   "myMonth": "My month",
   "target": "Target",
