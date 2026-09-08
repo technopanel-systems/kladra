@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import type { ReactNode } from "react";
-import { Pencil, SearchIcon, XIcon } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -15,11 +15,11 @@ import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-los
 import { Sqm } from "@/components/ui-ext/figures";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
+import { ListSearch } from "@/components/ui-ext/list-search";
 import { NoteBlock } from "@/components/ui-ext/note-block";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -70,8 +70,6 @@ const WAITING_TEXT: Record<FollowUpState, string> = {
   today: TONE_TEXT.wait,
   future: "text-faint",
 };
-
-const DEBOUNCE_MS = 200;
 
 function listHref(q: string, filter: FollowUpFilter | null, open?: string | null): string {
   const params = new URLSearchParams();
@@ -225,15 +223,7 @@ export function ProjectsTable({
   // starts its two seconds now (D105).
   useLanded(rows);
   const router = useRouter();
-  const [term, setTerm] = useState(q);
   const [pending, startTransition] = useTransition();
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
 
   function go(href: string) {
     startTransition(() => {
@@ -241,22 +231,15 @@ export function ProjectsTable({
     });
   }
 
-  function onTerm(value: string) {
-    setTerm(value);
-    if (timer.current) clearTimeout(timer.current);
-    // A new search drops whatever the URL had open — that row may be gone.
-    timer.current = setTimeout(() => go(listHref(value.trim(), filter)), DEBOUNCE_MS);
-  }
-
+  // The box is `ListSearch` now; what is left here is the way OUT of a search
+  // from the empty list, which is a navigation and not a second search box.
   function clearTerm() {
-    setTerm("");
-    if (timer.current) clearTimeout(timer.current);
     go(listHref("", filter));
   }
 
   /** Clicking the chip you are already on takes the filter off again. */
   const chip = (value: FollowUpFilter) =>
-    listHref(term.trim(), filter === value ? null : value);
+    listHref(q, filter === value ? null : value);
 
   return (
     <div className="flex flex-col gap-4">
@@ -280,38 +263,19 @@ export function ProjectsTable({
           {t("projects.todayChip", { count: counts.today })}
         </FilterChip>
         <span aria-hidden="true" className="h-4 w-px bg-line" />
-        <FilterChip href={listHref(term.trim(), null)} active={filter === null}>
+        <FilterChip href={listHref(q, null)} active={filter === null}>
           {t("common.all")}
         </FilterChip>
       </div>
 
-      <div className="relative max-w-md">
-        <SearchIcon
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4 text-muted-foreground"
-        />
-        <Input
-          type="search"
-          value={term}
-          onChange={(event) => onTerm(event.target.value)}
-          aria-label={t("projects.searchLabel")}
-          placeholder={t("projects.searchPlaceholder")}
-          // The clear is a thumb wide on a phone (D130): room for it.
-          className="h-10 px-10 max-md:pe-12"
-        />
-        {term ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={clearTerm}
-            aria-label={t("common.clear")}
-            className="absolute inset-y-0 end-1 my-auto"
-          >
-            <XIcon />
-          </Button>
-        ) : null}
-      </div>
+      <ListSearch
+        q={q}
+        keep={{ filter }}
+        label={t("projects.searchLabel")}
+        placeholder={t("projects.searchPlaceholder")}
+        clearLabel={t("common.clear")}
+        className="max-w-md sm:max-w-md"
+      />
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
         {rows.length === 0 ? (

@@ -37,7 +37,7 @@ Both locales ship together — a string that exists in `messages/en.json` and no
 
 ## Commands
 `npm run dev` (3100) · `npm run typecheck` · `npm run lint` · `npm run build` ·
-`npm run test` (boots dev on 3100 against a freshly seeded DB, both locales) ·
+`npm run test` (boots its own server on 3101 against `kladra_test`, freshly seeded, both locales) ·
 `npm run db:migrate` · `npm run db:clear` · `npm run seed:demo` · `npm run backup`.
 Every commit is green on typecheck, lint, build, test.
 

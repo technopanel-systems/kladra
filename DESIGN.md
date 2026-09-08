@@ -94,7 +94,9 @@ Dropdown-menu, Switch, Checkbox, Scroll-area, Avatar. On top of them, the app's 
 small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, `Prose`
 — one `<p dir="auto">` for any block a PERSON typed — and `NoteBlock`, which is `Prose` under
 the word for what it is, in a face of its own so a paragraph that swings to the other end of a
-wide drawer stays attached to its label. Logical utilities only (`ms-`, `pe-`,
+wide drawer stays attached to its label; and `ListSearch`, the one box a list is filtered by —
+term on the URL a quarter-second after the last keystroke, caret never stolen, and one per
+screen however many lists are under it. Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
@@ -572,6 +574,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   from a person owes them a screen that gives it back; a field whose only reader is the form it
   was typed in teaches people to stop filling it. Before a field is added, name the screen that
   reads it, and when one is found with no reader, that is a defect and not a feature request.
+- **A control that writes the URL exists once per screen.** Phase 11J (D137). Two controls
+  writing the same query parameter are not duplication, they are a bug: each holds its own idea
+  of the value, neither hears the other, and the one that did not write it sits there stating
+  something false. It bit the queue, which draws two list tables and so had two search boxes.
+  A control like that belongs to the SCREEN and is passed down (`showSearch={false}` on a table
+  the screen searches for), never drawn once per list — and the same test is worth asking of any
+  filter, chip or sort that ends up in `?`.
 - **Speed is a number with a ceiling.** Phase 11I (D133). What a mid phone pays to draw a screen
   is measured, not felt: `npm run measure:speed` against the production build, cold and warm, and
   `scripts/speed.baseline.json` is the ceiling the next change is held to. A change that touches
@@ -605,6 +614,11 @@ Two came off this list in P8, and one did not. A colour-per-status map was asked
 built (§6). Remembering which view a person last chose is not a saved view: a saved view is
 a filter somebody names and keeps, and nobody has asked for one. Drag-and-drop stays off the
 list on its own merits, argued in §6.
+
+Two more were put to the founder in P11J and answered no (SPEC §3): a screen for a coordinator
+who is away, because there are two coordinators and the queue is a shared desk; and a lapsed-
+customer screen, because "gone quiet" already says that on the rep's list and a second name for
+one silence is the two-figures defect.
 
 ## §6 Depth (P8) — what was studied, what was taken, what was rejected
 

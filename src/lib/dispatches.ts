@@ -105,6 +105,8 @@ export type ListDispatchesInput = {
   locale?: string;
   /** How many rows the screen will draw (D80). */
   limit?: number;
+  /** "oldest" for the desk somebody works down — the queue (D137). */
+  order?: "newest" | "oldest";
 };
 
 /** She runs both chains, so she sees every dispatch on them (S9). */
@@ -312,8 +314,8 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
     .leftJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(and(...conditions))
-    .orderBy(desc(dispatches.createdAt))
-    // Newest first and capped (D80).
+    .orderBy(input.order === "oldest" ? asc(dispatches.createdAt) : desc(dispatches.createdAt))
+    // Capped (D80).
     .limit(input.limit ?? LIST_LIMIT);
 
   return rows.map((row) => toRow(row, row.shipmentMethod));

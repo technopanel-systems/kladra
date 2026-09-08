@@ -1,4 +1,6 @@
 {
+  "searchLabel": "Search the queue",
+  "searchPlaceholder": "Company, project or number",
   "longestWait": "Longest wait",
   "since": "since {day}",
   "workingDays": "{days, plural, =0 {today} one {# working day} other {# working days}}",

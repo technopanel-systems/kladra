@@ -200,3 +200,51 @@ test("archiving the oldest request's company moves the wait to the next one, rat
     );
   }
 });
+
+test("her desk is in the order she works it: the longest wait is the first row", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const oldest = await oldestRaised();
+  expect(oldest, "nothing is waiting on the seeded queue").not.toBeNull();
+  expect(oldest!.kind, "the seeded desk has no waiting quotation to order").toBe("quotation");
+  const label = quotationLabel(oldest!.number!, oldest!.revision!);
+
+  await login(page, locale, "rawan");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/queue`), COLD);
+
+  // The screen has said "oldest first" since P8 and both lists came back newest
+  // first, so the row she must answer next was the last one she read (D137).
+  const section = listSection(page, t("common.quotations"));
+  await expect(section.getByRole("row").nth(1).getByText(label, { exact: true })).toBeVisible(COLD);
+});
+
+test("one search box over both her lists, and it filters both", async ({ page, locale, t }) => {
+  const raised = await query<{ company: string }>(
+    `select c.name as company
+       from quotations q
+       join companies c on c.id = q.company_id
+      where q.status = 'requested' and c.archived_at is null
+      order by q.created_at
+      limit 1`,
+  );
+  expect(raised.length, "nothing is waiting on the seeded queue").toBe(1);
+
+  await login(page, locale, "rawan");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/queue`), COLD);
+
+  // Two tables meant two boxes: she typed the name twice, and the second box
+  // sat empty over a list that was already filtered (D137).
+  const boxes = page.getByRole("search");
+  await expect(boxes).toHaveCount(1);
+
+  await boxes.getByRole("searchbox").fill(raised[0].company);
+  await expect(page).toHaveURL(/[?&]q=/, COLD);
+  const quotations = listSection(page, t("common.quotations"));
+  await expect(
+    quotations.getByRole("row").filter({ hasText: raised[0].company }).first(),
+  ).toBeVisible(COLD);
+  // The term is on the URL once, and the box that wrote it is the box that shows it.
+  await expect(boxes.getByRole("searchbox")).toHaveValue(raised[0].company);
+});

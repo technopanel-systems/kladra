@@ -181,8 +181,8 @@ statement (§5 #139–#141).
 
 Next is box 11J, the last of Phase 11: what a good CRM has that Kladra does not — proposed
 freely, then deleted down to what names a person, a day and what it replaces; the rejected list
-kept. Two things are already parked for it (§5 #121: four hand-drawn search boxes; the quotations
-chips that wrap round the list/board switch at 375). The dev database is seeded at volume
+kept. One of the two things parked for it is done (§5 #121 → #143: the four hand-drawn search boxes
+are one component); the quotations chips that wrap round the list/board switch at 375 are not. The dev database is seeded at volume
 (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back.
 
 **Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
@@ -824,6 +824,12 @@ sent-back tile is the day's own list minus the ones with the customer. In `tests
 Rawan's longest wait is the oldest row her two lists show, and archiving the company of the
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
+
+**One desk, one box, her order** — `tests/queue.spec.ts`
+Rawan opens her queue: the first row of the quotations list is the oldest thing waiting, which is
+the row the caption above it is already talking about. The screen has one element with the search
+role on it, not two; typing a customer's name into it puts the term on the URL once, filters the
+list under it, and the box she typed in is the box holding the words (D137).
 
 **A count counts the rows its list shows** — `tests/counts.spec.ts`
 One of Faisal's companies is put a day late on its own date and on a project's — the shape
@@ -1755,7 +1761,7 @@ What the walk found on top:
   The projects, quotations and dispatches searches each draw their own clear button — a
   `Button`, so 44 wide now — inside an input that reserved 40px; the tail of a long term sat
   under the X. Fix: `max-md:pe-12` on the three. Four hand-drawn search boxes is the cause and
-  is parked for 11J with the picker race.
+  was fixed in P11J-2 (#143); the picker race is still parked.
 - [x] 122 **The sheet's stated height was fiction.** Found by the critic, fixed in P11H. The kit's
   `max-h-[80vh]` is an attribute selector and the sheet's `max-h-[92dvh]` never applied. Fix:
   `max-h-[88dvh]!`, the company drawer's figure, in dvh.
@@ -1957,3 +1963,18 @@ survived is below; what did not is in DESIGN §4 and §6, with the reason.
   quietly stopped being used. Fix: each note is read where its record is read. The labelled typed
   block was already solved once on the quotation sheet, so the pattern became `NoteBlock` and the
   five sites share it. `tests/notes.spec.ts` walks all three and the manager who may not write.
+
+- [x] 143 **The coordinator's desk had two search boxes over one URL, and ran newest first under a
+  caption that says oldest.** Found by the coordinator's reading, fixed in P11J-2 (D137). Four
+  screens search a list and four boxes were written: one component on companies, and a hand-drawn
+  one inside each of the projects, quotations and dispatches tables — which is why #121's clear
+  button had to be fixed three times. The queue renders two of those tables, so it drew two boxes
+  over one screen: both wrote `?q=`, each wrote its own `?status=` over the other's, and the
+  second box showed empty above a list that was already filtered, because a box holding its own
+  text cannot hear another one. Second fault on the same screen: `listQuotations` and
+  `listDispatches` order newest first — right for every screen where somebody looks something up,
+  wrong for the one desk that is worked DOWN, where it puts the row she must answer next at the
+  bottom and lets the row cap drop the oldest. Fix: `ListSearch` is the box, the three tables take
+  `showSearch={false}` and the queue draws one over both lists; both queries take
+  `order: "oldest"` and the queue passes it. `tests/queue.spec.ts` asserts one search role on the
+  desk, the term written once, and the longest wait as the first row.

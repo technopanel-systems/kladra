@@ -7,6 +7,7 @@ import {
   QuotationSheetSkeleton,
   QuotationsTable,
 } from "@/components/quotations/quotations-table";
+import { ListSearch } from "@/components/ui-ext/list-search";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { requireUser } from "@/lib/authz";
 import { listNonWorkingDays } from "@/lib/calendar";
@@ -70,8 +71,10 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
 
   const [t, quotationRows, dispatchRows, standing] = await Promise.all([
     getTranslations(),
-    listQuotations({ user, q: q || undefined, status: "requested", locale }),
-    listDispatches({ user, q: q || undefined, status: "submitted", locale }),
+    // Oldest first: this is a desk she works DOWN, and her own screen has said
+    // "oldest first" since P8 while both lists came back newest first (D137).
+    listQuotations({ user, q: q || undefined, status: "requested", locale, order: "oldest" }),
+    listDispatches({ user, q: q || undefined, status: "submitted", locale, order: "oldest" }),
     queueStanding(),
   ]);
 
@@ -182,6 +185,18 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
         </p>
       ) : (
         <>
+          {/* ONE box over both lists. Two tables meant two boxes, both writing
+              `?q=` and each writing its own `?status=` over the other's, and
+              the second one showing empty over a list already filtered — she
+              typed the customer's name twice and believed the wrong box
+              (D137). */}
+          <ListSearch
+            q={q}
+            label={t("queue.searchLabel")}
+            placeholder={t("queue.searchPlaceholder")}
+            clearLabel={t("common.clear")}
+          />
+
           <section className="flex flex-col gap-4">
             <h2 className="text-sm font-medium text-muted-foreground">
               {t("common.quotations")}
@@ -193,6 +208,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               status="requested"
               openId={open}
               showFilters={false}
+              showSearch={false}
               waiting={waits(quotationRows)}
             />
           </section>
@@ -209,6 +225,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               status="submitted"
               openId={openDispatch}
               showFilters={false}
+              showSearch={false}
               waiting={waits(dispatchRows)}
             />
           </section>

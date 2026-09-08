@@ -112,6 +112,14 @@ export type ListQuotationsInput = {
   locale?: string;
   /** How many rows the screen will draw (D80). */
   limit?: number;
+  /**
+   * Newest first everywhere a person is looking something up, because what
+   * they want is what just happened. "oldest" is for a desk somebody works
+   * DOWN: the coordinator's queue, where the first row must be the one that has
+   * waited longest and the cap must drop the newest rather than the oldest
+   * (D137) — the same reasoning as the rep's waiting list (D83).
+   */
+  order?: "newest" | "oldest";
 };
 
 /** She runs both chains, so she sees every quotation on them (S9). */
@@ -293,9 +301,9 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
     .leftJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .where(and(...conditions))
-    .orderBy(desc(quotations.createdAt))
-    // Newest first and capped: this list is years long on a real floor, and
-    // what anybody reads on it is the top (D80).
+    .orderBy(input.order === "oldest" ? asc(quotations.createdAt) : desc(quotations.createdAt))
+    // Capped: this list is years long on a real floor, and what anybody reads
+    // on it is the top (D80).
     .limit(input.limit ?? LIST_LIMIT);
 
   return rows.map(toRow);

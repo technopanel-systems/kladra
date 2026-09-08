@@ -4,7 +4,7 @@ import { AddCompanyDialog } from "@/components/companies/add-company-dialog";
 import { CompaniesTable } from "@/components/companies/companies-table";
 import { CompanyDrawer } from "@/components/companies/company-drawer";
 import { FollowUpStrip } from "@/components/companies/follow-up-strip";
-import { ListSearch } from "@/components/companies/list-search";
+import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -158,7 +158,13 @@ export default async function CompaniesPage({
 
       <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} rep={repId} />
 
-      <ListSearch q={q} filter={filter ?? null} open={open} rep={repId} />
+      <ListSearch
+        q={q}
+        keep={{ filter: filter ?? null, open, rep: repId }}
+        label={t("companies.searchLabel")}
+        placeholder={t("companies.searchPlaceholder")}
+        clearLabel={t("companies.clearSearch")}
+      />
 
       {tableRows.length === 0 ? (
         <EmptyList q={q} filtered={filter !== undefined} mayAdd={mayAdd} rep={repId} />

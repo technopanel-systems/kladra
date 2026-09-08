@@ -1,17 +1,16 @@
 "use client";
 
-import { SearchIcon, XIcon } from "lucide-react";
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { ListSearch } from "@/components/ui-ext/list-search";
 import { NoteBlock } from "@/components/ui-ext/note-block";
 import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
 import type { Waited } from "@/lib/waiting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -52,8 +51,6 @@ import { useArrivedIds } from "@/hooks/use-arrived";
  * Search, status and the open drawer all live in the URL, so a link somebody
  * sends reopens exactly what they were looking at (SPEC §3).
  */
-
-const DEBOUNCE_MS = 200;
 
 const STATUS_KEYS: Record<QuotationStatus, string> = {
   requested: "quotations.statusRequested",
@@ -119,6 +116,7 @@ export function QuotationsTable({
   openId,
   view = "list",
   showFilters = true,
+  showSearch = true,
   waiting,
 }: {
   /** "/quotations" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
@@ -131,6 +129,8 @@ export function QuotationsTable({
   view?: ListView;
   /** The coordinator's queue is one status by definition; it needs no chips. */
   showFilters?: boolean;
+  /** The queue draws ONE box over both its lists, so its tables draw none. */
+  showSearch?: boolean;
   /**
    * How long each row has been waiting, by id — the coordinator's queue passes
    * it, every other screen does not. Where it is given the status cell says the
@@ -149,15 +149,7 @@ export function QuotationsTable({
   const arrived = useArrivedIds(rows);
   const locale = useLocale();
   const router = useRouter();
-  const [term, setTerm] = useState(q);
   const [pending, startTransition] = useTransition();
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
 
   function go(href: string) {
     startTransition(() => {
@@ -165,16 +157,9 @@ export function QuotationsTable({
     });
   }
 
-  function onTerm(value: string) {
-    setTerm(value);
-    if (timer.current) clearTimeout(timer.current);
-    // A new search drops whatever the URL had open — that row may be gone.
-    timer.current = setTimeout(() => go(listHref(base, value.trim(), status)), DEBOUNCE_MS);
-  }
-
+  // The box is `ListSearch` now; what is left here is the way OUT of a search
+  // from the empty list, which is a navigation and not a second search box.
   function clearTerm() {
-    setTerm("");
-    if (timer.current) clearTimeout(timer.current);
     go(listHref(base, "", status));
   }
 
@@ -192,7 +177,7 @@ export function QuotationsTable({
       .filter((row) => row.status === value)
       .map((row) => ({
         id: row.id,
-        href: listHref(base, term.trim(), null, row.id, "board"),
+        href: listHref(base, q, null, row.id, "board"),
         label: row.label,
         title: row.companyName,
         subtitle: row.projectName,
@@ -209,8 +194,8 @@ export function QuotationsTable({
           <ViewSwitch
             screen="quotations"
             view={view}
-            listHref={listHref(base, term.trim(), status, null, "list")}
-            boardHref={listHref(base, term.trim(), null, null, "board")}
+            listHref={listHref(base, q, status, null, "list")}
+            boardHref={listHref(base, q, null, null, "board")}
           />
           {/* A board of states IS the status view, so the chips would be a
               filter that leaves one column standing. They come back with the
@@ -222,7 +207,7 @@ export function QuotationsTable({
             <FilterChip
               key={value}
               // Pressing the chip you are on takes the filter off again.
-              href={listHref(base, term.trim(), status === value ? null : value)}
+              href={listHref(base, q, status === value ? null : value)}
               active={status === value}
               >
                 {t(STATUS_KEYS[value])}
@@ -231,7 +216,7 @@ export function QuotationsTable({
           {view === "board" ? null : (
             <>
               <span aria-hidden="true" className="h-4 w-px bg-line" />
-              <FilterChip href={listHref(base, term.trim(), null)} active={status === null}>
+              <FilterChip href={listHref(base, q, null)} active={status === null}>
                 {t("common.all")}
               </FilterChip>
             </>
@@ -239,33 +224,16 @@ export function QuotationsTable({
         </div>
       ) : null}
 
-      <div className="relative max-w-md">
-        <SearchIcon
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 start-3 my-auto size-4 text-muted-foreground"
-        />
-        <Input
-          type="search"
-          value={term}
-          onChange={(event) => onTerm(event.target.value)}
-          aria-label={t("quotations.searchLabel")}
+      {showSearch ? (
+        <ListSearch
+          q={q}
+          keep={{ status }}
+          label={t("quotations.searchLabel")}
           placeholder={t("quotations.searchPlaceholder")}
-          // The clear is a thumb wide on a phone (D130): room for it.
-          className="h-10 px-10 max-md:pe-12"
+          clearLabel={t("common.clear")}
+          className="max-w-md sm:max-w-md"
         />
-        {term ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={clearTerm}
-            aria-label={t("common.clear")}
-            className="absolute inset-y-0 end-1 my-auto"
-          >
-            <XIcon />
-          </Button>
-        ) : null}
-      </div>
+      ) : null}
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
         {rows.length === 0 ? (
@@ -413,7 +381,6 @@ export function QuotationsTable({
     </div>
   );
 }
-
 
 /** One sentence, and the action it names — where there is one (SPEC §3, D31). */
 function EmptyQuotations({

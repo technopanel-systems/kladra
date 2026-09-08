@@ -1,4 +1,6 @@
 {
+  "searchLabel": "البحث في الطلبات الواردة",
+  "searchPlaceholder": "شركة أو مشروع أو رقم",
   "longestWait": "أطول انتظار",
   "since": "منذ {day}",
   "workingDays": "{days, plural, =0 {اليوم} zero {لا أيام عمل} one {يوم عمل واحد} two {يوما عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}",
