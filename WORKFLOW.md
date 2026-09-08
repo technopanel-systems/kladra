@@ -126,6 +126,28 @@
             read in order); 11J-7: 33, 151 (a figure is not the length of a capped list,
             D144); 11J-8: 153 (one chip over a list, in one row, D145)
 
+- [ ] P12 First real user feedback — reps, the coordinator and the manager have used it, and the
+      founder's list from that use is SPEC §3 authority: it overrides any earlier default it
+      touches, including D1, D12, D15, D51 and D81. His answer on sharing and credit is part of it.
+      - [ ] 1 The hang, and its whole class: a picker that fires on a value that did not change
+      - [ ] 2 A gate on founder decisions: §3 reachable from a test, `npm run check:spec3`
+      - [ ] 3 One door, then sharing: a shared company, a shared project, owners on projects
+            and contacts, and the eleven visibility clauses re-pointed at one predicate
+      - [ ] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
+            visible wherever the m² is, and no metre counted twice
+      - [ ] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
+      - [ ] 6 The three-tab shell, empty: today's work · metrics · the team
+      - [ ] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
+            and what an unacknowledged one looks like after two days
+      - [ ] 8 Duplicate review: the customer number, the name rules in both languages, the
+            manager's three answers
+      - [ ] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
+      - [ ] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
+      - [ ] 11 The queue: the whole row opens it, and the SMAC number is the large one
+      - [ ] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
+      - [ ] 13 Reports and the company log rebuilt as one thing, per person, per day
+      - [ ] 14 Across: the panel's width, one primary action per list, the board ruling written
+
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
 rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
 
@@ -504,6 +526,20 @@ Dead code swept: `companyOwner`, `formatInstant`, `isSaudi`, `defaultLocation`, 
 `ROLES`. `defaultLocation` was a second definition of a figure `src/actions/forms.ts` already
 owned — the exact drift trap. `src/lib/money.ts` and `src/lib/workdays.ts` keep their unwired
 arithmetic: it is P4's and P6's, and rewriting it a box later is churn, not a fix.
+
+**Phase 12 is where I am now.** Phase 11 closed at `f66bc93` with 475 specs green in both
+locales and the register empty. Then the app went in front of the people it was built for, and
+they came back with a list — that list is SPEC §3 now, and the fourteen slices above are the
+order I am building it in. Twelve readers went through the code first (workflow run
+`wf_c2b6533d-6e6`, script kept under the session's `workflows/scripts/`; resume it with
+`resumeFromRunId` and the finished readers replay from cache). What they found and I verified:
+the dispatch dialog's freeze is a picker firing a change for a value that did not change, and
+the same shape is live in the company form; the visibility rule is written eleven times and
+twenty-five figure queries take a rep id as an argument, so a shared company would be counted
+twice before it was hidden once; and SPEC §3's width chips were never built at all, along with
+the quantity column's position, the manager's target box, the long-press number and the
+per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
+which is what slice 2 is for.
 
 ## §4 Five days, walked (P9.1)
 

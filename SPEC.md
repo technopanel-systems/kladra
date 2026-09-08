@@ -138,6 +138,52 @@ Jerom used the app himself before P8. His verdict was that it beats FACET and is
 - Roles may grow beyond the four if the business needs them. (P8)
 - Where a screen earns more than one view, the default is the one that answers the daily question, and the choice is remembered per person and carried in the URL. Which screens earn which views is decided in DESIGN §6, with the reason. (P8)
 
+Phase 12 is the first real use: Faisal and the reps, Rawan and Abdulrahman have all worked in
+Kladra now, and this is what they came back with. None of it is speculation and all of it
+overrides any earlier default it touches. (P12)
+
+- Handover of an existing company between reps is the **sales manager's** action. Not the owner's,
+  not marketing's. **Overrules D51**, which gave it to the owner as well.
+- Marketing does not use the Add company form. Marketing has its own module for bringing in a lead,
+  and creating one there IS an assignment: it goes to a chosen rep, or to a member of the marketing
+  team. The two paths stay visibly separate so nobody confuses "my company" with "a lead I was given".
+- The Marketing lead source is not offered to a rep adding a company. Management and marketing only.
+  **Narrows D1**, which offered the whole list to everybody.
+- The coordinator is a selling role too: department **Internal Sales**, her own m² target, and she
+  creates companies, projects and quotations like a rep — except she does not request a quotation,
+  she issues it directly, flagged for the manager so nobody issues their own work unseen.
+  **Overrules D15**, "the coordinator has no companies of her own".
+- A dispatch implies the customer accepted that quotation. The manual "customer accepted" action
+  stays only for a quotation accepted but not yet dispatched.
+- One warehouse per whole quotation and per whole dispatch, never per line: Riyadh, Malham, Dammam,
+  Khamis Mushait.
+- Payment terms are a choice plus notes, not free text. Bank transfer → full amount or part. Cash →
+  on delivery or at the office. Credit and tasaheel → a note from the rep explaining the terms is
+  mandatory, for finance to review. **Overrules D12**, which made them free text, and it moves the
+  line S3 draws around finance: Kladra records how a load is being paid for so the coordinator does
+  not have to ring finance. It still holds no balance, no credit limit and no invoice.
+- Nothing is ever carried forward from a previous record into a new one. A note typed on one dispatch
+  must not appear prefilled on the next. This is global, not a dispatch rule. **Overrules D81.**
+
+**Sharing, and who gets the metres.** Asked as one question in P12 and answered in the founder's own
+words; the answer replaces the brief's own earlier line, which said another rep sees only that an
+item exists and who owns it until that item is shared with him.
+
+- **A shared company**: every rep on it sees the company and all items beneath it. Each keeps his own
+  contacts — two reps may hold the same person as a contact, and that is not a duplicate. Nothing
+  else is jointly editable by company sharing alone.
+- **A shared project**: every rep on it works it fully — logs against it, reports on it, and raises
+  quotations and dispatches against it. An item belongs to whoever created it, and only he edits it.
+- **Credit** is chosen per quotation and per dispatch and is never inherited. Where the project has
+  more than one rep the dialog asks who this one counts for: a single named rep, or split between the
+  sharers. Some reps genuinely share a job; some are only helping, and a helper still writes his own
+  daily report about what he did without taking the metres. Where the project has one rep the
+  question is not asked at all.
+- The split is visible wherever the m² appears — the rep's target, the manager's table, the metrics —
+  so a rep who sees 400 m² on a dispatch and 200 against his target can see why on the row itself.
+  Every m² is attributed, no metre is counted twice, and the manager can see for any shared project
+  who was credited what.
+
 ## §4 Defaults Claude chose — founder may change
 
 - D1 Lead sources, in order: Field visit · Direct contact · Referral · Exhibition · Marketing · Online · WhatsApp · Other (FACET's list with "Online or WhatsApp" split and "Consultant or architect" dropped, per §3).
