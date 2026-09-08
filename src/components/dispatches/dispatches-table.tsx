@@ -473,6 +473,11 @@ function useCloseDrawer(param: string): () => void {
 
 export type DispatchSheetProps = {
   dispatch: DispatchRow;
+  /**
+   * What happened to it, oldest first (D143). A node rather than data, for the
+   * reason `QuotationSheetProps.history` gives.
+   */
+  history: ReactNode;
   items: DispatchItemRow[];
   draft: DispatchDraft;
   scope: DispatchScope;
@@ -482,6 +487,7 @@ export type DispatchSheetProps = {
 
 export function DispatchSheet({
   dispatch,
+  history,
   items,
   draft,
   scope,
@@ -651,6 +657,11 @@ export function DispatchSheet({
             <Row label={t("common.destination")}>{dispatch.destination}</Row>
             <Row label={t("common.paymentTerms")}>{dispatch.paymentTerms}</Row>
           </dl>
+
+          {/* Last, as on the quotation sheet: what the drawer is opened to do
+              is at the top, and what has already happened is what you scroll
+              to (D143). */}
+          {history}
         </div>
       </SheetContent>
     </Sheet>

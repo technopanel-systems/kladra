@@ -825,6 +825,13 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**A dispatch says what happened to it** — `tests/dispatch-trail.spec.ts`
+Rawan opens the dispatch she refused: its trail starts with the request, carries her refusal with
+her own words and her name on it, and reads oldest first. Faisal opens an approved one of his and
+reads the same trail on his own screen, with the request and the approval both on it, the request
+first, and nothing to press (D143, D42). "The request first" is the assertion that catches an
+approval dated before the request it answers (§5 #152). Reads only.
+
 **One clock** — `tests/one-clock.spec.ts`
 A company of Faisal's is promised a call twelve days ago and a company holiday is put inside that
 window, so the working-day answer and the calendar answer are different numbers and only one of
@@ -2073,3 +2080,33 @@ fortnight whoever was at work, the bands accuse nobody, and counting working day
 delay surfacing exactly the customers somebody should ring the morning he gets back from a
 holiday. The rule that tells the two apart is now in DESIGN §5, which is the change that was
 actually needed.
+
+- [x] 150 **The dispatch was the one record that could not say what had happened to it.** Found by
+  the coordinator's reading, fixed in P11J-6 (D143). Its five transitions have been writing audit
+  rows since P5 — requested, quantities edited, approved, number corrected, refused with her words
+  — and the drawer read none of them, so a refusal and the resubmission after it were invisible on
+  the screen they were about. Fix: `src/lib/dispatch-events.ts` is the list, the actions build
+  their audit string from it, `dispatchHistory` reads the log the way `quotationHistory` does, and
+  `DispatchHistory` draws it last in the sheet. `check-messages` reads the new union, so a sixth
+  transition cannot ship without a sentence in both languages. "was {number}" moved to `common`
+  on the way past: one sentence, said by both chains, had been two keys. `tests/smac.spec.ts`
+  asserts the one line this trail draws that no event on it draws — the number it used to carry,
+  under the correction — which the dialog's own hint promises in both languages and nothing
+  checked.
+
+- [x] 152 **The demo approved two dispatches the day before they were raised.** Found by the
+  critic pass over P11J-6 and fixed in the same slice. The seed builds a dispatch's two instants
+  on two clocks: `createdBack` counts WORKING days back from today, and `approvedOnDayOfMonth` is
+  a fixed calendar day of this month, because a month is counted from its approvals and the demo's
+  months must not move (S41). Past the first days of a month the working ladder overtakes the
+  fixed day — on Tuesday 8 September, three working days back is the 3rd, and "approved on the
+  2nd" is the day before — so two dispatches carried an `approved_at` earlier than their
+  `created_at`, and an `updated_at` earlier still. Nothing read the pair in order for five phases.
+  P11J-6 put the trail on the drawer and its first line said "Approved" over "Requested", on the
+  two current-month dispatches a reader is most likely to open. Fixed in three places, because
+  one of them is the cause and the other two are the guard: the seed derives an approved
+  dispatch's raising day from its approval day rather than from the ladder; the trail's own spec
+  asserts the first line is the request; and the database refuses the shape outright
+  (`dispatches_approved_after_created_check`, migration 0013) — the app cannot write it, but a
+  seed, a migration or the import that will exist next year can, which is what the rest of that
+  table's checks are for.

@@ -1,4 +1,12 @@
 {
+  "history": "What happened",
+  "event": {
+    "request": "Requested",
+    "update": "Request edited",
+    "approve": "Approved",
+    "correctNumber": "SMAC number corrected",
+    "refuse": "Refused"
+  },
   "request": "Request dispatch",
   "requestFor": "Request dispatch against {label}",
   "pickQuotation": "Choose a quotation",
@@ -18,7 +26,7 @@
   "smacTakenSomewhere": "{number} is already on another dispatch.",
   "correctNumber": "Correct the number",
   "correctNumberTitle": "Correct the SMAC dispatch number on {label}",
-  "correctNumberHint": "The number as SMAC issued it. The month it counts in does not move, and the old number is not lost.",
+  "correctNumberHint": "The number as SMAC issued it. The month it counts in does not move, and the old one stays under What happened.",
   "numberCorrected": "Number corrected on {label}",
   "sameNumber": "That is the number it already carries.",
   "notApproved": "It has no SMAC number until it is approved.",

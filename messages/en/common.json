@@ -1,4 +1,5 @@
 {
+  "wasNumber": "was {number}",
   "projectLost": "Project marked lost",
   "projectLostOn": "Project marked lost on {date}",
   "app": "Kladra",

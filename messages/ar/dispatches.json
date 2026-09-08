@@ -1,4 +1,12 @@
 {
+  "history": "ما حدث",
+  "event": {
+    "request": "طُلب التوريد",
+    "update": "عُدِّل الطلب",
+    "approve": "اعتُمد التوريد",
+    "correctNumber": "صُحِّح رقم سماك",
+    "refuse": "رُفض التوريد"
+  },
   "request": "طلب توريد",
   "requestFor": "طلب توريد على عرض السعر {label}",
   "pickQuotation": "اختيار عرض السعر",
@@ -18,7 +26,7 @@
   "smacTakenSomewhere": "الرقم {number} مسجّل بالفعل على توريد آخر.",
   "correctNumber": "تصحيح الرقم",
   "correctNumberTitle": "تصحيح رقم سماك للتوريد {label}",
-  "correctNumberHint": "الرقم كما أصدره سماك. لا يتغيّر الشهر الذي يُحتسب فيه، ولا يُحذف الرقم القديم.",
+  "correctNumberHint": "الرقم كما أصدره سماك. لا يتغيّر الشهر الذي يُحتسب فيه، ويبقى الرقم القديم في «ما حدث».",
   "numberCorrected": "تم تصحيح رقم {label}",
   "sameNumber": "هذا هو الرقم الحالي.",
   "notApproved": "التوريد لا يحمل رقم سماك قبل اعتماده.",

@@ -50,6 +50,22 @@ test("a quotation line cannot carry a zero or a minus", async () => {
   }
 });
 
+test("a dispatch cannot be approved before it was raised", async () => {
+  const row = await one<{ id: string }>(
+    "select id from dispatches where status = 'approved' limit 1",
+  );
+
+  // The demo wrote exactly this for two dispatches, on two clocks, and no screen
+  // read the pair in order until the drawer's trail did (P11J).
+  const message = await refused(
+    "update dispatches set approved_at = created_at - interval '1 day' where id = $1::uuid",
+    [row.id],
+  );
+  expect(message, "an approval before the request was accepted").toContain(
+    "violates check constraint",
+  );
+});
+
 test("one line of a quotation goes on a dispatch once", async () => {
   const item = await one<{ dispatch_id: string; quotation_item_id: string }>(
     "select dispatch_id, quotation_item_id from dispatch_items limit 1",

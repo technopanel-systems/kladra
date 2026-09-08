@@ -37,7 +37,9 @@ import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm"
 import { QueryBuilder } from "drizzle-orm/pg-core";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { personName } from "@/lib/people";
+import type { Day } from "@/lib/dates";
+import { isDispatchEvent, type DispatchEventName } from "@/lib/dispatch-events";
+import { personName, personNameOf } from "@/lib/people";
 import {
   companies,
   dispatchItems,
@@ -687,4 +689,48 @@ export async function companyAchievedSqm(month: string): Promise<string> {
       ),
     );
   return String(row?.sqm ?? "0");
+}
+
+/** One thing that happened to a dispatch, for the trail on its drawer (D143). */
+export type DispatchEvent = {
+  /** The audit action with its `dispatch.` prefix removed: `approve`, `refuse`… */
+  what: DispatchEventName;
+  /** A Riyadh day, "YYYY-MM-DD". */
+  day: Day;
+  /** Who did it, named in the reader's script (D68). Null if the account is gone. */
+  who: string | null;
+  /** Her reason, where the event carried one — or, on a number correction, the old number (D88). */
+  note: string | null;
+};
+
+/**
+ * What happened to this dispatch, oldest first (D143).
+ *
+ * Read from `audit_log` and not from a history table of its own, for the reason
+ * `quotationHistory` gives: every transition already writes an audit row with
+ * who and when, inside the same transaction as the change, and a second table
+ * beside it would be a second answer to one question (rules/data.md).
+ */
+export async function dispatchHistory(id: string): Promise<DispatchEvent[]> {
+  const locale = await getLocale();
+  const rows = await db.execute<{ what: string; day: Day; who: string | null; note: string | null }>(
+    sql`
+      select replace(a.action, 'dispatch.', '') as what,
+             to_char((a.at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day,
+             ${personNameOf("u", locale)} as who,
+             nullif(btrim(coalesce(a.details ->> 'reason', a.details ->> 'from', '')), '') as note
+        from audit_log a
+        left join users u on u.id = a.user_id
+       where a.record_type = 'dispatch'
+         and a.record_id = ${id}::text
+       order by a.at asc
+    `,
+  );
+  // Anything the app has no word for is not shown: `action` is a text column and
+  // the trail prints a sentence per event.
+  return rows.rows.flatMap((row) =>
+    isDispatchEvent(row.what)
+      ? [{ what: row.what, day: row.day, who: row.who, note: row.note }]
+      : [],
+  );
 }

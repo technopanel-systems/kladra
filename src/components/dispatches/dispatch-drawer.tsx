@@ -1,9 +1,10 @@
 import { getLocale } from "next-intl/server";
 import { z } from "zod";
+import { DispatchHistory } from "@/components/dispatches/dispatch-history";
 import { DispatchSheet } from "@/components/dispatches/dispatches-table";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { mayQuote } from "@/lib/floor";
-import { getDispatch } from "@/lib/dispatches";
+import { dispatchHistory, getDispatch } from "@/lib/dispatches";
 
 /**
  * The dispatch drawer (DESIGN §2: work happens in a drawer over the list).
@@ -44,6 +45,10 @@ export async function DispatchDrawer({
   }
   if (!dispatch) return null;
 
+  // Read after the row and not beside it: there is nothing to say about a
+  // dispatch this person may not open, and the refusal above is what decides.
+  const history = await dispatchHistory(dispatch.id);
+
   return (
     <DispatchSheet
       param={param}
@@ -60,6 +65,10 @@ export async function DispatchDrawer({
           qty: item.qty,
         })),
       }}
+      // A node, not data: it is built on the server, where the audit log and
+      // the reader's own language both live — the same reason the quotation
+      // sheet takes its trail this way.
+      history={<DispatchHistory history={history} />}
       scope={{
         coordinator: user.role === "coordinator",
         // The rep whose COMPANY it is — not whoever raised it, and not a

@@ -570,6 +570,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
   return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
   typed on the screen to lose — each is disabled at its line with that reason written there.
+- **A record that passes through hands says what happened to it.** Phase 11J (D143). Two people
+  own a quotation at different moments and three own a dispatch, and every one of those handovers
+  already writes an audit row inside the transaction that made the change. A chain record whose
+  drawer shows only its current state asks the reader to remember the middle — so each one gets
+  the same trail, off the same log, with the same shape: what, when, who, and the words the event
+  carried. The list of what can happen is a module (`quotation-events`, `dispatch-events`), the
+  actions build their audit string from it, and `check-messages` demands a sentence per member in
+  both languages, so a new transition cannot reach a screen without a word for it.
 - **Working days for lateness, calendar days for silence.** Phase 11J (D141). Two clocks run in
   this app and which one a figure takes is decided by what the figure accuses somebody of. Anything
   that says a PERSON is late — a request on a desk, a promised call, a stuck band, a pace line —

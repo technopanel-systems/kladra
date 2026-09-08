@@ -67,6 +67,7 @@ export const families: [string, string[]][] = [
   ["reports", union("src/components/reports/person-card.tsx", "REPORT_STATES")],
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
   ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
+  ["dispatches.event", union("src/lib/dispatch-events.ts", "DISPATCH_EVENTS")],
   ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
   ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
   ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],

@@ -53,6 +53,18 @@ function sheetFor(page: Page, label: string): Locator {
   return page.getByRole("dialog", { name: label });
 }
 
+/**
+ * The state, read where the state is said.
+ *
+ * Not `getByText`: since D143 the trail under it names the event that produced
+ * the state, and in both languages that is the same word — an approved
+ * dispatch says "Approved" twice on one screen, and both are right. `[data-tone]`
+ * is how the quotation chain's specs have read a state since P9.
+ */
+function statusOf(sheet: Locator): Locator {
+  return sheet.locator("[data-tone]").first();
+}
+
 /** The label where it is actually on screen — every list renders twice. */
 function labelOnScreen(page: Page, label: string): Locator {
   return page.getByText(label, { exact: true }).filter({ visible: true }).first();
@@ -271,7 +283,7 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     await expect(page).toHaveURL(new RegExp(`/dispatches\\?open=${dispatchId}`), COLD);
 
     const sheet = sheetFor(page, label);
-    await expect(sheet.getByText(t("dispatches.statusApproved"), { exact: true })).toBeVisible();
+    await expect(statusOf(sheet)).toHaveText(t("dispatches.statusApproved"));
     await expect(sheet.getByText(smacNumber(locale), { exact: true })).toBeVisible();
   });
 

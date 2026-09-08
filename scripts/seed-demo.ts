@@ -154,6 +154,21 @@ function weekendBefore(day: Day): Day {
   return d;
 }
 
+/** The working day either side of a day. Nothing in the demo happens on a weekend. */
+function workingDayBefore(day: Day): Day {
+  let d = addDays(day, -1);
+  while (isWeekend(d)) d = addDays(d, -1);
+  return d;
+}
+function workingDayAfter(day: Day): Day {
+  return nextWorkingDay(addDays(day, 1));
+}
+
+/** The earlier of two days. */
+function earlier(a: Day, b: Day): Day {
+  return a < b ? a : b;
+}
+
 /** A day of THIS month, never later than today (used for approved dispatches). */
 function dayOfThisMonth(dayOfMonth: number): Day {
   const candidate = firstOfMonth(TODAY).slice(0, 8) + String(dayOfMonth).padStart(2, "0");
@@ -811,13 +826,34 @@ async function seedDispatches(
     for (const d of DISPATCHES) {
       const res = await tx.execute(sql.raw(`select nextval('dispatch_numbers')::int as n`));
       const number = Number((res.rows[0] as { n: number }).n);
-      const created = instant(back(d.createdBack), 12, 15);
-      const approvedAt =
-        d.approvedOnDayOfMonth === undefined
-          ? null
-          : instant(dayOfThisMonth(d.approvedOnDayOfMonth), 14, 30);
+      /*
+       * Two clocks, and they have to be reconciled. `createdBack` counts WORKING
+       * days back from today; `approvedOnDayOfMonth` is a fixed calendar day of
+       * this month, because an approval is what a month is counted from (S41) and
+       * the demo's months must not move. Past the first days of a month the
+       * working ladder overtakes the fixed day — on Tuesday 8 September, three
+       * working days back is the 3rd, and "approved on the 2nd" is the day
+       * before — so two of the demo's approved dispatches were approved before
+       * they were asked for, and updated_at was earlier than created_at with
+       * them. Nothing read the audit rows in order until P11J put the trail on
+       * the drawer, and then the first line of it said "Approved" over
+       * "Requested". A dispatch is raised and THEN approved: where there is an
+       * approval day, the day it was raised is no later than the working day
+       * before it.
+       */
+      const approvedDay =
+        d.approvedOnDayOfMonth === undefined ? null : dayOfThisMonth(d.approvedOnDayOfMonth);
+      const raised =
+        approvedDay === null
+          ? back(d.createdBack)
+          : earlier(back(d.createdBack), workingDayBefore(approvedDay));
+      const created = instant(raised, 12, 15);
+      const approvedAt = approvedDay === null ? null : instant(approvedDay, 14, 30);
       // Refused the morning after it was raised; nothing else ends a dispatch.
-      const refusedAt = d.status === "refused" ? instant(back(d.createdBack - 1), 9, 40) : null;
+      // Counted off the day it was raised rather than off the ladder again, so
+      // it cannot land before it either — and `createdBack: 0` does not index
+      // past the end of the ladder.
+      const refusedAt = d.status === "refused" ? instant(workingDayAfter(raised), 9, 40) : null;
       const ended = approvedAt ?? refusedAt;
 
       const [row] = await tx

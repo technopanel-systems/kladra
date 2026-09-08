@@ -26,7 +26,6 @@
   "numberCorrected": "Number corrected on {label}",
   "sameNumber": "That is the number it already carries.",
   "noNumberYet": "It has no SMAC number until it is issued.",
-  "wasNumber": "was {number}",
   "issued": "{label} issued",
   "sendBack": "Send back",
   "sendBackTitle": "Send {label} back",

@@ -21,6 +21,7 @@
  * somebody else can spend the same panels (D12).
  */
 
+import { dispatchEvent } from "@/lib/dispatch-events";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -341,7 +342,7 @@ export async function requestDispatchAction(
       const label = dispatchLabel(row.number);
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "dispatch.request",
+        action: dispatchEvent("request"),
         recordType: "dispatch",
         recordId: row.id,
         details: { quotationId: quotation.id, lines: asked.length },
@@ -445,7 +446,7 @@ export async function updateDispatchAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "dispatch.update",
+        action: dispatchEvent("update"),
         recordType: "dispatch",
         recordId: dispatch.id,
         details: { lines: asked.length },
@@ -532,7 +533,7 @@ export async function approveDispatchAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "dispatch.approve",
+        action: dispatchEvent("approve"),
         recordType: "dispatch",
         recordId: dispatch.id,
         details: { smacDispatchNumber: parsed.data.smacDispatchNumber },
@@ -626,7 +627,7 @@ export async function correctDispatchNumberAction(
 
         await tx.insert(auditLog).values({
           userId: actor.id,
-          action: "dispatch.correctNumber",
+          action: dispatchEvent("correctNumber"),
           recordType: "dispatch",
           recordId: dispatch.id,
           details: { from, to: parsed.data.smacDispatchNumber },
@@ -707,7 +708,7 @@ export async function refuseDispatchAction(
 
       await tx.insert(auditLog).values({
         userId: actor.id,
-        action: "dispatch.refuse",
+        action: dispatchEvent("refuse"),
         recordType: "dispatch",
         recordId: dispatch.id,
         details: { reason: parsed.data.reason },

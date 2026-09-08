@@ -26,7 +26,6 @@
   "numberCorrected": "تم تصحيح رقم {label}",
   "sameNumber": "هذا هو الرقم الحالي.",
   "noNumberYet": "عرض السعر لا يحمل رقم سماك قبل إصداره.",
-  "wasNumber": "سابقًا {number}",
   "issued": "تم إصدار {label}",
   "sendBack": "إعادة للتعديل",
   "sendBackTitle": "إعادة {label} للتعديل",

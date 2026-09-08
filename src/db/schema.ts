@@ -506,6 +506,19 @@ export const dispatches = pgTable(
       sql`(${t.smacDispatchNumber} is not null) = (${t.status} = 'approved')`,
     ),
     check("dispatches_refused_check", sql`(${t.refuseReason} is not null) = (${t.status} = 'refused')`),
+    // Raised, and THEN approved. The demo built the two instants on two clocks —
+    // working days back from today for the raising, a fixed day of this month for
+    // the approval, because a month is counted from approvals — and past the first
+    // days of a month the ladder overtakes the fixed day, so two seeded dispatches
+    // were approved the day before they were asked for. Nothing read them in order
+    // until P11J put a trail on the drawer, and then its first line said
+    // "Approved" over "Requested". The app cannot write this; a seed, a migration
+    // or the import that will exist next year can, which is what the rest of this
+    // table's checks are for.
+    check(
+      "dispatches_approved_after_created_check",
+      sql`${t.approvedAt} is null or ${t.approvedAt} >= ${t.createdAt}`,
+    ),
   ],
 );
 

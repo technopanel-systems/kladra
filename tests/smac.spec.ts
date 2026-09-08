@@ -126,7 +126,7 @@ test("the coordinator corrects a number in place, and the trail keeps the old on
     await expect(sheet.getByText(fresh, { exact: true })).toBeVisible(COLD);
     const line = sheet.locator('[data-event="correctNumber"]');
     await expect(line).toContainText(t("quotations.event.correctNumber"));
-    await expect(line).toContainText(t("quotations.wasNumber", { number: target.smac_number }));
+    await expect(line).toContainText(t("common.wasNumber", { number: target.smac_number }));
 
     const row = await one<{ smac_number: string; status: string; issued_at: string }>(
       "select smac_number, status, issued_at::text as issued_at from quotations where id = $1::uuid",
@@ -197,6 +197,15 @@ test("the same on an approved dispatch, whose month does not move", async ({ pag
     await ask.getByRole("button", { name: t("dispatches.correctNumber") }).click();
     await expect(page.getByText(t("dispatches.numberCorrected", { label }))).toBeVisible(COLD);
     await expect(sheet.getByText(fresh, { exact: true })).toBeVisible(COLD);
+    // The number it used to carry, under the correction — the one line the
+    // dispatch trail draws that no other event on it draws, and the hint in
+    // the dialog promises it in both languages (D88, D143). The quotation
+    // twin of this test has asserted the same two lines since P9.
+    const line = sheet.locator('[data-event="correctNumber"]');
+    await expect(line).toContainText(t("dispatches.event.correctNumber"));
+    await expect(line).toContainText(
+      t("common.wasNumber", { number: target.smac_dispatch_number }),
+    );
 
     const row = await one<{ smac_dispatch_number: string; status: string; approved_at: string }>(
       `select smac_dispatch_number, status, approved_at::text as approved_at
