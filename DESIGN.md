@@ -650,6 +650,17 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   plain class never beat it; the stated height was fiction for a whole box. The utility that
   has to win over the kit says so with `!`, and the figure is the company drawer's, 88.
 
+- **A control reports a change only when something changed.** Phase 12 (D146). Every option in a
+  picker is pressable, the chosen one included — it wears a tick, and pressing what is already true
+  is an ordinary thing to do. `SearchableSelect` called `onChange` for it anyway, and the handlers
+  above it read that word literally: the dispatch dialog threw away the items it had loaded for
+  that quotation, then set the same value back. React bails on a setState that changes nothing, so
+  the effect that reloads them saw every dependency compare equal, and the rep watched a skeleton
+  that had nothing left to arrive. The guard is one line in the control rather than nine in its
+  callers, because a caller that clears what it derived is doing the right thing — it is the word
+  "change" that has to be true. The same trap was live in the company form, where choosing the same
+  country again wiped the city under it.
+
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,

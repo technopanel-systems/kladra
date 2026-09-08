@@ -2206,3 +2206,18 @@ actually needed.
   layout rule once and `FilterChip` gains the one thing the private copy had, in the app's own
   words for the two tones; the four rows and the five chips are one of each.
   `tests/filters.spec.ts` asks the pixels, so a sixth copy is a different height and fails.
+
+- [x] 154 **A picker said something had changed when nothing had, and the dialog waited for ever.**
+  Reported by a rep in the first real use (P12): raise a dispatch, choose a quotation, choose again,
+  and the dialog hangs. Reading found the exact sequence and it is not the dispatch screen's fault.
+  Every option in the list is pressable, the chosen one included — it wears a tick, and pressing what
+  is already true is ordinary. `SearchableSelect` called `onChange` for it, and the dialog's handler
+  read the word literally: it cleared the items it had loaded for that quotation, then set the same
+  value back. React bails on a setState that changes nothing, so the effect that reloads them found
+  every dependency equal, never re-ran, and the gate that swaps the skeleton for the form could never
+  come true again. Only closing the dialog recovered it. Nine fields are built on the control and a
+  second one had it live: choosing the same country again in the company form wiped the city under
+  it, which would have filed a company in Dubai under Riyadh had the rep not noticed. Fix: the
+  control reports a change only when the value is not the one it holds (D146), one line where the
+  word is said rather than nine where it is believed. `tests/picking.spec.ts` presses the same option
+  twice in both places.

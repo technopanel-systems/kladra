@@ -131,10 +131,26 @@ export function SearchableSelect({
     };
   }, [options, search, allowCustom]);
 
+  /**
+   * Picking closes the list and clears the search, whatever was picked, and
+   * reports a CHANGE only when the value actually changed (D146).
+   *
+   * A rep opened the dispatch dialog, picked a quotation, opened the list again
+   * and pressed the same one — it wears a tick, and pressing what is already
+   * true is an ordinary thing to do. Its handler cleared the items it had
+   * loaded for that quotation and then set the same value back; React bailed on
+   * the setState, so every dependency of the effect that reloads them compared
+   * equal, nothing re-ran, and the form waited for ever on a skeleton with
+   * nothing left to arrive. The picker was the one that said something had
+   * changed when nothing had. Nine fields are built on this control, and the
+   * company form had the same trap live: choosing the same country again wiped
+   * the city underneath it.
+   */
   function choose(next: string) {
-    onChange(next);
     setSearch("");
     setOpen(false);
+    if (next === value) return;
+    onChange(next);
   }
 
   function onOpenChange(next: boolean) {
