@@ -138,6 +138,20 @@ export function holdsFloor(role: Role): boolean {
 }
 
 /**
+ * May this person put somebody else on a company or a project of his?
+ *
+ * Its owner, because inviting help with his own customer is his call, and the
+ * manager and the admin for anybody's. Deliberately not the same answer as
+ * handing over (D147): a handover changes whose metres these are and belongs to
+ * the sales manager alone (SPEC §3), while a share changes who else can see and
+ * work, and takes nothing from the person who grants it.
+ */
+export function mayShare(user: SessionUser, ownerId: string): boolean {
+  if (user.viewedBy) return false;
+  return ownerId === user.id || user.role === "manager" || user.role === "admin";
+}
+
+/**
  * May this person move a company to somebody else's floor?
  *
  * Its owner, so marketing can hand a lead to the rep who will price it — the

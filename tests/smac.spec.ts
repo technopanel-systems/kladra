@@ -283,6 +283,10 @@ test("a phone already on the company is refused by name, not as 'something went 
        from companies c
        join contacts ct on ct.company_id = c.id and ct.archived_at is null
       where c.rep_id = $1::uuid and c.archived_at is null and ct.phone_normalized is not null
+        -- HIS contact, not merely one on his company: since P12 the phone is
+        -- unique per rep per company (drizzle/0014_who_else_is_on_it.sql), so
+        -- a number another rep holds here is not a number Faisal is refused.
+        and ct.rep_id = $1::uuid
       order by c.created_at desc limit 1`,
     [faisal],
   );

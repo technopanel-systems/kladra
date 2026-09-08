@@ -20,8 +20,8 @@ import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import { personName } from "@/lib/people";
 import { cities, companies, projects, users } from "@/db/schema";
-import { type ActivityRow, listActivitiesForProject, mayOpen } from "@/lib/activities";
-import { NotAllowed, seesAll } from "@/lib/authz";
+import { type ActivityRow, listActivitiesForProject } from "@/lib/activities";
+import { NotAllowed } from "@/lib/authz";
 import type { Day } from "@/lib/dates";
 import {
   type FollowUpFilter,
@@ -32,6 +32,12 @@ import {
 } from "@/lib/followups";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
+import {
+  maySeeCompany,
+  onCompanySql,
+  onProjectSql,
+  seesCompany,
+} from "@/lib/visibility";
 
 export type ProjectRow = {
   id: string;
@@ -129,7 +135,7 @@ function narrowTo(input: ListProjectsInput): (SQL | undefined)[] {
   const conditions: (SQL | undefined)[] = [
     isNull(projects.archivedAt),
     isNull(companies.archivedAt),
-    seesAll(user) ? undefined : eq(companies.repId, user.id),
+    seesCompany(user),
   ];
 
   if (term) {
@@ -185,6 +191,12 @@ export type ProjectDetail = ProjectRow & {
   notes: string | null;
   archivedAt: Date | null;
   createdAt: Date;
+  /** Whose job it is — only he edits the project row itself (D147). */
+  repId: string;
+  /** Whether this reader is on it, and therefore works it. */
+  onProject: boolean;
+  /** Whether this reader is on the company over it, and therefore reads it. */
+  shared: boolean;
   company: {
     id: string;
     name: string;
@@ -228,6 +240,11 @@ export async function getProject(
       }, ${companies.cityText})`,
       companyRepId: companies.repId,
       companyRepName: personName(label),
+      shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+      // Whose job it is, and whether this reader is on it (D147): seeing the
+      // customer and working the job are two different permissions.
+      repId: projects.repId,
+      onProject: onProjectSql(user, sql`projects.id`).mapWith(Boolean),
       companyNextFollowUp: companies.nextFollowUp,
     })
     .from(projects)
@@ -238,7 +255,7 @@ export async function getProject(
     .limit(1);
 
   if (!row) return null;
-  if (!mayOpen(user, row.companyRepId)) throw new NotAllowed();
+  if (!maySeeCompany(user, row.companyRepId, row.shared)) throw new NotAllowed();
 
   return {
     id: row.id,
@@ -253,6 +270,9 @@ export async function getProject(
     notes: row.notes ?? null,
     archivedAt: row.archivedAt ?? null,
     createdAt: row.createdAt,
+    repId: row.repId,
+    onProject: row.onProject,
+    shared: row.shared,
     company: {
       id: row.companyId,
       name: row.companyName,

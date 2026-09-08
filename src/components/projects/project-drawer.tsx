@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { LogDialogHost } from "@/components/activities/log-dialog";
 import { ActivityList } from "@/components/activities/activity-list";
 import { ProjectSheet } from "@/components/projects/projects-table";
+import { ShareProjectDialog } from "@/components/projects/share-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,11 @@ import { z } from "zod";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
-import { mayQuote, mayWrite } from "@/lib/floor";
+import { mayShare, mayWrite } from "@/lib/floor";
+import { floorHolderOptions } from "@/lib/pickers";
 import { getProject } from "@/lib/projects";
+import { projectSharers } from "@/lib/shares";
+import { mayRaiseFor, mayWorkProject } from "@/lib/visibility";
 import { projectStanding } from "@/lib/standing";
 import { listQuotationsForProject } from "@/lib/quotations";
 
@@ -68,17 +72,51 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   ]);
 
   /**
-   * Whose floor this project sits on. A manager and an admin open everybody's
-   * and work none (S8, D42), which is the same answer the actions give — so the
-   * drawer offers no work the server would refuse (DESIGN §5).
+   * Two questions about this job, and they stopped having one answer in P12
+   * (D147).
+   *
+   * WORKING it — logging against it, moving its follow-up date, raising a
+   * quotation or a dispatch on it — belongs to its own rep and to everybody it
+   * has been shared with: a shared project is a worked project. That is what
+   * `assertProjectMine` asks, so the drawer offers exactly what the actions
+   * allow (DESIGN §5).
+   *
+   * OWNING the row — renaming it, marking it lost, archiving it — belongs to
+   * whoever added it and to nobody else, because an item belongs to its author
+   * (SPEC §3). A helper on a job does not close it.
+   *
+   * Neither is the company's rep any more: a project can sit on a customer
+   * whose floor is somebody else's, and seeing the customer is not working the
+   * job. A manager and an admin open everybody's and work none (S8, D42).
    */
-  const mine = mayWrite(user, project.company.repId);
+  const mine = mayWorkProject(user, project.repId, project.onProject);
+  const owns = mayWrite(user, project.repId);
+
+  /*
+   * Who else is on this job, and whether this reader may change that. Read for
+   * everybody, because the drawer says it in words to every reader — a rep put
+   * on a colleague's job has to be able to see that he is on it, and so does
+   * the manager reading the floor.
+   *
+   * `floorHolderOptions` takes the project's own rep off the picker; everybody
+   * already on it comes off too, so it never offers a share the action would
+   * answer "It is already theirs" to.
+   */
+  const sharers = await projectSharers(project.id);
+  const shareWith = mayShare(user, project.repId)
+    ? (await floorHolderOptions(project.repId, (role) => t(`common.${role}`))).filter(
+        (option) => !sharers.some((person) => person.id === option.value),
+      )
+    : null;
 
   // A lost project is finished work (S20): nothing new is raised against it,
   // so the button is not there rather than there and refusing (DESIGN §5).
   // Marketing works a lead like a rep and stops at the price: quoting is the
   // sales conversation, and it belongs to whoever the lead was handed to (P8.9).
-  const requestTrigger = project.lostAt || !mayQuote(user, project.company.repId) ? null : (
+  // Two ways in (D147): the customer is his, or the job is one he was put on —
+  // the same sentence `requestQuotationAction` guards itself with.
+  const mayRaise = mayRaiseFor(user, project.company.repId, project.repId, project.onProject);
+  const requestTrigger = project.lostAt || !mayRaise ? null : (
     <RequestQuotationDialog
       companyId={project.companyId}
       projectId={project.id}
@@ -95,7 +133,10 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
         [project.companyId]: {
           companyName: project.companyName,
           contacts: contacts.map((row) => ({ id: row.id, name: row.name })),
-          projects,
+          // An entry that names a project is guarded by the project, not the
+          // company (`assertProjectMine`, D147), so the picker offers the other
+          // jobs at this customer only where this reader works them.
+          projects: projects.filter((row) => mayWorkProject(user, row.repId, row.onProject)),
         },
       }}
     >
@@ -113,6 +154,38 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       lostReason={project.lostReason}
       notes={project.notes}
       mine={mine}
+      owns={owns}
+      // Who else is on it, in words for every reader, with the control that
+      // changes it beside the fact it is about (DESIGN §5). The dialog draws
+      // nothing at all for a reader who neither grants a share nor is on one.
+      sharing={
+        sharers.length > 0 || shareWith ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            {sharers.length > 0 ? (
+              <p className="min-w-0 text-xs text-muted-foreground">
+                {t("drawer.share.onProject")}:{" "}
+                {sharers.map((person, index) => (
+                  <span key={person.id}>
+                    {index > 0 ? (
+                      <span aria-hidden="true" className="text-faint">
+                        {" · "}
+                      </span>
+                    ) : null}
+                    <bdi>{person.name}</bdi>
+                  </span>
+                ))}
+              </p>
+            ) : null}
+            <ShareProjectDialog
+              projectId={project.id}
+              projectName={project.name}
+              sharers={sharers}
+              people={shareWith}
+              me={user.id}
+            />
+          </div>
+        ) : null
+      }
       // The request button is in ONE position, whatever the list under it says.
       // Rendered inside the empty branch it was destroyed by the save that
       // filled the list, and the dialog's success handler — the toast, and the

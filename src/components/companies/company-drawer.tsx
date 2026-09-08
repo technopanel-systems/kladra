@@ -28,10 +28,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { listActivitiesForCompany } from "@/lib/activities";
-import { mayHandOver, mayQuote, mayWrite } from "@/lib/floor";
+import { mayHandOver, mayQuote, mayShare, mayWrite } from "@/lib/floor";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany, type CompanyDetail } from "@/lib/companies";
 import { floorHolderOptions } from "@/lib/pickers";
+import { companySharers } from "@/lib/shares";
+import { mayKeepContacts, mayRaiseFor, mayWorkProject } from "@/lib/visibility";
 import { listQuotationsForCompany } from "@/lib/quotations";
 import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
@@ -128,27 +130,68 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   // it while an admin is viewing as somebody (D42, P8.8).
   const mine = mayWrite(user, company.repId);
 
-  // Who this customer belongs to is the manager's question as much as the
-  // owner's (D50). The list is read only when somebody may act on it, so a rep
-  // reading a colleague's company costs nothing.
-  const handOverTo = mayHandOver(user, company.repId)
-    ? await floorHolderOptions(company.repId, (role) => t(`common.${role}`))
+  /*
+   * The two questions about belonging, and who may answer each (D50, D147).
+   *
+   * Who this customer BELONGS to is the manager's question as much as the
+   * owner's; who else is ON it is granted by the same three people and means
+   * something else entirely. They are separate predicates on purpose — a
+   * handover moves the metres and a share does not — and they happen to want
+   * the same list of people, which is read once rather than twice.
+   *
+   * Who is on it is read for EVERY reader, because the header says it in words
+   * to every reader: a rep put on a colleague's customer has to be able to see
+   * that he is on it.
+   */
+  const canHandOver = mayHandOver(user, company.repId);
+  const canShare = mayShare(user, company.repId);
+  const sharers = await companySharers(company.id);
+  const floorHolders =
+    canHandOver || canShare
+      ? await floorHolderOptions(company.repId, (role) => t(`common.${role}`))
+      : [];
+  const handOverTo = canHandOver ? floorHolders : null;
+  // Its rep is already off this list; everybody on it comes off too, so the
+  // picker never offers a share the action would answer "It is already theirs"
+  // to (DESIGN §5).
+  const shareWith = canShare
+    ? floorHolders.filter((option) => !sharers.some((person) => person.id === option.value))
     : null;
+
+  /**
+   * The one thing a company share carries besides reading: his own contacts on
+   * it (SPEC §3, D147). Adding is `mayKeepContacts` — its rep, or anybody it is
+   * shared with — and changing one is a different question with a different
+   * answer, asked per row below: a contact belongs to whoever added him.
+   */
+  const keepsContacts = mayKeepContacts(user, company.repId, company.shared);
 
   const contacts: readonly CompanyContact[] = company.contacts;
   const projects: readonly CompanyProject[] = company.projects;
   const logContacts: LogContact[] = contacts.map((row) => ({ id: row.id, name: row.name }));
   const quotations = await listQuotationsForCompany(user, company.id);
-  // A lost project is closed (SPEC S20); nothing new is logged against it.
+  // A lost project is closed (SPEC S20); nothing new is logged against it. And
+  // an entry that names a project is guarded by the project, not the company
+  // (`assertProjectMine`, D147), so the picker offers only the jobs this reader
+  // actually works — its own rep, or somebody put on it.
   const logProjects: LogProject[] = projects
-    .filter((row) => !row.lostAt)
+    .filter((row) => !row.lostAt && mayWorkProject(user, row.repId, row.onProject))
     .map((row) => ({ id: row.id, name: row.name }));
-  // The same open projects, for the quotation the drawer raises: every
-  // quotation belongs to one (S18, D94), so the dialog asks which.
-  const quotationProjects = logProjects.map((row) => ({
-    value: projectOptionValue(row.id, company.id),
-    label: row.name,
-  }));
+  /*
+   * The open projects this reader may raise a quotation ON: every quotation
+   * belongs to one (S18, D94), so the dialog asks which, and there are two ways
+   * in now — the customer is his, or the job is one he was put on (D147).
+   *
+   * The same sentence `requestQuotationAction` guards itself with, asked per
+   * row, so the picker never offers a job the action would refuse and never
+   * hides one it would allow (DESIGN §5).
+   */
+  const quotationProjects = projects
+    .filter((row) => !row.lostAt && mayRaiseFor(user, company.repId, row.repId, row.onProject))
+    .map((row) => ({
+      value: projectOptionValue(row.id, company.id),
+      label: row.name,
+    }));
 
   const addContactTrigger = (
     <Button variant="outline">
@@ -206,6 +249,9 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         standing={company.standing}
         mine={mine}
         handOverTo={handOverTo}
+        sharers={sharers}
+        shareWith={shareWith}
+        me={user.id}
       />
 
       <Tabs defaultValue="activity" className="gap-3 px-4 py-3">
@@ -231,7 +277,10 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="contacts" className="flex flex-col gap-3">
-          {mine ? (
+          {/* Not `mine`: two reps on one customer have each met people there,
+              and the same person on both lists is not a duplicate (SPEC §3).
+              This is the one write a company share carries. */}
+          {keepsContacts ? (
             <div className="flex">
               <AddContactDialog
                 companyId={company.id}
@@ -245,7 +294,14 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           ) : (
             <>
               <ul className="flex flex-col gap-2">
-                {contacts.map((row) => (
+                {contacts.map((row) => {
+                  // A contact belongs to whoever added him, and only he edits,
+                  // archives or makes him the main one — the same answer
+                  // `assertContactMine` gives, so a shared company offers
+                  // nothing on the other rep's rows that the action would
+                  // refuse (D147, DESIGN §5).
+                  const myContact = mayWrite(user, row.repId);
+                  return (
                   <li key={row.id} className="card-face flex flex-col gap-1.5 p-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{row.name}</span>
@@ -254,14 +310,15 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                           <Star aria-hidden="true" />
                           {t("drawer.mainContact")}
                         </Badge>
-                      ) : mine ? (
+                      ) : myContact ? (
                         <MakeMainButton contactId={row.id} name={row.name} />
                       ) : null}
                       {/* Pushed to the far edge: a rep reads the name and the
                           number, and only occasionally comes here to change
                           one. A manager reading the floor gets the name and the
-                          number and nothing to press (D42). */}
-                      {mine ? (
+                          number and nothing to press (D42), and so does a rep
+                          reading the row his colleague added (D147). */}
+                      {myContact ? (
                       <span className="ms-auto flex items-center gap-1">
                         <EditContactDialog
                           country={company.countryCode}
@@ -320,7 +377,8 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                       ) : null}
                     </div>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </>
           )}
@@ -403,8 +461,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
 
         <TabsContent value="quotations" className="flex flex-col gap-3">
           {/* Quoting is the sales conversation: marketing works the lead and
-              hands it on, so it owns this company and does not price it (P8.9). */}
-          {mayQuote(user, company.repId) && quotationProjects.length > 0 ? (
+              hands it on, so it owns this company and does not price it (P8.9).
+              The list already carries that answer per job (D147), so a rep put
+              on one project of somebody else's customer gets the button here
+              too, with only that job in its picker. */}
+          {quotationProjects.length > 0 ? (
             <div className="flex">
               <RequestQuotationDialog
                 companyId={company.id}

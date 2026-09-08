@@ -18,19 +18,29 @@
  * src/actions/forms.ts, over the one matcher in src/lib/companies.ts.
  */
 
-import { and, eq, gte, isNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { auditLog, cities, companies, contacts, countries, users } from "@/db/schema";
+import {
+  auditLog,
+  cities,
+  companies,
+  companyShares,
+  contacts,
+  countries,
+  projectShares,
+  projects,
+  users,
+} from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { FLOOR_ROLES, holdsFloor, mayHandOver } from "@/lib/floor";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
-import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { liveAudienceFor, liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { createNotification } from "@/lib/notify";
 import { SAUDI_CODE } from "@/lib/lookups";
 import { isSaudi, normalizePhone } from "@/lib/phone";
@@ -266,6 +276,7 @@ export async function createCompanyAction(
 
       await tx.insert(contacts).values({
         companyId: company.id,
+        repId: actor.id,
         name: input.contactName,
         phone: input.contactPhone,
         phoneNormalized,
@@ -323,7 +334,7 @@ export async function updateCompanyAction(
     }
     const input = parsed.data;
 
-    const { repId } = await assertCompanyMine(actor, input.companyId);
+    await assertCompanyMine(actor, input.companyId);
     const place = await resolvePlace(input.countryId, input.cityId, input.cityText, t);
     if (!place.ok) return { ok: false, error: tc("invalid"), fieldErrors: place.fieldErrors };
 
@@ -349,7 +360,7 @@ export async function updateCompanyAction(
         details: { name: input.name },
       });
 
-      await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+      await notifyLive(tx, await liveAudienceForCompany(input.companyId, actor.id), {
         type: "company",
         id: input.companyId,
       });
@@ -378,7 +389,7 @@ export async function setCompanyFollowUpAction(
       return { ok: false, error: tc("notADate"), fieldErrors: { nextFollowUp: tc("notADate") } };
     }
 
-    const { repId, archived } = await assertCompanyMine(actor, id.data);
+    const { archived } = await assertCompanyMine(actor, id.data);
     // A date on an archived company would chase a row that appears on no list.
     if (archived) return { ok: false, error: t("companyArchived") };
 
@@ -394,7 +405,7 @@ export async function setCompanyFollowUpAction(
         recordId: id.data,
         details: { nextFollowUp: parsedDay.data },
       });
-      await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+      await notifyLive(tx, await liveAudienceForCompany(id.data, actor.id), {
         type: "company",
         id: id.data,
       });
@@ -413,11 +424,13 @@ export async function setCompanyFollowUpAction(
  * before this, deactivating an account took its companies out of sight for
  * good, because every list is scoped by `companies.rep_id`.
  *
- * Which is exactly why the whole floor moves in one statement and nothing else
- * has to: the projects, the quotations, the dispatches and the achieved metres
- * are all read through that one column (S8, and the note on `achievedByRep`).
- * The log does not move — an activity records who did it, and rewriting that
- * would be rewriting the report (S27).
+ * What travels is the customer and the work under him: the company, and since
+ * P12 the departing rep's projects and contacts as well, because those now say
+ * whose they are (D147) and a company that arrives without its people is a
+ * customer the new owner cannot phone. The quotations, the dispatches and the
+ * achieved metres do NOT travel — they are read by who raised them (D86, the
+ * note on `achievedByRep`) — and neither does the log, because an activity
+ * records who did it and rewriting that would be rewriting the report (S27).
  *
  * Both sides are told. The new owner gets a notification, because a company
  * appearing on his floor with a follow-up already on it is news; the audit row
@@ -472,6 +485,93 @@ export async function handOverCompanyAction(
         .set({ repId: target.id })
         .where(eq(companies.id, company.id));
 
+      // What was his under this customer goes with it. D51 said the whole floor
+      // travels because everything was read through `companies.rep_id`; since
+      // P12 a project and a contact say whose they are (D147), so moving the
+      // company alone would leave the man who left still holding the jobs and
+      // the new owner unable to touch them. Only HIS rows move: on a shared
+      // company a third rep's project stays his, because a handover is not a
+      // way to take somebody else's work.
+      const moved = await tx
+        .update(projects)
+        .set({ repId: target.id })
+        .where(and(eq(projects.companyId, company.id), eq(projects.repId, from)))
+        .returning({ id: projects.id });
+
+      // A contact belongs to a rep since P12, so the man receiving the company
+      // may already hold his OWN row for the same person on it — which is the
+      // case sharing exists for, and not a duplicate (D147). Moving the
+      // departing rep's row onto him would break two unique indexes at once:
+      // one number per rep per company, and one main contact per rep per
+      // company. It reached the manager as "something went wrong" and the
+      // hand-over quietly did not happen (#159).
+      //
+      // The row that stands is the one the new owner wrote himself. The
+      // arriving duplicate is archived rather than deleted (S16) and stays
+      // with the rep who wrote it, because an archived row is history and
+      // history keeps its author (D153).
+      const alreadyHis = await tx
+        .select({ phoneNormalized: contacts.phoneNormalized, isMain: contacts.isMain })
+        .from(contacts)
+        // Archived ones too: the unique index does not exempt them, so a
+        // number he once held here is still a number that cannot arrive.
+        .where(and(eq(contacts.companyId, company.id), eq(contacts.repId, target.id)));
+
+      const taken = alreadyHis
+        .map((row) => row.phoneNormalized)
+        .filter((phone): phone is string => Boolean(phone));
+      if (taken.length > 0) {
+        await tx
+          .update(contacts)
+          .set({ archivedAt: new Date() })
+          .where(
+            and(
+              eq(contacts.companyId, company.id),
+              eq(contacts.repId, from),
+              isNull(contacts.archivedAt),
+              inArray(contacts.phoneNormalized, taken),
+            ),
+          );
+      }
+
+      await tx
+        .update(contacts)
+        .set({
+          repId: target.id,
+          // He already has a main contact here, and a company has one per rep:
+          // the arriving people are his now, and none of them displaces the
+          // person he had already picked (D18).
+          ...(alreadyHis.some((row) => row.isMain) ? { isMain: false } : {}),
+        })
+        // Live rows only. An archived contact is a record of who the rep was
+        // talking to, and it reads with his name on it wherever it still reads.
+        .where(
+          and(
+            eq(contacts.companyId, company.id),
+            eq(contacts.repId, from),
+            isNull(contacts.archivedAt),
+          ),
+        );
+
+      // And he is not left sharing what he now owns — the company, and every
+      // job under it that has just become his.
+      await tx
+        .delete(companyShares)
+        .where(and(eq(companyShares.companyId, company.id), eq(companyShares.userId, target.id)));
+      if (moved.length > 0) {
+        await tx
+          .delete(projectShares)
+          .where(
+            and(
+              inArray(
+                projectShares.projectId,
+                moved.map((row) => row.id),
+              ),
+              eq(projectShares.userId, target.id),
+            ),
+          );
+      }
+
       await tx.insert(auditLog).values({
         userId: actor.id,
         action: "company.handOver",
@@ -493,7 +593,11 @@ export async function handOverCompanyAction(
 
       // Both floors changed, so both are told, and so is everybody who reads
       // the team screen.
-      const audience = new Set([...(await liveAudienceFor(from, actor.id)), target.id]);
+      const audience = new Set([
+        ...(await liveAudienceForCompany(company.id, actor.id)),
+        from,
+        target.id,
+      ]);
       await notifyLive(tx, [...audience], {
         type: "company",
         id: company.id,
@@ -525,7 +629,7 @@ export async function archiveCompanyAction(companyId: unknown, reason: unknown):
       return { ok: false, error: sentence, fieldErrors: { reason: sentence } };
     }
 
-    const { repId } = await assertCompanyMine(actor, id.data);
+    await assertCompanyMine(actor, id.data);
 
     const archived = await db.transaction(async (tx) => {
       const rows = await tx
@@ -542,7 +646,7 @@ export async function archiveCompanyAction(companyId: unknown, reason: unknown):
         recordId: id.data,
         details: { reason: why.data },
       });
-      await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+      await notifyLive(tx, await liveAudienceForCompany(id.data, actor.id), {
         type: "company",
         id: id.data,
       });

@@ -154,6 +154,13 @@ export type CompanySeed = {
   country?: string;
   cityText?: string;
   notes?: string;
+  /**
+   * Other reps this company is shared with (SPEC §3, D147). They read all of
+   * it and keep their own contacts on it. One company carries this so the
+   * "who else is on it" line is not a screen nobody has ever seen with a row
+   * in it.
+   */
+  sharedWith?: RepKey[];
   /** The first one is the main contact (SPEC D18). */
   contacts: ContactSeed[];
   /**
@@ -184,6 +191,10 @@ export const COMPANIES: CompanySeed[] = [
     key: "f2",
     name: "شركة أنماء للمقاولات",
     rep: "faisal",
+    // Saad reads this one with him: the customer's Riyadh office buys through
+    // Faisal and the Eastern site is Saad's, which is the case sharing exists
+    // for (SPEC §3).
+    sharedWith: ["saad"],
     category: "Contractor",
     source: "Direct contact",
     city: "Riyadh",
@@ -517,6 +528,8 @@ export type ProjectSeed = {
   key: string;
   company: string;
   name: string;
+  /** Reps working this job besides its owner (SPEC §3, D147). */
+  sharedWith?: RepKey[];
   /** numeric(12,2) — a string, always, so nothing rounds on the way in. */
   expectedSqm: string;
   notes?: string;
@@ -535,6 +548,10 @@ export const PROJECTS: ProjectSeed[] = [
     key: "p2",
     company: "f2",
     name: "برج مكاتب طريق الملك فهد",
+    // The one job two reps are on: Saad works it with Faisal, so the screens
+    // that say who is credited what have a row that is not one person's
+    // (SPEC §3, D147).
+    sharedWith: ["saad"],
     expectedSqm: "2400.00",
     notes: "توريد وتركيب، اللون نحاسي",
   },

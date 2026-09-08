@@ -136,7 +136,7 @@
       - [ ] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
             visible wherever the m² is, and no metre counted twice
       - [ ] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
-      - [ ] 6 The three-tab shell, empty: today's work · metrics · the team
+      - [x] 6 The three-tab shell: today's work · metrics · the team
       - [ ] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
             and what an unacknowledged one looks like after two days
       - [ ] 8 Duplicate review: the customer number, the name rules in both languages, the
@@ -736,6 +736,21 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 6. The quotation now has that much less left to send.
 7. Raising a second dispatch against the same quotation opens on the first one's destination, terms and shipment method, with every quantity box empty (D81).
 8. Second test: a request for more than a line has left is refused at the field as it is typed, and refused again by the action — the second one is the enforcement that counts.
+
+**The metrics tab (P12)** — `tests/metrics.spec.ts`
+1. Faisal's day opens on his work: the report line if he owes one, his month, what is waiting on him, then the calls. The six-month bars are not on it.
+2. He presses Metrics. The bars are there, and beside them where his quarter's metres went by kind of customer, largest first, each row saying what share of the metres on the screen it is.
+3. The three windows are chips and the middle one is live on arrival: this month · the last three months · this year. Pressing one changes every figure on the tab, and the address changes with it, so the link he copies opens on what he was reading.
+4. He signs out; Abdulrahman opens the same tab and sees the whole company, plus one chip per selling person. Picking Faisal gives back exactly the figures Faisal saw for the same window — the same question asked of the same rows, from two screens.
+5. Every figure on the tab carries a sentence saying what it is a share OF, and no figure on it is one somebody typed.
+
+**Two reps on one customer (P12)** — `tests/sharing.spec.ts`
+1. Faisal opens Anmaa and puts Saad on it. Saad is told, and the drawer says who else is on it.
+2. Saad, who has never seen this customer, opens it from his own list: the whole company, its contacts, its projects, its quotations and its dispatches, all readable and none of them his.
+3. Saad adds his own contact at that customer — the same person Faisal already holds, because they have both met him — and it is his, beside Faisal's, and neither is a duplicate. Faisal's main contact stays Faisal's; Saad's is his own.
+4. Saad tries the work he has not been given: no project of his own on that company, no log against it, no quotation. The buttons are not there, and the actions refuse it.
+5. Faisal puts Saad on the tower. Now Saad raises a quotation on it, and it is his; Faisal sees it and cannot edit it.
+6. Faisal takes Saad off the company. The tower goes with it — a job he cannot see the customer of would be a permission pointing at nothing — and Saad's own contact and his own quotation stay exactly where they are, because they are records of work that happened.
 
 Faisal's Home target card (the old step 4) lands with P6, which is where the card exists.
 
@@ -2221,3 +2236,71 @@ actually needed.
   control reports a change only when the value is not the one it holds (D146), one line where the
   word is said rather than nine where it is believed. `tests/picking.spec.ts` presses the same option
   twice in both places.
+
+- [x] 155 **A handover moved the company and left the work behind.** Found while building P12-3,
+  by the agent that was writing the drawers rather than by the one that wrote the rule — it read
+  what the new write gate would refuse and saw that a rep handed a customer could not touch a
+  single project on it. Cause: D51 moved `companies.rep_id` alone, and that was complete while
+  every read went through that one column. P12 gave a project and a contact an owner of their own
+  (D147), so the same statement now leaves the man who left holding the jobs and the new owner
+  holding nothing. Fix: the handover moves the projects and the contacts THAT REP owned, and only
+  his — on a shared company a third rep's project stays his, because a handover is not a way to
+  take somebody else's work — and it drops the incoming rep's own share of the company he now
+  owns, so nobody is left sharing what is his. Walked in `tests/sharing.spec.ts`.
+
+- [x] 156 **A share check that was false for ever, and the screen that offered what it refused.**
+  Found by `tests/sharing.spec.ts` on the slice that introduced it: a rep put on a job was shown the
+  Request quotation button and told "you are not allowed to do that" when he pressed it. The cause
+  is in rules/data.md, written down after it happened three times in FACET, and it happened again
+  here: a Drizzle column handed to a `sql` template keeps its table qualifier only while the outer
+  query joins something. The project drawer's read joins a company, so `projects.id` stayed
+  qualified and the share was found; the action's read has a single FROM, so the same expression
+  rendered bare, resolved inside the subquery, and asked whether a share row points at its own id.
+  Never true, no error, no row. Fix at the shape rather than at the site: the two share fragments
+  take a written fragment and no longer accept a column at all, so the compiler refuses the trap,
+  and every call site names its table outright.
+- [x] 157 **Whose paper it is was still read off whose customer it is.** Found in the same walk. The
+  quotation drawer decided its whole action row with `mayQuote(user, companyRepId)` — edit, revise,
+  withdraw, record the customer's answer — and until a project could be shared that was the same
+  person as the raiser, so nothing was wrong. Sharing separated them and the flag broke both ways at
+  once: the rep who raised the quotation was offered none of his own buttons, and the rep whose
+  customer it was would have been offered all of somebody else's. SPEC §3 settles it in one line —
+  an item belongs to whoever created it, and only he edits it — so the drawer and the four actions
+  behind it ask `mayWrite(user, quotation.repId)` now. The lesson is the one D42 already wrote: when
+  two questions have had the same answer for a year, the day they stop is the day nobody notices.
+
+- [x] 158 **The dev server ate the machine again, and took a second acceptance run with it.**
+  §5 #68 was closed in P11J with a four-gigabyte ceiling on the test server. This is the same
+  failure on the other one: 3100 had no ceiling, grew to 3.9 GB across a long session of edits, and
+  when a full suite started beside it Windows took the memory back from both — the gate died thirty
+  minutes in and the founder's own audit copy died with it. Fix: `npm run dev` is `scripts/dev.ts`
+  now, the same fifteen lines `dev:test` has had since P11J, so both servers die by themselves and
+  say why rather than starving whatever else is running. No dependency added for it; `cross-env`
+  would have been a package to do what Node already does.
+
+- [x] 159 **The hand-over collided with the very thing sharing exists for.** Found by the gate, in
+  the shape a gate finds things: five failures across three files, none of them naming the cause. A
+  contact belongs to a rep since P12, so two men may hold the same person on one company and that
+  is not a duplicate — and then the manager hands that company to the second man, the first man's
+  people travel with it, and the same number arrives at somebody who already has it. Two unique
+  indexes refuse it at once: one number per rep per company, and one main contact per rep per
+  company. The transaction died, the manager read "something went wrong", and the hand-over silently
+  did not happen. Fix in `handOverCompanyAction`: the row that stands is the one the NEW owner wrote
+  himself, the arriving duplicate is archived where it is rather than deleted (S16) and keeps the
+  name of the rep who wrote it, and the people who do move arrive without the main flag when he has
+  already chosen a main contact. He is also no longer left sharing the projects he now owns.
+  `tests/sharing.spec.ts` builds the collision in one row and hands the company over through the
+  manager's own dialog.
+
+  **And the reason it took five failures to see one bug.** `tests/attribution.spec.ts` hands a
+  company over to prove that achieved metres do not move with it, and put back `companies.rep_id`
+  alone afterwards — true when a company was the only thing that moved, and false since P12. So it
+  left Faisal's contacts on Saad's floor for every file that ran after it: a duplicate phone that
+  was no longer a duplicate, a "his own contact" step where the contact was already his, and a Log
+  button the drawer was right to withhold. A spec that provokes a state change restores everything
+  that change touched, by ID, captured before it moved — `floorOfCompany` and `restoreCompanyFloor`
+  in `tests/helpers/db.ts`, one copy for every spec that hands a company over — and the walk that
+  leaves a contact and a quotation behind now takes them with it. The rule generalises past this
+  file: **when an action grows a second effect, every spec that undoes the first one is now
+  half-written**, and the failure lands in some other file, days later, wearing somebody else's
+  name.

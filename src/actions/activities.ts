@@ -22,12 +22,12 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { activities, auditLog, companies, contacts, projects } from "@/db/schema";
-import { assertCompanyMine } from "@/lib/activities";
+import { assertCompanyMine, assertProjectMine } from "@/lib/activities";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { parseDay, todayRiyadh, type Day } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { mayWriteFor } from "@/lib/reports";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
@@ -97,21 +97,22 @@ export async function logActivityAction(
     }
     const input = parsed.data;
 
-    const { repId, archived } = await assertCompanyMine(actor, input.companyId);
+    // Two ways to be allowed to write here, and which one is asked depends on
+    // what the entry is filed against (D147). An entry against a JOB is the
+    // work of that job, so anybody on it may write it. An entry against the
+    // customer alone is the company's own history, and that is its rep's.
+    const gate = input.projectId
+      ? await assertProjectMine(actor, input.projectId)
+      : { ...(await assertCompanyMine(actor, input.companyId)), companyId: input.companyId };
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.
-    if (archived) return { ok: false, error: t("companyArchived") };
+    if (gate.archived) return { ok: false, error: t("companyArchived") };
 
     // A named project and a named contact must belong to the company the entry
     // is filed under, or the log would claim something that never happened.
     if (input.projectId) {
-      const [row] = await db
-        .select({ id: projects.id })
-        .from(projects)
-        .where(and(eq(projects.id, input.projectId), eq(projects.companyId, input.companyId)))
-        .limit(1);
-      if (!row) {
+      if (gate.companyId !== input.companyId) {
         return {
           ok: false,
           error: t("projectNotAtCompany"),
@@ -216,7 +217,7 @@ export async function logActivityAction(
         },
       });
 
-      const audience = await liveAudienceFor(repId, actor.id);
+      const audience = await liveAudienceForCompany(input.companyId, actor.id);
       await notifyLive(tx, audience, { type: "company", id: input.companyId });
       if (input.projectId) {
         await notifyLive(tx, audience, { type: "project", id: input.projectId });
@@ -335,7 +336,7 @@ export async function editActivityAction(
 
       // A correction is news exactly as the entry was (D94): the manager's
       // open drawer and the day's figures move without a reload.
-      const audience = await liveAudienceFor(entry.repId, actor.id);
+      const audience = await liveAudienceForCompany(entry.companyId, actor.id);
       await notifyLive(tx, audience, { type: "company", id: entry.companyId });
       if (input.projectId) {
         await notifyLive(tx, audience, { type: "project", id: input.projectId });
@@ -390,7 +391,7 @@ export async function archiveActivityAction(
       });
 
       // Unfiled is news too (D94): every count that included it moves.
-      await notifyLive(tx, await liveAudienceFor(entry.repId, actor.id), {
+      await notifyLive(tx, await liveAudienceForCompany(entry.companyId, actor.id), {
         type: "company",
         id: entry.companyId,
       });
@@ -401,7 +402,7 @@ export async function archiveActivityAction(
   });
 }
 
-type Correctable = { companyId: string; repId: string; happenedOn: Day; text: string };
+type Correctable = { companyId: string; happenedOn: Day; text: string };
 
 /**
  * The one gate both corrections ask: it is his own entry, it is still filed,
@@ -431,11 +432,10 @@ async function mineToCorrect(
 
   if (!row || row.archivedAt) return { ok: false, error: t("activityNotFound") };
   if (row.userId !== actor.id) throw new NotAllowed();
-  const { repId } = await assertCompanyMine(actor, row.companyId);
+  await assertCompanyMine(actor, row.companyId);
 
   return {
     companyId: row.companyId,
-    repId,
     happenedOn: row.happenedOn as Day,
     text: row.text,
   };

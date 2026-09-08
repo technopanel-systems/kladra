@@ -18,7 +18,7 @@
  */
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, type Db, type Tx } from "@/db";
-import { users } from "@/db/schema";
+import { companies, companyShares, users } from "@/db/schema";
 import type { LiveEvent, Role } from "@/lib/types";
 
 /** The one LISTEN/NOTIFY channel. Both sides name it from here. */
@@ -74,16 +74,52 @@ export function parseLivePayload(raw: string): LivePayload | null {
  * `alsoRoles` adds the people a particular chain runs through — the coordinator
  * for a quotation or a dispatch, whose queue has to move without a refresh
  * (S9). One list, so a new screen cannot quietly tell a different set of people.
+ *
+ * `alsoUsers` is who else is on the company (D147). A rep shared into a customer
+ * sees every row under it, so he is in the audience for every one of them — and
+ * there is no refresh button to recover with (CLAUDE.md), so a change he is not
+ * told about is a screen that stays wrong until he navigates away.
  */
 export async function liveAudienceFor(
   repId: string,
   actorId: string,
   alsoRoles: Role[] = [],
+  alsoUsers: string[] = [],
 ): Promise<string[]> {
   const roles: Role[] = [...new Set<Role>(["manager", "admin", ...alsoRoles])];
   const watchers = await db
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.active, true), inArray(users.role, roles)));
-  return [...new Set([repId, actorId, ...watchers.map((watcher) => watcher.id)])];
+  return [...new Set([repId, actorId, ...alsoUsers, ...watchers.map((watcher) => watcher.id)])];
+}
+
+/**
+ * The same audience for a change to a COMPANY or anything under it, asked by
+ * the company rather than by its rep (D147).
+ *
+ * A company can be shared now, and everyone on it reads every row beneath it —
+ * so telling only its owner leaves the other rep looking at a screen that is
+ * quietly out of date, with no refresh button to recover with (CLAUDE.md). The
+ * owner and the share list come back in one statement, because a write path
+ * should not ask two questions to answer one.
+ */
+export async function liveAudienceForCompany(
+  companyId: string,
+  actorId: string,
+  alsoRoles: Role[] = [],
+): Promise<string[]> {
+  const [[owner], sharers] = await Promise.all([
+    db.select({ repId: companies.repId }).from(companies).where(eq(companies.id, companyId)),
+    db
+      .select({ userId: companyShares.userId })
+      .from(companyShares)
+      .where(eq(companyShares.companyId, companyId)),
+  ]);
+  return liveAudienceFor(
+    owner?.repId ?? actorId,
+    actorId,
+    alsoRoles,
+    sharers.map((row) => row.userId),
+  );
 }

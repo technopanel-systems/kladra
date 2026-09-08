@@ -35,7 +35,7 @@ import {
   users,
 } from "@/db/schema";
 import { assertCompanyVisible, mayOpen } from "@/lib/activities";
-import { NotAllowed, seesAll } from "@/lib/authz";
+import { NotAllowed } from "@/lib/authz";
 import type { Day } from "@/lib/dates";
 import {
   type FollowUpFilter,
@@ -51,6 +51,12 @@ import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import { companyStanding, type CompanyStanding } from "@/lib/standing";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
+import {
+  maySeeCompany,
+  onCompanySql,
+  onProjectSql,
+  seesCompany,
+} from "@/lib/visibility";
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
 export { listActivitiesForCompany as listCompanyActivities } from "@/lib/activities";
@@ -130,12 +136,45 @@ function phoneNeedle(term: string): string | null {
  *
  * `companyId` is passed as SQL because the two readers name it differently: the
  * list correlates against `companies.id`, the drawer against a bound parameter.
+ *
+ * A shared company can have two people marked main, one per rep (D147), and
+ * this still answers with one: the earliest, which is the rep whose company it
+ * is. "The number to call" on the list is the customer's, the same for whoever
+ * reads it — a figure that changed with the reader would be the second
+ * definition rules/data.md forbids. Each rep's own person is in the drawer,
+ * marked as his.
  */
 export function mainContactIdSql(companyId: SQL): SQL<string | null> {
   return sql`(
     select ct.id
       from contacts ct
      where ct.company_id = ${companyId}
+       and ct.archived_at is null
+     order by ct.is_main desc, ct.created_at asc
+     limit 1
+  )`;
+}
+
+/**
+ * The same question asked inside one rep's own contacts (D147).
+ *
+ * The company-wide answer above is what the LIST and the export show, and it is
+ * one answer for every reader on purpose. The drawer is the other case: it draws
+ * both reps' people on a shared company, and "the number to call" there is the
+ * one each of them marked, so a row is main when it is the main of the rep whose
+ * row it is. Same ordering, same fallback for a company whose marked contact has
+ * been archived — asked per person instead of per company.
+ *
+ * Correlated on `contacts.rep_id` from the outer query, so both tables are named
+ * outright (rules/data.md): the bare form would resolve inside `ct` and answer
+ * the same thing for every row.
+ */
+function mainContactForRepSql(companyId: SQL): SQL<string | null> {
+  return sql`(
+    select ct.id
+      from contacts ct
+     where ct.company_id = ${companyId}
+       and ct.rep_id = contacts.rep_id
        and ct.archived_at is null
      order by ct.is_main desc, ct.created_at asc
      limit 1
@@ -180,7 +219,7 @@ function lastActivityTextSql(): SQL<string | null> {
 
 /** A rep sees only his own; manager and admin see all (S8, authz.seesAll). */
 function ownedBy(user: SessionUser): SQL | undefined {
-  return seesAll(user) ? undefined : eq(companies.repId, user.id);
+  return seesCompany(user);
 }
 
 /**
@@ -310,6 +349,8 @@ export type CompanyContact = {
   email: string | null;
   notes: string | null;
   isMain: boolean;
+  /** Whose contact this is (D147) — only he may change it. */
+  repId: string;
 };
 
 export type CompanyProject = {
@@ -320,6 +361,9 @@ export type CompanyProject = {
   lostAt: Date | null;
   lostReason: string | null;
   followUpState: FollowUpState | null;
+  /** Whose job it is, and whether this reader is on it (D147). */
+  repId: string;
+  onProject: boolean;
 };
 
 /** The earliest follow-up among the company's open projects, and whose it is (D94). */
@@ -347,6 +391,8 @@ export type CompanyDetail = {
   cityText: string | null;
   repId: string;
   repName: string;
+  /** Whether this reader is on its share list rather than its owner (D147). */
+  shared: boolean;
   /** The company's OWN date — what the picker at the top of the drawer edits. */
   nextFollowUp: Day | null;
   followUpState: FollowUpState | null;
@@ -392,6 +438,7 @@ export async function getCompany(
       cityText: companies.cityText,
       repId: companies.repId,
       repName: personName(label),
+      shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
       nextFollowUp: companies.nextFollowUp,
       followUpState: followUpStateSql(sql`companies.next_follow_up`),
       archivedAt: companies.archivedAt,
@@ -407,7 +454,7 @@ export async function getCompany(
     .limit(1);
 
   if (!row) return null;
-  if (!mayOpen(user, row.repId)) throw new NotAllowed();
+  if (!maySeeCompany(user, row.repId, row.shared)) throw new NotAllowed();
 
   const [contactRows, projectRows, countRow, standing] = await Promise.all([
     db
@@ -419,9 +466,12 @@ export async function getCompany(
         position: contacts.position,
         email: contacts.email,
         notes: contacts.notes,
+        repId: contacts.repId,
         // Derived, never the raw column: the flag alone says nobody is main
-        // once the marked contact has been archived (D18, mainContactIdSql).
-        isMain: sql<boolean>`contacts.id = ${mainContactIdSql(sql`${id}::uuid`)}`,
+        // once the marked contact has been archived (D18). Per rep rather than
+        // per company, because on a shared one each of them has his own person
+        // to call and the company-wide answer marked only the owner's (D147).
+        isMain: sql<boolean>`contacts.id = ${mainContactForRepSql(sql`${id}::uuid`)}`,
       })
       .from(contacts)
       .where(and(eq(contacts.companyId, id), isNull(contacts.archivedAt)))
@@ -436,6 +486,11 @@ export async function getCompany(
         lostAt: projects.lostAt,
         lostReason: projects.lostReason,
         followUpState: followUpStateSql(sql`projects.next_follow_up`),
+        // Whose job it is, and whether this reader is on it (D147): the drawer
+        // offers Request quotation on a job somebody put him on, and the action
+        // behind it asks the same two columns.
+        repId: projects.repId,
+        onProject: onProjectSql(user, sql`projects.id`).mapWith(Boolean),
       })
       .from(projects)
       .where(and(eq(projects.companyId, id), isNull(projects.archivedAt)))

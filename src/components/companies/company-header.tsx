@@ -11,6 +11,7 @@ import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
 import { HandOverDialog } from "@/components/companies/hand-over-dialog";
+import { ShareCompanyDialog } from "@/components/companies/share-company-dialog";
 import {
   EditCompanyDialog,
   type CompanyEditable,
@@ -33,6 +34,7 @@ import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { useIsPhone } from "@/hooks/use-is-phone";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import type { PickerOption } from "@/lib/picker-option";
+import type { Sharer } from "@/lib/shares";
 import type { CompanyStanding } from "@/lib/standing";
 import { followUpClass, TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
@@ -132,6 +134,9 @@ export function CompanyHeader({
   standing,
   mine,
   handOverTo,
+  sharers,
+  shareWith,
+  me,
 }: {
   company: DrawerCompany;
   /** The four figures under the title (P8.5). */
@@ -150,6 +155,22 @@ export function CompanyHeader({
    * second, so this can be here while the action row below is not.
    */
   handOverTo: PickerOption[] | null;
+  /**
+   * Who else is on this company (D147). Read for every reader, not only for
+   * the people who may change it: a rep who was put on a colleague's customer
+   * has to be able to see that he is on it, and a manager reading the floor has
+   * to be able to see who else is working it.
+   */
+  sharers: Sharer[];
+  /**
+   * The people it can still be shared with, or null for a reader who may not
+   * grant it. Its own rep, the manager and the admin may (`mayShare`); a reader
+   * who may not still gets the way OFF it if he is on it himself, which is the
+   * dialog's own second shape (D147).
+   */
+  shareWith: PickerOption[] | null;
+  /** The reader, for the one row on that list that is his own. */
+  me: string;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -297,13 +318,44 @@ export function CompanyHeader({
         ) : null}
       </div>
 
-      {handOverTo ? (
-        <div className="flex items-center gap-2">
-          <HandOverDialog
+      {/* Whose company this is, and who else is on it — the two facts about
+          belonging, with the two controls that change them beside them rather
+          than in the row of work below (DESIGN §5). Sharing sits next to Hand
+          over because a reader comparing the two is comparing exactly the
+          right pair: one moves the customer, the other does not (D147). */}
+      {sharers.length > 0 || shareWith || handOverTo ? (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {sharers.length > 0 ? (
+            <p className="min-w-0 text-xs text-muted-foreground">
+              {t("drawer.share.onCompany")}:{" "}
+              {sharers.map((person, index) => (
+                <span key={person.id}>
+                  {index > 0 ? (
+                    <span aria-hidden="true" className="text-faint">
+                      {" · "}
+                    </span>
+                  ) : null}
+                  <bdi>{person.name}</bdi>
+                </span>
+              ))}
+            </p>
+          ) : null}
+          {/* It draws nothing at all for a reader who neither grants a share
+              nor is on one himself, so the condition lives in one place. */}
+          <ShareCompanyDialog
             companyId={company.id}
             companyName={company.name}
-            people={handOverTo}
+            sharers={sharers}
+            people={shareWith}
+            me={me}
           />
+          {handOverTo ? (
+            <HandOverDialog
+              companyId={company.id}
+              companyName={company.name}
+              people={handOverTo}
+            />
+          ) : null}
         </div>
       ) : null}
 

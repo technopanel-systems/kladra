@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test, expect } from "@playwright/test";
 import { AUDIT_RECORD_TYPES, NOTIFICATION_KINDS } from "@/db/schema";
-import { one, query } from "./helpers/db";
+import { one, query, userId } from "./helpers/db";
 
 /**
  * What a row is allowed to contain (SPEC D52, D53).
@@ -269,9 +269,16 @@ test("a notice's subject is one of a closed list (D100)", async () => {
   const subjectId =
     seeded?.subject_id ?? (await one<{ id: string }>("select gen_random_uuid() as id")).id;
 
+  // 'project' used to be the value this test wrote to prove refusal. Migration
+  // 0014 (D147) widened the list to four: a company SHARE and a project SHARE
+  // both need a notice about the record itself, and `projectShared` points at
+  // one — so 'project' is a real subject_type now and asserting it is refused
+  // would be asserting a rule the app no longer has. 'contact' is still
+  // outside the list (a notice is never about a contact on its own — it is
+  // read through the company, D147) and proves the same refusal.
   const message = await refused(
     `insert into notifications (user_id, kind, params, link, subject_type, subject_id)
-     values ($1::uuid, $2, $3::jsonb, $4, 'project', $5::uuid)`,
+     values ($1::uuid, $2, $3::jsonb, $4, 'contact', $5::uuid)`,
     [userId, kind, params, link, subjectId],
   );
   expect(message).toContain("violates check constraint");
@@ -482,6 +489,89 @@ test("an archive reason lives only on an archived company (0012, D87)", async ()
       company.id,
       company.archive_reason,
     ]);
+  }
+});
+
+test("a company cannot be shared with the same person twice (0014, D147)", async () => {
+  // The seed's own standing example (scripts/seed/demo-data.ts): Anmaa,
+  // shared with Saad, so this asks about a row that is guaranteed to exist
+  // rather than an arbitrary `limit 1` a later test's own fixture could shift.
+  const row = await one<{ company_id: string; user_id: string; granted_by: string }>(
+    `select cs.company_id, cs.user_id, cs.granted_by
+       from company_shares cs
+       join companies c on c.id = cs.company_id
+      where c.name = $1::text`,
+    ["شركة أنماء للمقاولات"],
+  );
+  // Pressing "Add" a second time on somebody already on the list is the
+  // action's own `onConflictDoNothing` (src/actions/shares.ts) — this is the
+  // index that makes that safe, asked directly against a write that skips it.
+  const message = await refused(
+    "insert into company_shares (company_id, user_id, granted_by) values ($1::uuid, $2::uuid, $3::uuid)",
+    [row.company_id, row.user_id, row.granted_by],
+  );
+  expect(message).toContain("company_shares_company_user_idx");
+});
+
+test("a project cannot be shared with the same person twice (0014, D147)", async () => {
+  // The seed's own tower, shared with Saad alongside Anmaa — the same reason
+  // as the company test above: a row this is guaranteed to find.
+  const row = await one<{ project_id: string; user_id: string; granted_by: string }>(
+    `select ps.project_id, ps.user_id, ps.granted_by
+       from project_shares ps
+       join projects p on p.id = ps.project_id
+      where p.name = $1::text`,
+    ["برج مكاتب طريق الملك فهد"],
+  );
+  const message = await refused(
+    "insert into project_shares (project_id, user_id, granted_by) values ($1::uuid, $2::uuid, $3::uuid)",
+    [row.project_id, row.user_id, row.granted_by],
+  );
+  expect(message).toContain("project_shares_project_user_idx");
+});
+
+test("contacts_one_main_idx is now per rep: two mains on one company for two reps, never two for one (0014, D147)", async () => {
+  // Anmaa again, by name rather than an arbitrary row: this test WRITES a
+  // second main contact, and a `limit 1` main contact picked at random could
+  // land on a company tests/sharing.spec.ts has its own rep on, which would
+  // make the "different rep" half below collide with a row that spec left
+  // behind on purpose (D147: "stays exactly where it is").
+  const anmaa = await one<{ id: string }>("select id from companies where name = $1::text", [
+    "شركة أنماء للمقاولات",
+  ]);
+  const main = await one<{ id: string; rep_id: string }>(
+    `select id, rep_id from contacts
+      where company_id = $1::uuid and is_main = true and archived_at is null
+      limit 1`,
+    [anmaa.id],
+  );
+
+  // The same rep, a second main: two would make "the number to call" depend
+  // on which row came back first (D18).
+  const sameRep = await refused(
+    `insert into contacts (company_id, rep_id, name, phone, phone_normalized, is_main)
+     values ($1::uuid, $2::uuid, 'spec-schema-same-rep', '0500000010', '+966500000010', true)`,
+    [anmaa.id, main.rep_id],
+  );
+  expect(sameRep).toContain("contacts_one_main_idx");
+
+  // A different rep on the SAME company: narrowed by D147, one main per rep
+  // rather than one per company, so a second rep's own first contact there
+  // must go through. Jerom never holds a contact anywhere in the seed, so
+  // this row cannot collide with one a fixture left behind.
+  const jerom = await userId("jerom@technopanel.com.sa");
+  try {
+    const written = await query(
+      `insert into contacts (company_id, rep_id, name, phone, phone_normalized, is_main)
+       values ($1::uuid, $2::uuid, 'spec-schema-other-rep', '0500000011', '+966500000011', true)
+       returning id`,
+      [anmaa.id, jerom],
+    );
+    expect(written, "a second rep's own main contact on the same company was refused").toHaveLength(
+      1,
+    );
+  } finally {
+    await query("delete from contacts where phone_normalized = '+966500000011'");
   }
 });
 

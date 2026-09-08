@@ -58,4 +58,5 @@ which reloads live — no restart. To stop prompts for good: `/permissions` → 
 ## Never
 No third-party agent frameworks or swarms. No production data — migrations clear.
 No comments feature, refresh buttons, drag-and-drop, bulk edit, saved views, charts
-beyond bars. No internal codes or IDs on screen. Max six installed skills.
+beyond bars. No internal codes or IDs on screen.
+Six installed skills was the cap; P12 lifted it and D149 says which are installed and why.

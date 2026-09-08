@@ -84,6 +84,91 @@ export async function personName(email: string, locale: string): Promise<string>
   return rows[0].name;
 }
 
+/**
+ * Everything a hand-over moves, as it stood before it moved.
+ *
+ * `handOverCompanyAction` moves the company, and since P12 the departing rep's
+ * projects and contacts under it as well; it archives a contact whose number
+ * the new owner already holds, clears the main flag on the ones that arrive
+ * when he already has a main, and drops his share of what he now owns
+ * (src/actions/companies.ts). A spec that hands a company over and afterwards
+ * puts back only `companies.rep_id` leaves the floor half moved: the people
+ * under the customer belong to a rep who no longer owns him, and every spec
+ * that runs after it reads a floor the seed never wrote.
+ *
+ * That cost five failures in one run and none of them named the cause — a
+ * duplicate phone that was no longer a duplicate, a "his own contact" step
+ * where the contact was already his, and a Log button the drawer was right to
+ * withhold. So the floor is captured before the move and restored BY ID, each
+ * row to the state it was actually in.
+ */
+export type CompanyFloor = {
+  companyId: string;
+  /** Whose the company was. */
+  repId: string;
+  projects: { id: string; repId: string }[];
+  contacts: { id: string; repId: string; isMain: boolean; archivedAt: Date | null }[];
+  /** Who could see it, and who let them — the share rows the move may delete. */
+  shares: { userId: string; grantedBy: string }[];
+};
+
+export async function floorOfCompany(companyId: string): Promise<CompanyFloor> {
+  const owner = await one<{ repId: string }>(
+    'select rep_id as "repId" from companies where id = $1::uuid',
+    [companyId],
+  );
+  return {
+    companyId,
+    repId: owner.repId,
+    projects: await query<{ id: string; repId: string }>(
+      'select id, rep_id as "repId" from projects where company_id = $1::uuid',
+      [companyId],
+    ),
+    contacts: await query<{ id: string; repId: string; isMain: boolean; archivedAt: Date | null }>(
+      `select id, rep_id as "repId", is_main as "isMain", archived_at as "archivedAt"
+         from contacts where company_id = $1::uuid`,
+      [companyId],
+    ),
+    shares: await query<{ userId: string; grantedBy: string }>(
+      `select user_id as "userId", granted_by as "grantedBy"
+         from company_shares where company_id = $1::uuid`,
+      [companyId],
+    ),
+  };
+}
+
+export async function restoreCompanyFloor(floor: CompanyFloor): Promise<void> {
+  await query("update companies set rep_id = $1::uuid where id = $2::uuid", [
+    floor.repId,
+    floor.companyId,
+  ]);
+  for (const project of floor.projects) {
+    await query("update projects set rep_id = $1::uuid where id = $2::uuid", [
+      project.repId,
+      project.id,
+    ]);
+  }
+  for (const contact of floor.contacts) {
+    // The main flag and the archive stamp move in a hand-over too, so putting
+    // back the rep alone would leave a company with two main contacts or one
+    // archived for no reason anybody could read.
+    await query(
+      `update contacts
+          set rep_id = $1::uuid, is_main = $2::boolean, archived_at = $3::timestamptz
+        where id = $4::uuid`,
+      [contact.repId, contact.isMain, contact.archivedAt, contact.id],
+    );
+  }
+  for (const share of floor.shares) {
+    await query(
+      `insert into company_shares (company_id, user_id, granted_by)
+            values ($1::uuid, $2::uuid, $3::uuid)
+       on conflict (company_id, user_id) do nothing`,
+      [floor.companyId, share.userId, share.grantedBy],
+    );
+  }
+}
+
 /** Closes the pool. Only a one-off script outside a Playwright run needs this. */
 export async function closePool(): Promise<void> {
   if (!pool) return;

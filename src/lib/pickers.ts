@@ -17,13 +17,14 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { projectOptionValue } from "@/lib/picker-option";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personName } from "@/lib/people";
 import { companies, projects, quotations, users } from "@/db/schema";
 import { committedQtySql } from "@/lib/dispatches";
 import { holdsFloor, sells } from "@/lib/floor";
+import { onProjectSql } from "@/lib/visibility";
 import { quotationLabel } from "@/lib/labels";
 import type { PickerOption } from "@/lib/picker-option";
 import { isLatestRevisionSql } from "@/lib/quotations";
@@ -65,7 +66,9 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
     .innerJoin(companies, eq(companies.id, projects.companyId))
     .where(
       and(
-        eq(companies.repId, user.id),
+        // His own, and the jobs he has been put on (D147). A shared project is
+        // a worked project: quoting on it is the point of being on it.
+        or(eq(projects.repId, user.id), onProjectSql(user, sql`projects.id`)),
         isNull(companies.archivedAt),
         isNull(projects.archivedAt),
         isNull(projects.lostAt),
@@ -105,7 +108,10 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
     .leftJoin(projects, eq(projects.id, quotations.projectId))
     .where(
       and(
-        eq(companies.repId, user.id),
+        // The paper he raised, and the paper on a job he is on: two reps
+        // working one project send against each other's quotations, which is
+        // what sharing the job means (D147).
+        or(eq(quotations.repId, user.id), onProjectSql(user, sql`quotations.project_id`)),
         eq(quotations.status, "issued"),
         isLatestRevisionSql(),
         sql`exists (

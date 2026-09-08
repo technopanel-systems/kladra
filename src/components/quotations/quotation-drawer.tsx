@@ -7,7 +7,7 @@ import { RevisionChanges } from "@/components/quotations/revision-changes";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { mayQuote } from "@/lib/floor";
+import { mayWrite } from "@/lib/floor";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { draftLinesFrom } from "@/lib/quotation-draft";
 import { getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
@@ -47,7 +47,14 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   }
   if (!quotation) return null;
 
-  const owner = mayQuote(user, quotation.companyRepId);
+  // Its raiser, and nobody else. Every action this flag carries — edit, revise,
+  // withdraw, record the customer's answer — belongs to whoever created the
+  // record (SPEC §3, D147), and the actions behind them ask the same question.
+  // It read the COMPANY's owner before, which was the same person until a
+  // project could be shared: a rep put on a job would then have been shown none
+  // of his own paper's buttons, and the man whose customer it is would have been
+  // shown all of somebody else's.
+  const owner = mayWrite(user, quotation.repId);
   const [dispatches, standing, history, changes] = await Promise.all([
     listDispatchesForQuotation(user, quotation.id, locale),
     quotationStanding(quotation.id),

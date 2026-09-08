@@ -20,9 +20,9 @@
  */
 import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
-import { seesAll } from "@/lib/authz";
 import type { Day } from "@/lib/dates";
 import type { SessionUser } from "@/lib/types";
+import { seesCompany } from "@/lib/visibility";
 
 /** How a pending follow-up reads on a row. `null` means none is set. */
 export type FollowUpState = "overdue" | "today" | "future";
@@ -211,7 +211,7 @@ export type FollowUpCounts = {
  * archived company or project never appears anywhere.
  */
 export async function followUpCounts(user: SessionUser): Promise<FollowUpCounts> {
-  return countsWhere(seesAll(user) ? sql`true` : sql`companies.rep_id = ${user.id}::uuid`);
+  return countsWhere(seesCompany(user) ?? sql`true`);
 }
 
 /**

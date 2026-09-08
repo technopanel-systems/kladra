@@ -32,6 +32,7 @@ import {
   companies,
   dispatchItems,
   dispatches,
+  projects,
   quotationItems,
   quotations,
   shipmentMethods,
@@ -40,13 +41,19 @@ import {
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
 import { isSmacClash, smacHolder } from "@/lib/smac";
-import { mayQuote, SELLING_ROLES } from "@/lib/floor";
+import { SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { holdDispatch, holdQuotation, isLiveRevision } from "@/lib/hold";
-import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { clearNotifications, createNotification } from "@/lib/notify";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
+import {
+  mayRaiseFor,
+  maySeeCompany,
+  onCompanySql,
+  onProjectSql,
+} from "@/lib/visibility";
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -88,8 +95,13 @@ type Loaded = {
   quotationId: string;
   quotationLabel: string;
   projectId: string | null;
-  /** The rep who owns the COMPANY — who may act on it, and who hears about it. */
+  companyId: string;
+  /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
   companyRepId: string;
+  /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
+  projectRepId: string | null;
+  shared: boolean;
+  onProject: boolean;
 };
 
 /**
@@ -106,16 +118,22 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
       quotationNumber: quotations.number,
       quotationRevision: quotations.revision,
       projectId: quotations.projectId,
+      companyId: quotations.companyId,
       companyRepId: companies.repId,
+      projectRepId: projects.repId,
+      shared: onCompanySql(actor, sql`companies.id`).mapWith(Boolean),
+      onProject: onProjectSql(actor, sql`quotations.project_id`).mapWith(Boolean),
     })
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .leftJoin(projects, eq(projects.id, quotations.projectId))
     .where(eq(dispatches.id, dispatchId))
     .limit(1);
 
   if (!row) return null;
-  if (!seesEveryDispatch(actor) && row.companyRepId !== actor.id) throw new NotAllowed();
+  if (!seesEveryDispatch(actor) && !maySeeCompany(actor, row.companyRepId, row.shared))
+    throw new NotAllowed();
   return {
     id: row.id,
     number: row.number,
@@ -124,7 +142,11 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
     quotationId: row.quotationId,
     quotationLabel: quotationLabel(row.quotationNumber, row.quotationRevision),
     projectId: row.projectId ?? null,
+    companyId: row.companyId,
     companyRepId: row.companyRepId,
+    projectRepId: row.projectRepId ?? null,
+    shared: row.shared,
+    onProject: row.onProject,
   };
 }
 
@@ -271,15 +293,20 @@ export async function requestDispatchAction(
         revision: quotations.revision,
         status: quotations.status,
         projectId: quotations.projectId,
+        companyId: quotations.companyId,
         companyRepId: companies.repId,
         companyArchived: companies.archivedAt,
+        projectRepId: projects.repId,
+        onProject: onProjectSql(actor, sql`quotations.project_id`).mapWith(Boolean),
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
+      .leftJoin(projects, eq(projects.id, quotations.projectId))
       .where(eq(quotations.id, parsed.data.quotationId))
       .limit(1);
     if (!quotation) return { ok: false, error: td("quotationNotFound") };
-    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
+    if (!mayRaiseFor(actor, quotation.companyRepId, quotation.projectRepId, quotation.onProject))
+      throw new NotAllowed();
     if (quotation.companyArchived) return { ok: false, error: td("quotationNotFound") };
     // S38: the paper has to exist before goods move against it. A request that
     // has been sent back or refused is not a quotation yet.
@@ -358,7 +385,7 @@ export async function requestDispatchAction(
         });
       }
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]), {
         type: "dispatch",
         id: row.id,
         number: label,
@@ -420,7 +447,8 @@ export async function updateDispatchAction(
 
     const dispatch = await load(actor, parsed.data.dispatchId);
     if (!dispatch) return { ok: false, error: td("notFound") };
-    if (!mayQuote(actor, dispatch.companyRepId)) throw new NotAllowed();
+    if (!mayRaiseFor(actor, dispatch.companyRepId, dispatch.projectRepId, dispatch.onProject))
+      throw new NotAllowed();
     if (dispatch.status !== "submitted") return { ok: false, error: td("notWaiting") };
 
     const asked = askedFor(items);
@@ -452,7 +480,7 @@ export async function updateDispatchAction(
         details: { lines: asked.length },
       });
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(dispatch.companyId, actor.id, ["coordinator"]), {
         type: "dispatch",
         id: dispatch.id,
         number: dispatch.label,
@@ -554,7 +582,7 @@ export async function approveDispatchAction(
 
       await notifyLive(
         tx,
-        await liveAudienceFor(dispatch.companyRepId, actor.id, ["coordinator", "manager"]),
+        await liveAudienceForCompany(dispatch.companyId, actor.id, ["coordinator", "manager"]),
         { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "approved" },
       );
       return "ok" as const;
@@ -635,7 +663,7 @@ export async function correctDispatchNumberAction(
 
         await notifyLive(
           tx,
-          await liveAudienceFor(dispatch.companyRepId, actor.id, ["coordinator", "manager"]),
+          await liveAudienceForCompany(dispatch.companyId, actor.id, ["coordinator", "manager"]),
           { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "approved" },
         );
         return "ok" as const;
@@ -730,7 +758,7 @@ export async function refuseDispatchAction(
 
       await notifyLive(
         tx,
-        await liveAudienceFor(dispatch.companyRepId, actor.id, ["coordinator"]),
+        await liveAudienceForCompany(dispatch.companyId, actor.id, ["coordinator"]),
         { type: "dispatch", id: dispatch.id, number: dispatch.label, status: "refused" },
       );
       return true;

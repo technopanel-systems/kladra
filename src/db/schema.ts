@@ -269,6 +269,12 @@ export const contacts = pgTable(
     companyId: uuid("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
+    // Whose contact this is (D147). A company can be shared, and each rep on it
+    // keeps his own list: the same person held by two reps is two rows and not
+    // a duplicate, because each of them knows him.
+    repId: uuid("rep_id")
+      .notNull()
+      .references(() => users.id),
     name: text("name").notNull(),
     phone: text("phone").notNull(), // as typed; mandatory — the company has no phone
     phoneNormalized: text("phone_normalized").notNull(), // E.164, +966…
@@ -281,12 +287,18 @@ export const contacts = pgTable(
   },
   (t) => [
     index("contacts_company_idx").on(t.companyId),
+    index("contacts_rep_idx").on(t.repId),
     index("contacts_phone_idx").on(t.phoneNormalized),
-    uniqueIndex("contacts_company_phone_idx").on(t.companyId, t.phoneNormalized),
-    // One main per company (D18): two would make "the number to call" depend on
-    // which row came back first.
+    // One number once per rep, not once per company (D147). Two reps working
+    // one customer will both hold the buyer's number, and refusing the second
+    // would tell the second rep his own customer's number belongs to somebody
+    // else.
+    uniqueIndex("contacts_company_phone_idx").on(t.companyId, t.repId, t.phoneNormalized),
+    // One main per rep on a company (D18, narrowed by D147): two would make
+    // "the number to call" depend on which row came back first, and one per
+    // company would make it depend on which rep added his first.
     uniqueIndex("contacts_one_main_idx")
-      .on(t.companyId)
+      .on(t.companyId, t.repId)
       .where(sql`${t.isMain} and ${t.archivedAt} is null`),
   ],
 );
@@ -298,6 +310,12 @@ export const projects = pgTable(
     companyId: uuid("company_id")
       .notNull()
       .references(() => companies.id, { onDelete: "cascade" }),
+    // Whose project this is (D147). Until sharing there was nobody to ask: a
+    // project belonged to whoever owned the company over it, which is still the
+    // answer for every project one person opened on his own floor.
+    repId: uuid("rep_id")
+      .notNull()
+      .references(() => users.id),
     name: text("name").notNull(),
     expectedSqm: numeric("expected_sqm", { precision: 12, scale: 2 }),
     nextFollowUp: date("next_follow_up"),
@@ -309,8 +327,72 @@ export const projects = pgTable(
   },
   (t) => [
     index("projects_company_idx").on(t.companyId),
+    index("projects_rep_idx").on(t.repId),
     index("projects_follow_up_idx").on(t.nextFollowUp),
     check("projects_expected_sqm_check", sql`${t.expectedSqm} is null or ${t.expectedSqm} >= 0`),
+  ],
+);
+
+/**
+ * Who else is on a company, and who else is on a project (D147, SPEC §3).
+ *
+ * Two tables and not one polymorphic table, which is the shape the two newest
+ * tables in this file use. Those two are pointers — a notification and an audit
+ * row point at a record and an orphan is harmless. A share is a permission, and
+ * a stale row over a recycled id is a permission nobody granted, so these carry
+ * real foreign keys and real cascades: delete the company and its shares go
+ * with it, deactivate nobody and nothing dangles.
+ *
+ * They are two levels of one sentence. A company shared is a company SEEN — the
+ * second rep reads everything under it, so no list anywhere has to draw a row
+ * that refuses to open. A project shared is a project WORKED: he logs against
+ * it and raises quotations and dispatches on it, and what he creates is his,
+ * because an item belongs to whoever made it.
+ *
+ * That a person cannot be shared a thing he already owns is the action's rule
+ * rather than a CHECK: the owner is a column on another table, and a constraint
+ * cannot read one.
+ */
+export const companyShares = pgTable(
+  "company_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by")
+      .notNull()
+      .references(() => users.id),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("company_shares_company_user_idx").on(t.companyId, t.userId),
+    // Every list asks it this way round: what may this person see?
+    index("company_shares_user_idx").on(t.userId),
+  ],
+);
+
+export const projectShares = pgTable(
+  "project_shares",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    grantedBy: uuid("granted_by")
+      .notNull()
+      .references(() => users.id),
+    ...stamps,
+  },
+  (t) => [
+    uniqueIndex("project_shares_project_user_idx").on(t.projectId, t.userId),
+    index("project_shares_user_idx").on(t.userId),
   ],
 );
 
@@ -630,7 +712,7 @@ export const dailyReports = pgTable(
  * `src/lib/notify.ts` because the column is what enforces it: a fourth one
  * would need a column value, and this is where a reader looks for the list.
  */
-export const NOTIFICATION_SUBJECT_TYPES = ["quotation", "dispatch", "company"] as const;
+export const NOTIFICATION_SUBJECT_TYPES = ["quotation", "dispatch", "company", "project"] as const;
 export type NotificationSubjectType = (typeof NOTIFICATION_SUBJECT_TYPES)[number];
 
 /**
@@ -652,6 +734,8 @@ export const NOTIFICATION_KINDS = [
   "dispatchApproved",
   "dispatchRefused",
   "companyHandedOver",
+  "companyShared",
+  "projectShared",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
@@ -721,6 +805,8 @@ export const AUDIT_RECORD_TYPES = [
   "user",
   "companyTarget",
   "nonWorkingDay",
+  "companyShare",
+  "projectShare",
   ...LOOKUP_KINDS,
 ] as const;
 export type AuditRecordType = (typeof AUDIT_RECORD_TYPES)[number];

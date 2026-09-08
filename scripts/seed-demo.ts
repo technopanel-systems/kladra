@@ -96,6 +96,7 @@ const {
   classes,
   companies,
   companyCategories,
+  companyShares,
   companyTargets,
   contacts,
   countries,
@@ -107,6 +108,7 @@ const {
   nonWorkingDays,
   notifications,
   positions,
+  projectShares,
   projects,
   quotationItems,
   quotations,
@@ -465,6 +467,8 @@ async function seedCompanies(
     const contactValues = COMPANIES.flatMap((c) =>
       c.contacts.map((p, i) => ({
         companyId: companyIds.get(c.key)!,
+        // The rep who found the company holds the people at it (D147).
+        repId: must(userIds, c.rep, "user"),
         name: p.name,
         phone: p.phone,
         phoneNormalized: phone(p.phone),
@@ -501,7 +505,51 @@ async function seedCompanies(
 // Phase 4 — projects
 // ============================================================================
 
-async function seedProjects(companyIds: Map<string, string>): Promise<Map<string, string>> {
+/** Whose company it is, and therefore whose project (D147). */
+function companyRep(key: string): string {
+  const company = COMPANIES.find((c) => c.key === key);
+  if (!company) throw new Error(`no company ${key}`);
+  return company.rep;
+}
+
+/**
+ * Who else is on a company and on a job (SPEC §3, D147).
+ *
+ * One of each, and deliberately the same customer: Faisal owns Anmaa and the
+ * tower at it, and Saad reads the customer and works the tower with him. A
+ * screen that can only ever show "nobody else" is a screen nobody has seen
+ * work — the same reason every band and every threshold has a demo row on each
+ * side of it (rules/data.md).
+ */
+async function seedShares(
+  companyIds: Map<string, string>,
+  projectIds: Map<string, string>,
+  userIds: Map<string, string>,
+): Promise<void> {
+  const companyRows = COMPANIES.flatMap((c) =>
+    (c.sharedWith ?? []).map((who) => ({
+      companyId: must(companyIds, c.key, "company"),
+      userId: must(userIds, who, "user"),
+      grantedBy: must(userIds, c.rep, "user"),
+    })),
+  );
+  const projectRows = PROJECTS.flatMap((p) =>
+    (p.sharedWith ?? []).map((who) => ({
+      projectId: must(projectIds, p.key, "project"),
+      userId: must(userIds, who, "user"),
+      grantedBy: must(userIds, companyRep(p.company), "user"),
+    })),
+  );
+  await db.transaction(async (tx) => {
+    if (companyRows.length > 0) await tx.insert(companyShares).values(companyRows);
+    if (projectRows.length > 0) await tx.insert(projectShares).values(projectRows);
+  });
+}
+
+async function seedProjects(
+  companyIds: Map<string, string>,
+  userIds: Map<string, string>,
+): Promise<Map<string, string>> {
   const projectIds = new Map<string, string>();
   await db.transaction(async (tx) => {
     const rows = await tx
@@ -511,6 +559,7 @@ async function seedProjects(companyIds: Map<string, string>): Promise<Map<string
           const created = instant(addDays(TODAY, -(15 + i * 4)), 11, (i * 5) % 60);
           return {
             companyId: must(companyIds, p.company, "company"),
+            repId: must(userIds, companyRep(p.company), "user"),
             name: p.name,
             expectedSqm: p.expectedSqm,
             nextFollowUp: null,
@@ -1386,7 +1435,8 @@ try {
   const { companyIds, contactIds } = await seedCompanies(lk, userIds);
   console.log(`  companies        ${companyIds.size}`);
 
-  const projectIds = await seedProjects(companyIds);
+  const projectIds = await seedProjects(companyIds, userIds);
+  await seedShares(companyIds, projectIds, userIds);
   console.log(`  projects         ${projectIds.size}`);
 
   const activityCount = await seedActivities(companyIds, projectIds, contactIds, userIds);

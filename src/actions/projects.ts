@@ -18,12 +18,12 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, projects } from "@/db/schema";
-import { assertCompanyMine, assertProjectMine } from "@/lib/activities";
+import { assertCompanyMine, assertProjectMine, assertProjectOwn } from "@/lib/activities";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
@@ -103,7 +103,7 @@ export async function createProjectAction(
     }
     const input = parsed.data;
 
-    const { repId, archived } = await assertCompanyMine(actor, input.companyId);
+    const { archived } = await assertCompanyMine(actor, input.companyId);
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.
@@ -149,6 +149,7 @@ export async function createProjectAction(
         .insert(projects)
         .values({
           companyId: input.companyId,
+          repId: actor.id,
           name: input.name,
           expectedSqm: sqm,
           nextFollowUp: input.nextFollowUp ?? null,
@@ -163,7 +164,7 @@ export async function createProjectAction(
         recordId: row.id,
         details: { companyId: input.companyId, name: input.name },
       });
-      const audience = await liveAudienceFor(repId, actor.id);
+      const audience = await liveAudienceForCompany(input.companyId, actor.id);
       await notifyLive(tx, audience, { type: "project", id: row.id });
       await notifyLive(tx, audience, { type: "company", id: input.companyId });
       return row.id;
@@ -192,7 +193,7 @@ export async function updateProjectAction(
     }
     const input = parsed.data;
 
-    const owner = await assertProjectMine(actor, input.projectId);
+    const owner = await assertProjectOwn(actor, input.projectId);
 
     const sqm = parseSqm(input.expectedSqm);
     if (sqm === "invalid") {
@@ -217,7 +218,7 @@ export async function updateProjectAction(
         recordId: input.projectId,
         details: { name: input.name },
       });
-      const audience = await liveAudienceFor(owner.repId, actor.id);
+      const audience = await liveAudienceForCompany(owner.companyId, actor.id);
       await notifyLive(tx, audience, { type: "project", id: input.projectId });
       await notifyLive(tx, audience, { type: "company", id: owner.companyId });
     });
@@ -255,7 +256,7 @@ export async function setProjectFollowUpAction(
         recordId: id.data,
         details: { nextFollowUp: parsedDay.data },
       });
-      const audience = await liveAudienceFor(owner.repId, actor.id);
+      const audience = await liveAudienceForCompany(owner.companyId, actor.id);
       await notifyLive(tx, audience, { type: "project", id: id.data });
       await notifyLive(tx, audience, { type: "company", id: owner.companyId });
     });
@@ -291,7 +292,7 @@ export async function markProjectLostAction(
       return { ok: false, error: t("reasonRequired"), fieldErrors: { reason: t("reasonRequired") } };
     }
 
-    const owner = await assertProjectMine(actor, id.data);
+    const owner = await assertProjectOwn(actor, id.data);
 
     const marked = await db.transaction(async (tx) => {
       const rows = await tx
@@ -308,7 +309,7 @@ export async function markProjectLostAction(
         recordId: id.data,
         details: { reason: why.data },
       });
-      const audience = await liveAudienceFor(owner.repId, actor.id);
+      const audience = await liveAudienceForCompany(owner.companyId, actor.id);
       await notifyLive(tx, audience, { type: "project", id: id.data });
       await notifyLive(tx, audience, { type: "company", id: owner.companyId });
       return true;
@@ -336,7 +337,7 @@ export async function archiveProjectAction(projectId: unknown): Promise<ActionRe
     const id = z.uuid().safeParse(projectId);
     if (!id.success) return { ok: false, error: tc("invalid") };
 
-    const owner = await assertProjectMine(actor, id.data);
+    const owner = await assertProjectOwn(actor, id.data);
 
     const archived = await db.transaction(async (tx) => {
       const rows = await tx
@@ -353,7 +354,7 @@ export async function archiveProjectAction(projectId: unknown): Promise<ActionRe
         recordId: id.data,
         details: { companyId: owner.companyId },
       });
-      const audience = await liveAudienceFor(owner.repId, actor.id);
+      const audience = await liveAudienceForCompany(owner.companyId, actor.id);
       await notifyLive(tx, audience, { type: "project", id: id.data });
       await notifyLive(tx, audience, { type: "company", id: owner.companyId });
       return true;

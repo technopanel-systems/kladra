@@ -17,7 +17,8 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
-import { assertCompanyMine } from "@/lib/activities";
+import { assertContactMine, assertMayKeepContacts } from "@/lib/activities";
+import { sharersOfCompany } from "@/lib/visibility";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceFor, notifyLive } from "@/lib/live";
@@ -95,7 +96,8 @@ export async function createContactAction(
     }
     const input = parsed.data;
 
-    const { repId, archived, country } = await assertCompanyMine(actor, input.companyId);
+    const { repId, archived, country } = await assertMayKeepContacts(actor, input.companyId);
+    const sharers = await sharersOfCompany(input.companyId);
     // Archived is off the floor (S16): nothing new is added to a company that
     // is not on anybody's list. Editing what is already there still works, so a
     // name can be fixed before it is restored.
@@ -115,7 +117,15 @@ export async function createContactAction(
     const [existing] = await db
       .select({ id: contacts.id })
       .from(contacts)
-      .where(and(eq(contacts.companyId, input.companyId), isNull(contacts.archivedAt)))
+      // His own first contact on this company is his main one (D18, D147):
+      // another rep's, on a company they share, is not his to be pointed at.
+      .where(
+        and(
+          eq(contacts.companyId, input.companyId),
+          eq(contacts.repId, actor.id),
+          isNull(contacts.archivedAt),
+        ),
+      )
       .limit(1);
 
     try {
@@ -124,6 +134,7 @@ export async function createContactAction(
           .insert(contacts)
           .values({
             companyId: input.companyId,
+            repId: actor.id,
             name: input.name,
             phone: input.phone,
             phoneNormalized,
@@ -141,7 +152,7 @@ export async function createContactAction(
           recordId: row.id,
           details: { companyId: input.companyId, name: input.name },
         });
-        await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+        await notifyLive(tx, await liveAudienceFor(repId, actor.id, [], sharers), {
           type: "company",
           id: input.companyId,
         });
@@ -178,14 +189,11 @@ export async function updateContactAction(
     }
     const input = parsed.data;
 
-    const [row] = await db
-      .select({ companyId: contacts.companyId })
-      .from(contacts)
-      .where(eq(contacts.id, input.contactId))
-      .limit(1);
-    if (!row) return { ok: false, error: t("contactNotFound") };
-
-    const { repId, country } = await assertCompanyMine(actor, row.companyId);
+    const { companyId, companyRepId: repId, country, sharers } = await assertContactMine(
+      actor,
+      input.contactId,
+    );
+    const row = { companyId };
 
     const phoneNormalized = normalizePhone(input.phone, country);
     if (!phoneNormalized) {
@@ -217,7 +225,7 @@ export async function updateContactAction(
           recordId: input.contactId,
           details: { companyId: row.companyId, name: input.name },
         });
-        await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+        await notifyLive(tx, await liveAudienceFor(repId, actor.id, [], sharers), {
           type: "company",
           id: row.companyId,
         });
@@ -252,13 +260,21 @@ export async function setMainContactAction(contactId: unknown): Promise<ActionRe
       .limit(1);
     if (!row || row.archivedAt) return { ok: false, error: t("contactNotFound") };
 
-    const { repId } = await assertCompanyMine(actor, row.companyId);
+    const { companyRepId: repId, sharers } = await assertContactMine(actor, id.data);
 
     await db.transaction(async (tx) => {
       await tx
         .update(contacts)
         .set({ isMain: false })
-        .where(and(eq(contacts.companyId, row.companyId), ne(contacts.id, id.data)));
+        // His own rows only. One main per REP on a company (D147): clearing the
+        // flag company-wide would take the other rep's number to call away.
+        .where(
+          and(
+            eq(contacts.companyId, row.companyId),
+            eq(contacts.repId, actor.id),
+            ne(contacts.id, id.data),
+          ),
+        );
       await tx.update(contacts).set({ isMain: true }).where(eq(contacts.id, id.data));
       await tx.insert(auditLog).values({
         userId: actor.id,
@@ -267,7 +283,7 @@ export async function setMainContactAction(contactId: unknown): Promise<ActionRe
         recordId: id.data,
         details: { companyId: row.companyId },
       });
-      await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+      await notifyLive(tx, await liveAudienceFor(repId, actor.id, [], sharers), {
         type: "company",
         id: row.companyId,
       });
@@ -303,7 +319,7 @@ export async function archiveContactAction(contactId: unknown): Promise<ActionRe
       .limit(1);
     if (!row || row.archivedAt) return { ok: false, error: t("contactNotFound") };
 
-    const { repId } = await assertCompanyMine(actor, row.companyId);
+    const { companyRepId: repId, sharers } = await assertContactMine(actor, id.data);
 
     await db.transaction(async (tx) => {
       await tx
@@ -318,7 +334,7 @@ export async function archiveContactAction(contactId: unknown): Promise<ActionRe
         recordId: id.data,
         details: { companyId: row.companyId },
       });
-      await notifyLive(tx, await liveAudienceFor(repId, actor.id), {
+      await notifyLive(tx, await liveAudienceFor(repId, actor.id, [], sharers), {
         type: "company",
         id: row.companyId,
       });

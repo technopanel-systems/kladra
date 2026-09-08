@@ -9,6 +9,7 @@ import { NotAllowed, refusalKey, requireActor, seesAll } from "@/lib/authz";
 import { ownsCompanies } from "@/lib/floor";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
+import { seesCompany } from "@/lib/visibility";
 
 /**
  * Global search — the Ctrl+K palette (SPEC §3).
@@ -97,8 +98,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
 
   // The rep filter is a column comparison, so it lands in the WHERE clause and
   // the limit applies to rows he is allowed to see, never to a page of them.
-  const ownCompany: SQL | undefined = isRep ? eq(companies.repId, actor.id) : undefined;
-  const ownQuotation: SQL | undefined = isRep ? eq(quotations.repId, actor.id) : undefined;
+  const ownCompany: SQL | undefined = isRep ? seesCompany(actor) : undefined;
   if (!all && !isRep && !isCoordinator) return EMPTY;
 
   const companyRows = db
@@ -182,7 +182,12 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
           ilike(quotations.smacNumber, anywhere),
           ilike(companies.name, anywhere),
         ),
-        ownQuotation,
+        // The same clause the companies above use, and the same one the
+        // quotations LIST uses (D147). It asked `quotations.rep_id` here and
+        // `companies.rep_id` there, which agreed while a company had one rep
+        // and would have disagreed the day one was shared — a search that
+        // finds a paper the list will not show, or hides one it will.
+        ownCompany,
       ),
     )
     .orderBy(desc(quotations.number), desc(quotations.revision))

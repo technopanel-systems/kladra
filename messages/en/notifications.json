@@ -9,5 +9,7 @@
   "dispatchApproved": "{label} for {company} is approved — SMAC {smacNumber}.",
   "dispatchRefused": "{label} for {company} was refused.",
   "companyHandedOver": "{rep} handed you {label}.",
-  "unreadMark": "Unread"
+  "unreadMark": "Unread",
+  "companyShared": "{rep} shared {label} with you.",
+  "projectShared": "{rep} put you on {label}."
 }

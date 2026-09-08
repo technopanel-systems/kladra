@@ -54,6 +54,7 @@ import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotat
 import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
+import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
 
 export type QuotationStatus =
   | "requested"
@@ -333,7 +334,7 @@ function narrowTo(input: ListQuotationsInput): (SQL | undefined)[] {
   const conditions: (SQL | undefined)[] = [
     isNull(companies.archivedAt),
     isLatestRevisionSql(),
-    seesEveryQuotation(user) ? undefined : eq(companies.repId, user.id),
+    seesEveryQuotation(user) ? undefined : seesCompany(user),
   ];
 
   if (input.status) {
@@ -455,6 +456,9 @@ export async function getQuotation(
   const [row] = await db
     .select({
       ...selection(await getLocale()),
+      // Whether this reader is on the company's share list, asked in the same
+      // statement as its owner (D147).
+      shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
       notes: quotations.notes,
       revisionOf: quotations.revisionOf,
     })
@@ -467,7 +471,8 @@ export async function getQuotation(
     .limit(1);
 
   if (!row) return null;
-  if (!seesEveryQuotation(user) && row.companyRepId !== user.id) throw new NotAllowed();
+  if (!seesEveryQuotation(user) && !maySeeCompany(user, row.companyRepId, row.shared))
+    throw new NotAllowed();
 
   const base = toRow(row);
 
@@ -561,7 +566,7 @@ export async function listQuotationsForProject(
       and(
         eq(quotations.projectId, projectId),
         isLatestRevisionSql(),
-        seesEveryQuotation(user) ? undefined : eq(companies.repId, user.id),
+        seesEveryQuotation(user) ? undefined : seesCompany(user),
       ),
     )
     .orderBy(desc(quotations.createdAt));
@@ -585,7 +590,7 @@ export async function listQuotationsForCompany(
       and(
         eq(quotations.companyId, companyId),
         isLatestRevisionSql(),
-        seesEveryQuotation(user) ? undefined : eq(companies.repId, user.id),
+        seesEveryQuotation(user) ? undefined : seesCompany(user),
       ),
     )
     .orderBy(desc(quotations.createdAt));
@@ -621,7 +626,7 @@ export async function lastQuotationForCompany(
       and(
         eq(quotations.companyId, companyId),
         isNull(companies.archivedAt),
-        seesEveryQuotation(user) ? undefined : eq(companies.repId, user.id),
+        seesEveryQuotation(user) ? undefined : seesCompany(user),
       ),
     )
     .orderBy(desc(quotations.createdAt))

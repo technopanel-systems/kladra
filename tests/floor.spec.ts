@@ -6,6 +6,7 @@ import {
   mayHandOver,
   mayOpen,
   mayQuote,
+  mayShare,
   mayWrite,
   ownsCompanies,
   REPORTING_ROLES,
@@ -15,6 +16,14 @@ import {
   writesReports,
 } from "@/lib/floor";
 import type { Role, SessionUser } from "@/lib/types";
+// mayWorkProject and mayKeepContacts live in visibility.ts, not floor.ts,
+// because they ask a second question floor.ts does not have the vocabulary
+// for — "or was he put on this one" — but they are built entirely on
+// mayWrite underneath, and that is exactly what the tests below hold them to.
+// visibility.ts imports "@/db" for the SQL half of the file this does not
+// use; the pool it names opens on first use, never on import (src/db/index.ts),
+// so pulling the module in here costs nothing and opens no connection.
+import { mayKeepContacts, mayWorkProject } from "@/lib/visibility";
 
 /**
  * Who may read a rep's floor and who may write on it (SPEC S8, D42).
@@ -168,4 +177,85 @@ test("who may move a company: its owner, the manager, the admin — and nobody v
   // Viewing is reading, here as everywhere (P8.8).
   const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };
   expect(mayHandOver(viewing, FAISAL)).toBe(false);
+});
+
+/**
+ * Who may put somebody else on a company or a project (SPEC §3, D147).
+ *
+ * The same three as `mayHandOver` — its owner, the manager, the admin — and
+ * deliberately asked the same way, because the two are easy to conflate and
+ * the difference is the whole rule: a handover moves whose metres these are;
+ * a share does not, and takes nothing from the person who grants it.
+ */
+test("who may share a company or a project: its owner, the manager, the admin — and nobody viewing", () => {
+  expect(mayShare(who("marketing", "marketing-id"), "marketing-id")).toBe(true);
+  expect(mayShare(who("rep", FAISAL), FAISAL)).toBe(true);
+  expect(mayShare(who("manager", "manager-id"), FAISAL)).toBe(true);
+  expect(mayShare(who("admin", "admin-id"), FAISAL)).toBe(true);
+
+  // Not a colleague's, and not the coordinator's business at all.
+  expect(mayShare(who("rep", SAAD), FAISAL)).toBe(false);
+  expect(mayShare(who("coordinator", "rawan-id"), FAISAL)).toBe(false);
+
+  // Viewing is reading, here as everywhere (P8.8).
+  const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };
+  expect(mayShare(viewing, FAISAL)).toBe(false);
+});
+
+/**
+ * May this person WORK a project — log against it, report on it, raise a
+ * quotation or a dispatch on it (SPEC §3, D147)?
+ *
+ * Its own rep, always. Somebody it was shared with — `onProject`, the share
+ * row a caller already fetched — works it exactly when his ROLE holds a floor
+ * to work it from, the same "an id is not a floor" rule `mayWrite` itself was
+ * built for (P11A, D91): a coordinator put on a project by mistake would not
+ * begin working it, because she has no floor for the work to land on.
+ */
+test("mayWorkProject: his own project always; a shared one only for a role that holds a floor", () => {
+  for (const role of ROLES) {
+    const user = who(role, SAAD);
+    // Not his and not shared: reading the company this project sits under is
+    // not being on the JOB (D147) — the company share carries less than this.
+    expect(mayWorkProject(user, FAISAL, false), `${role}, not on Faisal's project`).toBe(false);
+    // Put on it: he works it exactly when his role holds a floor at all.
+    expect(mayWorkProject(user, FAISAL, true), `${role}, put on Faisal's project`).toBe(
+      holdsFloor(role),
+    );
+  }
+
+  // His own project, never shared, reduces to `mayWrite` through the same door.
+  for (const role of ROLES) {
+    const user = who(role, FAISAL);
+    expect(mayWorkProject(user, FAISAL, false), `${role} on his own project`).toBe(holdsFloor(role));
+  }
+
+  // Viewing is reading even for a share that would otherwise say yes.
+  const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };
+  expect(mayWorkProject(viewing, "admin-id", true)).toBe(false);
+});
+
+/**
+ * May this person keep his own contacts on this company (SPEC §3, D147)?
+ *
+ * The same shape as `mayWorkProject`, for the one thing a COMPANY share
+ * carries besides reading: its own rep always, and somebody it was shared
+ * with exactly when his role holds a floor for the contact to sit on.
+ */
+test("mayKeepContacts: his own company always; a shared one only for a role that holds a floor", () => {
+  for (const role of ROLES) {
+    const user = who(role, SAAD);
+    expect(mayKeepContacts(user, FAISAL, false), `${role}, not shared Faisal's company`).toBe(false);
+    expect(mayKeepContacts(user, FAISAL, true), `${role}, shared Faisal's company`).toBe(
+      holdsFloor(role),
+    );
+  }
+
+  for (const role of ROLES) {
+    const user = who(role, FAISAL);
+    expect(mayKeepContacts(user, FAISAL, false), `${role} on his own company`).toBe(holdsFloor(role));
+  }
+
+  const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };
+  expect(mayKeepContacts(viewing, "admin-id", true)).toBe(false);
 });

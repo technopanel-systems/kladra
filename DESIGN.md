@@ -96,7 +96,11 @@ small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, 
 the word for what it is, in a face of its own so a paragraph that swings to the other end of a
 wide drawer stays attached to its label; and `ListSearch`, the one box a list is filtered by —
 term on the URL a quarter-second after the last keystroke, caret never stolen, and one per
-screen however many lists are under it. Logical utilities only (`ms-`, `pe-`,
+screen however many lists are under it; and `PageTabs`, the row across the top of a home
+screen (D151), which is links rather than the kit's `Tabs` because a tab here is a place with an
+address and not a panel toggled in the browser, and which is deliberately not the pill the
+list-and-board switch wears — that one is a control inside a screen and this one is the
+structure of it. Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
@@ -660,6 +664,22 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   callers, because a caller that clears what it derived is doing the right thing — it is the word
   "change" that has to be true. The same trap was live in the company form, where choosing the same
   country again wiped the city under it.
+
+- **One door, and the answer to "may he see it" is written at it.** Phase 12 (D147). The rule
+  "a rep sees his own companies" was written eleven times: four private `narrowTo` predicates,
+  and seven more clauses typed by hand into the readers beside them. Every copy was correct, and
+  that is exactly what made them dangerous — the day a company could be shared, ten of them would
+  have gone on being correct about the old rule. `seesCompany` in `src/lib/visibility.ts` is the
+  sentence now, and every list, count, drawer and search asks it. The pure half stays pure:
+  `mayOpen` and `mayWrite` take a role and two ids and no database (D42), so the share arrives as
+  a boolean the query already asked for, in the same statement that fetched the owner. Two round
+  trips to answer one question are two chances for the answers to disagree.
+- **A permission has a real foreign key.** Phase 12 (D147). The two newest tables in the schema
+  are polymorphic — a notification and an audit row carry a type and an id and no reference — and
+  copying that shape for a share would have been the obvious thing. It is wrong for this one: those
+  two are pointers, where an orphan is a row nobody reads, and a share is a permission, where an
+  orphan over a recycled id is somebody seeing a customer nobody gave him. Two tables, real
+  references, real cascades.
 
 ## §4 Not built until asked
 

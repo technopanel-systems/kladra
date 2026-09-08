@@ -14,7 +14,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, desc, eq, isNull, type SQL } from "drizzle-orm";
+import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { activities, companies, contacts, countries, projects, users } from "@/db/schema";
@@ -24,6 +24,14 @@ import { mayOpen, mayWrite } from "@/lib/floor";
 import { lastWorkingDay } from "@/lib/reports";
 import { todayRiyadh, type Day } from "@/lib/dates";
 import type { SessionUser } from "@/lib/types";
+import {
+  mayKeepContacts,
+  mayWorkProject,
+  maySeeCompany,
+  onCompanySql,
+  onProjectSql,
+  sharersOfCompany,
+} from "@/lib/visibility";
 
 export type ActivityChannel = "visit" | "call" | "whatsapp" | "other";
 
@@ -48,15 +56,31 @@ export { mayOpen, mayWrite };
 
 /** The company's owner and whether it is archived, in ONE read. */
 async function companyRow(
+  user: SessionUser,
   companyId: string,
-): Promise<{ repId: string; archived: boolean; country: string } | null> {
+): Promise<{ repId: string; archived: boolean; country: string; shared: boolean } | null> {
   const [row] = await db
-    .select({ repId: companies.repId, archivedAt: companies.archivedAt, country: countries.code })
+    .select({
+      repId: companies.repId,
+      archivedAt: companies.archivedAt,
+      country: countries.code,
+      // Asked in the same statement as the owner, because "may I see it" is one
+      // question with two answers in it now (D147) and two round trips are two
+      // chances for them to disagree.
+      shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+    })
     .from(companies)
     .innerJoin(countries, eq(countries.id, companies.countryId))
     .where(eq(companies.id, companyId))
     .limit(1);
-  return row ? { repId: row.repId, archived: row.archivedAt !== null, country: row.country } : null;
+  return row
+    ? {
+        repId: row.repId,
+        archived: row.archivedAt !== null,
+        country: row.country,
+        shared: row.shared,
+      }
+    : null;
 }
 
 /**
@@ -72,9 +96,9 @@ async function companyRow(
 export async function assertCompanyOpen(
   user: SessionUser,
   companyId: string,
-): Promise<{ repId: string; archived: boolean }> {
-  const row = await companyRow(companyId);
-  if (!row || !mayOpen(user, row.repId)) throw new NotAllowed();
+): Promise<{ repId: string; archived: boolean; shared: boolean }> {
+  const row = await companyRow(user, companyId);
+  if (!row || !maySeeCompany(user, row.repId, row.shared)) throw new NotAllowed();
   return row;
 }
 
@@ -89,10 +113,53 @@ export async function assertCompanyOpen(
 export async function assertCompanyMine(
   user: SessionUser,
   companyId: string,
-): Promise<{ repId: string; archived: boolean; country: string }> {
-  const row = await companyRow(companyId);
+): Promise<{ repId: string; archived: boolean; country: string; shared: boolean }> {
+  const row = await companyRow(user, companyId);
   if (!row || !mayWrite(user, row.repId)) throw new NotAllowed();
   return row;
+}
+
+/**
+ * The read for ADDING a contact: his own company, or one shared with him
+ * (D147). A company share carries exactly this much writing and no more.
+ */
+export async function assertMayKeepContacts(
+  user: SessionUser,
+  companyId: string,
+): Promise<{ repId: string; archived: boolean; country: string; shared: boolean }> {
+  const row = await companyRow(user, companyId);
+  if (!row || !mayKeepContacts(user, row.repId, row.shared)) throw new NotAllowed();
+  return row;
+}
+
+/**
+ * The read for CHANGING one: a contact belongs to whoever added him, and only
+ * he edits, archives or makes him the main one. On a shared company the other
+ * rep has his own row for the same person, and that is the one he changes.
+ */
+export async function assertContactMine(
+  user: SessionUser,
+  contactId: string,
+): Promise<{ companyId: string; companyRepId: string; country: string; sharers: string[] }> {
+  const [row] = await db
+    .select({
+      companyId: contacts.companyId,
+      contactRepId: contacts.repId,
+      companyRepId: companies.repId,
+      country: countries.code,
+    })
+    .from(contacts)
+    .innerJoin(companies, eq(companies.id, contacts.companyId))
+    .innerJoin(countries, eq(countries.id, companies.countryId))
+    .where(eq(contacts.id, contactId))
+    .limit(1);
+  if (!row || !mayWrite(user, row.contactRepId)) throw new NotAllowed();
+  return {
+    companyId: row.companyId,
+    companyRepId: row.companyRepId,
+    country: row.country,
+    sharers: await sharersOfCompany(row.companyId),
+  };
 }
 
 /** Throws NotAllowed for a company this person may not open. Reading only. */
@@ -101,12 +168,36 @@ export async function assertCompanyVisible(user: SessionUser, companyId: string)
   return repId;
 }
 
-/** The project's company and that company's owner, or null when unknown. */
+/**
+ * Everything the two questions about a project need, in one statement (D147).
+ *
+ * `repId` is the company's owner and `projectRepId` is the project's, which
+ * were the same person until a company could be shared. Seeing it is the
+ * company's question — a company shared is a company seen, all of it — and
+ * working it is the project's, and they are answered from different columns.
+ */
 export async function projectOwner(
+  user: SessionUser,
   projectId: string,
-): Promise<{ companyId: string; repId: string } | null> {
+): Promise<{
+  companyId: string;
+  repId: string;
+  projectRepId: string;
+  shared: boolean;
+  onProject: boolean;
+  archived: boolean;
+} | null> {
   const [row] = await db
-    .select({ companyId: projects.companyId, repId: companies.repId })
+    .select({
+      companyId: projects.companyId,
+      repId: companies.repId,
+      projectRepId: projects.repId,
+      shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+      onProject: onProjectSql(user, sql`projects.id`).mapWith(Boolean),
+      // A job on a company that has left the floor takes nothing new either
+      // (S16); the same sentence the company gate says.
+      archived: sql<boolean>`${companies.archivedAt} is not null`.mapWith(Boolean),
+    })
     .from(projects)
     .innerJoin(companies, eq(companies.id, projects.companyId))
     .where(eq(projects.id, projectId))
@@ -119,18 +210,41 @@ export async function assertProjectVisible(
   user: SessionUser,
   projectId: string,
 ): Promise<{ companyId: string; repId: string }> {
-  const owner = await projectOwner(projectId);
-  if (!owner || !mayOpen(user, owner.repId)) throw new NotAllowed();
+  const owner = await projectOwner(user, projectId);
+  if (!owner || !maySeeCompany(user, owner.repId, owner.shared)) throw new NotAllowed();
   return owner;
 }
 
-/** The same, for writing: a project is worked by the rep whose company it is. */
+/**
+ * The same, for WORKING it: its own rep, and whoever it has been shared with
+ * (D147). Seeing the company over it is not enough — the founder drew the line
+ * there, and a rep who can read a job is not thereby on it.
+ */
 export async function assertProjectMine(
   user: SessionUser,
   projectId: string,
-): Promise<{ companyId: string; repId: string }> {
-  const owner = await projectOwner(projectId);
-  if (!owner || !mayWrite(user, owner.repId)) throw new NotAllowed();
+): Promise<{ companyId: string; repId: string; projectRepId: string; archived: boolean }> {
+  const owner = await projectOwner(user, projectId);
+  if (!owner || !mayWorkProject(user, owner.projectRepId, owner.onProject)) throw new NotAllowed();
+  return owner;
+}
+
+/**
+ * The same read, for changing the PROJECT ROW rather than working the job.
+ *
+ * Renaming it, marking it lost and archiving it belong to whoever created it
+ * (SPEC §3: an item belongs to the person who made it, and only he edits it).
+ * Logging against it, reporting on it and quoting on it are the work, and
+ * `assertProjectMine` answers those. Two questions, two helpers — the same
+ * split as `mayOpen` and `mayWrite`, and for the same reason: one predicate
+ * answering both is how a manager once came to write on every floor (D42).
+ */
+export async function assertProjectOwn(
+  user: SessionUser,
+  projectId: string,
+): Promise<{ companyId: string; repId: string; projectRepId: string; archived: boolean }> {
+  const owner = await projectOwner(user, projectId);
+  if (!owner || !mayWrite(user, owner.projectRepId)) throw new NotAllowed();
   return owner;
 }
 

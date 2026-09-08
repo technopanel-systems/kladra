@@ -55,6 +55,7 @@ import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { lineSqm, sumSqm } from "@/lib/sqm";
+import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
 
 export type DispatchStatus = "submitted" | "approved" | "refused";
 
@@ -343,7 +344,7 @@ function narrowTo(input: ListDispatchesInput): (SQL | undefined)[] {
 
   const conditions: (SQL | undefined)[] = [
     isNull(companies.archivedAt),
-    seesEveryDispatch(user) ? undefined : eq(companies.repId, user.id),
+    seesEveryDispatch(user) ? undefined : seesCompany(user),
     input.repId ? eq(companies.repId, input.repId) : undefined,
   ];
 
@@ -436,7 +437,13 @@ export async function getDispatch(
   locale?: string,
 ): Promise<DispatchDetail | null> {
   const [row] = await db
-    .select({ ...selection(locale ?? (await getLocale())), shipmentMethod: shipmentName(locale) })
+    .select({
+      ...selection(locale ?? (await getLocale())),
+      shipmentMethod: shipmentName(locale),
+      // Whether this reader is on the company's share list, asked in the same
+      // statement as its owner (D147).
+      shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+    })
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -448,7 +455,8 @@ export async function getDispatch(
     .limit(1);
 
   if (!row) return null;
-  if (!seesEveryDispatch(user) && row.companyRepId !== user.id) throw new NotAllowed();
+  if (!seesEveryDispatch(user) && !maySeeCompany(user, row.companyRepId, row.shared))
+    throw new NotAllowed();
 
   const items = await db
     .select({
@@ -529,7 +537,7 @@ export async function lastDispatchForQuotation(
     .where(
       and(
         eq(dispatches.quotationId, quotationId),
-        seesEveryDispatch(user) ? undefined : eq(companies.repId, user.id),
+        seesEveryDispatch(user) ? undefined : seesCompany(user),
       ),
     )
     .orderBy(desc(dispatches.createdAt))
@@ -561,7 +569,7 @@ export async function listDispatchesForQuotation(
     .where(
       and(
         eq(dispatches.quotationId, quotationId),
-        seesEveryDispatch(user) ? undefined : eq(companies.repId, user.id),
+        seesEveryDispatch(user) ? undefined : seesCompany(user),
       ),
     )
     .orderBy(desc(dispatches.createdAt));
@@ -649,9 +657,12 @@ const approvedSqm = sumSqm;
  *
  * `month` is any day in it. Approval is the event, so the month is the month
  * `approved_at` fell in, in Riyadh, and neither the request nor the SMAC number
- * moves it (S41). Counted against the rep who owns the COMPANY, not whoever
- * pressed the button, so moving a company to another rep moves its metres with
- * it (S8).
+ * moves it (S41). Counted against the rep who RAISED it, never against whoever
+ * owns the company today: a hand-over moves the customer and his open work and
+ * leaves the metres in the month somebody already earned them (D86). This block
+ * said the opposite for three phases while the code four lines down did the
+ * right thing, which is how a stale comment becomes a defect in the next thing
+ * somebody builds on it.
  *
  * One statement for the whole team: the manager's table and a rep's own card
  * read the same row, so they cannot disagree.

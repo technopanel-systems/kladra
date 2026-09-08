@@ -51,9 +51,12 @@ export type FloorDay = {
   answersRecorded: number;
   dispatchesRaised: number;
   /**
-   * Dispatches on his FLOOR that the desk approved that day — counted through
-   * `companies.rep_id`, the same way the metres beside it are (S43), so the
-   * count and the m² can never disagree about which dispatches they mean.
+   * Dispatches HE raised that the desk approved that day — counted through
+   * `dispatches.rep_id`, the same way the metres beside it are (D86), so the
+   * count and the m² can never disagree about which dispatches they mean. This
+   * said `companies.rep_id` while the query below filtered on the raiser, and a
+   * comment that contradicts the code under it is the trap the next builder
+   * falls into.
    */
   dispatchesApproved: number;
   /** The m² an approved dispatch moved on his floor that day (S41, S43). */

@@ -24,16 +24,23 @@ import { db } from "@/db";
 import { auditLog, companies, projects, quotationItems, quotations, users } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { liveAudienceFor, notifyLive } from "@/lib/live";
+import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { clearNotifications, createNotification } from "@/lib/notify";
 import { holdQuotation } from "@/lib/hold";
 import { quotationLabel } from "@/lib/labels";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
-import { mayQuote, SELLING_ROLES } from "@/lib/floor";
+import { SELLING_ROLES } from "@/lib/floor";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
+import {
+  mayRaiseFor,
+  maySeeCompany,
+  onCompanySql,
+  onProjectSql,
+} from "@/lib/visibility";
+import { mayWrite } from "@/lib/floor";
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -77,8 +84,12 @@ type Loaded = {
   companyName: string;
   projectId: string | null;
   repId: string;
-  /** The rep who owns the COMPANY — who may act on it, and who hears about it. */
+  /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
   companyRepId: string;
+  /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
+  projectRepId: string | null;
+  shared: boolean;
+  onProject: boolean;
 };
 
 /**
@@ -97,14 +108,19 @@ async function load(actor: SessionUser, quotationId: string): Promise<Loaded | n
       projectId: quotations.projectId,
       repId: quotations.repId,
       companyRepId: companies.repId,
+      projectRepId: projects.repId,
+      shared: onCompanySql(actor, sql`companies.id`).mapWith(Boolean),
+      onProject: onProjectSql(actor, sql`quotations.project_id`).mapWith(Boolean),
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .leftJoin(projects, eq(projects.id, quotations.projectId))
     .where(eq(quotations.id, quotationId))
     .limit(1);
 
   if (!row) return null;
-  if (!seesEveryQuotation(actor) && row.companyRepId !== actor.id) throw new NotAllowed();
+  if (!seesEveryQuotation(actor) && !maySeeCompany(actor, row.companyRepId, row.shared))
+    throw new NotAllowed();
   return {
     ...row,
     status: row.status as QuotationStatus,
@@ -246,7 +262,6 @@ export async function requestQuotationAction(
       .where(eq(companies.id, input.companyId))
       .limit(1);
     if (!company) return { ok: false, error: t("companyNotFound") };
-    if (!mayQuote(actor, company.repId)) throw new NotAllowed();
     if (company.archivedAt) return { ok: false, error: t("companyArchived") };
 
     // Every quotation belongs to a project (S18). The company drawer used to
@@ -261,13 +276,25 @@ export async function requestQuotationAction(
       };
     }
     const [project] = await db
-      .select({ companyId: projects.companyId, lostAt: projects.lostAt })
+      .select({
+        companyId: projects.companyId,
+        lostAt: projects.lostAt,
+        repId: projects.repId,
+        onProject: onProjectSql(actor, sql`projects.id`).mapWith(Boolean),
+      })
       .from(projects)
       .where(eq(projects.id, input.projectId))
       .limit(1);
     if (!project) return { ok: false, error: t("projectNotFound") };
     if (project.companyId !== input.companyId) {
       return { ok: false, error: t("projectNotAtCompany") };
+    }
+    // Asked here rather than above the project check, because there are two
+    // ways to be allowed and only one of them is about the company: his own
+    // customer, or a job he has been put on (D147). Both are refused with the
+    // same silence a rep gets for somebody else's id.
+    if (!mayRaiseFor(actor, company.repId, project.repId, project.onProject)) {
+      throw new NotAllowed();
     }
     // A lost project is finished work (S20): nothing new hangs off it.
     if (project.lostAt) return { ok: false, error: t("alreadyLost") };
@@ -305,7 +332,7 @@ export async function requestQuotationAction(
         });
       }
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(input.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: row.id,
         number: label,
@@ -339,7 +366,10 @@ export async function updateQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
+    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // only he edits it (SPEC §3, D147) — which was the same person as the
+    // company's owner until a project could be shared, and is not any more.
+    if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
     if (quotation.status !== "requested" && quotation.status !== "returned") {
       return { ok: false, error: tq("alreadyIssued") };
     }
@@ -394,7 +424,7 @@ export async function updateQuotationAction(
         }
       }
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: quotation.id,
         number: quotation.label,
@@ -472,7 +502,7 @@ export async function issueQuotationAction(
 
       await notifyLive(
         tx,
-        await liveAudienceFor(quotation.companyRepId, actor.id, ["coordinator"]),
+        await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]),
         { type: "quotation", id: quotation.id, number: quotation.label, status: "issued" },
       );
       return true;
@@ -557,7 +587,7 @@ export async function correctQuotationNumberAction(
 
         await notifyLive(
           tx,
-          await liveAudienceFor(quotation.companyRepId, actor.id, ["coordinator"]),
+          await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]),
           { type: "quotation", id: quotation.id, number: quotation.label, status: quotation.status },
         );
         return "ok" as const;
@@ -648,7 +678,7 @@ export async function sendBackQuotationAction(
 
       await notifyLive(
         tx,
-        await liveAudienceFor(quotation.companyRepId, actor.id, ["coordinator"]),
+        await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]),
         { type: "quotation", id: quotation.id, number: quotation.label, status: "returned" },
       );
       return true;
@@ -696,7 +726,10 @@ export async function decideQuotationAction(
 
     const quotation = await load(actor, parsed.data.quotationId);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
+    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // only he edits it (SPEC §3, D147) — which was the same person as the
+    // company's owner until a project could be shared, and is not any more.
+    if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
     if (quotation.status !== "issued") return { ok: false, error: tq("notIssued") };
 
     const held = await db.transaction(async (tx) => {
@@ -733,7 +766,7 @@ export async function decideQuotationAction(
         });
       }
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: quotation.id,
         number: quotation.label,
@@ -768,7 +801,10 @@ export async function reviseQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
+    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // only he edits it (SPEC §3, D147) — which was the same person as the
+    // company's owner until a project could be shared, and is not any more.
+    if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
     if (quotation.status === "requested" || quotation.status === "returned") {
       return { ok: false, error: tq("notIssuedYet") };
     }
@@ -830,7 +866,7 @@ export async function reviseQuotationAction(
         });
       }
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: row.id,
         number: label,
@@ -864,7 +900,10 @@ export async function cancelQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    if (!mayQuote(actor, quotation.companyRepId)) throw new NotAllowed();
+    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // only he edits it (SPEC §3, D147) — which was the same person as the
+    // company's owner until a project could be shared, and is not any more.
+    if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
     if (quotation.status !== "requested" && quotation.status !== "returned") {
       return { ok: false, error: tq("alreadyIssued") };
     }
@@ -910,7 +949,7 @@ export async function cancelQuotationAction(
         });
       }
 
-      await notifyLive(tx, await liveAudienceFor(actor.id, actor.id, ["coordinator"]), {
+      await notifyLive(tx, await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: quotation.id,
         number: quotation.label,

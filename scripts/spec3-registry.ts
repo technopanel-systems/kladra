@@ -265,11 +265,15 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "every rep on it sees the company and all items beneath it",
-    owed: "P12-3 sharing — a company has one rep and no sharers, so there is no second floor to see it from.",
+    tests: [
+      "two reps on one customer: a shared company, a shared project, and taking the company back",
+    ],
   },
   {
     says: "every rep on it works it fully",
-    owed: "P12-3 sharing — a project belongs to its company's one rep, so there is nobody to share the work of it with.",
+    tests: [
+      "two reps on one customer: a shared company, a shared project, and taking the company back",
+    ],
   },
   {
     says: "chosen per quotation and per dispatch and is never inherited",

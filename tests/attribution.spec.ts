@@ -1,6 +1,13 @@
 import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one, personName, query, userId } from "./helpers/db";
+import {
+  floorOfCompany,
+  one,
+  personName,
+  query,
+  restoreCompanyFloor,
+  userId,
+} from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 
 /**
@@ -142,6 +149,12 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
     "the two definitions already disagree before anything moved — the target company is wrong",
   ).toBe(faisalByRaiser);
 
+  // The floor as it stands before anything moves. A hand-over takes the
+  // company's projects and contacts with it (src/actions/companies.ts), so
+  // putting back `companies.rep_id` alone would leave this customer's people
+  // on Saad's floor for every spec that runs after this one.
+  const floor = await floorOfCompany(target.company_id);
+
   try {
     await login(page, locale, "abdulrahman");
 
@@ -175,6 +188,36 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
           { timeout: 15_000 },
         )
         .toBe(saad.id);
+
+      // And his people and his jobs went with it (#155). Before P12 a project
+      // and a contact had no rep of their own, so moving the company moved
+      // everything under it by definition; now that they say whose they are,
+      // a hand-over that moves the company alone hands the new owner a
+      // customer he cannot log against and leaves the man who left still
+      // holding the work.
+      const his = {
+        projects: floor.projects.filter((p) => p.repId === faisal.id).map((p) => p.id),
+        contacts: floor.contacts
+          .filter((c) => c.repId === faisal.id && c.archivedAt === null)
+          .map((c) => c.id),
+      };
+      expect(
+        his.projects.length + his.contacts.length,
+        "the target company has no projects and no contacts of Faisal's — nothing to prove the move with",
+      ).toBeGreaterThan(0);
+      const leftBehind = await query<{ id: string }>(
+        `select id from projects where id = any($1::uuid[]) and rep_id = $2::uuid
+          union all
+         -- Except one the new owner already held himself: that row is
+         -- archived where it stands, on purpose (#159, D153).
+         select id from contacts
+          where id = any($3::uuid[]) and rep_id = $2::uuid and archived_at is null`,
+        [his.projects, faisal.id, his.contacts],
+      );
+      expect(
+        leftBehind.length,
+        "the company moved and left the departing rep's projects or contacts behind",
+      ).toBe(0);
     });
 
     await test.step("2 · the team screen still credits each man with what he raised", async () => {
@@ -185,7 +228,9 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
         "the old, company-owner definition did not move even though the company did",
       ).not.toBe(faisalByRaiser);
 
-      await page.goto(`/${locale}/team`);
+      // The team table is its own tab now (D151): the manager's screen answers three
+      // questions and this is the third one, people rather than work.
+      await page.goto(`/${locale}/team?tab=team`);
       await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
 
       expect(
@@ -212,10 +257,7 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
     // (rules/data.md — nothing here may leak into another file's assumptions).
     // `audit_log.record_id` is text; `notifications.subject_id` is uuid
     // (src/db/schema.ts) — cast each to its own column's type, not the other's.
-    await query("update companies set rep_id = $1::uuid where id = $2::uuid", [
-      faisal.id,
-      target.company_id,
-    ]);
+    await restoreCompanyFloor(floor);
     await query(
       `delete from audit_log
         where record_type = 'company' and record_id = $1::text and action = 'company.handOver'`,

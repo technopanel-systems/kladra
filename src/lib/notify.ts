@@ -75,6 +75,8 @@ const CLEARED_BY: Record<NotificationKind, "work" | "reading"> = {
   dispatchApproved: "reading",
   dispatchRefused: "reading",
   companyHandedOver: "reading",
+  companyShared: "reading",
+  projectShared: "reading",
 };
 
 /** The kinds that die when they are read. Derived, never listed twice. */

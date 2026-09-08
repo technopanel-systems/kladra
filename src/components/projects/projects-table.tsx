@@ -377,12 +377,29 @@ export type ProjectSheetProps = {
   /** As stored, so Edit opens on the project's own notes rather than a summary. */
   notes: string | null;
   /**
-   * Whether the person reading this owns the company the project hangs off. A
-   * manager reads every project and works none (S8, D42), so he gets the dates
-   * and the history and no controls at all — rather than four buttons that
-   * would answer "Not allowed" (DESIGN §5).
+   * Whether the person reading this WORKS the job: its own rep, and anybody it
+   * has been shared with (D147). A manager reads every project and works none
+   * (S8, D42), so he gets the dates and the history and no controls at all —
+   * rather than buttons that would answer "Not allowed" (DESIGN §5).
+   *
+   * This is what logging against it and setting its date take. Changing the
+   * project ROW is a second question, below.
    */
   mine: boolean;
+  /**
+   * Whether he owns the row itself — the person who added the project. Editing
+   * it, marking it lost and archiving it are decisions about the record rather
+   * than work on the job, and an item belongs to whoever created it (SPEC §3).
+   * Two flags rather than one, because two people can now be looking at this
+   * drawer with different answers.
+   */
+  owns: boolean;
+  /**
+   * Who else is on this job, in words, and the control that changes it — or
+   * only the words, for a reader who may neither grant a share nor leave one.
+   * Built by the server half, which is where the names are read (D147).
+   */
+  sharing: ReactNode;
   /** The rendered activity list, empty state and all. */
   activity: ReactNode;
   /** The rendered quotations panel, empty state and all. */
@@ -416,6 +433,8 @@ export function ProjectSheet({
   lostReason,
   notes,
   mine,
+  owns,
+  sharing,
   activity,
   quotations,
 }: ProjectSheetProps) {
@@ -542,38 +561,51 @@ export function ProjectSheet({
             {saving ? <span className="text-xs text-faint">{t("common.saving")}</span> : null}
           </div>
 
+          {/* Who else is on this job, beside the facts it is about, in the same
+              place the company drawer says it (D147, DESIGN §5). */}
+          {sharing}
+
           {/* One primary action, at the top (DESIGN §2). */}
-          {mine ? (
+          {mine || owns ? (
           <div className="flex flex-wrap items-center gap-2">
+            {/* Working it: its rep, and anybody put on it (D147). */}
+            {mine ? (
             <LogButton companyId={companyId} projectId={projectId} variant="brand">
               {t("common.log")}
             </LogButton>
-            <EditProjectDialog
-              project={{ id: projectId, name, expectedSqm, nextFollowUp, notes }}
-              trigger={
-                <Button variant="outline">
-                  <Pencil aria-hidden="true" />
-                  {t("common.edit")}
-                </Button>
-              }
-            />
-            {lost ? null : (
-              <MarkLostDialog
-                projectId={projectId}
-                trigger={
-                  <Button variant="ghost" className="text-muted-foreground">
-                    {t("common.markLost")}
-                  </Button>
-                }
-              />
-            )}
-            {/* Last, and not the same act as Mark lost: this one tidies a job
-                that was never real, and says so in its own warning. */}
-            <ArchiveProjectDialog
-              projectId={projectId}
-              projectName={name}
-              onArchived={close}
-            />
+            ) : null}
+            {/* The row itself, and only its own rep — a helper on the job does
+                not rename it, close it or take it off the list. */}
+            {owns ? (
+              <>
+                <EditProjectDialog
+                  project={{ id: projectId, name, expectedSqm, nextFollowUp, notes }}
+                  trigger={
+                    <Button variant="outline">
+                      <Pencil aria-hidden="true" />
+                      {t("common.edit")}
+                    </Button>
+                  }
+                />
+                {lost ? null : (
+                  <MarkLostDialog
+                    projectId={projectId}
+                    trigger={
+                      <Button variant="ghost" className="text-muted-foreground">
+                        {t("common.markLost")}
+                      </Button>
+                    }
+                  />
+                )}
+                {/* Last, and not the same act as Mark lost: this one tidies a
+                    job that was never real, and says so in its own warning. */}
+                <ArchiveProjectDialog
+                  projectId={projectId}
+                  projectName={name}
+                  onArchived={close}
+                />
+              </>
+            ) : null}
           </div>
           ) : null}
 

@@ -176,6 +176,7 @@ async function main(): Promise<void> {
     const typed = `05${String(50000000 + i).slice(0, 8)}`;
     await db.insert(contacts).values({
       companyId: row.id,
+      repId,
       name: `${pick(PEOPLE)} ${pick(FAMILIES)}`,
       phone: typed,
       phoneNormalized: normalizePhone(typed) ?? typed,
@@ -222,6 +223,7 @@ async function main(): Promise<void> {
       .insert(projects)
       .values({
         companyId,
+        repId: company.repId,
         name: `${pick(["واجهة", "مشروع", "مبنى", "مجمع"])} ${pick(LAST)} ${i + 1}`,
         expectedSqm: `${between(200, 6000)}.00`,
       })
