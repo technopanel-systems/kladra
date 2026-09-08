@@ -35,7 +35,24 @@ const child = spawn("npx", ["next", "dev", "-H", "127.0.0.1", "-p", PORT], {
   cwd: repoRoot,
   stdio: "inherit",
   shell: process.platform === "win32",
-  env: { ...process.env, DATABASE_URL: testDatabaseUrl(), NEXT_DIST_DIR: DIST_DIR },
+  /*
+   * A ceiling on the compiler's heap, because the failure this file already
+   * describes has now happened three times and always the same way: a dev
+   * server that has hot-reloaded through hours of edits grows without plateau —
+   * 2.9 GB the second time, 6.7 GB the third — and the third one starved a full
+   * acceptance run, which the machine killed halfway through. Four gigabytes is
+   * far above anything a healthy run of this codebase uses (about 600 MB fresh),
+   * so it changes nothing until the server is already pathological, and then it
+   * dies at once and says why instead of taking the suite down with it.
+   */
+  env: {
+    ...process.env,
+    DATABASE_URL: testDatabaseUrl(),
+    NEXT_DIST_DIR: DIST_DIR,
+    NODE_OPTIONS: [process.env.NODE_OPTIONS, "--max-old-space-size=4096"]
+      .filter(Boolean)
+      .join(" "),
+  },
 });
 
 child.on("exit", (code, signal) => {

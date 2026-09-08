@@ -4,6 +4,7 @@ import { query } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 import { addDays, formatDay, todayRiyadh, type Day } from "@/lib/dates";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import { LIST_LIMIT } from "@/lib/list-size";
 import { waitedSince } from "@/lib/waiting";
 import type { NonWorking } from "@/lib/workdays";
 
@@ -93,13 +94,14 @@ async function nonWorkingWindow(today: Day): Promise<NonWorking[]> {
   );
 }
 
-/** The Longest-wait tile of the strip on her queue (src/components/ui-ext/standing-strip.tsx). */
+/** One tile of the strip on her queue, by its own label (src/components/ui-ext/standing-strip.tsx). */
+function figureTile(page: Page, label: string): Locator {
+  return page.locator('[data-slot="standing"]').first().locator("> div").filter({ hasText: label });
+}
+
+/** The Longest-wait tile of the strip on her queue. */
 function longestWaitTile(page: Page, t: Translate): Locator {
-  return page
-    .locator('[data-slot="standing"]')
-    .first()
-    .locator("> div")
-    .filter({ hasText: t("queue.longestWait") });
+  return figureTile(page, t("queue.longestWait"));
 }
 
 /** One of the two sections the queue draws its lists in, by its own heading —
@@ -247,4 +249,110 @@ test("one search box over both her lists, and it filters both", async ({ page, l
   ).toBeVisible(COLD);
   // The term is on the URL once, and the box that wrote it is the box that shows it.
   await expect(boxes.getByRole("searchbox")).toHaveValue(raised[0].company);
+});
+
+/**
+ * A figure is not the length of a list (D144).
+ *
+ * Her four figures used to be counted off the two arrays her lists had been
+ * given, and a list is two hundred rows (D80) — so past the cap her desk would
+ * have said two hundred waiting for ever, and counted the late ones out of the
+ * same two hundred. The seeded floor never reaches the cap, so this test builds
+ * a floor that does, on both halves of the desk at once, and reads the strip.
+ *
+ * Everything it inserts is raised today, so the longest wait stays where the
+ * seed put it and the tests above still describe the same desk.
+ */
+test("her figures are the whole desk's, not the first two hundred rows'", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const MARKER = "queue-cap.spec";
+  const OVER = LIST_LIMIT + 6;
+
+  const [home] = await query<{ companyId: string; projectId: string | null; repId: string }>(
+    `select c.id as "companyId", c.rep_id as "repId",
+            (select p.id from projects p
+              where p.company_id = c.id and p.archived_at is null and p.lost_at is null
+              limit 1) as "projectId"
+       from companies c
+      where c.archived_at is null
+      limit 1`,
+  );
+  expect(home, "the seeded floor has a company to hang requests on").toBeTruthy();
+
+  const [issued] = await query<{ id: string; repId: string }>(
+    `select q.id, q.rep_id as "repId"
+       from quotations q join companies c on c.id = q.company_id
+      where q.status = 'issued' and c.archived_at is null
+      limit 1`,
+  );
+  expect(issued, "the seeded floor has an issued quotation to dispatch against").toBeTruthy();
+  const [method] = await query<{ id: number }>(`select id from shipment_methods order by id limit 1`);
+
+  try {
+    await query(
+      `insert into quotations
+         (number, revision, company_id, project_id, rep_id, status, notes, created_at, updated_at)
+       select nextval('quotation_numbers')::int, 1, $1, $2, $3, 'requested', $4, now(), now()
+         from generate_series(1, $5::int)`,
+      [home.companyId, home.projectId, home.repId, MARKER, OVER],
+    );
+    await query(
+      `insert into dispatches
+         (number, quotation_id, rep_id, status, shipment_method_id, destination, payment_terms,
+          created_at, updated_at)
+       select nextval('dispatch_numbers')::int, $1, $2, 'submitted', $3, $4, $5, now(), now()
+         from generate_series(1, $6::int)`,
+      [issued.id, issued.repId, method.id, MARKER, MARKER, OVER],
+    );
+
+    // The same question the lists ask, asked here in SQL: everything requested
+    // at a company that is not archived and is nobody's earlier revision, and
+    // everything submitted behind it.
+    const [{ quotations: waitingQuotations }] = await query<{ quotations: number }>(
+      `select count(*)::int as quotations
+         from quotations q join companies c on c.id = q.company_id
+        where q.status = 'requested' and c.archived_at is null
+          and not exists (select 1 from quotations later
+                           where later.number = q.number and later.revision > q.revision)`,
+    );
+    const [{ dispatches: waitingDispatches }] = await query<{ dispatches: number }>(
+      `select count(*)::int as dispatches
+         from dispatches d
+         join quotations q on q.id = d.quotation_id
+         join companies c on c.id = q.company_id
+        where d.status = 'submitted' and c.archived_at is null`,
+    );
+    expect(waitingQuotations).toBeGreaterThan(LIST_LIMIT);
+    expect(waitingDispatches).toBeGreaterThan(LIST_LIMIT);
+
+    await login(page, locale, "rawan");
+    await expect(page).toHaveURL(new RegExp(`/${locale}/queue`), COLD);
+
+    await test.step("each figure is the true count, not the capped list's length", async () => {
+      await expect(figureTile(page, t("common.quotations")).locator("dd").first()).toHaveText(
+        String(waitingQuotations),
+        COLD,
+      );
+      await expect(figureTile(page, t("common.dispatches")).locator("dd").first()).toHaveText(
+        String(waitingDispatches),
+      );
+    });
+
+    await test.step("and each list says what the cap left off", async () => {
+      await expect(
+        listSection(page, t("common.quotations")).locator('[data-slot="list-tail"]'),
+      ).toHaveText(t("common.showingFirst", { shown: LIST_LIMIT, total: waitingQuotations }));
+      await expect(
+        listSection(page, t("common.dispatches")).locator('[data-slot="list-tail"]'),
+      ).toHaveText(t("common.showingFirst", { shown: LIST_LIMIT, total: waitingDispatches }));
+    });
+  } finally {
+    await query(`delete from dispatches where destination = $1`, [MARKER]);
+    await query(`delete from quotations where notes = $1`, [MARKER]);
+  }
 });

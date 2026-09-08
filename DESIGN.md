@@ -570,6 +570,10 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
   return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
   typed on the screen to lose — each is disabled at its line with that reason written there.
+- **A figure is not the length of a list.** Phase 11J (D144). Every list here is capped, so the
+  count above one is a different question from the rows inside it — asked of the same predicate,
+  never of the array. The two must not be able to disagree, which is why the predicate is shared
+  (`narrowTo`) rather than the number derived, and why a screen that caps says so with a tail.
 - **A record that passes through hands says what happened to it.** Phase 11J (D143). Two people
   own a quotation at different moments and three own a dispatch, and every one of those handovers
   already writes an audit row inside the transaction that made the change. A chain record whose

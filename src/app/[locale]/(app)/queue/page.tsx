@@ -8,12 +8,13 @@ import {
   QuotationsTable,
 } from "@/components/quotations/quotations-table";
 import { ListSearch } from "@/components/ui-ext/list-search";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { requireUser } from "@/lib/authz";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { formatDay, todayRiyadh, type Day } from "@/lib/dates";
-import { listDispatches } from "@/lib/dispatches";
-import { listQuotations } from "@/lib/quotations";
+import { dispatchWaitDays, listDispatches } from "@/lib/dispatches";
+import { listQuotations, quotationWaitDays } from "@/lib/quotations";
 import { queueStanding } from "@/lib/standing";
 import {
   countLate,
@@ -69,26 +70,32 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
 
   const today = todayRiyadh();
 
-  const [t, quotationRows, dispatchRows, standing] = await Promise.all([
+  const [t, quotationRows, dispatchRows, standing, quotationDays, dispatchDays] = await Promise.all([
     getTranslations(),
     // Oldest first: this is a desk she works DOWN, and her own screen has said
     // "oldest first" since P8 while both lists came back newest first (D137).
     listQuotations({ user, q: q || undefined, status: "requested", locale, order: "oldest" }),
     listDispatches({ user, q: q || undefined, status: "submitted", locale, order: "oldest" }),
     queueStanding(),
+    // Her figures, uncapped and through the list's own predicate (D144).
+    quotationWaitDays({ user, q: q || undefined, status: "requested", locale }),
+    dispatchWaitDays({ user, q: q || undefined, status: "submitted", locale }),
   ]);
 
-  // The counts come from the rows already on the page, so the strip cannot say
-  // three while the list under it shows two (rules/data.md).
-  const waiting = quotationRows.length + dispatchRows.length;
+  // The counts come from the same question the lists ask, not from the rows
+  // they were given: a list is capped and a figure is not (D144). The strip and
+  // the list still cannot disagree, because neither is derived from the other —
+  // both come from `narrowTo` (rules/data.md).
+  const waiting = quotationDays.length + dispatchDays.length;
 
   // Both chains, one rule (src/lib/waiting.ts): the manager's screen has called
   // a request stuck after two working days since P8, and until now the person
   // who could clear it was the only one not told.
-  // From the rows the page shows, as the counts are: a second query over the
-  // same tables once named a request neither list showed — an archived
-  // company's — and the strip said "4 working days" over an empty desk (D95).
-  const raised = [...quotationRows, ...dispatchRows].map((row) => row.createdOn);
+  // From the same predicate the lists ask, with no cap on it (D144) — not from
+  // a second query written by hand, which is what once named a request neither
+  // list showed, an archived company's, and put "4 working days" over an empty
+  // desk (D95).
+  const raised = [...quotationDays, ...dispatchDays];
   // The holidays a wait crosses, back to the day the oldest request was raised
   // — they are why a wait is counted in working days at all (S48). A fixed
   // sixty days let a longer wait age an earlier holiday as a working day (D97).
@@ -97,16 +104,8 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
     today,
   );
   const worst = longestWait(raised, today, nonWorking);
-  const lateQuotations = countLate(
-    quotationRows.map((row) => row.createdOn),
-    today,
-    nonWorking,
-  );
-  const lateDispatches = countLate(
-    dispatchRows.map((row) => row.createdOn),
-    today,
-    nonWorking,
-  );
+  const lateQuotations = countLate(quotationDays, today, nonWorking);
+  const lateDispatches = countLate(dispatchDays, today, nonWorking);
 
   // Computed here and handed down, rather than in each table: the tables are
   // client components and the holiday table is a database read, so the rule
@@ -127,21 +126,21 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
             label: t("common.quotations"),
             value: (
               <span dir="ltr" className="num">
-                {quotationRows.length}
+                {quotationDays.length}
               </span>
             ),
             caption: <LateCaption count={lateQuotations} text={lateText(lateQuotations)} />,
-            tone: quotationRows.length > 0 ? "wait" : null,
+            tone: quotationDays.length > 0 ? "wait" : null,
           },
           {
             label: t("common.dispatches"),
             value: (
               <span dir="ltr" className="num">
-                {dispatchRows.length}
+                {dispatchDays.length}
               </span>
             ),
             caption: <LateCaption count={lateDispatches} text={lateText(lateDispatches)} />,
-            tone: dispatchRows.length > 0 ? "wait" : null,
+            tone: dispatchDays.length > 0 ? "wait" : null,
           },
           {
             label: t("queue.longestWait"),
@@ -211,6 +210,9 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               showSearch={false}
               waiting={waits(quotationRows)}
             />
+            {/* What the cap left off, said the way the four list screens say it
+                (D80, D144). */}
+            <ListTail shown={quotationRows.length} total={quotationDays.length} />
           </section>
 
           <section className="flex flex-col gap-4">
@@ -228,6 +230,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               showSearch={false}
               waiting={waits(dispatchRows)}
             />
+            <ListTail shown={dispatchRows.length} total={dispatchDays.length} />
           </section>
         </>
       )}

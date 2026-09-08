@@ -373,6 +373,19 @@ function narrowTo(input: ListDispatchesInput): (SQL | undefined)[] {
   return conditions;
 }
 
+/** The same, for the other half of her desk (D144). */
+export async function dispatchWaitDays(input: ListDispatchesInput): Promise<Day[]> {
+  const rows = await db
+    .select({ day: riyadhDay(sql`dispatches.created_at`) })
+    .from(dispatches)
+    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
+    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .where(and(...narrowTo(input)))
+    .orderBy(asc(dispatches.createdAt));
+  return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
+}
+
 /** How many there are, asked only when the list came back full (D80). */
 export async function countDispatches(input: ListDispatchesInput): Promise<number> {
   const [row] = await db

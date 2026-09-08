@@ -359,6 +359,36 @@ function narrowTo(input: ListQuotationsInput): (SQL | undefined)[] {
   return conditions;
 }
 
+/**
+ * The day each row the input describes was raised, oldest first and UNCAPPED
+ * (D144).
+ *
+ * The coordinator's four figures were the length of the arrays her two lists
+ * had been given, and those are capped at `LIST_LIMIT` (D80) — so at a volume
+ * this business has not reached, her desk would have said two hundred waiting
+ * for ever and counted the late ones out of the same two hundred.
+ *
+ * Asked through `narrowTo`, the same predicate the list and the count already
+ * use, because the trap the old code was avoiding is real: a second query
+ * written by hand over the same tables once named a request neither list showed
+ * — an archived company's — and the strip said "4 working days" over an empty
+ * desk (D95). One column and no rows to draw, so it stays cheap at any volume.
+ *
+ * A day and not a count, because what the strip says about them — how many are
+ * late, and how long the longest has waited — is working-day arithmetic, and
+ * that lives in `@/lib/workdays` and never in SQL (D141).
+ */
+export async function quotationWaitDays(input: ListQuotationsInput): Promise<Day[]> {
+  const rows = await db
+    .select({ day: riyadhDay(sql`quotations.created_at`) })
+    .from(quotations)
+    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .where(and(...narrowTo(input)))
+    .orderBy(asc(quotations.createdAt));
+  return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
+}
+
 /** How many there are, asked only when the list came back full (D80). */
 export async function countQuotations(input: ListQuotationsInput): Promise<number> {
   const [row] = await db

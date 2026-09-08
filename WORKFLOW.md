@@ -1309,8 +1309,10 @@ lies, a write that can corrupt, then a screen that confuses, then hygiene.
   94-101`: title and description carry a bare label. Reader cites code.
 - [x] 32 **Stuck-request ageing reads holidays from the first of this month only.** Verified; both screens read back to the oldest request's day (P11A-10, D97). `team.ts:
   412-432, 516-532`, `calendar.ts:21-27`. Reader cites code.
-- [ ] 33 **The queue's headline counts are a capped array's length.** `queue/page.tsx:71-134`;
-  `/dispatches` counts. Unreachable at fourteen people; wrong shape all the same. Reader cites code.
+- [x] 33 **The queue's headline counts are a capped array's length.** Verified; her waiting
+  counts and her longest wait are asked of the list's own predicate, uncapped, and each list
+  carries the tail the four list screens already had (P11J-7, D144). `queue/page.tsx:71-134`; `/dispatches` counts. Unreachable
+  at fourteen people; wrong shape all the same. Reader cites code.
 - [x] 34 **The board's "current card" ring is the alert red DESIGN already retired once.** Verified; the `bg-surface-2` wash the lists give their open row (P11G-2, D123).
   `board.tsx:98`, `globals.css:181`. Reader cites code. (11G.)
 - [x] 35 **The phone breakpoint is written three times — 639, 640 and 768.** Verified, four with the log dialog's `max-sm:`; one constant, one hook, one lint rule, and the spec opens the same form at 767 and 768 (P11H, D128). `responsive-dialog.
@@ -2093,6 +2095,15 @@ actually needed.
   asserts the one line this trail draws that no event on it draws — the number it used to carry,
   under the correction — which the dialog's own hint promises in both languages and nothing
   checked.
+
+- [x] 151 **Her desk counted itself off two capped arrays.** The stranger read's #33, fixed last
+  in P11J-7 (D144). `waiting`, the two late counts and the longest wait were all derived from the
+  rows the two lists had been given, and a list is two hundred rows (D80). The fix had to avoid
+  the trap the comment above it names — a hand-written second query over the same tables once put
+  a request on the strip that neither list showed (D95) — so the new read goes through `narrowTo`,
+  the predicate the list and the count already share, and asks for one column with no cap. The
+  working-day arithmetic stays where it belongs (D141). Both lists gained the tail every other
+  list screen has had since D80.
 
 - [x] 152 **The demo approved two dispatches the day before they were raised.** Found by the
   critic pass over P11J-6 and fixed in the same slice. The seed builds a dispatch's two instants
