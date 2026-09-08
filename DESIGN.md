@@ -96,11 +96,14 @@ small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, 
 the word for what it is, in a face of its own so a paragraph that swings to the other end of a
 wide drawer stays attached to its label; and `ListSearch`, the one box a list is filtered by —
 term on the URL a quarter-second after the last keystroke, caret never stolen, and one per
-screen however many lists are under it; and `PageTabs`, the row across the top of a home
+screen however many lists are under it; `PageTabs`, the row across the top of a home
 screen (D151), which is links rather than the kit's `Tabs` because a tab here is a place with an
 address and not a panel toggled in the browser, and which is deliberately not the pill the
 list-and-board switch wears — that one is a control inside a screen and this one is the
-structure of it. Logical utilities only (`ms-`, `pe-`,
+structure of it; `ShareBars`, the one way a share of a whole is drawn — ranked longest first,
+the figure written on every row, the bar hidden from a reader because there is nothing in it
+that is not in the text (D150, D65); and `RangeChips`, the window a measured screen is read
+over, which is `FilterChip` in a row rather than a fourth kind of chip. Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
@@ -674,6 +677,16 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   `mayOpen` and `mayWrite` take a role and two ids and no database (D42), so the share arrives as
   a boolean the query already asked for, in the same statement that fetched the owner. Two round
   trips to answer one question are two chances for the answers to disagree.
+- **A card ends where its content ends, and cards in a row are paired by length.** Phase 12
+  (D154). The metrics tab draws four cards in a two-column grid, and the first arrangement put a
+  two-row card beside a nine-row one. Stretched to the row's height, the short card drew a block of
+  nothing inside itself; left to its own height, it drew the same block of nothing beside itself —
+  three hundred pixels of it, measured. Neither reads as "a short answer"; both read as a card that
+  failed to load. So the grid is `items-start`, and the pairing is by length as well as by sense —
+  which came out the same pairing here, because the two long cards are both "what happened to what
+  we did" and the two short ones are both "how much of it worked". A grid of cards is a layout only
+  as long as somebody has looked at it with real data in it (§5 #161).
+
 - **A permission has a real foreign key.** Phase 12 (D147). The two newest tables in the schema
   are polymorphic — a notification and an audit row carry a type and an id and no reference — and
   copying that shape for a share would have been the obvious thing. It is wrong for this one: those

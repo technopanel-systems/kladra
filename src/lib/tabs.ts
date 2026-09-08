@@ -14,7 +14,8 @@
  * URL says nothing. A second mechanism for one idea is the drift this file
  * exists to avoid.
  *
- * Pure: no database, no cookies API, so `tests/tabs.spec.ts` asks it directly
+ * Pure: no database, no cookies API, so `tests/ranges.spec.ts` asks it directly
+ * — the two choices a home screen carries in its URL are tested in one file —
  * and a client component can import it.
  */
 

@@ -12,10 +12,11 @@
  * "Other". Nine rows over a quarter is the difference between "we are losing"
  * and "we are losing on lead time, and it is the third quarter running".
  *
- * The same window as the chain card, deliberately. Two cards on one screen
- * asking about two different quarters is the defect rules/words.md names: a
- * reader cannot hold two windows, and neither can the person who adds a third
- * card.
+ * The same window as every other card on the tab, and not because this file
+ * says so: the window is chosen once above them all and passed in (D154). Two
+ * cards on one screen asking about two different quarters is the defect
+ * rules/words.md names — a reader cannot hold two windows, and neither can the
+ * person who adds a third card.
  *
  * Square metres lead and the count supports, because that is how this business
  * measures everything (DESIGN §6). Five small jobs lost to colour and one
@@ -26,8 +27,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { CHAIN_WINDOW_DAYS } from "@/lib/chain";
-import { addDays, todayRiyadh, type Day } from "@/lib/dates";
+import { type Day } from "@/lib/dates";
 import { LOSS_REASON_CODES, type LossReasonCode } from "@/lib/loss-reason";
 
 /** One reason, and what it cost in the window. */
@@ -50,11 +50,7 @@ export type LossCohort = {
   rows: LossRow[];
 };
 
-export async function lossCohort(
-  repId: string | null,
-  today: Day = todayRiyadh(),
-): Promise<LossCohort> {
-  const from = addDays(today, -CHAIN_WINDOW_DAYS);
+export async function lossCohort(repId: string | null, from: Day): Promise<LossCohort> {
 
   /*
    * The nine codes as bound parameters, built FROM the constant rather than
@@ -78,7 +74,10 @@ export async function lossCohort(
        and p.archived_at is null
        and c.archived_at is null
        and (p.lost_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-       and (${repId}::uuid is null or c.rep_id = ${repId}::uuid)
+       -- Whose job was given up, not whose customer it sits under: a project
+       -- has had a rep of its own since P12 (D147), and on a shared company
+       -- the two are different people.
+       and (${repId}::uuid is null or p.rep_id = ${repId}::uuid)
      group by 1
   `);
 
@@ -103,7 +102,7 @@ export async function lossCohort(
          and p.archived_at is null
          and c.archived_at is null
          and (p.lost_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-         and (${repId}::uuid is null or c.rep_id = ${repId}::uuid)
+         and (${repId}::uuid is null or p.rep_id = ${repId}::uuid)
     `)
   ).rows;
   const sqm = String(totals?.sqm ?? "0");

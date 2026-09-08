@@ -127,5 +127,12 @@
     "work": "Today’s work",
     "metrics": "Metrics",
     "team": "The team"
-  }
+  },
+  "window": "Window",
+  "range": {
+    "month": "This month",
+    "quarter": "Last 3 months",
+    "year": "This year"
+  },
+  "percent": "{percent}%"
 }

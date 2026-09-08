@@ -1102,12 +1102,23 @@ export const HISTORY: HistorySeed[] = [
   { monthsBack: 4, rep: "saad", company: "s5", sheets: 140 },
   { monthsBack: 3, rep: "faisal", company: "f2", sheets: 120 },
   { monthsBack: 3, rep: "saad", company: "s1", sheets: 190 },
-  { monthsBack: 2, rep: "faisal", company: "f6", sheets: 200 },
+  // The last two months sell to five kinds of customer rather than one, and the
+  // sheets are untouched: every rep's month, every bar on the six-month card and
+  // every pace band is exactly what it was. What changes is WHOSE they are.
+  //
+  // Before this, every approved metre in the quarter but one had gone to a
+  // contractor, so the metrics tab's "where the metres went" — the founder's own
+  // question, and the reason that card exists — drew two bars, one of them 96%.
+  // A card whose shape the demo never shows is a card nobody has seen work
+  // (rules/data.md), and a business that sells to stations, consultants,
+  // factories and sign-makers as well as contractors is also the truer picture
+  // of this floor. Each row stays on a company its own rep holds.
+  { monthsBack: 2, rep: "faisal", company: "f9", sheets: 200 },
   { monthsBack: 2, rep: "saad", company: "s5", sheets: 160 },
-  { monthsBack: 2, rep: "turki", company: "t2", sheets: 60 },
+  { monthsBack: 2, rep: "turki", company: "t1", sheets: 60 },
   { monthsBack: 1, rep: "faisal", company: "f2", sheets: 185 },
-  { monthsBack: 1, rep: "saad", company: "s1", sheets: 210 },
-  { monthsBack: 1, rep: "turki", company: "t2", sheets: 95 },
+  { monthsBack: 1, rep: "saad", company: "s3", sheets: 210 },
+  { monthsBack: 1, rep: "turki", company: "t3", sheets: 95 },
 ];
 
 /*

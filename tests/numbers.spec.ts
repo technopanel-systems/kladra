@@ -1,4 +1,5 @@
-import { addDays, diffDays, todayRiyadh } from "@/lib/dates";
+import { diffDays, formatDay, todayRiyadh } from "@/lib/dates";
+import { DEFAULT_RANGE, rangeStart } from "@/lib/ranges";
 import { login } from "./helpers/auth";
 import { query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
@@ -314,7 +315,11 @@ test("where quotations go is a cohort, and every ending is named", async ({ page
     const total = counts.reduce((sum, n) => sum + n, 0);
     expect(total, "nothing was raised in the window").toBeGreaterThan(0);
 
-    await expect(card).toContainText(t("team.chainMeans", { raised: total, days: 90 }));
+    // The window the tab opens on, written as the card writes it: the first day
+    // of the range rather than a count of days back (D154).
+    await expect(card).toContainText(
+      t("team.chainMeans", { raised: total, from: formatDay(rangeStart(DEFAULT_RANGE), locale) }),
+    );
   });
 
   await test.step("3 · every stage of the seeded chain has something in it", async () => {
@@ -429,14 +434,13 @@ test("a rep's floor and his day cannot disagree about what is waiting", async ({
 });
 
 test("the sent-back row says how old the oldest is", async ({ page, locale, t }) => {
-  // The same cohort chainCohort(null) reads on /team (SPEC D101): every
-  // quotation raised in the last 90 Riyadh days, on a live company, company-wide
-  // — nobody's floor scopes this card. `from` is computed here the same way
-  // src/lib/chain.ts computes it (today in Node, bound as a parameter) rather
-  // than with SQL's own `now()`, so a slow test run cannot put the two `today`s
-  // a day apart.
+  // The same cohort the chain card reads on /team (SPEC D101): every quotation
+  // raised since the window's first day, on a live company, company-wide —
+  // nobody's floor scopes this card. The window is the one the tab opens on
+  // (D154), asked for here rather than written out, and computed in Node like
+  // the app's own so a slow run cannot put the two `today`s a day apart.
   const today = todayRiyadh();
-  const from = addDays(today, -90);
+  const from = rangeStart(DEFAULT_RANGE, today);
 
   const [{ oldest }] = await query<{ oldest: string | null }>(
     `with cohort as (
@@ -460,7 +464,7 @@ test("the sent-back row says how old the oldest is", async ({ page, locale, t })
      select to_char(min(on_day), 'YYYY-MM-DD') as oldest from sent_back`,
     [from],
   );
-  expect(oldest, "the seed has no sent-back quotation in the 90-day cohort").not.toBeNull();
+  expect(oldest, "the seed has no sent-back quotation in the window").not.toBeNull();
   const expectedDays = diffDays(oldest as string, today);
 
   await login(page, locale, "abdulrahman");

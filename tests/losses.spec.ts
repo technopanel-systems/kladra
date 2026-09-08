@@ -1,8 +1,9 @@
 import { login } from "./helpers/auth";
 import { one, query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
-import { CHAIN_WINDOW_DAYS } from "@/lib/chain";
+import { DEFAULT_RANGE, rangeStart } from "@/lib/ranges";
 import { formatSqmWhole } from "@/lib/money";
+import { formatDay } from "@/lib/dates";
 
 /**
  * P11J — why we lose (D140).
@@ -33,11 +34,10 @@ async function lossesByReason() {
       where p.lost_at is not null
         and p.archived_at is null
         and c.archived_at is null
-        and (p.lost_at at time zone 'Asia/Riyadh')::date
-            >= (now() at time zone 'Asia/Riyadh')::date - $1::int
+        and (p.lost_at at time zone 'Asia/Riyadh')::date >= $1::date
       group by 1
       order by sum(p.expected_sqm) desc`,
-    [CHAIN_WINDOW_DAYS],
+    [rangeStart(DEFAULT_RANGE)],
   );
 }
 
@@ -74,9 +74,8 @@ test("its sentence counts the same projects the rows do", async ({ page, locale,
       where p.lost_at is not null
         and p.archived_at is null
         and c.archived_at is null
-        and (p.lost_at at time zone 'Asia/Riyadh')::date
-            >= (now() at time zone 'Asia/Riyadh')::date - $1::int`,
-    [CHAIN_WINDOW_DAYS],
+        and (p.lost_at at time zone 'Asia/Riyadh')::date >= $1::date`,
+    [rangeStart(DEFAULT_RANGE)],
   );
 
   await login(page, locale, "abdulrahman");
@@ -87,7 +86,9 @@ test("its sentence counts the same projects the rows do", async ({ page, locale,
   await expect(card).toContainText(
     t("team.lossMeans", {
       projects: total.projects,
-      days: CHAIN_WINDOW_DAYS,
+      // The window the tab opens on, written the way the card writes it: the
+      // first day of the range, not a count of days back (D154).
+      from: formatDay(rangeStart(DEFAULT_RANGE), locale),
       sqm: formatSqmWhole(total.sqm),
     }),
     COLD,

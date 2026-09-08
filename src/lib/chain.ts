@@ -22,10 +22,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
-import { addDays, diffDays, todayRiyadh, type Day } from "@/lib/dates";
-
-/** The window the question is asked over. A quarter — long enough to have shape. */
-export const CHAIN_WINDOW_DAYS = 90;
+import { diffDays, todayRiyadh, type Day } from "@/lib/dates";
 
 /**
  * Where a quotation got to. Ordered as the chain runs, so a screen can render
@@ -73,18 +70,23 @@ export type ChainCohort = {
 };
 
 /**
- * The cohort raised in the last `CHAIN_WINDOW_DAYS`, and where each of them
- * ended up.
+ * The cohort raised since `from`, and where each of them ended up.
  *
- * `scope` narrows it to one rep's floor. It is a fragment rather than a uuid so
- * the company-wide read and a rep's own go through one statement, and neither
- * can drift from the other (rules/data.md).
+ * The window was ninety rolling days written into this file, which made it the
+ * one card on the metrics tab that ignored the window above it (D154). It is a
+ * day now, chosen by `rangeStart` like every other figure on that tab, and the
+ * card says which day it is rather than a number of days a reader has to count
+ * back himself.
+ *
+ * `repId` narrows it to one rep's floor. It is a bound parameter rather than a
+ * second query so the company-wide read and a rep's own go through one
+ * statement, and neither can drift from the other (rules/data.md).
  */
 export async function chainCohort(
   repId: string | null,
+  from: Day,
   today: Day = todayRiyadh(),
 ): Promise<ChainCohort> {
-  const from = addDays(today, -CHAIN_WINDOW_DAYS);
 
   const result = await db.execute<{
     stage: ChainStage;
@@ -97,7 +99,13 @@ export async function chainCohort(
         join companies c on c.id = q.company_id
        where (q.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
          and c.archived_at is null
-         and (${repId}::uuid is null or c.rep_id = ${repId}::uuid)
+         -- Whose quotation, not whose customer. They were the same person
+         -- until a project could be shared, and since P12 a rep may raise one
+         -- on somebody else's company (D147) — so a cohort scoped by the
+         -- company would count his paper under a man who never touched it,
+         -- while the metres beside it on the same tab are counted by the
+         -- raiser (D86). One question, one answer.
+         and (${repId}::uuid is null or q.rep_id = ${repId}::uuid)
     ),
     sent_back as (
       -- The day each sent-back one was LAST sent back: its latest sendBack row.

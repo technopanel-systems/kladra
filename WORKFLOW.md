@@ -131,7 +131,7 @@
       touches, including D1, D12, D15, D51 and D81. His answer on sharing and credit is part of it.
       - [x] 1 The hang, and its whole class: a picker that fires on a value that did not change
       - [x] 2 A gate on founder decisions: §3 reachable from a test, `npm run check:spec3`
-      - [ ] 3 One door, then sharing: a shared company, a shared project, owners on projects
+      - [x] 3 One door, then sharing: a shared company, a shared project, owners on projects
             and contacts, and the eleven visibility clauses re-pointed at one predicate
       - [ ] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
             visible wherever the m² is, and no metre counted twice
@@ -144,7 +144,7 @@
       - [ ] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
       - [ ] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
       - [ ] 11 The queue: the whole row opens it, and the SMAC number is the large one
-      - [ ] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
+      - [x] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
       - [ ] 13 Reports and the company log rebuilt as one thing, per person, per day
       - [ ] 14 Across: the panel's width, one primary action per list, the board ruling written
 
@@ -541,6 +541,18 @@ the quantity column's position, the manager's target box, the long-press number 
 per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
 which is what slice 2 is for.
 
+**Where P12 has got to.** Boxes 1, 2, 3, 6 and 12 are done and pushed. The freeze was fixed at
+its cause and the same picker shape swept out of the company form; `npm run lint` now fails on a
+§3 sentence with no test behind it and prints what is owed (25 proved, 6 proved another way, 13
+owed); sharing is built end to end — a shared company, a shared project, an owner on every
+contact and every project, and the eleven visibility clauses re-pointed at one predicate — with
+four defects found in the building of it (§5 #155–#157, #159) and a fifth, the half-restored
+floor, found in the gate. The three-tab shell is on the rep's day and the manager's screen, and
+the metrics tab under it now answers the founder's proportion questions: where the metres went by
+kind of customer, how the work narrows, over a window chosen once for everything under it, for
+the whole floor or one person (D152, D154). Boxes 4, 5, 7, 8, 9, 10, 11, 13 and 14 are next, in
+that order; credit (box 4) is the one the sharing schema was written for and is the first.
+
 ## §4 Five days, walked (P9.1)
 
 Written before any P9 code. Every claim below was checked against the running app or
@@ -739,9 +751,9 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 
 **The metrics tab (P12)** — `tests/metrics.spec.ts`
 1. Faisal's day opens on his work: the report line if he owes one, his month, what is waiting on him, then the calls. The six-month bars are not on it.
-2. He presses Metrics. The bars are there, and beside them where his quarter's metres went by kind of customer, largest first, each row saying what share of the metres on the screen it is.
-3. The three windows are chips and the middle one is live on arrival: this month · the last three months · this year. Pressing one changes every figure on the tab, and the address changes with it, so the link he copies opens on what he was reading.
-4. He signs out; Abdulrahman opens the same tab and sees the whole company, plus one chip per selling person. Picking Faisal gives back exactly the figures Faisal saw for the same window — the same question asked of the same rows, from two screens.
+2. He presses Metrics. The bars are there, and under them where his quarter's metres went by kind of customer, largest first, each row saying what share of the metres on the screen it is; beside it, how his work narrows — of the projects he started in the window, how many were quoted, and of the quotations he raised, how many went out.
+3. The three windows are chips and the middle one is live on arrival: this month · the last three months · this year. Pressing one changes every figure BELOW the chips, and the address changes with it, so the link he copies opens on what he was reading. What is above them is not windowed and cannot be — this month against its target, and the six months behind it (D154).
+4. He signs out; Abdulrahman opens the same tab and sees the whole company, plus a picker of the people on it — a dropdown and not a row of chips, because fourteen names wrap into three lines and push the figures under the fold, which is what the tabs were drawn to stop. Picking Faisal gives back exactly the figures Faisal saw for the same window, and keeps the window while doing it — the same question asked of the same rows, from two screens.
 5. Every figure on the tab carries a sentence saying what it is a share OF, and no figure on it is one somebody typed.
 
 **Two reps on one customer (P12)** — `tests/sharing.spec.ts`
@@ -751,6 +763,7 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 4. Saad tries the work he has not been given: no project of his own on that company, no log against it, no quotation. The buttons are not there, and the actions refuse it.
 5. Faisal puts Saad on the tower. Now Saad raises a quotation on it, and it is his; Faisal sees it and cannot edit it.
 6. Faisal takes Saad off the company. The tower goes with it — a job he cannot see the customer of would be a permission pointing at nothing — and Saad's own contact and his own quotation stay exactly where they are, because they are records of work that happened.
+7. Second test, the hand-over that collides with all of the above: Abdulrahman gives a company to the rep who already holds his own row for one of its people. It goes through; the new owner's own contact stands, still his main one; the arriving duplicate is archived where it is and keeps the name of the rep who wrote it; and nobody ends up with two main contacts on one customer (§5 #159, D153).
 
 Faisal's Home target card (the old step 4) lands with P6, which is where the card exists.
 
@@ -2304,3 +2317,26 @@ actually needed.
   file: **when an action grows a second effect, every spec that undoes the first one is now
   half-written**, and the failure lands in some other file, days later, wearing somebody else's
   name.
+
+- [x] 160 **Two cards on one screen answered "whose" two different ways.** Found in the critic pass
+  over P12-12, before it shipped. The metrics tab puts four cards under one rep picker, and two of
+  them were written before a record could belong to anybody but the customer's owner: `chainCohort`
+  scoped by `companies.rep_id` and `lossCohort` did the same, while the segment card and the ratios
+  beside them scope by the person who RAISED the record, which is what achieved metres have meant
+  since D86. Until P12 the two were the same person and nothing was wrong. Sharing separated them,
+  and the picker put the difference on one screen: pick Faisal and the metres are his, the funnel
+  is his customers'. The cohorts ask `quotations.rep_id` and `projects.rep_id` now — whose paper
+  and whose job, not whose customer — which is the same sentence the rest of the tab says. The
+  general form is D42's, again: **two questions that have had the same answer for a year are still
+  two questions**, and the day they diverge is the day nobody notices.
+
+- [x] 161 **The card the founder asked for drew one bar.** Also found before it shipped, and only
+  because the demo was looked at. "Where did this month's metres go by customer segment" was built,
+  tested and green — and every approved metre in the seeded quarter but one had gone to a
+  contractor, so the ranked bars the whole card exists for drew a single row at 96%. Nothing was
+  wrong with the code; the demo had never had a floor that could show it. Fixed in the seed rather
+  than in the query: the last two months' history sells to a station, a consultant, a factory and a
+  sign-maker as well as to contractors, every rep's month and every bar on the six-month card
+  untouched, because only the customer changed. rules/data.md already had the rule — every band,
+  count and threshold needs a row on the wrong side of it — and this is the same rule for a shape:
+  **a card whose shape the demo cannot show is a card nobody has seen work.**

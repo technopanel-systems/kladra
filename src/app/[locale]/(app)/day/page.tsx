@@ -4,8 +4,11 @@ import { CallList } from "@/components/day/call-list";
 import { CloseTheDay } from "@/components/reports/close-the-day";
 import { MonthCard } from "@/components/team/month-card";
 import { MonthsCard } from "@/components/team/months-card";
+import { RatiosCard } from "@/components/team/ratios-card";
+import { SegmentCard } from "@/components/team/segment-card";
 import { WaitingList } from "@/components/day/waiting-list";
 import { PageTabs } from "@/components/ui-ext/page-tabs";
+import { RangeChips } from "@/components/ui-ext/range-chips";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
@@ -16,7 +19,9 @@ import { awayOn } from "@/lib/leave";
 import { followUpCounts } from "@/lib/followups";
 import { logTargetsFor } from "@/lib/log-targets";
 import { waitingCounts, waitingOnRep } from "@/lib/day";
+import { chainRatios, metresBySegment } from "@/lib/metrics";
 import { monthsBack } from "@/lib/months";
+import { RANGES, RANGE_COOKIE, rangeFor, rangeStart } from "@/lib/ranges";
 import { repMonth } from "@/lib/team";
 import { tabCookie, tabFor, type Tab } from "@/lib/tabs";
 
@@ -37,7 +42,7 @@ import { tabCookie, tabFor, type Tab } from "@/lib/tabs";
 export default async function DayPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; range?: string }>;
 }) {
   const [user, locale, params, jar] = await Promise.all([
     requireUser(),
@@ -65,6 +70,12 @@ export default async function DayPage({
   const tab = tabFor(params.tab, jar.get(tabCookie("day"))?.value, TABS);
   const working = tab === "work";
 
+  // The window every figure on the metrics tab is measured over — the same
+  // three the manager's screen offers, remembered in the same cookie, because
+  // it is the same question asked by two people (D152).
+  const range = rangeFor(params.range, jar.get(RANGE_COOKIE)?.value);
+  const from = rangeStart(range);
+
   // Each band asks for what it will draw and the counts come from the one
   // follow-up definition, so a band that is longer than the screen says how
   // many there are rather than printing all of them (D80).
@@ -75,13 +86,20 @@ export default async function DayPage({
   // six-month read and the metrics tab would run four band queries, and neither
   // of them puts a pixel on the screen it is not on.
   const none: Awaited<ReturnType<typeof band>> = [];
-  const [t, month, months, waiting, overdue, today, never, quiet, counts, away] =
+  const measuring = hasMonth && !working;
+  const [t, month, months, segments, ratios, waiting, overdue, today, never, quiet, counts, away] =
     await Promise.all([
       getTranslations(),
       hasMonth && working ? repMonth(user.id) : null,
       // Only where there is a target to read them against — marketing carries
       // none, so six bars with no line on any of them would say nothing (D44).
-      hasMonth && !working ? monthsBack(user.id) : null,
+      measuring ? monthsBack(user.id) : null,
+      // His own metres and his own chain, over the window he picked. The same
+      // two cards the manager reads about the whole floor: one set of facts,
+      // one layout, so a rep recognises his own figures where he meets them
+      // again (D152).
+      measuring ? metresBySegment(from, user.id) : null,
+      measuring ? chainRatios(from, user.id) : null,
       hasChain && working ? waitingOnRep(user.id) : [],
       working ? band("overdue") : none,
       working ? band("today") : none,
@@ -162,7 +180,26 @@ export default async function DayPage({
           />
         </>
       ) : (
-        <>{months ? <MonthsCard months={months} /> : null}</>
+        <>
+          {/* The six months first: they are not windowed and cannot be — the
+              trend IS the six months (D61) — so they sit above the chips, and
+              what the chips govern is exactly what is under them (D154). */}
+          {months ? <MonthsCard months={months} /> : null}
+
+          <RangeChips
+            range={range}
+            chips={RANGES.map((value) => ({ value, href: `/day?tab=metrics&range=${value}` }))}
+          />
+
+          {/* `items-start`: a card ends where its content ends. Stretched to the
+              row's height, the short one — two rows of ratios beside a six-row
+              funnel — drew a card with a block of nothing inside it, which reads
+              as a card that failed to load rather than as a short answer. */}
+          <div className="grid items-start gap-4 md:grid-cols-2">
+            {segments ? <SegmentCard rows={segments} /> : null}
+            {ratios ? <RatiosCard ratios={ratios} /> : null}
+          </div>
+        </>
       )}
     </div>
   );

@@ -32,6 +32,14 @@ What a component still owns is the text it renders **itself**: a code, a phone,
 a quantity, an email. Those get `<span dir="ltr" className="num">`, as they do
 today in every table and drawer.
 
+**And a percentage is one of them**, which is easy to forget because it arrives
+through `t()` and looks like a message. `common.percent` is `{percent}%`: the
+digits are isolated by the loader, the per-cent sign is not — it is neutral, so
+it settles against the paragraph. Passed straight into an Arabic caption it
+rendered «%26», while the card above it, which wrapped the same key in the
+figure face, rendered «26%». Two cards, one screen, one key, two readings. A
+message that is nothing but a figure and a sign is still a figure.
+
 And one more thing a component owns: **two values joined by a separator in one
 string**. `` `${company} · ${project}` `` is the same defect the loader fixes for
 messages — the · is neutral and settles against the paragraph, not against the

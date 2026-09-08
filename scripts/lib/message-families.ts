@@ -56,6 +56,8 @@ export const families: [string, string[]][] = [
   // The tabs across a home screen are rendered from the list itself (D151), so
   // adding a fourth tab is a key the parity check sees the day it is added.
   ["common.tab", union("src/lib/tabs.ts", "TABS")],
+  // And the windows a metric is measured over (D152), for the same reason.
+  ["common.range", union("src/lib/ranges.ts", "RANGES")],
   // The sentence a refused actor is answered with is computed too — every
   // action guard says `t(refusalKey(error))` and no call site writes either
   // key, so without this family `signedOut` is a key the checks cannot see.

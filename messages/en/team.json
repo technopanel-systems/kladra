@@ -1,7 +1,7 @@
 {
   "lossTitle": "Why we lose",
-  "lossMeans": "{projects, plural, one {One project was marked lost in the last {days} days — {sqm} m².} other {# projects were marked lost in the last {days} days — {sqm} m² in all.}}",
-  "lossEmpty": "Nothing has been marked lost in the last {days} days.",
+  "lossMeans": "{projects, plural, one {One project was marked lost since {from} — {sqm} m².} other {# projects were marked lost since {from} — {sqm} m² in all.}}",
+  "lossEmpty": "Nothing has been marked lost since {from}.",
   "lossProjects": "{projects, plural, one {# project} other {# projects}}",
   "companyMonth": "Company this month",
   "myMonth": "My month",
@@ -45,9 +45,8 @@
   "monthAfterEmpty": "{month} had metres again after an empty {previous}",
   "monthNothing": "No metres in {previous} or {month}",
   "monthsMeans": "Approved m² per month, against that month’s target.",
-  "chainMeans": "{raised, plural, one {Of the one quotation raised in the last {days} days, this is where it got to.} other {Of the # raised in the last {days} days, this is where each one got to.}}",
-  "chainEmpty": "Nothing has been raised in the last {days} days.",
-  "chainShare": "{percent}%",
+  "chainMeans": "{raised, plural, one {Of the one quotation raised since {from}, this is where it got to.} other {Of the # raised since {from}, this is where each one got to.}}",
+  "chainEmpty": "Nothing has been raised since {from}.",
   "chainAnswered": "{reached, plural, one {One of them reached a customer} other {# of them reached a customer}}{answered, plural, =0 {, and none came back with an answer.} one {, and one came back with an answer.} other {, and # came back with an answer.}}",
   "chainTitle": "Where quotations go",
   "chain": {
@@ -65,5 +64,16 @@
   "openOnDesk": "{count, plural, =0 {none on the coordinator’s desk} one {# on the coordinator’s desk} other {# on the coordinator’s desk}}",
   "openReturned": "{count, plural, =0 {none sent back} one {# sent back} other {# sent back}}",
   "sentBackOrRefused": "Sent back or refused",
-  "sentBackOrRefusedMeans": "waiting on the rep, not on the customer"
+  "sentBackOrRefusedMeans": "waiting on the rep, not on the customer",
+  "everybody": "The whole team",
+  "segments": "Where the metres went",
+  "segmentsNone": "Nothing has been approved in this window.",
+  "segmentsMeans": "Approved metres by the kind of customer they went to, share of what is shown here.",
+  "ratios": "How the work narrows",
+  "ratiosNone": "Nothing has been raised in this window.",
+  "ratioQuoted": "Projects quoted",
+  "ratioDispatched": "Quotations dispatched",
+  "ratioOf": "{part} of {whole}",
+  "ratiosMeans": "Each row is what has become of what was started in this window. Raised in it: {quotations, plural, one {# quotation} other {# quotations}} and {dispatches, plural, one {# dispatch} other {# dispatches}}.",
+  "whose": "Whose figures"
 }
