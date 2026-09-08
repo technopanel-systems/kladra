@@ -125,7 +125,8 @@ where the machine killed a running acceptance suite to get the memory back, twic
 one session (WORKFLOW §5 #68). A server left up for a screenshot pass is the usual way
 in, because Playwright reuses whatever is already on the port. `npm run dev:test` caps the compiler at 4 GB so a pathological one
 dies at once and says why rather than starving whatever else is running; the one on
-3100 has no cap, so restart it between long sessions.
+3100 has the same cap since P12 (`scripts/dev.ts`), which is the fourth sighting of this
+and the second acceptance run it killed — restart both between long sessions anyway.
 
 > **Next 16 differs from 13–15** — `params` is a Promise and `middleware.ts` is
 > `proxy.ts`. Version-correct docs ship at `node_modules/next/dist/docs/`; read

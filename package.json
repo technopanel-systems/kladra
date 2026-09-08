@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 3100",
+    "dev": "tsx scripts/dev.ts",
     "dev:test": "tsx scripts/dev-test.ts",
     "prebuild": "npm run check:messages",
     "build": "next build",
