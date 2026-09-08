@@ -825,6 +825,14 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**One clock** — `tests/one-clock.spec.ts`
+A company of Faisal's is promised a call twelve days ago and a company holiday is put inside that
+window, so the working-day answer and the calendar answer are different numbers and only one of
+them may appear. Abdulrahman opens his screen: the row says the working-day count, and does not
+say the calendar one. Then the team table — it has a gone-quiet column at all, which it did not
+until P11J, and pressing a rep's figure opens the list that figure counted (D141, D142). The
+date and the holiday go back after.
+
 **Why we lose** — `tests/losses.spec.ts`
 Abdulrahman opens his screen and the card under "Where quotations go" names every reason the
 quarter's projects were given up for, largest metres first, each row carrying its own metres and
@@ -2037,3 +2045,31 @@ that decides which drawer opens mid-slice.
   `lossReasonLabel` reads by; `LossCard` beside `ChainCard`, metres first, one neutral tone. The
   demo carried no lost project at all before P11J-3 and now carries five, on three floors, for
   four different reasons and one written line.
+
+- [x] 148 **Two clocks on one screen.** Found by the manager's reading, fixed in P11J-5 (D141).
+  `stuckList` filters waiting requests in TypeScript on purpose, and says why four hundred lines
+  above: the weekend and the holiday table are `@/lib/workdays`'s business and a second copy of
+  that arithmetic in a `case` expression is how a rep back from Eid gets told he is late. The
+  follow-up half of the same function then did exactly that, in two statements, for the count and
+  for the threshold — so a call promised for Thursday read "3 days overdue" on Sunday beside a
+  request from Thursday reading "1 working day". Fix: SQL returns the day, `workingDaysBetween`
+  ages it against the rep whose call it is, and the calendar cut that survives in the WHERE is a
+  deliberate superset with the reason written on it. The uncovered band is aged the same way, and
+  the holiday window now reaches back to the oldest FOLLOW-UP as well as the oldest request —
+  the D97 bug would have come straight back through the new arithmetic otherwise. The demo moved
+  with the rule: its longest-overdue follow-up was four calendar days past, which is never three
+  working days past, so the band it is meant to fill was empty in every screenshot ever taken of
+  that screen. It is nine days past now.
+- [x] 149 **The strip said the team's gone-quiet total and the table said whose the OTHER figure
+  was.** Found by the manager's reading, fixed in P11J-5 (D142). Every other figure on that strip
+  has a column under it. `TeamMemberRow` gained `goneQuiet` from the same `followUpCountsForRep`
+  the never-contacted figure already came from, so a row and the strip above it cannot drift, and
+  the figure opens that rep's quiet list.
+
+What P11J-5 deliberately did NOT change: `goneQuietCompanySql` and `neverContactedCompanySql`
+still count CALENDAR days. They were on the list as the same defect and they are not one. Those
+two measure a customer's silence rather than a person's lateness: a fortnight without a word is a
+fortnight whoever was at work, the bands accuse nobody, and counting working days there would
+delay surfacing exactly the customers somebody should ring the morning he gets back from a
+holiday. The rule that tells the two apart is now in DESIGN §5, which is the change that was
+actually needed.

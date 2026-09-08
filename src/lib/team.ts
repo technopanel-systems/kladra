@@ -77,6 +77,13 @@ export type TeamMember = MonthFigures & {
   /** Added and never contacted, old enough to be a habit (S51). */
   neverContacted: number;
   /**
+   * Contacted, then dropped (D63). The strip above this table has carried the
+   * team's total since P9 and on a real floor it is the largest of the five
+   * figures — and the row said whose the never-contacted ones were and not
+   * whose these were, which is the only thing a manager can act on (D142).
+   */
+  goneQuiet: number;
+  /**
    * Not at work today, and the day he is back (D75). Null is the ordinary case.
    * His figures are still his — the month does not stop because he is away, and
    * his pace already counts only the days he works (S48).
@@ -182,6 +189,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
         openQuotations: open.total,
         overdueFollowUps: counts.overdue,
         neverContacted: counts.neverContacted,
+        goneQuiet: counts.goneQuiet,
         away: away.get(person.id) ?? null,
       };
     }),
@@ -211,7 +219,7 @@ export async function teamMonth(day: Day = todayRiyadh()): Promise<TeamMonth> {
 async function uncoveredFollowUps(
   away: Map<string, Away>,
   locale: string,
-): Promise<UncoveredFollowUp[]> {
+): Promise<RawFollowUp[]> {
   if (away.size === 0) return [];
 
   /*
@@ -233,7 +241,6 @@ async function uncoveredFollowUps(
     rep_name: string;
     rep_id: string;
     day: Day;
-    days_overdue: number;
     kind: "company" | "project";
   }>(sql`
     select companies.id::text as id,
@@ -242,7 +249,6 @@ async function uncoveredFollowUps(
            ${personNameOf("u", locale)} as rep_name,
            u.id::text as rep_id,
            to_char(companies.next_follow_up, 'YYYY-MM-DD') as day,
-           ((now() at time zone 'Asia/Riyadh')::date - companies.next_follow_up)::int as days_overdue,
            'company' as kind
       from companies
       join users u on u.id = companies.rep_id
@@ -257,7 +263,6 @@ async function uncoveredFollowUps(
            ${personNameOf("u", locale)} as rep_name,
            u.id::text as rep_id,
            to_char(projects.next_follow_up, 'YYYY-MM-DD') as day,
-           ((now() at time zone 'Asia/Riyadh')::date - projects.next_follow_up)::int as days_overdue,
            'project' as kind
       from projects
       join companies c on c.id = projects.company_id
@@ -283,8 +288,8 @@ async function uncoveredFollowUps(
         name: row.name,
         companyName: row.company_name,
         repName: row.rep_name,
+        repId: row.rep_id,
         day: row.day,
-        daysOverdue: Number(row.days_overdue),
         kind: row.kind,
         backOn: back.backOn,
       },
@@ -340,7 +345,17 @@ export async function repMonth(
  * nothing (D59).
  */
 export const STUCK_REQUEST_WORKING_DAYS = LATE_AFTER_WORKING_DAYS;
-export const STUCK_FOLLOW_UP_DAYS = 3;
+/**
+ * And a late follow-up is counted the same way (D141).
+ *
+ * It was three CALENDAR days, which put two clocks on one screen: a request
+ * waiting since Thursday read "1 working day" and a call promised for Thursday
+ * read "3 days overdue", on the same list, on the same Sunday morning. Worse
+ * over a holiday — a rep back from Eid was told he was nine days late on every
+ * date in his book, which is the sentence the comment above says this file must
+ * never produce.
+ */
+export const STUCK_FOLLOW_UP_WORKING_DAYS = 3;
 
 export type StuckRequest = {
   id: string;
@@ -383,6 +398,24 @@ export type StuckCompany = {
  * himself, or leave it three days.
  */
 export type UncoveredFollowUp = StuckFollowUp & { backOn: Day };
+
+/**
+ * A follow-up as the database hands it over: the day it was promised for, and
+ * whose it is. How LATE it is cannot be asked in SQL, because the answer counts
+ * working days and the weekend and the holiday table are `@/lib/workdays`'s
+ * business (D141) — so every row in this file is read first and aged after, the
+ * way the waiting requests already were.
+ */
+type RawFollowUp = {
+  id: string;
+  name: string;
+  companyName: string;
+  repName: string;
+  repId: string;
+  day: Day;
+  kind: "company" | "project";
+  backOn?: Day;
+};
 
 /** One group of the stuck list: what is drawn, and how many there are. */
 export type StuckGroup<Row> = Group<Row>;
@@ -432,30 +465,34 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
       name: string;
       company_name: string;
       rep_name: string;
-      day: string;
-      days_overdue: number;
+      rep_id: string;
+      day: Day;
       kind: "company" | "project";
     }>(sql`
       select companies.id::text as id,
              companies.name as name,
              companies.name as company_name,
              ${personNameOf("u", locale)} as rep_name,
+             u.id::text as rep_id,
              to_char(companies.next_follow_up, 'YYYY-MM-DD') as day,
-             ((now() at time zone 'Asia/Riyadh')::date - companies.next_follow_up)::int as days_overdue,
              'company' as kind
         from companies
         join users u on u.id = companies.rep_id
        where companies.archived_at is null
          and companies.next_follow_up is not null
+         -- A CALENDAR-day cut, and deliberately the wrong one: N working days
+         -- back is never later than N calendar days back, so this is a superset
+         -- of what the working-day rule keeps and the read stays narrow. The
+         -- rule itself is applied below, once (D141).
          and companies.next_follow_up
-             < (now() at time zone 'Asia/Riyadh')::date - ${STUCK_FOLLOW_UP_DAYS}::int
+             < (now() at time zone 'Asia/Riyadh')::date - ${STUCK_FOLLOW_UP_WORKING_DAYS}::int
       union all
       select projects.id::text as id,
              projects.name as name,
              c.name as company_name,
              ${personNameOf("u", locale)} as rep_name,
+             u.id::text as rep_id,
              to_char(projects.next_follow_up, 'YYYY-MM-DD') as day,
-             ((now() at time zone 'Asia/Riyadh')::date - projects.next_follow_up)::int as days_overdue,
              'project' as kind
         from projects
         join companies c on c.id = projects.company_id
@@ -465,7 +502,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
          and projects.next_follow_up is not null
          and c.archived_at is null
          and projects.next_follow_up
-             < (now() at time zone 'Asia/Riyadh')::date - ${STUCK_FOLLOW_UP_DAYS}::int
+             < (now() at time zone 'Asia/Riyadh')::date - ${STUCK_FOLLOW_UP_WORKING_DAYS}::int
        order by day asc
     `),
 
@@ -516,15 +553,33 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     awayOn(day),
   ]);
 
-  // The holidays a wait crosses, back to the day the OLDEST request was raised
-  // (D97). This read from the first of the month, so a request from the 28th
-  // aged a holiday on the 30th as a working day and read a day older than it
-  // was on the manager's screen and the coordinator's. `waiting` is oldest
-  // first, so its first row is the earliest day any wait here counts from.
-  const nonWorking = await listNonWorkingDays(
-    waiting[0] && waiting[0].since < firstOfMonth(day) ? (waiting[0].since as Day) : firstOfMonth(day),
-    day,
-  );
+  // What is due on a floor nobody is standing on. Asked here rather than in the
+  // read above because it needs `away`, and asked BEFORE the holidays because
+  // its rows are aged by them too (D141).
+  const uncovered = await uncoveredFollowUps(away, locale);
+
+  /*
+   * The holidays every wait on this screen crosses, back to the earliest day any
+   * of them counts from (D97). It read from the first of the month, so a request
+   * from the 28th aged a holiday on the 30th as a working day and read a day
+   * older than it was on the manager's screen and the coordinator's. Each list
+   * is ordered oldest first, so its first row is its own earliest day — and a
+   * follow-up promised in March is now aged by this too, which is the whole of
+   * D141.
+   */
+  const earliest = [
+    firstOfMonth(day),
+    waiting[0]?.since as Day | undefined,
+    followUps.rows[0]?.day,
+    ...uncovered.map((row) => row.day),
+  ].reduce<Day>((soonest, candidate) => (candidate && candidate < soonest ? candidate : soonest), firstOfMonth(day));
+  const nonWorking = await listNonWorkingDays(earliest, day);
+
+  /**
+   * How late a promised call is, in working days, counted against the person
+   * whose call it is: his own leave is not lateness (S48, D141).
+   */
+  const lateBy = (row: RawFollowUp) => workingDaysBetween(row.day, day, nonWorking, row.repId);
 
   const requests: StuckRequest[] = [];
   for (const row of waiting) {
@@ -542,17 +597,41 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
 
   return {
     requests: top(requests),
-    uncovered: top(await uncoveredFollowUps(away, locale)),
-    followUps: top(
-      followUps.rows.map((row) => ({
+    // Due TODAY counts here, which is the difference between this band and the
+    // stuck one, so nothing is filtered — only aged.
+    uncovered: top(
+      uncovered.map((row) => ({
         id: row.id,
         name: row.name,
-        companyName: row.company_name,
-        repName: row.rep_name,
+        companyName: row.companyName,
+        repName: row.repName,
         day: row.day,
-        daysOverdue: Number(row.days_overdue),
+        daysOverdue: lateBy(row),
         kind: row.kind,
+        backOn: row.backOn as Day,
       })),
+    ),
+    followUps: top(
+      followUps.rows
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          companyName: row.company_name,
+          repName: row.rep_name,
+          repId: row.rep_id,
+          day: row.day,
+          kind: row.kind,
+        }))
+        .filter((row) => lateBy(row) > STUCK_FOLLOW_UP_WORKING_DAYS)
+        .map((row) => ({
+          id: row.id,
+          name: row.name,
+          companyName: row.companyName,
+          repName: row.repName,
+          day: row.day,
+          daysOverdue: lateBy(row),
+          kind: row.kind,
+        })),
     ),
     goneQuiet: top(
       quiet.rows.map((row) => ({

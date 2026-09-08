@@ -721,8 +721,12 @@ export const ACTIVITIES: ActivitySeed[] = [
 export type FollowUpSeed = { company?: string; project?: string; days: number };
 
 export const FOLLOW_UPS: FollowUpSeed[] = [
-  // Faisal — 2 overdue
-  { company: "f2", days: -4 },
+  // Faisal — 2 overdue. The first is nine days past, which is more than three
+  // WORKING days past whatever weekday the demo is read on (D141): at four days
+  // it was long overdue by the calendar and never by the clock the manager's
+  // screen actually runs, so his "follow-ups long overdue" band was empty in
+  // every screenshot ever taken of it.
+  { company: "f2", days: -9 },
   { project: "p6", days: -2 },
   // Faisal — 1 today
   { company: "f1", days: 0 },

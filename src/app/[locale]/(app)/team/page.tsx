@@ -10,7 +10,7 @@ import { TeamTable } from "@/components/team/team-table";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser, seesAll } from "@/lib/authz";
 import {
-  STUCK_FOLLOW_UP_DAYS,
+  STUCK_FOLLOW_UP_WORKING_DAYS,
   STUCK_REQUEST_WORKING_DAYS,
   stuckList,
   teamMonth,
@@ -98,7 +98,7 @@ export default async function TeamPage() {
                 {stuck.followUps.total}
               </span>
             ),
-            caption: t("team.stuckFollowUpsMeans", { days: STUCK_FOLLOW_UP_DAYS }),
+            caption: t("team.stuckFollowUpsMeans", { days: STUCK_FOLLOW_UP_WORKING_DAYS }),
             tone: stuck.followUps.total > 0 ? "bad" : null,
           },
           {

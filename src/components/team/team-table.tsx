@@ -130,6 +130,11 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                 value={member.neverContacted}
                 href={`/companies?rep=${member.userId}&filter=never`}
               />
+              <Habit
+                label={t("team.stuckQuiet")}
+                value={member.goneQuiet}
+                href={`/companies?rep=${member.userId}&filter=quiet`}
+              />
             </span>
           </div>
         ))}
@@ -147,6 +152,7 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
               <TableHead className="p-3 text-end">{t("team.openQuotations")}</TableHead>
               <TableHead className="p-3 text-end">{t("team.overdueFollowUps")}</TableHead>
               <TableHead className="p-3 text-end">{t("team.neverContacted")}</TableHead>
+              <TableHead className="p-3 text-end">{t("team.stuckQuiet")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -209,6 +215,10 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
                 <Count
                   value={member.neverContacted}
                   href={`/companies?rep=${member.userId}&filter=never`}
+                />
+                <Count
+                  value={member.goneQuiet}
+                  href={`/companies?rep=${member.userId}&filter=quiet`}
                 />
               </TableRow>
             ))}

@@ -570,6 +570,15 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
   return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
   typed on the screen to lose — each is disabled at its line with that reason written there.
+- **Working days for lateness, calendar days for silence.** Phase 11J (D141). Two clocks run in
+  this app and which one a figure takes is decided by what the figure accuses somebody of. Anything
+  that says a PERSON is late — a request on a desk, a promised call, a stuck band, a pace line —
+  counts working days, because a weekend and a holiday are not somebody's fault and a rep back
+  from Eid must not be told he is nine days behind. Anything that measures a CUSTOMER's silence —
+  gone quiet, never contacted — counts calendar days, because a fortnight of silence is a
+  fortnight whoever was at work, the band carries no blame, and counting working days there would
+  hold back the very customers a rep should ring the morning he returns. The arithmetic for the
+  first kind lives in `@/lib/workdays` and is never written again in SQL.
 - **Two cards on one screen answer over one window.** Phase 11J (D140). "Where quotations go"
   and "Why we lose" are two halves of one question and both read `CHAIN_WINDOW_DAYS`, from the
   module that defines it. A reader cannot hold two quarters, and the next card added to that
