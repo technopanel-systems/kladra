@@ -11,7 +11,8 @@ import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
-import { MarkLostDialog, isLossReasonCode } from "@/components/projects/mark-lost-dialog";
+import { MarkLostDialog } from "@/components/projects/mark-lost-dialog";
+import { lossReasonLabel } from "@/lib/loss-reason";
 import { Sqm } from "@/components/ui-ext/figures";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
@@ -83,10 +84,7 @@ function listHref(q: string, filter: FollowUpFilter | null, open?: string | null
 /** A stored reason is one of the nine codes, or the rep's own words for "Other". */
 function useLossReasonLabel(): (stored: string | null) => string | null {
   const t = useTranslations();
-  return (stored) => {
-    if (!stored) return null;
-    return isLossReasonCode(stored) ? t(`projects.lossReason.${stored}`) : stored;
-  };
+  return (stored) => lossReasonLabel(stored, t);
 }
 
 function FollowUp({ day, state }: { day: string | null; state: FollowUpState | null }) {

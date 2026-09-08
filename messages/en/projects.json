@@ -38,12 +38,12 @@
   "lossDetailRequired": "Say more about “Other” — it is how the reason list grows.",
   "lossReason": {
     "price": "Price too high",
-    "competitor": "Lost to a competitor",
+    "competitor": "To a competitor",
     "colour": "Colour or product not available",
     "stock": "Stock shortage",
     "leadTime": "Delivery time too long",
     "specification": "Specification we do not offer",
-    "cancelled": "Project cancelled or postponed",
+    "cancelled": "Cancelled or postponed",
     "quiet": "Company stopped replying",
     "other": "Other"
   },

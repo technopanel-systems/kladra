@@ -1,4 +1,6 @@
 {
+  "projectLost": "المشروع سُجّل كخاسر",
+  "projectLostOn": "المشروع سُجّل كخاسر في {date}",
   "app": "كلادرا",
   "company": "الشركة",
   "companies": "الشركات",

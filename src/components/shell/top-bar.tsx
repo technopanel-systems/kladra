@@ -34,7 +34,7 @@ export async function TopBar({
           <span className="sr-only">{t("common.app")}</span>
         </Link>
 
-        <SearchCommand />
+        <SearchCommand role={role} />
 
         <div className="ms-auto flex shrink-0 items-center gap-0.5">
           <NotificationBell />

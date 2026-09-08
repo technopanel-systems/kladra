@@ -70,7 +70,7 @@ export const families: [string, string[]][] = [
   ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
   ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
   ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],
-  ["projects.lossReason", union("src/components/projects/mark-lost-dialog.tsx", "LOSS_REASON_CODES")],
+  ["projects.lossReason", union("src/lib/loss-reason.ts", "LOSS_REASON_CODES")],
   ["notifications", union("src/db/schema.ts", "NOTIFICATION_KINDS")],
   [
     "companies",

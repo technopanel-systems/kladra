@@ -825,6 +825,15 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**The desk knows what it is holding** — `tests/lost.spec.ts`
+The seeded queue holds a request whose project was marked lost after it was raised. Rawan opens
+her queue and the row says the project was marked lost; she opens it and the drawer says which
+day and why, in her language and not in the stored code. Turki opens the same company and reads
+the reason as a sentence on the project's own card, with the code itself nowhere on the screen.
+Then the palette: Rawan finds a company by name and lands on her quotations filtered to it, with
+rows under her; Faisal finds one of his and lands on the company drawer, as he always did
+(D138, D139). Writes nothing.
+
 **One desk, one box, her order** — `tests/queue.spec.ts`
 Rawan opens her queue: the first row of the quotations list is the oldest thing waiting, which is
 the row the caption above it is already talking about. The screen has one element with the search
@@ -1978,3 +1987,34 @@ survived is below; what did not is in DESIGN §4 and §6, with the reason.
   `showSearch={false}` and the queue draws one over both lists; both queries take
   `order: "oldest"` and the queue passes it. `tests/queue.spec.ts` asserts one search role on the
   desk, the term written once, and the longest wait as the first row.
+
+- [x] 144 **The coordinator prices projects that have already been given up.** Found by the
+  coordinator's reading, fixed in P11J-3 (D138). `markProjectLostAction` stamps `lost_at` and
+  nothing in the quotation or dispatch chain has ever read it — the only place that knows about
+  lost is the gate that refuses a NEW request. So the race is real and invisible: the rep marks
+  the project lost, his request stays in her queue looking exactly like work, and she prices a job
+  whose answer is already no. Fix: `projectLostOn` and `projectLostReason` on `QuotationRow` and
+  `DispatchRow` — `projects` is already joined, so it is two more columns and no new join — read
+  as a Riyadh day in SQL the way `issuedOn` is; one red line under the project name on the row,
+  the day and the reason in the drawer. Nothing is withdrawn on anybody's behalf. The demo had no
+  lost project at all, so it gained one, with a request still waiting on it.
+- [x] 145 **A stored code was printed on a screen.** Found by the same reading, fixed in P11J-3.
+  `projects.lost_reason` is a code for the nine reasons and the rep's own words for the tenth; the
+  projects table knew that and kept the rule in a client hook, and the company drawer rendered the
+  column. A rep opening a customer read "competitor". Fix: `src/lib/loss-reason.ts` owns the list
+  and the one reader, both screens use it, and `check-messages` reads the union from its new home.
+- [x] 146 **The palette sent the coordinator to a screen with nothing on it.** Found by the
+  coordinator's reading, fixed in P11J-3 (D139). The search action shows her every company on
+  purpose and the palette sent every company hit to `/companies?open=`, which narrows to the
+  reader's own floor — hers is empty — so she got "Nothing here yet" under a panel saying the
+  company she had just read the name of "is no longer available", on a screen her rail does not
+  even list. Fix: the destination is a function of the role, and hers is her own quotations
+  screen filtered to that company. Contacts route through the same rule even though she is shown
+  none.
+
+What P11J-3 did NOT do, and why. Marking a project lost still says nothing about a request
+waiting on it: warning the rep at that moment needs the count on the project drawer, four files
+deep, and the harm it prevents is a glance now that her desk says it. It is worth doing the day
+the project drawer next opens for another reason. And the queue's own row links still carry
+`?status=requested`, which the queue does not read: harmless, and not worth moving the parameter
+that decides which drawer opens mid-slice.

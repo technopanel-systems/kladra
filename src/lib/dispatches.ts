@@ -74,6 +74,13 @@ export type DispatchRow = {
   companyName: string;
   projectId: string | null;
   projectName: string | null;
+  /**
+   * The project this is against has been marked lost SINCE it was raised
+   * (D138). A Riyadh day, as text, and the stored reason — a code or the rep's
+   * own words (`@/lib/loss-reason`).
+   */
+  projectLostOn: string | null;
+  projectLostReason: string | null;
   repId: string;
   repName: string;
   /** Who owns the company, so who may act on it (S8). */
@@ -208,6 +215,8 @@ function selection(locale: string) {
     companyName: companies.name,
     projectId: quotations.projectId,
     projectName: projects.name,
+    projectLostOn: riyadhDay(sql`projects.lost_at`),
+    projectLostReason: projects.lostReason,
     repId: dispatches.repId,
       repName: personName(locale),
     companyRepId: companies.repId,
@@ -245,6 +254,8 @@ type Selected = {
   companyName: string;
   projectId: string | null;
   projectName: string | null;
+  projectLostOn: string | null;
+  projectLostReason: string | null;
   repId: string;
   repName: string;
   companyRepId: string;
@@ -274,6 +285,8 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     companyName: row.companyName,
     projectId: row.projectId ?? null,
     projectName: row.projectName ?? null,
+    projectLostOn: row.projectLostOn ?? null,
+    projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
     repName: row.repName,
     companyRepId: row.companyRepId,

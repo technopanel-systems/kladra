@@ -500,6 +500,10 @@ async function seedProjects(companyIds: Map<string, string>): Promise<Map<string
             expectedSqm: p.expectedSqm,
             nextFollowUp: null,
             notes: p.notes ?? null,
+            // Lost is a later decision, so it is stamped after the row was
+            // made rather than with it (S20).
+            lostAt: p.lost ? instant(addDays(TODAY, -p.lost.daysAgo), 14, 20) : null,
+            lostReason: p.lost?.reason ?? null,
             createdAt: created,
             updatedAt: created,
           };

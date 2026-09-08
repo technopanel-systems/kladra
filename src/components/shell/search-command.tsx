@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRouter } from "@/i18n/navigation";
 import { formatPhone } from "@/lib/phone";
+import type { Role } from "@/lib/types";
 
 /**
  * The search trigger and the palette behind it. Ctrl+K / Cmd+K opens it from
@@ -32,6 +33,24 @@ import { formatPhone } from "@/lib/phone";
  * A hit navigates to `?open=<id>` on the list screen; P3 reads that and opens
  * the drawer, which is how the open record stays in the URL (SPEC §3).
  */
+
+/**
+ * Where a company hit goes.
+ *
+ * Everybody who holds a floor or oversees one opens the company itself. The
+ * coordinator holds none: `/companies` narrows to `rep_id = her id`, which is
+ * nothing, and `getCompany` refuses the row — so the palette, which shows her
+ * every company on purpose (`src/actions/search.ts`), used to land her on an
+ * empty list with a sheet over it saying the company she had just read the name
+ * of "is no longer available" (D139). What she wants a company for is what we
+ * have quoted them, and that screen is hers, shows every rep's quotations and
+ * searches company name first.
+ */
+function companyHref(role: Role, id: string, name: string): string {
+  return role === "coordinator"
+    ? `/quotations?q=${encodeURIComponent(name)}`
+    : `/companies?open=${id}`;
+}
 
 const EMPTY: SearchResults = {
   companies: [],
@@ -63,7 +82,7 @@ function isMac(): boolean {
 }
 const notMac = () => false;
 
-export function SearchCommand() {
+export function SearchCommand({ role }: { role: Role }) {
   const t = useTranslations();
   const guarded = useWireGuard();
   const router = useRouter();
@@ -202,7 +221,7 @@ export function SearchCommand() {
                     <CommandItem
                       key={row.id}
                       value={`company-${row.id}`}
-                      onSelect={() => go(`/companies?open=${row.id}`)}
+                      onSelect={() => go(companyHref(role, row.id, row.name))}
                     >
                       <Building2 className="text-muted-foreground" />
                       <span className="truncate">{row.name}</span>
@@ -222,7 +241,10 @@ export function SearchCommand() {
                     <CommandItem
                       key={row.id}
                       value={`contact-${row.id}`}
-                      onSelect={() => go(`/companies?open=${row.companyId}`)}
+                      // A contact is his company, so it lands where the
+                      // company lands — including for the role that has no
+                      // company screen, even though she is shown no contacts.
+                      onSelect={() => go(companyHref(role, row.companyId, row.companyName))}
                     >
                       <UserRound className="text-muted-foreground" />
                       <span className="truncate">{row.name}</span>

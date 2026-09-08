@@ -570,6 +570,18 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   all three shapes. The two exceptions are `signOutAction` and `stopViewingFormAction`: both
   return nothing and end in a redirect, so there is no result to turn a refusal into and nothing
   typed on the screen to lose — each is disabled at its line with that reason written there.
+- **A stored code is never a word on a screen.** Phase 11J (D138). `projects.lost_reason` holds
+  one of nine codes or, for "Other", the rep's own line — one column, two kinds of value, and the
+  rule for reading it back lived in a client hook on one screen. The company drawer printed the
+  column, so a rep opened a customer and read "competitor". A column whose values are keys gets
+  ONE reader, in `src/lib/loss-reason.ts`, callable from a server component and a client one, and
+  the list in it is the union `check-messages` demands a word for. The Never list already says no
+  internal codes on screen; this is what that costs in code.
+- **A hit opens something for whoever pressed it.** Phase 11J (D139). A destination is not a
+  property of the record, it is a property of the record AND the reader: the same company row is
+  a drawer for the rep who owns it and an empty screen for the coordinator, who holds no floor.
+  Anything that navigates from a shared surface — the palette, a notification, a link in a
+  sentence — is written as a function of the role, or it is a dead end for somebody.
 - **A field that is written is read somewhere.** Phase 11J (D136). A form that takes something
   from a person owes them a screen that gives it back; a field whose only reader is the form it
   was typed in teaches people to stop filling it. Before a field is added, name the screen that

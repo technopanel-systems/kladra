@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import { ListSearch } from "@/components/ui-ext/list-search";
+import { formatDay } from "@/lib/dates";
+import { lossReasonLabel } from "@/lib/loss-reason";
 import { NoteBlock } from "@/components/ui-ext/note-block";
 import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
 import type { Waited } from "@/lib/waiting";
@@ -34,7 +36,7 @@ import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatMoney } from "@/lib/money";
 import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
 import type { QuotationStanding } from "@/lib/standing";
-import { quotationTone } from "@/lib/state-tone";
+import { quotationTone, TONE_TEXT } from "@/lib/state-tone";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
 import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
@@ -159,8 +161,11 @@ export function QuotationsTable({
 
   // The box is `ListSearch` now; what is left here is the way OUT of a search
   // from the empty list, which is a navigation and not a second search box.
+  // Where the SCREEN owns the search, the way out is the screen's own address:
+  // the queue does not read `?status=`, and each of its two tables was writing
+  // its own over the other's on the way out (D137).
   function clearTerm() {
-    go(listHref(base, "", status));
+    go(listHref(base, "", showSearch ? status : null));
   }
 
   /**
@@ -286,6 +291,13 @@ export function QuotationsTable({
                       {row.projectName}
                     </span>
                   ) : null}
+                  {/* The project was marked lost after this was raised (D138). A dead
+                      project is not work to price, and nothing on her desk said so. */}
+                  {row.projectLostOn ? (
+                    <span data-slot="project-lost" className={cn("truncate text-xs", TONE_TEXT.bad)}>
+                      {t("common.projectLost")}
+                    </span>
+                  ) : null}
                   {/* m² is the headline and SAR the support (DESIGN §6):
                       a rep's month is metres, and SMAC owns the money. */}
                   <span className="flex items-baseline justify-between gap-3 text-sm">
@@ -349,6 +361,13 @@ export function QuotationsTable({
                       </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
                         {row.projectName ?? "—"}
+                        {/* The project was marked lost after this was raised (D138). A dead
+                            project is not work to price, and nothing on her desk said so. */}
+                        {row.projectLostOn ? (
+                          <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
+                            {t("common.projectLost")}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="p-3 text-end">
                         <Sqm value={row.totalSqm} unit={false} />
@@ -533,6 +552,21 @@ export function QuotationSheet({
                   })
                 : quotation.companyName}
             </SheetDescription>
+
+            {/* The project is lost and this paper is still open on it (D138):
+                the drawer says so with the day and the reason, so nobody prices
+                or ships against a decision that has already been taken. */}
+            {quotation.projectLostOn ? (
+              <p data-slot="project-lost" className={cn("text-sm", TONE_TEXT.bad)}>
+                {t("common.projectLostOn", { date: formatDay(quotation.projectLostOn, locale) })}
+                {quotation.projectLostReason ? (
+                  <>
+                    {" — "}
+                    <bdi>{lossReasonLabel(quotation.projectLostReason, t)}</bdi>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
 
             {/* What this drawer is opened to check, before who typed it
                 (DESIGN §6): how big it is, how much of it is still available to

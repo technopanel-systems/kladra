@@ -520,6 +520,13 @@ export type ProjectSeed = {
   /** numeric(12,2) — a string, always, so nothing rounds on the way in. */
   expectedSqm: string;
   notes?: string;
+  /**
+   * Marked lost this many calendar days ago, for the reason stored — one of the
+   * nine codes, or a written line for "Other" (`@/lib/loss-reason`). Until
+   * P11J the demo had no lost project at all, so every screen that says
+   * anything about one was drawn from an empty case.
+   */
+  lost?: { daysAgo: number; reason: string };
 };
 
 export const PROJECTS: ProjectSeed[] = [
@@ -547,6 +554,20 @@ export const PROJECTS: ProjectSeed[] = [
   { key: "p10", company: "s5", name: "توسعة فندق العزيزية", expectedSqm: "2750.00" },
   { key: "p11", company: "t1", name: "مبنى مكاتب الخبر", expectedSqm: "760.00" },
   { key: "p12", company: "t2", name: "مركز الظهران التجاري", expectedSqm: "3400.00" },
+  /*
+   * Lost two days ago, with a request raised three working days ago still
+   * sitting on the coordinator's desk (D138). That is the only way into this
+   * state — a NEW request on a lost project is refused at the action — and it
+   * is the state the desk could not see: she reads the row, prices it, and the
+   * decision was taken the day before.
+   */
+  {
+    key: "p13",
+    company: "t1",
+    name: "مستودعات الدمام - المرحلة الثانية",
+    expectedSqm: "1450.00",
+    lost: { daysAgo: 2, reason: "competitor" },
+  },
 ];
 
 // ---- the log ------------------------------------------------------------------
@@ -881,6 +902,23 @@ export const QUOTATIONS: QuotationSeed[] = [
     items: [
       { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 100, width: "1.24", length: "5.8", pricePerSqm: "121.00" },
       { colourCode: "RAL 9016", supplier: "K", fireRating: "Normal", className: "B", thickness: "4.0", qty: 40, width: "1.5", length: "3.2", pricePerSqm: "104.00" },
+    ],
+  },
+  {
+    /*
+     * Raised before its project was marked lost, and still waiting (D138). It
+     * is deliberately younger than q1, which stays the longest wait on the
+     * desk and the one the late caption is about.
+     */
+    key: "q8",
+    company: "t1",
+    project: "p13",
+    rep: "turki",
+    status: "requested",
+    createdBack: 3,
+    notes: "العميل طلب السعر قبل قرار الترسية",
+    items: [
+      { colourCode: "1020", supplier: "N", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 60, width: "1.24", length: "5.8", pricePerSqm: "127.00" },
     ],
   },
 ];

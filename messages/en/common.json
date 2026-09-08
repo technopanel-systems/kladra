@@ -1,4 +1,6 @@
 {
+  "projectLost": "Project marked lost",
+  "projectLostOn": "Project marked lost on {date}",
   "app": "Kladra",
   "company": "Company",
   "companies": "Companies",

@@ -75,6 +75,16 @@ export type QuotationRow = {
   companyName: string;
   projectId: string | null;
   projectName: string | null;
+  /**
+   * The project this is against has been marked lost SINCE it was raised
+   * (D138). A new request on a lost project is refused at the action, so the
+   * only way into this state is the race: the rep marks the project lost while
+   * his request sits in the coordinator's queue, and she prices a dead project
+   * because nothing on her screen says otherwise. A Riyadh day, as text, and
+   * the stored reason — a code or the rep's own words (`@/lib/loss-reason`).
+   */
+  projectLostOn: string | null;
+  projectLostReason: string | null;
   /** Who raised it. */
   repId: string;
   repName: string;
@@ -211,6 +221,8 @@ function selection(locale: string) {
     companyName: companies.name,
     projectId: quotations.projectId,
     projectName: projects.name,
+    projectLostOn: riyadhDay(sql`projects.lost_at`),
+    projectLostReason: projects.lostReason,
     repId: quotations.repId,
       repName: personName(locale),
     companyRepId: companies.repId,
@@ -239,6 +251,8 @@ type Selected = {
   companyName: string;
   projectId: string | null;
   projectName: string | null;
+  projectLostOn: string | null;
+  projectLostReason: string | null;
   repId: string;
   repName: string;
   companyRepId: string;
@@ -266,6 +280,8 @@ function toRow(row: Selected): QuotationRow {
     companyName: row.companyName,
     projectId: row.projectId ?? null,
     projectName: row.projectName ?? null,
+    projectLostOn: row.projectLostOn ?? null,
+    projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
     repName: row.repName,
     companyRepId: row.companyRepId,

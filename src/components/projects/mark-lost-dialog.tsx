@@ -1,5 +1,6 @@
 "use client";
 
+import { LOSS_REASON_CODES } from "@/lib/loss-reason";
 import { useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
@@ -30,25 +31,6 @@ import { useRouter } from "@/i18n/navigation";
  * later. "Other" is the only one that takes a written detail, and then it is
  * required — that written line is how the list grows.
  */
-
-/** FACET's nine, in the order a rep meets them. `other` stays last (SPEC §3). */
-export const LOSS_REASON_CODES = [
-  "price",
-  "competitor",
-  "colour",
-  "stock",
-  "leadTime",
-  "specification",
-  "cancelled",
-  "quiet",
-  "other",
-] as const;
-
-export type LossReasonCode = (typeof LOSS_REASON_CODES)[number];
-
-export function isLossReasonCode(value: string): value is LossReasonCode {
-  return (LOSS_REASON_CODES as readonly string[]).includes(value);
-}
 
 export function MarkLostDialog({ projectId, trigger }: { projectId: string; trigger?: ReactNode }) {
   const t = useTranslations();

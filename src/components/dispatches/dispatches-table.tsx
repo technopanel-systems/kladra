@@ -31,6 +31,8 @@ import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatSqm } from "@/lib/money";
 import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
 import { dispatchTone, TONE_TEXT } from "@/lib/state-tone";
+import { formatDay } from "@/lib/dates";
+import { lossReasonLabel } from "@/lib/loss-reason";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
 import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
@@ -144,8 +146,10 @@ export function DispatchesTable({
 
   // The box is `ListSearch` now; what is left here is the way OUT of a search
   // from the empty list, which is a navigation and not a second search box.
+  // Where the SCREEN owns the search, the way out is the screen's own address
+  // and not this table's status (D137).
   function clearTerm() {
-    go(listHref(base, param, "", status));
+    go(listHref(base, param, "", showSearch ? status : null));
   }
 
   /** The three states a dispatch can be in, in the order it moves through them. */
@@ -268,6 +272,13 @@ export function DispatchesTable({
                       {row.projectName}
                     </span>
                   ) : null}
+                  {/* The project was marked lost after this was raised (D138). A dead
+                      project is not work to price, and nothing on her desk said so. */}
+                  {row.projectLostOn ? (
+                    <span data-slot="project-lost" className={cn("truncate text-xs", TONE_TEXT.bad)}>
+                      {t("common.projectLost")}
+                    </span>
+                  ) : null}
                   <span className="text-sm">
                     <span dir="ltr" className="num">
                       {formatSqm(row.totalSqm)}
@@ -331,6 +342,13 @@ export function DispatchesTable({
                       </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
                         {row.projectName ?? "—"}
+                        {/* The project was marked lost after this was raised (D138). A dead
+                            project is not work to price, and nothing on her desk said so. */}
+                        {row.projectLostOn ? (
+                          <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
+                            {t("common.projectLost")}
+                          </span>
+                        ) : null}
                       </TableCell>
                       <TableCell className="p-3">
                         <span dir="ltr" className="num text-sm">
@@ -504,6 +522,22 @@ export function DispatchSheet({
                 <bdi>{dispatch.companyName}</bdi>
               )}
             </SheetDescription>
+
+            {/* The project is lost and this material is still going out to it
+                (D138). A dispatch is not withdrawn by anybody's decision the
+                way a request can be, so the one thing the desk can do about it
+                is know before approving. */}
+            {dispatch.projectLostOn ? (
+              <p data-slot="project-lost" className={cn("text-sm", TONE_TEXT.bad)}>
+                {t("common.projectLostOn", { date: formatDay(dispatch.projectLostOn, locale) })}
+                {dispatch.projectLostReason ? (
+                  <>
+                    {" — "}
+                    <bdi>{lossReasonLabel(dispatch.projectLostReason, t)}</bdi>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Fact label={t("common.quotation")}>
