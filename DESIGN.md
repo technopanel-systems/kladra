@@ -574,6 +574,13 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   count above one is a different question from the rows inside it — asked of the same predicate,
   never of the array. The two must not be able to disagree, which is why the predicate is shared
   (`narrowTo`) rather than the number derived, and why a screen that caps says so with a tail.
+- **The chips over a list are one component, and so is the row they sit in.** Phase 11J
+  (D145). Five copies of the chip and four of the row, and the copies disagreed about the two
+  things nobody notices until a screen is narrow: what a pressed chip does while it waits, and
+  what wraps first. What changes the SHAPE of a list — the list/board switch — is not one of the
+  filters that change what is IN it, and below the phone line it takes its own row (D128). A
+  divider is a mark on a line: drawn where there is a line to mark, and only between things it
+  has to separate.
 - **A record that passes through hands says what happened to it.** Phase 11J (D143). Two people
   own a quotation at different moments and three own a dispatch, and every one of those handovers
   already writes an audit row inside the transaction that made the change. A chain record whose

@@ -9,6 +9,7 @@ import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
+import { FilterRow } from "@/components/ui-ext/filter-row";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -58,7 +59,7 @@ export function LookupsPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <FilterRow>
         {LOOKUP_KINDS.map((value) => (
           <FilterChip
             key={value}
@@ -68,7 +69,7 @@ export function LookupsPanel({
             {t(`admin.lookup.${value}`)}
           </FilterChip>
         ))}
-      </div>
+      </FilterRow>
 
       <div className="flex">
         <RowDialog

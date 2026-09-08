@@ -28,6 +28,7 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
+import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Money, Sqm } from "@/components/ui-ext/figures";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
@@ -195,38 +196,39 @@ export function QuotationsTable({
   return (
     <div className="flex flex-col gap-4">
       {showFilters ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <ViewSwitch
-            screen="quotations"
-            view={view}
-            listHref={listHref(base, q, status, null, "list")}
-            boardHref={listHref(base, q, null, null, "board")}
-          />
-          {/* A board of states IS the status view, so the chips would be a
-              filter that leaves one column standing. They come back with the
-              list. */}
-          <span aria-hidden="true" className="h-4 w-px bg-line" />
-          {view === "board"
-            ? null
-            : FILTERS.map((value) => (
-            <FilterChip
-              key={value}
-              // Pressing the chip you are on takes the filter off again.
-              href={listHref(base, q, status === value ? null : value)}
-              active={status === value}
-              >
-                {t(STATUS_KEYS[value])}
-              </FilterChip>
-            ))}
-          {view === "board" ? null : (
-            <>
-              <span aria-hidden="true" className="h-4 w-px bg-line" />
+        <FilterRow
+          lead={
+            <ViewSwitch
+              screen="quotations"
+              view={view}
+              listHref={listHref(base, q, status, null, "list")}
+              boardHref={listHref(base, q, null, null, "board")}
+            />
+          }
+          all={
+            view === "board" ? null : (
               <FilterChip href={listHref(base, q, null)} active={status === null}>
                 {t("common.all")}
               </FilterChip>
-            </>
-          )}
-        </div>
+            )
+          }
+        >
+          {/* A board of states IS the status view, so the chips would be a
+              filter that leaves one column standing. They come back with the
+              list. */}
+          {view === "board"
+            ? null
+            : FILTERS.map((value) => (
+                <FilterChip
+                  key={value}
+                  // Pressing the chip you are on takes the filter off again.
+                  href={listHref(base, q, status === value ? null : value)}
+                  active={status === value}
+                >
+                  {t(STATUS_KEYS[value])}
+                </FilterChip>
+              ))}
+        </FilterRow>
       ) : null}
 
       {showSearch ? (

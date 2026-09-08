@@ -14,6 +14,8 @@ import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog } from "@/components/projects/mark-lost-dialog";
 import { lossReasonLabel } from "@/lib/loss-reason";
 import { Sqm } from "@/components/ui-ext/figures";
+import { FilterChip } from "@/components/ui-ext/filter-chip";
+import { FilterRow } from "@/components/ui-ext/filter-row";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { ListSearch } from "@/components/ui-ext/list-search";
@@ -47,7 +49,7 @@ import { formatDay } from "@/lib/dates";
 import type { FollowUpFilter, FollowUpState } from "@/lib/followups";
 import type { ProjectRow } from "@/lib/projects";
 import type { ProjectStanding } from "@/lib/standing";
-import { TONE_CLASS, TONE_TEXT } from "@/lib/state-tone";
+import { TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -174,35 +176,6 @@ function ProjectCard({ row, href }: { row: ProjectRow; href: string }) {
   );
 }
 
-function FilterChip({
-  href,
-  active,
-  tone,
-  children,
-}: {
-  href: string;
-  active: boolean;
-  tone?: "red" | "amber";
-  children: ReactNode;
-}) {
-  return (
-    <Button
-      asChild
-      size="sm"
-      variant={active ? "secondary" : "ghost"}
-      className={cn(
-        active && "ring-1 ring-line-strong",
-        tone === "red" && cn(TONE_CLASS.bad, "hover:bg-state-bad"),
-        tone === "amber" && cn(TONE_CLASS.wait, "hover:bg-state-wait"),
-      )}
-    >
-      <Link href={href} aria-current={active ? "true" : undefined}>
-        {children}
-      </Link>
-    </Button>
-  );
-}
-
 export function ProjectsTable({
   rows,
   counts,
@@ -242,29 +215,31 @@ export function ProjectsTable({
   return (
     <div className="flex flex-col gap-4">
       {/* What is late, what is due, then the list (SPEC D9). */}
-      <div className="flex flex-wrap items-center gap-2">
+      <FilterRow
+        all={
+          <FilterChip href={listHref(q, null)} active={filter === null}>
+            {t("common.all")}
+          </FilterChip>
+        }
+      >
         <FilterChip href={chip("followups")} active={filter === "followups"}>
           {t("common.followUps")}
         </FilterChip>
         <FilterChip
           href={chip("overdue")}
           active={filter === "overdue"}
-          tone={counts.overdue > 0 ? "red" : undefined}
+          tone={counts.overdue > 0 ? "bad" : undefined}
         >
           {t("projects.overdueChip", { count: counts.overdue })}
         </FilterChip>
         <FilterChip
           href={chip("today")}
           active={filter === "today"}
-          tone={counts.today > 0 ? "amber" : undefined}
+          tone={counts.today > 0 ? "wait" : undefined}
         >
           {t("projects.todayChip", { count: counts.today })}
         </FilterChip>
-        <span aria-hidden="true" className="h-4 w-px bg-line" />
-        <FilterChip href={listHref(q, null)} active={filter === null}>
-          {t("common.all")}
-        </FilterChip>
-      </div>
+      </FilterRow>
 
       <ListSearch
         q={q}

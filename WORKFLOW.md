@@ -825,6 +825,12 @@ Rawan's longest wait is the oldest row her two lists show, and archiving the com
 oldest request moves it to the next one rather than leaving a wait over a desk that does not
 hold it.
 
+**The chips over a list** — `tests/filters.spec.ts`
+Every chip on the quotations, dispatches, projects and lookups screens is the same height, asked
+of the pixels rather than of the import — a private copy is a different shape, and the shape is
+what gives it away. At 375 and at the last phone pixel the list/board switch is above the chips
+rather than among them; at a desk width they are one row (D145, D128). Reads only.
+
 **A dispatch says what happened to it** — `tests/dispatch-trail.spec.ts`
 Rawan opens the dispatch she refused: its trail starts with the request, carries her refusal with
 her own words and her name on it, and reads oldest first. Faisal opens an approved one of his and
@@ -1835,12 +1841,12 @@ What the walk found on top:
   imperative wore a prefix and a suffix. Fix: the strings, and `gendered-arabic.mts` lists
   «اترك» with its attached forms.
 
-Seen on the 375 shots and left, with the reason: the quotations list's status chips wrap round
-the list/board switch, so «الكل» lands on a second row that reads as another group — the row is
-one flex-wrap from before this box and is the search-box question's neighbour, parked for 11J;
-«أبريل 2026» is the one month label on two lines, which is D65's rule (the year only where it
-changes) and not a fault; the focused textarea's ring peeks over the top of the scrolling body,
-which is the ring doing its job at an edge.
+Seen on the 375 shots and left, with the reason: «أبريل 2026» is the one month label on two
+lines, which is D65's rule (the year only where it changes) and not a fault; the focused textarea's
+ring peeks over the top of the scrolling body, which is the ring doing its job at an edge. The
+third one on that list — the quotations list's status chips wrapping round the list/board switch,
+so «الكل» landed on a second row that read as another group — was the search-box question's
+neighbour and was parked for box J. It is fixed there (§5 #153, D145).
 
 Refuted or confirmed by the critic, so the next reader does not re-find them: `@variant max-md`
 inside `@utility touch` compiles on Tailwind 4.3 to `@media (width < 48rem)`; the calendar's day
@@ -2121,3 +2127,15 @@ actually needed.
   (`dispatches_approved_after_created_check`, migration 0013) — the app cannot write it, but a
   seed, a migration or the import that will exist next year can, which is what the rest of that
   table's checks are for.
+
+- [x] 153 **The chips over a list were five components, and the row they sit in was four.** The
+  wrap was seen on the 375 shots in P11H and parked for box J as the search-box question's
+  neighbour; fixed in P11J-8 (D145). The symptom was the quotations list at 375, where the
+  list/board switch, four status chips and «All» were one wrapping row and «All» came round
+  underneath behind a divider, reading as a group of one. Reading for the cause found the rest of
+  it: the projects screen had its own private copy of the chip — a default-size square button, a
+  different height from the four on the other screens, and with no `LinkPending`, so it was the
+  one filter in the app that gave no sign it had been pressed (D126). Fix: `FilterRow` holds the
+  layout rule once and `FilterChip` gains the one thing the private copy had, in the app's own
+  words for the two tones; the four rows and the five chips are one of each.
+  `tests/filters.spec.ts` asks the pixels, so a sixth copy is a different height and fails.
