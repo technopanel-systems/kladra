@@ -114,7 +114,9 @@ test("the team row says whose customers have gone quiet, and it counts the rows 
   t,
 }) => {
   await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/team`);
+  // The team table is its own tab now (D151): the manager's screen answers three
+  // questions and this is the third one, people rather than work.
+  await page.goto(`/${locale}/team?tab=team`);
 
   const table = page.getByRole("table").first();
   await expect(table).toBeVisible(COLD);

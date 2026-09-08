@@ -119,7 +119,9 @@ test("a pill, a chip and a band each count the rows under them", async ({ page, 
       // that many rows under it — a count is a door, not a figure to go and
       // check.
       await login(page, locale, "abdulrahman");
-      await page.goto(`/${locale}/team`);
+      // The team table is its own tab now (D151): the manager's screen answers three
+      // questions and this is the third one, people rather than work.
+      await page.goto(`/${locale}/team?tab=team`);
       await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
       const row = page
         .getByRole("row")

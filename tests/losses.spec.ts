@@ -46,7 +46,9 @@ test("the card says what the quarter was lost to, largest first", async ({ page,
   expect(losses.length, "nothing was given up in the window").toBeGreaterThan(1);
 
   await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/team`);
+  // On the metrics tab now (D151): a cohort read over a quarter is measured, not
+  // worked, and the tabs are drawn on exactly that line.
+  await page.goto(`/${locale}/team?tab=metrics`);
 
   const card = page.locator("section").filter({ hasText: t("team.lossTitle") }).last();
   await expect(card).toBeVisible(COLD);
@@ -78,7 +80,9 @@ test("its sentence counts the same projects the rows do", async ({ page, locale,
   );
 
   await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/team`);
+  // On the metrics tab now (D151): a cohort read over a quarter is measured, not
+  // worked, and the tabs are drawn on exactly that line.
+  await page.goto(`/${locale}/team?tab=metrics`);
   const card = page.locator("section").filter({ hasText: t("team.lossTitle") }).last();
   await expect(card).toContainText(
     t("team.lossMeans", {
@@ -105,7 +109,9 @@ test("a reason somebody wrote counts under Other, and is not a row of its own", 
   );
 
   await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/team`);
+  // On the metrics tab now (D151): a cohort read over a quarter is measured, not
+  // worked, and the tabs are drawn on exactly that line.
+  await page.goto(`/${locale}/team?tab=metrics`);
   const card = page.locator("section").filter({ hasText: t("team.lossTitle") }).last();
   await expect(card).toBeVisible(COLD);
 

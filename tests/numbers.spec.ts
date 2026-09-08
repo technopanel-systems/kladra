@@ -128,6 +128,8 @@ test("the manager's five figures each say which number they are", async ({ page,
   await test.step("3 · a rep's month card says whose month and when", async () => {
     // Drilling into a rep from the team table used to title the card with his
     // bare name, so Achieved / Target / Pace sat under it with no month.
+    // The table is the team tab (D151); the strip above was the working one.
+    await page.goto(`/${locale}/team?tab=team`);
     const row = page.getByRole("table").first().getByRole("link").first();
     const name = ((await row.innerText()) || "").split(/\r?\n/)[0].trim();
     await row.click();
@@ -218,6 +220,11 @@ test("there is a month before this one, and it says which way it went", async ({
 
   await login(page, locale, "abdulrahman");
   await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+  // The six months are on the metrics tab now, not on the screen he lands on.
+  // The founder's own complaint in P12 was that they sat above the work and
+  // pushed it under the fold; what they measure is a window rather than
+  // something to do today, and that is the line the tabs are drawn on (D151).
+  await page.goto(`/${locale}/team?tab=metrics`);
 
   const months = page.locator("[data-month]");
 
@@ -273,6 +280,9 @@ test("where quotations go is a cohort, and every ending is named", async ({ page
 
   await login(page, locale, "abdulrahman");
   await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+  // A cohort read over a quarter is measured rather than worked, so the chain
+  // card is on the metrics tab (D151).
+  await page.goto(`/${locale}/team?tab=metrics`);
 
   const stages = page.locator("[data-stage]");
   const card = stages.first().locator("xpath=ancestor::section[1]");
@@ -455,6 +465,7 @@ test("the sent-back row says how old the oldest is", async ({ page, locale, t })
 
   await login(page, locale, "abdulrahman");
   await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+  await page.goto(`/${locale}/team?tab=metrics`);
 
   const returned = page.locator('[data-stage="returned"]');
 

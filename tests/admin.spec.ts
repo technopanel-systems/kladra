@@ -243,7 +243,9 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     );
     expect(Number(saved.sqm)).toBe(2500);
 
-    await page.goto(`/${locale}/team`);
+    // The target lands on the row in the table of people, which is its own tab
+    // on the manager's screen now (D151).
+    await page.goto(`/${locale}/team?tab=team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
     // Western digits and an ASCII comma in both languages (D6).
     await expect(row(page, faisal.name)).toContainText("2,500");

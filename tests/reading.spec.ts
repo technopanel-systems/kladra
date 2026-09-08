@@ -397,6 +397,8 @@ test("a person is named in the reader's script, not the account's", async ({ pag
 
   await login(page, locale, "abdulrahman");
   await expect(page).toHaveURL(/\/ar\/team/, { timeout: 20_000 });
+  // The table of people is the team tab now (D151).
+  await page.goto(`/${locale}/team?tab=team`);
 
   await test.step("1 · the manager's team table names his reps in Arabic", async () => {
     const table = page.getByRole("table").first();

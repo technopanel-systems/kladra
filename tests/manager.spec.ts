@@ -48,10 +48,16 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
 
   await login(page, locale, "abdulrahman");
 
-  await test.step("1 · his home is the team screen, and it opens on the company's month", async () => {
+  await test.step("1 · his home is the team screen, and its month is one tab in", async () => {
     // `homeFor` decides where a role lands (D15) — the test does not name the
     // path, it checks that signing in got him there.
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
+
+    // It lands on what has stopped, because that is what he can do something
+    // about today; the month and the quarter are measured rather than worked
+    // and live on the metrics tab (D151).
+    await expect(page.getByRole("heading", { name: t("team.stuck") })).toBeVisible();
+    await page.goto(`/${locale}/team?tab=metrics`);
 
     // Whole metres on a card (money.ts): a target is set in whole m² and half a
     // metre is not a fact anybody acts on. The figure behind it is exact.
@@ -62,6 +68,9 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
   });
 
   await test.step("2 · every person has a row with the month and the habits on it", async () => {
+    // People are the third question this screen answers, and its own tab (D151).
+    await page.goto(`/${locale}/team?tab=team`);
+
     // The name this language shows, not the Latin one on the row (D68).
     const faisal = { name: await personName("faisal@technopanel.com.sa", locale) };
     const rawan = { name: await personName("rawan@technopanel.com.sa", locale) };
@@ -106,7 +115,8 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
   });
 
   await test.step("3 · the Stuck list names what has stopped moving", async () => {
-    await expect(page.getByRole("heading", { name: t("team.stuck") })).toBeVisible();
+    await page.goto(`/${locale}/team?tab=work`);
+    await expect(page.getByRole("heading", { name: t("team.stuck") })).toBeVisible(COLD);
 
     // Whatever the database says is stuck is what the screen says. Counted
     // rather than named, because which rows qualify moves with the clock.
@@ -140,6 +150,8 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
       id: await userId("faisal@technopanel.com.sa"),
       name: await personName("faisal@technopanel.com.sa", locale),
     };
+    // Names are on the team tab (D151); step 3 left the walk on the working one.
+    await page.goto(`/${locale}/team?tab=team`);
     await page.getByRole("link", { name: faisal.name, exact: true }).first().click();
 
     await expect(page).toHaveURL(new RegExp(`rep=${faisal.id}`), COLD);
@@ -264,7 +276,8 @@ test("a rep on leave is named on the manager's screen, and what is due on his fl
   );
 
   await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/team`);
+  // Who is away is a fact about people, and people are the team tab (D151).
+  await page.goto(`/${locale}/team?tab=team`);
   await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
 
   if (away.length === 0) {
@@ -290,6 +303,10 @@ test("a rep on leave is named on the manager's screen, and what is due on his fl
   });
 
   await test.step("what is due on his floor is on this screen, with his name on it", async () => {
+    // Work left uncovered by somebody's leave is something to do today, so it
+    // is on the working tab while his row is on the team one (D151).
+    await page.goto(`/${locale}/team?tab=work`);
+
     const due = await query<{ id: string }>(
       `select companies.id from companies
         where companies.archived_at is null

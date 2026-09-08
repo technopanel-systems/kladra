@@ -1,9 +1,11 @@
+import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { CallList } from "@/components/day/call-list";
 import { CloseTheDay } from "@/components/reports/close-the-day";
 import { MonthCard } from "@/components/team/month-card";
 import { MonthsCard } from "@/components/team/months-card";
 import { WaitingList } from "@/components/day/waiting-list";
+import { PageTabs } from "@/components/ui-ext/page-tabs";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { carriesMetres, ownsCompanies, sells } from "@/lib/floor";
@@ -16,6 +18,7 @@ import { logTargetsFor } from "@/lib/log-targets";
 import { waitingCounts, waitingOnRep } from "@/lib/day";
 import { monthsBack } from "@/lib/months";
 import { repMonth } from "@/lib/team";
+import { tabCookie, tabFor, type Tab } from "@/lib/tabs";
 
 /**
  * A rep's day — his home from P8 (SPEC §3, DESIGN §6).
@@ -31,8 +34,17 @@ import { repMonth } from "@/lib/team";
  * follow-up filters — so pressing "2 overdue" on any other screen cannot show a
  * different two (rules/data.md).
  */
-export default async function DayPage() {
-  const [user, locale] = await Promise.all([requireUser(), getLocale()]);
+export default async function DayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const [user, locale, params, jar] = await Promise.all([
+    requireUser(),
+    getLocale(),
+    searchParams,
+    cookies(),
+  ]);
   // The two roles that own companies. The coordinator has none and the manager
   // reads the team screen for the same question; either one following a link
   // here goes to their own home rather than to an empty screen (D15, S8).
@@ -46,24 +58,35 @@ export default async function DayPage() {
   const hasMonth = carriesMetres(user.role);
   const hasChain = sells(user.role);
 
+  // Two tabs here: what he can do something about today, and what is measured
+  // over a window (D151). Marketing carries no month and no chain, so it has
+  // nothing to measure and gets no second tab rather than an empty one.
+  const TABS: Tab[] = hasMonth ? ["work", "metrics"] : ["work"];
+  const tab = tabFor(params.tab, jar.get(tabCookie("day"))?.value, TABS);
+  const working = tab === "work";
+
   // Each band asks for what it will draw and the counts come from the one
   // follow-up definition, so a band that is longer than the screen says how
   // many there are rather than printing all of them (D80).
   const band = (filter: "overdue" | "today" | "never" | "quiet") =>
     listCompanies({ user, filter, locale, limit: BAND_LIMIT });
 
+  // Each tab asks only for what it draws. The work tab was running the
+  // six-month read and the metrics tab would run four band queries, and neither
+  // of them puts a pixel on the screen it is not on.
+  const none: Awaited<ReturnType<typeof band>> = [];
   const [t, month, months, waiting, overdue, today, never, quiet, counts, away] =
     await Promise.all([
       getTranslations(),
-      hasMonth ? repMonth(user.id) : null,
+      hasMonth && working ? repMonth(user.id) : null,
       // Only where there is a target to read them against — marketing carries
       // none, so six bars with no line on any of them would say nothing (D44).
-      hasMonth ? monthsBack(user.id) : null,
-      hasChain ? waitingOnRep(user.id) : [],
-      band("overdue"),
-      band("today"),
-      band("never"),
-      band("quiet"),
+      hasMonth && !working ? monthsBack(user.id) : null,
+      hasChain && working ? waitingOnRep(user.id) : [],
+      working ? band("overdue") : none,
+      working ? band("today") : none,
+      working ? band("never") : none,
+      working ? band("quiet") : none,
       followUpCounts(user),
       awayOn(todayRiyadh()),
     ]);
@@ -77,52 +100,70 @@ export default async function DayPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t("day.title")}</h1>
-
-      {/* His own leave, said on his own screen (D75). The bands underneath are
-          left exactly as they are: a customer who was promised a call on Tuesday
-          is still waiting whether or not the rep was at work, and telling him
-          otherwise would be a comfortable lie. What this says instead is who has
-          it while he is out. */}
-      {onLeave ? (
-        <p className="card-face px-4 py-3 text-sm text-muted-foreground">
-          {t("day.onLeave", { day: formatDay(onLeave.backOn, locale) })}
-        </p>
-      ) : null}
-
-      {/* The same card the manager reads, with this rep's own figures — one
-          layout for one set of facts, so a rep recognises his row on the team
-          screen as the card on his own. */}
-      {month ? (
-        <MonthCard
-          title={t("day.myMonth")}
-          target={month.target}
-          achieved={month.achieved}
-          pace={month.pace}
+      <header className="flex flex-col gap-3">
+        <h1 className="text-xl font-semibold">{t("day.title")}</h1>
+        <PageTabs
+          screen="day"
+          tab={tab}
+          tabs={TABS.map((value) => ({ value, href: `/day?tab=${value}` }))}
         />
-      ) : null}
-      {months ? <MonthsCard months={months} /> : null}
-      {/* Worst first and capped like the bands below it (D80, D83): sixty-four
-          cards above the calls is the calls buried, not shown. */}
-      {hasChain ? (
-        <WaitingList
-          rows={waiting.slice(0, BAND_LIMIT)}
-          total={waiting.length}
-          counts={waitingCounts(waiting)}
-        />
-      ) : null}
-      <CallList
-        overdue={overdue}
-        today={today}
-        never={never}
-        quiet={quiet}
-        totals={counts}
-        targets={targets}
-      />
+      </header>
 
-      {/* Last, because it is the last thing done: the report is written when
-          the day is finished, not while it is being worked (D55). */}
-      <CloseTheDay userId={user.id} role={user.role} />
+      {working ? (
+        <>
+          {/* First, not last. It sat at the foot of the screen because a report
+              is the last thing done, which is true and was still wrong: a rep
+              who has finished his day should not scroll past three lists of
+              unfinished work to write it (D151). It disappears once written. */}
+          <CloseTheDay userId={user.id} role={user.role} />
+
+          {/* His own leave, said on his own screen (D75). The bands underneath are
+              left exactly as they are: a customer who was promised a call on Tuesday
+              is still waiting whether or not the rep was at work, and telling him
+              otherwise would be a comfortable lie. What this says instead is who has
+              it while he is out. */}
+          {onLeave ? (
+            <p className="card-face px-4 py-3 text-sm text-muted-foreground">
+              {t("day.onLeave", { day: formatDay(onLeave.backOn, locale) })}
+            </p>
+          ) : null}
+
+          {/* The same card the manager reads, with this rep's own figures — one
+              layout for one set of facts, so a rep recognises his row on the team
+              screen as the card on his own. It stays on the working tab because
+              it is the frame the day is worked against; the six months behind it
+              are a measurement and moved (D151). */}
+          {month ? (
+            <MonthCard
+              title={t("day.myMonth")}
+              target={month.target}
+              achieved={month.achieved}
+              pace={month.pace}
+            />
+          ) : null}
+
+          {/* Worst first and capped like the bands below it (D80, D83): sixty-four
+              cards above the calls is the calls buried, not shown. */}
+          {hasChain ? (
+            <WaitingList
+              rows={waiting.slice(0, BAND_LIMIT)}
+              total={waiting.length}
+              counts={waitingCounts(waiting)}
+            />
+          ) : null}
+
+          <CallList
+            overdue={overdue}
+            today={today}
+            never={never}
+            quiet={quiet}
+            totals={counts}
+            targets={targets}
+          />
+        </>
+      ) : (
+        <>{months ? <MonthsCard months={months} /> : null}</>
+      )}
     </div>
   );
 }
