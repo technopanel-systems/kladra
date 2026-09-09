@@ -5,6 +5,8 @@
  * that is the UTC day, one behind Riyadh until 03:00.
  */
 
+import { sql, type SQL } from "drizzle-orm";
+
 export const RIYADH = "Asia/Riyadh";
 
 export type Day = string; // "2026-08-04"
@@ -105,4 +107,21 @@ export function formatMonthName(day: Day, locale: string = "en"): string {
 /** "Aug 2026" / "أغسطس 2026" for month headings. */
 export function formatMonth(day: Day, locale: string = "en"): string {
   return `${formatMonthName(day, locale)} ${parseDay(day).y}`;
+}
+
+/**
+ * The Riyadh calendar day an instant fell on, as `YYYY-MM-DD` text.
+ *
+ * `to_char` rather than a bare cast: node-postgres turns a `date` back into a
+ * JavaScript Date at the READER's midnight, which is the whole bug this avoids
+ * (rules/data.md).
+ *
+ * It was written twice, identically, in `@/lib/quotations` and `@/lib/dispatches`
+ * — and a third caller needing it (P12-7's leads) is the moment a private copy
+ * becomes a shared one rather than a third. Everything else in this file is
+ * pure arithmetic on a `Day`; this is the one SQL fragment, and it is here
+ * because "which day is this instant" is the question this file answers.
+ */
+export function riyadhDay(column: SQL): SQL<string | null> {
+  return sql`to_char((${column} at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`;
 }

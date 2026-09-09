@@ -95,12 +95,13 @@ test("a rep is not offered the Marketing lead source, and marketing is", async (
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
 
-  // Marketing files its own leads, so it is offered the source that names them.
+  // Marketing is offered the source that names its own work — on its own form,
+  // which since P12-7 is New lead and not Add company (SPEC §3).
   await login(page, locale, "marketing");
-  await page.goto(`/${locale}/companies`);
-  await page.getByRole("button", { name: t("forms.addCompany") }).first().click();
+  await page.goto(`/${locale}/leads`);
+  await page.getByRole("button", { name: t("leads.new") }).first().click();
 
-  const theirs = page.getByRole("dialog", { name: t("forms.addCompany") });
+  const theirs = page.getByRole("dialog", { name: t("leads.new") });
   await expect(theirs.getByLabel(t("common.company"))).toBeVisible(COLD);
   await theirs.getByRole("combobox", { name: t("common.leadSource") }).click();
   await expect(

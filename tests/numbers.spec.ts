@@ -413,6 +413,13 @@ test("a rep's floor and his day cannot disagree about what is waiting", async ({
     .getByRole("listitem")
     .filter({ hasText: t("day.withCustomer") })
     .count();
+  // "Sent back or refused" is two kinds by name, not everything that is not
+  // with the customer: a lead waiting on him is on this list too since P12-7,
+  // and it belongs to neither figure below (§5 #170).
+  const newLeads = await waiting
+    .getByRole("listitem")
+    .filter({ hasText: t("day.newLead") })
+    .count();
 
   await page.goto(`/${locale}/companies`);
   const floor = page.locator('[data-slot="standing"]').first();
@@ -424,7 +431,7 @@ test("a rep's floor and his day cannot disagree about what is waiting", async ({
       .filter({ hasText: t("team.sentBackOrRefused") })
       .locator("dd")
       .first(),
-  ).toHaveText(String(rows - withCustomer));
+  ).toHaveText(String(rows - withCustomer - newLeads));
   await expect(
     floor
       .locator("> div")

@@ -25,5 +25,6 @@
   "activityNotFound": "That entry is no longer there.",
   "shareWho": "Choose who to share it with.",
   "shareOwner": "It is already theirs.",
-  "leadSourceNotYours": "That lead source is for management and marketing."
+  "leadSourceNotYours": "That lead source is for management and marketing.",
+  "leadNeedsAFloor": "Choose someone a customer can sit with."
 }

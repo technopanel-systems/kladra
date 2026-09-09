@@ -179,7 +179,13 @@ export async function personStanding(repId: string): Promise<PersonStanding> {
   return {
     pipelineSqm: pipelineSqmValue,
     openQuotations,
-    sentBack: waiting.filter((row) => row.reasonKey !== "day.withCustomer").length,
+    // Named, not "everything that is not with the customer". The caption on
+    // this figure is "waiting on the rep, not on the customer", which a lead
+    // also satisfies — so the negative form quietly added a fourth kind to a
+    // number labelled "Sent back or refused" the day P12-7 landed one.
+    sentBack: waiting.filter(
+      (row) => row.reasonKey === "day.sentBack" || row.reasonKey === "day.refused",
+    ).length,
   };
 }
 

@@ -237,7 +237,17 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Marketing has its own module for bringing in a lead",
-    owed: "P12-7 marketing leads — marketing brings a lead in through the same Add company form a rep uses, and assigning it is a second, separate step.",
+    tests: [
+      // Filing IS the assignment: one Save and the customer is on the chosen
+      // floor with somebody to ring on him (P12-7).
+      "marketing files a lead and it is on the rep's floor when Save comes back",
+      // And the assignment is answered, which is what clears it on all three
+      // screens that count it.
+      "the rep answers the lead, and the answer is what clears it everywhere",
+      // The other half of the founder's sentence — "does not use the Add
+      // company form" — asked of the rule rather than of a screen.
+      "marketing files leads and adds no company; everybody else with a floor does the opposite",
+    ],
   },
   {
     says: "The Marketing lead source is not offered to a rep adding a company",

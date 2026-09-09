@@ -22,6 +22,7 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import {
@@ -36,6 +37,7 @@ import {
 } from "@/db/schema";
 import { assertCompanyVisible, mayOpen } from "@/lib/activities";
 import { NotAllowed } from "@/lib/authz";
+import { mayWrite } from "@/lib/floor";
 import type { Day } from "@/lib/dates";
 import {
   type FollowUpFilter,
@@ -46,7 +48,7 @@ import {
   goneQuietCompanySql,
   neverContactedCompanySql,
 } from "@/lib/followups";
-import { personName } from "@/lib/people";
+import { personName, personNameOf } from "@/lib/people";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import { companyStanding, type CompanyStanding } from "@/lib/standing";
 import { LIST_LIMIT } from "@/lib/list-size";
@@ -57,6 +59,15 @@ import {
   onProjectSql,
   seesCompany,
 } from "@/lib/visibility";
+
+/**
+ * The person who filed a lead, as a second name for `users`.
+ *
+ * The query already joins that table once for the company's own rep, so the
+ * finder needs its own alias — aliased through Drizzle rather than written into
+ * a raw `from`, so the join condition and the name expression cannot drift.
+ */
+const leadFinder = alias(users, "lead_finder");
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
 export { listActivitiesForCompany as listCompanyActivities } from "@/lib/activities";
@@ -403,6 +414,28 @@ export type CompanyDetail = {
   counts: { contacts: number; projects: number; activities: number; quotations: number };
   /** How the relationship is going, for the top of the drawer (P8.5). */
   standing: CompanyStanding;
+  /**
+   * Where this customer came from, when marketing filed him as a lead (§3).
+   *
+   * Null on a company somebody typed in himself, which is most of them. It is
+   * one object rather than three loose columns because the three are one fact —
+   * a lead has a finder, a question and an answer to "have you got him?" — and
+   * three nullable fields side by side is the shape that lets a screen render
+   * half of it.
+   */
+  lead: CompanyLead | null;
+};
+
+/** What makes a company a lead (SPEC §3, P12-7). */
+export type CompanyLead = {
+  /** Who found it, in the reader's script (D68). */
+  fromName: string;
+  /** What the customer asked for, in the finder's own words. */
+  query: string;
+  /** Whether the person it was given to has said he has it. */
+  acknowledged: boolean;
+  /** True for the reader who has to answer that question — him and nobody else. */
+  mine: boolean;
 };
 
 /**
@@ -439,6 +472,12 @@ export async function getCompany(
       repId: companies.repId,
       repName: personName(label),
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+      // What makes it a lead, if it is one (P12-7). The finder is a second
+      // alias of `users`, joined LEFT because most companies have none.
+      leadFromId: companies.leadFromId,
+      leadFromName: personNameOf("lead_finder", label),
+      leadQuery: companies.leadQuery,
+      leadAcknowledgedAt: companies.leadAcknowledgedAt,
       nextFollowUp: companies.nextFollowUp,
       followUpState: followUpStateSql(sql`companies.next_follow_up`),
       archivedAt: companies.archivedAt,
@@ -449,6 +488,7 @@ export async function getCompany(
     .innerJoin(leadSources, eq(leadSources.id, companies.leadSourceId))
     .innerJoin(countries, eq(countries.id, companies.countryId))
     .innerJoin(users, eq(users.id, companies.repId))
+    .leftJoin(leadFinder, eq(leadFinder.id, companies.leadFromId))
     .leftJoin(cities, eq(cities.id, companies.cityId))
     .where(eq(companies.id, id))
     .limit(1);
@@ -513,6 +553,18 @@ export async function getCompany(
 
   return {
     ...row,
+    lead: row.leadFromId
+      ? {
+          fromName: row.leadFromName,
+          // The CHECK says a lead always carries one; the fallback is for a
+          // reader of this type who does not know that.
+          query: row.leadQuery ?? "",
+          acknowledged: row.leadAcknowledgedAt !== null,
+          // The question is his to answer, and asked with the rule the action
+          // asks: an admin viewing as him is reading, not working (D42, P8.8).
+          mine: mayWrite(user, row.repId),
+        }
+      : null,
     cityName: row.cityId === null ? null : row.cityName,
     followUpState: row.followUpState ?? null,
     contacts: contactRows.map((c) => ({

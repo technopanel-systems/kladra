@@ -137,17 +137,22 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
 }
 
 /**
- * The people a company can be handed to (P8.9).
+ * The people a company can be handed to, or filed onto (P8.9, P12-7).
  *
  * Everybody active whose floor a company may sit on, minus whoever has it now —
  * handing a company to the person already holding it is not a move, and an
  * option that does nothing is one more thing to read past.
  *
+ * `exceptId` is null where there is nobody to leave out: a lead is filed onto
+ * somebody's floor rather than moved off one, and §3 says it may go "to a
+ * chosen rep, or to a member of the marketing team" — which includes the person
+ * filing it, who then has it and nobody to tell.
+ *
  * The role is the hint rather than part of the name, so "Faisal" stays one
  * value and the two never end up either side of a separator (D46).
  */
 export async function floorHolderOptions(
-  exceptId: string,
+  exceptId: string | null,
   roleName: (role: Role) => string,
 ): Promise<PickerOption[]> {
   const locale = await getLocale();

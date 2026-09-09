@@ -37,6 +37,7 @@ import { and, asc, desc, eq, inArray, isNull, sql, type SQL } from "drizzle-orm"
 import { QueryBuilder } from "drizzle-orm/pg-core";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import { riyadhDay } from "@/lib/dates";
 import type { Day } from "@/lib/dates";
 import { isDispatchEvent, type DispatchEventName } from "@/lib/dispatch-events";
 import { personName, personNameOf } from "@/lib/people";
@@ -163,15 +164,6 @@ const dispatchTotals = qb
   .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
   .groupBy(dispatchItems.dispatchId)
   .as("dispatch_totals");
-
-/**
- * The Riyadh calendar day an instant fell on, as `YYYY-MM-DD` text. `to_char`
- * rather than a bare cast: node-postgres turns a `date` back into a JavaScript
- * Date at the READER's midnight (rules/data.md).
- */
-function riyadhDay(column: SQL): SQL<string | null> {
-  return sql`to_char((${column} at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`;
-}
 
 /**
  * How much of one quotation line is already spoken for.

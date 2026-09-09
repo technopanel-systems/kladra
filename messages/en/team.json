@@ -23,6 +23,8 @@
   "stuck": "Stuck",
   "stuckNothing": "Nothing is stuck. Everything waiting is still inside its window.",
   "stuckRequests": "Requests waiting",
+  "stuckLeads": "Leads not acknowledged",
+  "stuckLeadsMeans": "{days, plural, one {given to somebody more than # working day ago} other {given to somebody more than # working days ago}}",
   "stuckFollowUps": "Follow-ups long overdue",
   "stuckNever": "Added and never contacted",
   "waitingDays": "{count, plural, one {# working day} other {# working days}}",

@@ -9,6 +9,8 @@
   "dispatchApproved": "تم اعتماد التوريد {label} لدى {company} برقم سماك {smacNumber}.",
   "dispatchRefused": "رُفض التوريد {label} لدى {company}.",
   "companyHandedOver": "سلّمك {rep} {label}.",
+  "leadAssigned": "أسند إليك {rep} عميلًا محتملًا: {company}.",
+  "leadAcknowledged": "أكّد {rep} استلام العميل المحتمل {company}.",
   "unreadMark": "غير مقروء",
   "companyShared": "شاركك {rep} {label}.",
   "projectShared": "أضافك {rep} إلى {label}."

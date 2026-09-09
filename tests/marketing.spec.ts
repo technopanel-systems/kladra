@@ -28,16 +28,23 @@ test("marketing works its floor and is offered no price anywhere", async ({ page
 
   await login(page, locale, "marketing");
 
-  await test.step("1 · its home is a day, like a rep's, with no month on it", async () => {
-    await expect(page).toHaveURL(new RegExp(`/${locale}/day`), COLD);
+  await test.step("1 · its home is the module SPEC §3 gave it, and its day carries no month", async () => {
+    // Leads, not the day: filing one IS handing a customer to a rep, so the
+    // screen where that happens is the screen this role opens Kladra to do
+    // (§3, P12-7). It used to land on the day, which was right while marketing
+    // worked a floor like a rep's.
+    await expect(page).toHaveURL(new RegExp(`/${locale}/leads`), COLD);
+    await expect(page.getByRole("heading", { name: t("leads.title") })).toBeVisible(COLD);
+
+    await page.goto(`/${locale}/day`);
     await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible(COLD);
     // No target, so no card that would read as a permanent shortfall (D44).
     await expect(page.getByText(t("day.myMonth"))).toHaveCount(0);
   });
 
-  await test.step("2 · the rail carries its three screens and neither chain screen", async () => {
+  await test.step("2 · the rail carries its four screens and neither chain screen", async () => {
     const nav = page.getByRole("navigation", { name: t("shell.mainNav") }).first();
-    for (const label of ["day.title", "common.companies", "common.projects"]) {
+    for (const label of ["leads.title", "day.title", "common.companies", "common.projects"]) {
       await expect(nav.getByRole("link", { name: t(label) }), `${label} missing`).toHaveCount(1);
     }
     for (const label of ["common.quotations", "common.dispatches", "common.queue"]) {
@@ -59,6 +66,10 @@ test("marketing works its floor and is offered no price anywhere", async ({ page
 
     await page.goto(`/${locale}/companies`);
     await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
+    // And the door it no longer has: "Marketing does not use the Add company
+    // form" (§3). The floor is still its floor — the rows below are the proof —
+    // so what went is the way in, not the screen.
+    await expect(page.getByRole("button", { name: t("forms.addCompany") })).toHaveCount(0);
     // Its own, and nobody else's.
     const rows = page.getByRole("table").first().getByRole("row");
     await expect(rows).toHaveCount(Number(count) + 1, COLD);

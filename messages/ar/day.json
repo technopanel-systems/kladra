@@ -4,6 +4,8 @@
   "myMonth": "هذا الشهر",
   "waitingOnYou": "بانتظارك",
   "nothingWaiting": "لم يرجع إليك شيء.",
+  "newLead": "عميل محتمل جديد",
+  "newLeadCount": "{count, plural, zero {لا عملاء محتملين جدد} one {عميل محتمل جديد} two {عميلان محتملان جديدان} few {# عملاء محتملين جدد} many {# عميلًا محتملًا جديدًا} other {# عميل محتمل جديد}}",
   "sentBack": "أُعيد للتعديل",
   "refused": "مرفوض",
   "withCustomer": "لدى العميل",

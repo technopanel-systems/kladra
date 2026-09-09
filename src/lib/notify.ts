@@ -75,6 +75,11 @@ const CLEARED_BY: Record<NotificationKind, "work" | "reading"> = {
   dispatchApproved: "reading",
   dispatchRefused: "reading",
   companyHandedOver: "reading",
+  // He has to answer it — "I have him" — and the answer is what takes it off
+  // his bell, not his having glanced at it (P12-7).
+  leadAssigned: "work",
+  // He answered; marketing is being told so. There is nothing left to do.
+  leadAcknowledged: "reading",
   companyShared: "reading",
   projectShared: "reading",
 };

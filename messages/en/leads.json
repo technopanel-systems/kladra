@@ -1,0 +1,22 @@
+{
+  "title": "Leads",
+  "new": "New lead",
+  "newHint": "Filing a lead hands it to somebody. It is on their day the moment you save.",
+  "listLabel": "Leads brought in",
+  "empty": "Nothing has come in yet.",
+  "query": "What they asked for",
+  "queryPlaceholder": "Cladding for a four-storey office in Al Malqa, wants a price this week",
+  "handOverHeading": "Who takes it",
+  "handOverHint": "Whoever you choose sees the customer on their floor and the phone number with it.",
+  "giveTo": "Give it to",
+  "filed": "{name} is with {rep}.",
+  "with": "With",
+  "foundBy": "Found by",
+  "givenOn": "Given",
+  "state": "Acknowledged",
+  "acknowledge": "Acknowledge",
+  "acknowledged": "Acknowledged",
+  "notAcknowledged": "Not acknowledged",
+  "acknowledgedToast": "Acknowledged. The customer is yours.",
+  "fromPerson": "A lead from {name}."
+}

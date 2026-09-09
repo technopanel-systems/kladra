@@ -115,6 +115,34 @@ test("a company has exactly one main contact and exactly one city", async () => 
   expect(both).toContain("companies_city_check");
 });
 
+/**
+ * The three columns that make a company a lead are one fact (D157).
+ *
+ * A lead with nothing the customer asked for is a name and a phone number,
+ * which is what Add company is already for; and an acknowledgement of a lead
+ * nobody gave is a state that never happened. Both are refused by the column,
+ * not only by the action, because the column is the guard for the ways in that
+ * are not the app (rules/data.md).
+ */
+test("a lead carries what was asked, and an answer belongs to a lead", async () => {
+  const lead = await one<{ id: string }>(
+    "select id from companies where lead_from_id is not null limit 1",
+  );
+  const noQuery = await refused("update companies set lead_query = null where id = $1::uuid", [
+    lead.id,
+  ]);
+  expect(noQuery).toContain("companies_lead_check");
+
+  const plain = await one<{ id: string }>(
+    "select id from companies where lead_from_id is null limit 1",
+  );
+  const answered = await refused(
+    "update companies set lead_acknowledged_at = now() where id = $1::uuid",
+    [plain.id],
+  );
+  expect(answered).toContain("companies_lead_ack_check");
+});
+
 test("a status and the instants that belong to it agree", async () => {
   const issued = await one<{ id: string }>(
     "select id from quotations where status = 'issued' limit 1",

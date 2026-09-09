@@ -46,6 +46,7 @@ import {
   users,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
+import { riyadhDay } from "@/lib/dates";
 import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { numberInTerm, quotationLabel } from "@/lib/labels";
@@ -182,16 +183,6 @@ const totalSql = sql<string>`round(
   coalesce(${lineTotals.subtotal}, 0) + round(coalesce(${lineTotals.subtotal}, 0) * ${VAT_RATE}::numeric, 2),
   2
 )`;
-
-/**
- * The Riyadh calendar day an instant fell on, as `YYYY-MM-DD` text.
- *
- * `to_char` rather than a bare cast: node-postgres turns a `date` back into a
- * JavaScript Date at the READER's midnight, which is the whole bug this avoids.
- */
-function riyadhDay(column: SQL): SQL<string | null> {
-  return sql`to_char((${column} at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`;
-}
 
 /**
  * True for the newest revision of a number — the only one that is live (S34).

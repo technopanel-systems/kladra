@@ -10,6 +10,7 @@ import {
   type LogProject,
 } from "@/components/activities/log-dialog";
 import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
+import { AcknowledgeLeadButton } from "@/components/leads/acknowledge-lead-button";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import { ArchiveContactDialog } from "@/components/contacts/archive-contact-dialog";
 import { EditContactDialog } from "@/components/contacts/edit-contact-dialog";
@@ -39,7 +40,7 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
 import { lossReasonLabel } from "@/lib/loss-reason";
 import { formatSqm } from "@/lib/money";
-import { TONE_TEXT } from "@/lib/state-tone";
+import { TONE_CLASS, TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -258,6 +259,39 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         shareWith={shareWith}
         me={user.id}
       />
+
+      {/*
+        Where this customer came from, when marketing filed him as a lead
+        (SPEC §3, P12-7). Above the tabs, because it is the first thing the
+        person who has just been handed him needs to read, and it stops being
+        prominent the moment he says he has it: amber with a button while it is
+        unanswered, a quiet line afterwards. It stays on the drawer for good —
+        what the customer originally asked for is the one thing about him
+        nobody can reconstruct later.
+      */}
+      {company.lead ? (
+        <div
+          className={cn(
+            "mx-4 mt-3 flex flex-col gap-2 rounded-lg px-3 py-2.5",
+            company.lead.acknowledged ? "bg-surface-2" : TONE_CLASS.wait,
+          )}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs font-medium">
+              {t("leads.fromPerson", { name: company.lead.fromName })}
+            </span>
+            {company.lead.acknowledged ? null : company.lead.mine ? (
+              <AcknowledgeLeadButton companyId={company.id} />
+            ) : (
+              // A manager reading somebody else's lead is told the state and
+              // offered nothing: the answer is the holder's to give.
+              <span className="text-xs font-medium">{t("leads.notAcknowledged")}</span>
+            )}
+          </div>
+          {/* The customer's own words, in whichever language he used. */}
+          <Prose line text={company.lead.query} className="text-xs" />
+        </div>
+      ) : null}
 
       <Tabs defaultValue="activity" className="gap-3 px-4 py-3">
         <TabsList className="w-full">

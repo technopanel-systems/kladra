@@ -11,7 +11,7 @@ import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
 import { PersonStrip } from "@/components/team/person-strip";
 import { requireUser, seesAll } from "@/lib/authz";
-import { ownsCompanies, sells } from "@/lib/floor";
+import { addsCompanies, ownsCompanies, sells } from "@/lib/floor";
 import { countCompanies, listCompanies } from "@/lib/companies";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { todayRiyadh } from "@/lib/dates";
@@ -70,8 +70,14 @@ export default async function CompaniesPage({
    * adding one would quietly become its rep. They read this screen instead
    * (WORKFLOW §3, Abdulrahman: no Add company button). The action refuses them
    * as well; this only keeps a button they cannot use off the screen.
+   *
+   * And not marketing since P12-7. SPEC §3: "Marketing does not use the Add
+   * company form. Marketing has its own module for bringing in a lead." It
+   * still HOLDS companies — a lead filed onto its own floor is one — so this
+   * screen is still its floor and still its search; what has gone is the way
+   * in, which is now New lead and asks the two questions a lead has.
    */
-  const mayAdd = ownsCompanies(user.role);
+  const mayAdd = addsCompanies(user.role);
 
   const narrowing = { user, q: q || undefined, filter, repId: repId ?? undefined, locale };
 

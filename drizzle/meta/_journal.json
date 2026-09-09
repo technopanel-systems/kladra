@@ -127,6 +127,20 @@
       "when": 1789193699156,
       "tag": "0017_paper_she_put_out_herself",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789280099156,
+      "tag": "0018_a_lead_is_an_assignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789366499156,
+      "tag": "0019_a_lead_lands_on_a_bell",
+      "breakpoints": true
     }
   ]
 }

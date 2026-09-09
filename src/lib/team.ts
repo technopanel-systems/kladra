@@ -29,6 +29,7 @@ import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
 import { carriesMetres } from "@/lib/floor";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
+import { ageLeads, lateLeads, unacknowledgedLeads, type LeadWithWait } from "@/lib/leads";
 import { awayOn, type Away } from "@/lib/leave";
 import { personName, personNameOf } from "@/lib/people";
 import { ROLES } from "@/lib/types";
@@ -339,7 +340,9 @@ export async function repMonth(
 
 /**
  * What is stuck (D14): requests waiting more than 2 WORKING days, follow-ups
- * overdue more than 3 days, companies never contacted for more than 14.
+ * overdue more than 3 days, companies never contacted for more than 14, and
+ * since P12-7 a lead nobody has picked up in the same 2 working days a request
+ * gets.
  *
  * "Working days" is why the requests are filtered here rather than in SQL: the
  * weekend and the holiday table are `src/lib/workdays.ts`'s business, and a
@@ -451,11 +454,19 @@ export type Stuck = {
    * this is a customer somebody was already talking to.
    */
   goneQuiet: StuckGroup<StuckCompany>;
+  /**
+   * A lead marketing handed somebody and nobody has picked up (SPEC §3, P12-7).
+   *
+   * Late at the same age as a request on the coordinator's desk, because it is
+   * the same fact: something arrived, and the person it arrived for has not
+   * touched it. Two clocks for one idea of "too long" is what D141 was.
+   */
+  leads: StuckGroup<LeadWithWait>;
 };
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   const locale = await getLocale();
-  const [waiting, followUps, never, quiet, away] = await Promise.all([
+  const [waiting, followUps, never, quiet, away, leads] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -562,6 +573,11 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     `),
 
     awayOn(day),
+
+    // Read whole and aged below, like every other row on this screen: working
+    // days are `@/lib/workdays`'s business and a second copy of that arithmetic
+    // is how a rep back from Eid gets told he is late (D141).
+    unacknowledgedLeads(),
   ]);
 
   // What is due on a floor nobody is standing on. Asked here rather than in the
@@ -582,6 +598,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     firstOfMonth(day),
     waiting[0]?.since as Day | undefined,
     followUps.rows[0]?.day,
+    leads[0]?.givenOn,
     ...uncovered.map((row) => row.day),
   ].reduce<Day>((soonest, candidate) => (candidate && candidate < soonest ? candidate : soonest), firstOfMonth(day));
   const nonWorking = await listNonWorkingDays(earliest, day);
@@ -660,5 +677,6 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
         days: Number(row.days),
       })),
     ),
+    leads: top(lateLeads(ageLeads(leads, day, nonWorking))),
   };
 }

@@ -11,6 +11,7 @@ import {
   ListTree,
   type LucideIcon,
   NotebookPen,
+  PhoneIncoming,
   Target,
   Truck,
   Users,
@@ -64,6 +65,18 @@ const reports: NavItem = {
   labelKey: "reports.title",
   shortKey: "shell.shortReports",
   icon: NotebookPen,
+};
+
+/**
+ * Marketing's own module, and the one screen no rep has (SPEC §3, P12-7).
+ *
+ * A telephone with an arrow coming in, because that is what a lead is: somebody
+ * rang, and this is the list of who has been rung back.
+ */
+const leads: NavItem = {
+  href: "/leads",
+  labelKey: "leads.title",
+  icon: PhoneIncoming,
 };
 
 const companies: NavItem = {
@@ -124,9 +137,15 @@ export const ADMIN_PATHS: readonly string[] = adminItems.map((item) => item.href
 export function navFor(role: Role): NavGroup[] {
   switch (role) {
     case "marketing":
+      // Leads first, and therefore home (SPEC §3): filing one IS handing a
+      // customer to a rep, so the module the founder asked for is the screen
+      // this role opens Kladra to do. Its day and its floor come after — a lead
+      // filed onto its own floor is an ordinary customer from then on, with the
+      // follow-ups and the log any customer has.
+      //
       // No quotations and no dispatches: marketing finds customers and hands
       // them on, and a screen it can only read is a screen it stops opening.
-      return [{ items: [day, reports, companies, projects] }];
+      return [{ items: [leads, reports, day, companies, projects] }];
     case "coordinator":
       // Her desk first, and her own floor after it. She is a selling role since
       // SPEC §3 — companies, projects and quotations of her own — and the queue
@@ -134,11 +153,16 @@ export function navFor(role: Role): NavGroup[] {
       // for and her own customers are what she opens it for second. Her day
       // sits with them rather than at the front for the same reason.
       return [{ items: [queue, reports, quotations, dispatches, day, companies, projects] }];
+    // Leads last for the two roles that read every screen: it is a window onto
+    // somebody else's module rather than work of their own, and what the
+    // manager actually needs from it — the ones nobody has picked up — is
+    // already a band on his own screen. Last also keeps his phone bar the four
+    // it was.
     case "manager":
-      return [{ items: [team, reports, companies, projects, quotations, dispatches] }];
+      return [{ items: [team, reports, companies, projects, quotations, dispatches, leads] }];
     case "admin":
       return [
-        { items: [team, reports, companies, projects, quotations, dispatches] },
+        { items: [team, reports, companies, projects, quotations, dispatches, leads] },
         { labelKey: "shell.adminSection", items: adminItems },
       ];
     default:

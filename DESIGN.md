@@ -736,6 +736,23 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   it, derived from the control's own id rather than typed twice — a hand-written id beside a
   hand-written describedby is the second copy this file refuses everywhere else.
 
+- **A row is a link only where the reader may open what it points at.** Phase 12 (D157). The leads
+  screen is marketing's, and every lead on it sits on somebody else's floor the moment it is filed
+  — which marketing may not open (S8). A table of rows that refuse most of the people looking at
+  them is worse than a table of plain rows: it teaches the reader that this screen is broken. So
+  the leads list carries no row links and says everything the reader needs instead — who has it,
+  what they asked for, whether it has been answered — and the one reader who may open the customer
+  reaches him from the screen that is his. The general form is the same rule as "no screen offers
+  work the action would refuse", one step out: a DOOR is work too.
+
+- **A count in a row of pills is a link only if it has a list.** Phase 12 (D157). The waiting
+  pills on a rep's day are doors to that kind's own screen — every returned quotation, every
+  refused dispatch. A lead has no such screen for him, so its pill is text in the kind's own
+  colour rather than a link somewhere near enough; the list under the heading IS that kind's list,
+  because leads sort first on it. The pills still add up to the figure beside the heading, which
+  is the part that must not break: a set of counts that no longer sums to the total it splits is
+  the figure-that-lies (rules/data.md), so a new kind gets a pill even when it has nowhere to go.
+
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,

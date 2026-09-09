@@ -2,19 +2,27 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { StuckRows, type StuckRowData } from "@/components/team/stuck-rows";
 import { formatDay } from "@/lib/dates";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
+import { LEAD_LATE_WORKING_DAYS } from "@/lib/leads";
 import type { Stuck } from "@/lib/team";
 
 /**
  * What is waiting longer than it should be (SPEC D14).
  *
- * Five questions, each with its own window: work due today on the floor of
- * somebody who is on leave (D75), a quotation request more than two WORKING days
- * on the coordinator's desk, a follow-up more than three days past its date, a
+ * Six questions, each with its own window: work due today on the floor of
+ * somebody who is on leave (D75), a lead marketing handed somebody and nobody
+ * has picked up (§3, P12-7), a quotation request more than two WORKING days on
+ * the coordinator's desk, a follow-up more than three days past its date, a
  * company added more than fourteen days ago and never contacted, and a customer
  * somebody DID contact and then dropped — no next step anywhere on him and
- * nothing logged for a fortnight (D63). The fourth is the biggest and was
+ * nothing logged for a fortnight (D63). The last is the biggest and was
  * invisible until P9.4: it is on no band of any screen, because every band this
  * app had was keyed on a date and these have none.
+ *
+ * The lead is second because it is the youngest kind of stuck on the list and
+ * the cheapest to clear: a customer who rang the company, was promised a call,
+ * and has been sitting on somebody's floor since. It is also the only row here
+ * that is somebody's introduction to Kladra — the rest are people already in
+ * the middle of something.
  *
  * The first is the only one about TODAY, so it is first on the screen. The rest
  * have been waiting for days and will still be there tomorrow; a customer
@@ -37,6 +45,7 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
 
   const nothing =
     stuck.uncovered.total === 0 &&
+    stuck.leads.total === 0 &&
     stuck.requests.total === 0 &&
     stuck.followUps.total === 0 &&
     stuck.neverContacted.total === 0 &&
@@ -70,6 +79,23 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
       row.daysOverdue > 0
         ? t("team.overdueDays", { count: row.daysOverdue })
         : t("common.dueToday"),
+  }));
+
+  /*
+   * The customer, whose floor he is sitting on, and how long. Who FOUND him is
+   * not on the row: the manager reading this is deciding whether to ring the
+   * rep, and marketing has already done its half — its own screen is where the
+   * finder's name belongs (P12-7).
+   */
+  const leads: StuckRowData[] = stuck.leads.rows.map((row) => ({
+    key: row.id,
+    href: `/companies?open=${row.id}`,
+    name: row.name,
+    who: row.repName,
+    // The same words a waiting request wears two groups down: it is the same
+    // question — how long has this been sitting — and one phrasing for one
+    // figure is what keeps the manager from reading two clocks (D59).
+    note: t("team.waitingDays", { count: row.waited?.days ?? 0 }),
   }));
 
   const requests: StuckRowData[] = stuck.requests.rows.map((row) => ({
@@ -120,6 +146,15 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
           means={t("team.uncoveredMeans")}
           rows={uncovered}
           more={stuck.uncovered.total - uncovered.length}
+        />
+      ) : null}
+
+      {stuck.leads.total > 0 ? (
+        <Group
+          title={t("team.stuckLeads")}
+          means={t("team.stuckLeadsMeans", { days: LEAD_LATE_WORKING_DAYS })}
+          rows={leads}
+          more={stuck.leads.total - leads.length}
         />
       ) : null}
 

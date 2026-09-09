@@ -42,14 +42,23 @@ test("the waiting list draws the cap, counts the rest, and keeps the oldest", as
          from generate_series(1, $5::int) g`,
       [home.company_id, home.project_id, faisal, MARKER, EXTRA],
     );
+    // The spec keeps its own copy of "what is waiting on him" on purpose — that
+    // is what makes it worth running against the app's. A lead nobody has
+    // answered is the fourth kind since P12-7, and leaving it out here would
+    // have this test asserting a figure the screen never claimed.
     const [{ total }] = await query<{ total: number }>(
-      `select count(*)::int as total
-         from quotations q join companies c on c.id = q.company_id
-        where c.rep_id = $1 and c.archived_at is null
-          and ((q.status in ('returned', 'issued')
-                and not exists (select 1 from quotations later
-                                 where later.number = q.number and later.revision > q.revision))
-               or exists (select 1 from dispatches d where d.quotation_id = q.id and d.status = 'refused'))`,
+      `select (
+         (select count(*)
+            from quotations q join companies c on c.id = q.company_id
+           where c.rep_id = $1 and c.archived_at is null
+             and ((q.status in ('returned', 'issued')
+                   and not exists (select 1 from quotations later
+                                    where later.number = q.number and later.revision > q.revision))
+                  or exists (select 1 from dispatches d where d.quotation_id = q.id and d.status = 'refused')))
+         + (select count(*) from companies lc
+             where lc.rep_id = $1 and lc.archived_at is null
+               and lc.lead_from_id is not null and lc.lead_acknowledged_at is null)
+       )::int as total`,
       [faisal],
     );
 
@@ -70,9 +79,15 @@ test("the waiting list draws the cap, counts the rest, and keeps the oldest", as
       waiting.getByText(t("common.andMore", { count: total - BAND_LIMIT })),
     ).toBeVisible();
 
-    // The oldest is drawn first, so the top row is one of ours, sent back
-    // longest ago — and its reason is the marker this test wrote.
-    await expect(waiting.getByRole("listitem").first()).toContainText(MARKER);
+    // The oldest is drawn first WITHIN its kind, so the top row of the
+    // quotations is one of ours, sent back longest ago — and its reason is the
+    // marker this test wrote. A lead sorts above every one of them (P12-7): it
+    // is the only row on this list about a customer nobody has spoken to yet,
+    // and on a floor this size it would otherwise fall off the bottom of the
+    // cap, which is the one row that must not.
+    await expect(
+      waiting.getByRole("listitem").filter({ hasNotText: t("day.newLead") }).first(),
+    ).toContainText(MARKER);
   } finally {
     await query(`delete from quotations where return_reason = $1`, [MARKER]);
   }

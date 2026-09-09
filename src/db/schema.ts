@@ -252,6 +252,31 @@ export const companies = pgTable(
     archivedAt: timestamp("archived_at", { withTimezone: true }), // archive, never delete
     /** Why it left the floor, in the archiver's words (S16, D87). */
     archiveReason: text("archive_reason"),
+    /**
+     * Who brought this customer in and gave him away (SPEC §3, P12-7).
+     *
+     * Marketing does not use the Add company form: it files a LEAD, and filing
+     * one IS the assignment — it goes to a chosen rep or to a member of the
+     * marketing team, and `rep_id` above is that person from the first second.
+     * So a lead is not a second kind of row waiting to become a company; it is
+     * a company, on somebody's floor, that somebody else found. These three
+     * columns are the only difference, and they are what makes "a lead I was
+     * given" a different thing on screen from "my company".
+     *
+     * Null on every company a rep opened himself, which is most of them.
+     */
+    leadFromId: uuid("lead_from_id").references(() => users.id),
+    /** What the customer asked for, in the finder's own words. The point of the lead. */
+    leadQuery: text("lead_query"),
+    /**
+     * When the person it was given to said he has it.
+     *
+     * An act, not a side effect of opening the drawer: marketing needs to know
+     * somebody has actually taken the call, and a lead cleared by a stray click
+     * answers nobody. Null until then, and a lead somebody filed for himself is
+     * stamped at the moment he files it, because there is nobody to tell.
+     */
+    leadAcknowledgedAt: timestamp("lead_acknowledged_at", { withTimezone: true }),
     ...stamps,
   },
   (t) => [
@@ -270,6 +295,17 @@ export const companies = pgTable(
       "companies_archive_reason_check",
       sql`${t.archiveReason} is null or ${t.archivedAt} is not null`,
     ),
+    // The three lead columns are one fact and stand or fall together: a lead
+    // with nothing the customer asked for is a name and a phone number, which
+    // is what the Add company form is already for, and an acknowledgement of a
+    // lead nobody gave is a state that never happened (rules/data.md).
+    check("companies_lead_check", sql`${t.leadFromId} is null or ${t.leadQuery} is not null`),
+    check(
+      "companies_lead_ack_check",
+      sql`${t.leadAcknowledgedAt} is null or ${t.leadFromId} is not null`,
+    ),
+    // Marketing's own screen reads by who brought it in; nothing else does.
+    index("companies_lead_from_idx").on(t.leadFromId),
   ],
 );
 
@@ -825,6 +861,11 @@ export const NOTIFICATION_KINDS = [
   "companyHandedOver",
   "companyShared",
   "projectShared",
+  // A lead marketing filed and gave away, and the receiver saying he has it
+  // (SPEC §3, P12-7). Both directions, because a handoff nobody confirms is a
+  // customer two people each think the other is calling.
+  "leadAssigned",
+  "leadAcknowledged",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

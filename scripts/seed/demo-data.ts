@@ -177,6 +177,19 @@ export type CompanySeed = {
    * a branch nobody has seen (rules/data.md).
    */
   archived?: { daysAgo: number; reason: string };
+  /**
+   * Brought in by marketing, and therefore a lead (SPEC §3, P12-7).
+   *
+   * `daysAgo` overrides the spread-out creation date, because a lead's whole
+   * meaning is its age: two working days is the line, and the demo carries a
+   * row on each side of it plus one already answered. A threshold with no row
+   * past it is a figure nobody has ever seen work (rules/data.md).
+   *
+   * `acknowledgedDaysAgo` is missing on the ones nobody has answered. A lead
+   * somebody filed onto his OWN floor is always answered — there is nobody to
+   * tell — which is what `createLeadAction` writes and what these rows copy.
+   */
+  lead?: { from: RepKey; query: string; daysAgo: number; acknowledgedDaysAgo?: number };
 };
 
 export const COMPANIES: CompanySeed[] = [
@@ -487,7 +500,14 @@ export const COMPANIES: CompanySeed[] = [
     ],
   },
 
-  // ---- Marketing — leads waiting to be handed to a rep (2) -------------------
+  /*
+   * ---- Marketing — what it brought in (2 of its own, 3 given away) ----------
+   *
+   * Since SPEC §3 marketing files a LEAD rather than a company, and filing one
+   * IS the assignment. Its own two are leads it kept — "or to a member of the
+   * marketing team" — and are therefore answered the moment they are written:
+   * there is nobody to tell.
+   */
   {
     key: "m1",
     name: "شركة واجهات الرياض للمقاولات",
@@ -496,6 +516,7 @@ export const COMPANIES: CompanySeed[] = [
     source: "Exhibition",
     city: "Riyadh",
     notes: "من معرض البناء، طلبوا كتالوج وأسعار",
+    lead: { from: "marketing", query: "واجهة مبنى إداري في العليا، طلبوا كتالوج وسعر تقريبي", daysAgo: 26 },
     contacts: [
       { name: "ريان الحربي", phone: "0553318890", position: "Procurement", email: "rayan@example.sa" },
     ],
@@ -510,7 +531,69 @@ export const COMPANIES: CompanySeed[] = [
     // No activity anywhere below: this one is the "never contacted" band on
     // marketing's day, which is the habit S51 wants visible.
     notes: "وصلت من الموقع، لم يتم التواصل بعد",
+    lead: { from: "marketing", query: "استفسار من الموقع عن ألواح 4 مم لمشروع ديكور داخلي", daysAgo: 20 },
     contacts: [{ name: "ماجد الزهراني", phone: "0501129983", position: "Owner" }],
+  },
+
+  /*
+   * ---- Marketing — three it gave away, on each side of the line -------------
+   *
+   * One nobody has answered in four working days (the manager's stuck list and
+   * the red badge), one that arrived yesterday (amber, not late), and one that
+   * was answered the day after it landed (green). Three rows because a band of
+   * three needs a row in each of the three, and because the rep's day, the
+   * leads screen and the stuck list all read the same three columns.
+   *
+   * No activity on any of them and no follow-up date: a lead is a customer
+   * nobody has spoken to yet, which is the whole reason somebody is waiting.
+   */
+  {
+    key: "l1",
+    name: "شركة الرواسي للمقاولات العامة",
+    rep: "faisal",
+    category: "Contractor",
+    source: "Marketing",
+    city: "Riyadh",
+    notes: "اتصلوا على رقم الشركة، تحويل إلى المبيعات",
+    lead: {
+      from: "marketing",
+      query: "برج مكاتب من ستة أدوار في طريق الملك فهد، يريدون سعر كلادينج A2 خلال أسبوع",
+      daysAgo: 6,
+    },
+    contacts: [
+      { name: "عبدالله الشمري", phone: "0554417702", position: "Procurement", email: "a.alshammari@example.sa" },
+    ],
+  },
+  {
+    key: "l2",
+    name: "مؤسسة البناء المتين للتجارة",
+    rep: "saad",
+    category: "Other",
+    source: "Exhibition",
+    city: "Dammam",
+    notes: "من معرض الشرقية، أخذ كرت وطلب اتصال",
+    lead: {
+      from: "marketing",
+      query: "محل عرض في الدمام، واجهة صغيرة، يسأل عن الألوان المتوفرة والسعر",
+      daysAgo: 1,
+    },
+    contacts: [{ name: "طلال الدوسري", phone: "0503380914", position: "Owner" }],
+  },
+  {
+    key: "l3",
+    name: "شركة أفق الشمال للاستثمار",
+    rep: "turki",
+    category: "Contractor",
+    source: "Marketing",
+    city: "Buraydah",
+    notes: "طلب من الموقع، تم التواصل معه",
+    lead: {
+      from: "marketing",
+      query: "مبنى تجاري في بريدة، يسأل عن التوريد فقط بدون تركيب",
+      daysAgo: 8,
+      acknowledgedDaysAgo: 7,
+    },
+    contacts: [{ name: "نواف العتيبي", phone: "0567719920", position: "General manager" }],
   },
   // ---- Rawan — the desk that also sells (1) ---------------------------------
   /*

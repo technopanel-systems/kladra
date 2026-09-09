@@ -34,7 +34,7 @@ import { normalizePhone } from "../src/lib/phone";
 import { type QuotationEventName, quotationEvent } from "../src/lib/quotation-events";
 import { isWeekend, nextWorkingDay } from "../src/lib/workdays";
 import { MONTHS_SHOWN } from "../src/lib/months";
-import { clearedByReading } from "../src/lib/notify";
+import { clearedByReading, type NotificationKind } from "../src/lib/notify";
 import {
   CITIES,
   COMPANY_CATEGORIES,
@@ -446,7 +446,11 @@ async function seedCompanies(
         COMPANIES.map((c, i) => {
           // Spread the book back over about five months so "recently added" and
           // "never contacted for 14 days" mean something on the rep's home.
-          const created = instant(addDays(TODAY, -(20 + i * 6)), 10, (i * 7) % 60);
+          // A lead's age is the point of it (P12-7), so it sets its own day
+          // rather than taking the spread the rest of the book gets.
+          const created = c.lead
+            ? instant(addDays(TODAY, -c.lead.daysAgo), 9, 15)
+            : instant(addDays(TODAY, -(20 + i * 6)), 10, (i * 7) % 60);
           const code = c.country ?? "SA";
           return {
             name: c.name,
@@ -462,6 +466,19 @@ async function seedCompanies(
             // on a company that has not left (D106).
             archivedAt: c.archived ? instant(addDays(TODAY, -c.archived.daysAgo), 16, 20) : null,
             archiveReason: c.archived?.reason ?? null,
+            // What makes it a lead: who found it, what was asked, and whether
+            // the person it was given to has said he has it (P12-7). A lead
+            // somebody filed onto his own floor is answered as it is written,
+            // which is what the action does and what these rows copy.
+            leadFromId: c.lead ? must(userIds, c.lead.from, "user") : null,
+            leadQuery: c.lead?.query ?? null,
+            leadAcknowledgedAt: c.lead
+              ? c.lead.from === c.rep
+                ? created
+                : c.lead.acknowledgedDaysAgo === undefined
+                  ? null
+                  : instant(addDays(TODAY, -c.lead.acknowledgedDaysAgo), 11, 5)
+              : null,
             createdAt: created,
             updatedAt: created,
           };
@@ -1299,6 +1316,7 @@ async function seedTargets(userIds: Map<string, string>): Promise<void> {
 async function seedNotifications(
   userIds: Map<string, string>,
   quotationIds: Map<string, string>,
+  companyIds: Map<string, string>,
 ): Promise<void> {
   /*
    * The seed is the one writer that stamps `read_at` itself, so it is the one
@@ -1339,6 +1357,68 @@ async function seedNotifications(
         };
       }),
     );
+
+    /*
+     * The bells a lead rings (P12-7), derived from the leads themselves rather
+     * than listed beside them.
+     *
+     * A list would be the second copy: change a lead's day here and the notice
+     * about it would still carry the old one, which is the drift every other
+     * pair in this file is written to avoid. The rules are the action's own —
+     * the person it was given to is told, unless he is the person who filed it;
+     * and when he answers, the finder is told and the first notice is gone. So
+     * an answered lead has exactly one row, addressed the other way.
+     */
+    type LeadNotice = {
+      userId: string;
+      kind: NotificationKind;
+      params: Record<string, string>;
+      link: string;
+      subjectType: "company";
+      subjectId: string;
+      readAt: null;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+    const leadNotices = COMPANIES.flatMap((c): LeadNotice[] => {
+      if (!c.lead || c.lead.from === c.rep) return [];
+      const companyId = must(companyIds, c.key, "company");
+      const finder = must(userIds, c.lead.from, "user");
+      const holder = must(userIds, c.rep, "user");
+      const subject = { subjectType: "company" as const, subjectId: companyId };
+
+      if (c.lead.acknowledgedDaysAgo === undefined) {
+        const at = instant(addDays(TODAY, -c.lead.daysAgo), 9, 20);
+        return [
+          {
+            userId: holder,
+            kind: "leadAssigned",
+            params: { repId: finder },
+            link: `/companies?open=${companyId}`,
+            ...subject,
+            // Unread: it is work he has not done, and the work is the answer.
+            readAt: null,
+            createdAt: at,
+            updatedAt: at,
+          },
+        ];
+      }
+      const at = instant(addDays(TODAY, -c.lead.acknowledgedDaysAgo), 11, 5);
+      return [
+        {
+          userId: finder,
+          kind: "leadAcknowledged",
+          params: { repId: holder },
+          link: "/leads",
+          ...subject,
+          // Cleared by reading, so a read one is a row that no longer exists.
+          readAt: null,
+          createdAt: at,
+          updatedAt: at,
+        },
+      ];
+    });
+    if (leadNotices.length > 0) await tx.insert(notifications).values(leadNotices);
   });
 }
 
@@ -1514,7 +1594,7 @@ try {
   console.log(`  history          ${historyCount} quotations of business already done`);
 
   await seedTargets(userIds);
-  await seedNotifications(userIds, quotationIds);
+  await seedNotifications(userIds, quotationIds, companyIds);
   await seedNonWorkingDays(userIds);
 
   const reportCount = await seedReports(userIds);

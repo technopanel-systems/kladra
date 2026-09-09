@@ -38,11 +38,11 @@ import {
 import { assertCompanyMine } from "@/lib/activities";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
-import { FLOOR_ROLES, holdsFloor, mayHandOver } from "@/lib/floor";
+import { ADD_COMPANY_ROLES, holdsFloor, LEAD_ROLES, mayHandOver, mayWrite } from "@/lib/floor";
 import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
 import { liveAudienceFor, liveAudienceForCompany, notifyLive } from "@/lib/live";
-import { createNotification } from "@/lib/notify";
+import { clearNotifications, createNotification } from "@/lib/notify";
 import { SAUDI_CODE, seesEveryLeadSource } from "@/lib/lookups";
 import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
@@ -56,8 +56,10 @@ import type { ActionResult, Role, SessionUser } from "@/lib/types";
  * belongs to the rep who found it (SPEC S8). A manager or admin pressing Save
  * would quietly become its rep, so they are refused instead, and the button is
  * not offered to them either (WORKFLOW §3, Abdulrahman: no Add company button).
- * The list is `FLOOR_ROLES` rather than a literal, so who owns companies is one
- * sentence and every screen asks that same one (P8.9).
+ * The list is `ADD_COMPANY_ROLES` rather than a literal, so who types a customer
+ * in is one sentence and every screen asks that same one (P8.9). It stopped
+ * being everyone with a floor in P12-7: marketing still HOLDS companies and no
+ * longer adds them, because §3 gave it the lead module instead.
  */
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -344,7 +346,329 @@ export async function createCompanyAction(
 
     revalidateFloor();
     return { ok: true, data: { companyId } };
-  }, ...FLOOR_ROLES);
+  }, ...ADD_COMPANY_ROLES);
+}
+
+
+/*
+ * Leads — what marketing brings in (SPEC §3, P12-7).
+ *
+ * "Marketing does not use the Add company form. Marketing has its own module
+ * for bringing in a lead, and creating one there IS an assignment: it goes to a
+ * chosen rep, or to a member of the marketing team."
+ *
+ * A lead IS a company, so the writes live here, beside every other write to
+ * that table: one file owns what may be written to `companies`, and a second
+ * one would be two doors onto one room with two ideas of what a valid row is.
+ * What §3 asks to keep apart is the two PATHS — the screens and the words on
+ * their buttons — and those are `/leads` and `/companies`, which share this
+ * table and nothing else. `src/lib/leads.ts` says why there is no second table.
+ */
+
+const leadSchema = z.object({
+  ...companyFields,
+  /** Whose floor it lands on. The whole point of the form. */
+  repId: z.uuid(),
+  /** What the customer asked for, in the finder's own words. */
+  query: z.string().trim().min(1).max(4000),
+  contactName: z.string().trim().min(1).max(200),
+  contactPhone: z.string().trim().min(1).max(40),
+  contactPosition: z.string().trim().max(120).optional(),
+  contactEmail: z.string().trim().max(200).optional(),
+  contactNotes: z.string().trim().max(4000).optional(),
+});
+
+/**
+ * File a lead, which is to give it to somebody.
+ *
+ * One transaction: the company on his floor, its first contact, the audit row
+ * and the bell that tells him. A lead on nobody's floor and a company with no
+ * one to ring are both states this must be unable to produce — the second for
+ * the same reason `createCompanyAction` cannot produce it (§3: the phone is on
+ * the contact and mandatory there).
+ *
+ * A lead somebody files onto his own floor is stamped acknowledged as it is
+ * written. There is nobody to tell and nothing to wait for, and a row sitting
+ * for ever in the "not picked up" band because its finder is its holder is the
+ * figure that is always wrong (rules/data.md).
+ */
+export async function createLeadAction(
+  _prev: ActionResult<{ companyId: string }> | null,
+  formData: FormData,
+): Promise<ActionResult<{ companyId: string }>> {
+  return guard(async (actor) => {
+    const t = await getTranslations("errors");
+    const tc = await getTranslations("common");
+
+    const parsed = leadSchema.safeParse({
+      name: field(formData, "name"),
+      categoryId: field(formData, "categoryId"),
+      leadSourceId: field(formData, "leadSourceId"),
+      countryId: field(formData, "countryId"),
+      cityId: field(formData, "cityId"),
+      cityText: field(formData, "cityText"),
+      notes: field(formData, "notes"),
+      repId: field(formData, "repId"),
+      query: field(formData, "query"),
+      contactName: field(formData, "contactName"),
+      contactPhone: field(formData, "contactPhone"),
+      contactPosition: field(formData, "contactPosition"),
+      contactEmail: field(formData, "contactEmail"),
+      contactNotes: field(formData, "contactNotes"),
+    });
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: tc("invalid"),
+        fieldErrors: fieldErrorsOf(parsed.error, tc("required"), tc("invalid")),
+      };
+    }
+    const input = parsed.data;
+
+    // The same rule Add company asks, asked here because this form has the same
+    // field on it. It says yes to marketing, which is the whole of who may be
+    // standing here today — and it is the sentence, not the list of roles, that
+    // decides, so a second role added to the lead module later cannot quietly
+    // acquire a source it may not claim.
+    if (await claimsRestrictedSource(actor, input.leadSourceId)) {
+      return {
+        ok: false,
+        error: t("leadSourceNotYours"),
+        fieldErrors: { leadSourceId: t("leadSourceNotYours") },
+      };
+    }
+
+    // Onto a floor that exists and can hold a company. Asked of the database
+    // rather than trusted from the picker, because the picker is the courtesy
+    // and this is the rule (DESIGN §5) — and because an account deactivated
+    // between the dialog opening and Save would otherwise take a customer out
+    // of sight the second he arrived.
+    const [holder] = await db
+      .select({ role: users.role, active: users.active })
+      .from(users)
+      .where(eq(users.id, input.repId))
+      .limit(1);
+    if (!holder || !holder.active || !holdsFloor(holder.role)) {
+      const sentence = t("leadNeedsAFloor");
+      return { ok: false, error: sentence, fieldErrors: { repId: sentence } };
+    }
+
+    const place = await resolvePlace(input.countryId, input.cityId, input.cityText, t);
+    if (!place.ok) return { ok: false, error: tc("invalid"), fieldErrors: place.fieldErrors };
+
+    const phoneNormalized = normalizePhone(input.contactPhone, place.country);
+    if (!phoneNormalized) {
+      const sentence = t(isSaudi(place.country) ? "phoneInvalid" : "phoneInvalidAbroad");
+      return { ok: false, error: sentence, fieldErrors: { contactPhone: sentence } };
+    }
+    if (input.contactEmail && !z.email().safeParse(input.contactEmail).success) {
+      return {
+        ok: false,
+        error: t("emailInvalid"),
+        fieldErrors: { contactEmail: t("emailInvalid") },
+      };
+    }
+
+    // Pressed twice is one lead (D134), the same rule Add company follows and
+    // for the same reason: the wire can lose the answer after the row has
+    // landed, and the second press carries the same words seconds later. The
+    // whole form has to match, including who it was given to and what was
+    // asked, because a second press is as likely to carry a correction — the
+    // wrong rep picked, a digit fixed in the phone — as the same words again.
+    const [twin] = await db
+      .select({
+        id: companies.id,
+        categoryId: companies.categoryId,
+        leadSourceId: companies.leadSourceId,
+        countryId: companies.countryId,
+        cityId: companies.cityId,
+        cityText: companies.cityText,
+        notes: companies.notes,
+        repId: companies.repId,
+        query: companies.leadQuery,
+      })
+      .from(companies)
+      .where(
+        and(
+          eq(companies.leadFromId, actor.id),
+          eq(companies.name, input.name),
+          isNull(companies.archivedAt),
+          gte(companies.createdAt, sinceTwinWindow()),
+        ),
+      )
+      .limit(1);
+    if (
+      twin &&
+      sameField(input.repId, twin.repId) &&
+      sameField(input.query, twin.query) &&
+      sameField(input.categoryId, twin.categoryId) &&
+      sameField(input.leadSourceId, twin.leadSourceId) &&
+      sameField(input.countryId, twin.countryId) &&
+      sameField(place.cityId, twin.cityId) &&
+      sameField(place.cityText, twin.cityText) &&
+      sameField(input.notes, twin.notes)
+    ) {
+      const [contact] = await db
+        .select({ id: contacts.id })
+        .from(contacts)
+        .where(
+          and(
+            eq(contacts.companyId, twin.id),
+            eq(contacts.name, input.contactName),
+            eq(contacts.phoneNormalized, phoneNormalized),
+          ),
+        )
+        .limit(1);
+      if (contact) return { ok: true, data: { companyId: twin.id } };
+    }
+
+    const mine = input.repId === actor.id;
+    const companyId = await db.transaction(async (tx) => {
+      const [company] = await tx
+        .insert(companies)
+        .values({
+          name: input.name,
+          categoryId: input.categoryId,
+          leadSourceId: input.leadSourceId,
+          countryId: input.countryId,
+          cityId: place.cityId,
+          cityText: place.cityText,
+          notes: input.notes ?? null,
+          repId: input.repId,
+          leadFromId: actor.id,
+          leadQuery: input.query,
+          leadAcknowledgedAt: mine ? new Date() : null,
+        })
+        .returning({ id: companies.id });
+
+      // The contact is the receiver's, not the finder's: a contact belongs to
+      // the rep working it since P12 (D147), and a lead whose only phone number
+      // sits on somebody else's row is a customer the man holding him cannot
+      // ring.
+      await tx.insert(contacts).values({
+        companyId: company.id,
+        repId: input.repId,
+        name: input.contactName,
+        phone: input.contactPhone,
+        phoneNormalized,
+        position: input.contactPosition ?? null,
+        email: input.contactEmail ?? null,
+        notes: input.contactNotes ?? null,
+        isMain: true,
+      });
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "lead.create",
+        recordType: "company",
+        recordId: company.id,
+        details: { name: input.name, to: input.repId },
+      });
+
+      if (!mine) {
+        await createNotification(tx, {
+          userId: input.repId,
+          kind: "leadAssigned",
+          params: { repId: actor.id },
+          link: `/companies?open=${company.id}`,
+          subject: { type: "company", id: company.id },
+        });
+      }
+
+      await notifyLive(tx, await liveAudienceFor(input.repId, actor.id), {
+        type: "company",
+        id: company.id,
+      });
+      return company.id;
+    });
+
+    revalidateFloor();
+    revalidatePath("/[locale]/leads", "page");
+    return { ok: true, data: { companyId } };
+  }, ...LEAD_ROLES);
+}
+
+/**
+ * "I have him" — the person the lead was given to says so.
+ *
+ * Its own act rather than a side effect of opening the drawer: what marketing
+ * needs to know is that somebody has taken the call, and a row cleared by a
+ * stray click answers nobody. Only the person holding it, because it is his
+ * answer to give; and pressed twice it is still the first press, because the
+ * second would move the day he picked it up.
+ */
+export async function acknowledgeLeadAction(companyId: unknown): Promise<ActionResult> {
+  return guard(async (actor) => {
+    const t = await getTranslations("errors");
+    const tc = await getTranslations("common");
+
+    const id = z.uuid().safeParse(companyId);
+    if (!id.success) return { ok: false, error: tc("invalid") };
+
+    const [lead] = await db
+      .select({
+        repId: companies.repId,
+        fromId: companies.leadFromId,
+        acknowledgedAt: companies.leadAcknowledgedAt,
+      })
+      .from(companies)
+      .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
+      .limit(1);
+    if (!lead || !lead.fromId) return { ok: false, error: t("companyNotFound") };
+    if (!mayWrite(actor, lead.repId)) throw new NotAllowed();
+    // Answered already — by him, in the other tab, a moment ago. Not an error:
+    // what he asked for is the case.
+    if (lead.acknowledgedAt) return { ok: true };
+
+    const fromId = lead.fromId;
+    await db.transaction(async (tx) => {
+      // The condition is on the UPDATE and the rest hangs off what it wrote.
+      // Two tabs pressed at once both read "not answered yet" a moment ago —
+      // one of them writes the day and the other writes nothing, and it is the
+      // returned row, not the earlier read, that says which is which. Hung off
+      // the read instead, the loser would still have rung marketing's bell a
+      // second time about a lead it had already been told about.
+      const answered = await tx
+        .update(companies)
+        .set({ leadAcknowledgedAt: new Date() })
+        .where(and(eq(companies.id, id.data), isNull(companies.leadAcknowledgedAt)))
+        .returning({ id: companies.id });
+      if (answered.length === 0) return;
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "lead.acknowledge",
+        recordType: "company",
+        recordId: id.data,
+        details: { from: fromId },
+      });
+
+      // The notice was the work, and the work is done (D79).
+      await clearNotifications(tx, { type: "company", id: id.data }, ["leadAssigned"]);
+
+      // Not to himself, on a lead he filed onto his own floor — which cannot
+      // reach here anyway, being stamped at birth, and is written as a rule
+      // rather than left to that accident.
+      if (fromId !== actor.id) {
+        await createNotification(tx, {
+          userId: fromId,
+          kind: "leadAcknowledged",
+          params: { repId: actor.id },
+          link: `/leads`,
+          subject: { type: "company", id: id.data },
+        });
+      }
+
+      await notifyLive(tx, await liveAudienceForCompany(id.data, actor.id), {
+        type: "company",
+        id: id.data,
+      });
+    });
+
+    revalidateFloor();
+    revalidatePath("/[locale]/leads", "page");
+    return { ok: true };
+  });
 }
 
 /** Edit — the same fields, minus the contact, which has its own dialog. */

@@ -191,6 +191,12 @@ export function homeFor(role: Role): string {
   switch (role) {
     case "coordinator":
       return "/queue";
+    case "marketing":
+      // Its own module (SPEC §3, P12-7). It used to land on the day, which was
+      // right while marketing worked a floor like a rep's; the founder's answer
+      // is that it does not — it brings customers in and gives them away, and
+      // the screen where that happens is the first thing it should see.
+      return "/leads";
     case "manager":
     case "admin":
       return "/team";

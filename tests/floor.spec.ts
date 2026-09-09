@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 import {
+  ADD_COMPANY_ROLES,
+  addsCompanies,
   carriesMetres,
+  filesLeads,
   FLOOR_ROLES,
   holdsFloor,
+  LEAD_ROLES,
   issuesOwnQuotations,
   mayHandOver,
   mayOpen,
@@ -131,6 +135,37 @@ test("marketing owns companies, does not price them, and carries no month", () =
 });
 
 /**
+ * The way in that SPEC §3 moved (P12-7).
+ *
+ * "Marketing does not use the Add company form. Marketing has its own module
+ * for bringing in a lead, and creating one there IS an assignment." So the two
+ * doors are one sentence each and they do not overlap: everybody with a floor
+ * types a customer in, except the one role that files a lead instead.
+ *
+ * Marketing still OWNS companies — a lead filed onto its own floor is one — and
+ * that is the pair worth holding here, because it is the pair that would drift
+ * if somebody ever read "does not add companies" as "has no floor".
+ */
+test("marketing files leads and adds no company; everybody else with a floor does the opposite", () => {
+  expect(filesLeads("marketing")).toBe(true);
+  for (const role of ROLES) {
+    if (role === "marketing") continue;
+    expect(filesLeads(role), `${role} files leads`).toBe(false);
+  }
+
+  expect(addsCompanies("rep")).toBe(true);
+  expect(addsCompanies("coordinator")).toBe(true);
+  expect(addsCompanies("marketing")).toBe(false);
+  // Neither of them had it before this sentence existed, and neither gains it.
+  expect(addsCompanies("manager")).toBe(false);
+  expect(addsCompanies("admin")).toBe(false);
+
+  // The floor is untouched: it still holds companies, and still writes on them.
+  expect(ownsCompanies("marketing")).toBe(true);
+  expect(holdsFloor("marketing")).toBe(true);
+});
+
+/**
  * The guards take role LISTS and the screens ask predicates. A list that has
  * drifted from its function is `mayTouch` again (D42): the screen offers the
  * work and the server refuses it, or worse, the other way round.
@@ -144,6 +179,10 @@ test("the role lists say exactly what the rules say", () => {
     expect(REPORTING_ROLES.includes(role), `REPORTING_ROLES disagrees about ${role}`).toBe(
       writesReports(role),
     );
+    expect(ADD_COMPANY_ROLES.includes(role), `ADD_COMPANY_ROLES disagrees about ${role}`).toBe(
+      addsCompanies(role),
+    );
+    expect(LEAD_ROLES.includes(role), `LEAD_ROLES disagrees about ${role}`).toBe(filesLeads(role));
   }
 });
 

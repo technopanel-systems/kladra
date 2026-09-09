@@ -105,6 +105,39 @@ export function issuesOwnQuotations(role: Role): boolean {
   return role === "coordinator";
 }
 
+/**
+ * Who brings a customer in through the lead module instead of Add company
+ * (SPEC §3, P12-7).
+ *
+ * "Marketing does not use the Add company form. Marketing has its own module
+ * for bringing in a lead, and creating one there IS an assignment: it goes to a
+ * chosen rep, or to a member of the marketing team."
+ *
+ * Marketing, and only marketing. The manager reads every lead and files none,
+ * for the reason he adds no company (S8): a customer belongs to whoever found
+ * him, and a row the manager typed onto a rep's floor would put his own reading
+ * of a phone call into somebody else's report.
+ *
+ * It stays a role question rather than a screen question because the two are
+ * the same door: the form marketing is not offered is the action marketing must
+ * be refused, and this is the sentence both of them ask.
+ */
+export function filesLeads(role: Role): boolean {
+  return role === "marketing";
+}
+
+/**
+ * Who fills in Add company.
+ *
+ * Everyone with a floor except the role §3 moved to the lead module. Written as
+ * the subtraction rather than as a fresh list of two, because that is the whole
+ * change: marketing did not stop owning companies — a lead lands on its floor
+ * like anybody else's — it stopped being the one who types the customer in.
+ */
+export function addsCompanies(role: Role): boolean {
+  return ownsCompanies(role) && !filesLeads(role);
+}
+
 /** May this person raise a quotation or a dispatch on this floor? */
 export function mayQuote(user: SessionUser, repId: string): boolean {
   return sells(user.role) && mayWrite(user, repId);
@@ -158,6 +191,8 @@ export function writesReports(role: Role): boolean {
 export const FLOOR_ROLES: Role[] = ["rep", "marketing", "coordinator"];
 export const SELLING_ROLES: Role[] = ["rep", "manager", "coordinator"];
 export const REPORTING_ROLES: Role[] = ["rep", "marketing", "coordinator"];
+export const ADD_COMPANY_ROLES: Role[] = ["rep", "coordinator"];
+export const LEAD_ROLES: Role[] = ["marketing"];
 
 /**
  * On whose floor may a company SIT.

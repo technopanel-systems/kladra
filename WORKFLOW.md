@@ -137,7 +137,7 @@
             visible wherever the m² is, and no metre counted twice
       - [x] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
       - [x] 6 The three-tab shell: today's work · metrics · the team
-      - [ ] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
+      - [x] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
             and what an unacknowledged one looks like after two days
       - [ ] 8 Duplicate review: the customer number, the name rules in both languages, the
             manager's three answers
@@ -541,7 +541,7 @@ the quantity column's position, the manager's target box, the long-press number 
 per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
 which is what slice 2 is for.
 
-**Where P12 has got to.** Boxes 1, 2, 3, 4, 5, 6 and 12 are done. The freeze was fixed at
+**Where P12 has got to.** Boxes 1, 2, 3, 4, 5, 6, 7 and 12 are done. The freeze was fixed at
 its cause and the same picker shape swept out of the company form; `npm run lint` now fails on a
 §3 sentence with no test behind it and prints what is owed (27 proved, 6 proved another way, 11
 owed); sharing is built end to end — a shared company, a shared project, an owner on every
@@ -568,8 +568,16 @@ both (D156). Two defects came out of it and neither was about roles: the Dispatc
 picker allowed only `issued`, so the door closed on a quotation the moment its rep recorded the
 customer's yes, while the drawer one click away still offered it (§5 #166); and a spec that proved
 a refusal stopped being refused, performed the change instead, and left a rep holding another role
-for every file that ran after it in the shared database (§5 #167). Boxes 7, 8, 9, 10, 11, 13 and
-14 are next, in that order.
+for every file that ran after it in the shared database (§5 #167). Box 7 built the module §3 gave
+marketing, and the shape of it is the decision: a lead IS a company — three columns on the table
+every screen already reads — so filing one is the assignment, and there is nothing to convert
+afterwards. One Save puts the customer on the chosen floor with somebody to ring on him; the
+person it lands on answers it with a press of his own, which is what takes it off his day, off
+marketing's list and off the manager's stuck band, all three from one column; and it is late at
+the two working days everything else on those screens is late at. Marketing loses Add company and
+gains its own home. What the box found on top was a shape rather than a defect: adding a fourth
+kind to a list of three would have quietly grown two figures that count by `else` and by `!==`
+(§5 #170). Boxes 8, 9, 10, 11, 13 and 14 are next, in that order.
 
 ## §4 Five days, walked (P9.1)
 
@@ -793,6 +801,15 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 7. Faisal is handed a company marketing filed under its own source. He edits its notes and saves: the picker says what the company says rather than "Choose…", the save goes through, and the source has not moved. Jerom opens Lookups and that source carries a badge saying whose it is.
 
 Faisal's Home target card (the old step 4) lands with P6, which is where the card exists.
+
+**Marketing's own module (P12)** — `tests/leads.spec.ts`, `tests/marketing.spec.ts`
+1. Marketing signs in and lands on Leads. Its Companies screen no longer offers Add company at all, and its floor is still there under it — the rows, the search, the day, the report.
+2. It presses New lead. The form is the company form plus the two things a lead has: what the customer asked for, in his own words, and whose floor it lands on. The Marketing lead source is offered here, which is the form §3 moved it to.
+3. Save. One act: the customer is on Faisal's floor, his own contact row carries the phone number, and the leads screen says the lead is not acknowledged.
+4. Faisal signs in. It is the first row of "Waiting on you", badged **New lead**, with the customer's own question under it, and the pill above says how many. He has no Leads screen and his rail carries no link to one; typing the address puts him back on his day.
+5. He opens the customer. The drawer says who passed it and what they asked for, in amber, above the tabs. He presses Acknowledge: the toast says the customer is his, the row leaves his day, the notice leaves his bell, and marketing is told.
+6. The leads screen now shows that one as acknowledged with the day, and marketing's own two — the ones it kept — beside them.
+7. Abdulrahman opens the team screen. The lead nobody has answered in more than two working days is a group on his stuck list, under a line that says what "too long" means, with the name of the floor it is sitting on.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -2487,3 +2504,24 @@ actually needed.
   answer changes identity when the fields come back to life. The general form: **an effect that
   acts on the DOM has to fire when the DOM can be acted on, not when the state says it should be** —
   and a helper with no test is a helper nobody has watched work.
+
+- [x] 170 **Two figures would have grown a fourth kind without being asked.** Adding the lead to
+  the rep's "waiting on you" list (P12-7) was one entry in a union type, and the compiler caught
+  every place that had to change except the two that mattered. `waitingCounts` was an `if / else if
+  / else` whose last branch was `counts.withCustomer += 1`, so a lead would have been counted as a
+  quotation the customer was holding — on a pill that is a door to a list it is not on. And
+  `personStanding.sentBack`, the manager's "Sent back or refused" figure, was written as
+  `reasonKey !== "day.withCustomer"`, so a lead landing on a floor would have added itself to a
+  number captioned "waiting on the rep, not on the customer" — true of a lead, and not what those
+  two words name. Neither is a type error and neither would have failed a test: both would have
+  been off by one on a screen, in the direction that looks plausible. Fixed by making both name
+  their members — the count is a lookup by kind, the filter lists the two kinds it means. The rule
+  is the shape rather than these two sites: **a closed set is counted by lookup and filtered by
+  naming its members, never by `else` and never by `!==`** — the negative form silently recruits
+  whatever is added next, which is the same defect as a list beside a union (rules/words.md).
+  And the suite would not have caught it, which is the part worth keeping: `tests/numbers.spec.ts`
+  held the manager's figure to `rows - withCustomer`, the same negative form, so the defect and its
+  test agreed and both were wrong. Three specs did fail once the app was right — the two that count
+  the pills and the one that caps the list — because each keeps its own copy of "what is waiting on
+  him" and each copy had to learn the fourth kind. That is the copies doing their job; a spec that
+  restates the app's arithmetic in the app's own shape is not a second opinion.
