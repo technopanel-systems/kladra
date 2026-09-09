@@ -16,7 +16,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { companiesOf, projectOptionValue } from "@/lib/picker-option";
+import { companiesOf, optionValue } from "@/lib/picker-option";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
@@ -26,7 +26,7 @@ import { committedQtySql } from "@/lib/dispatches";
 import { holdsFloor, sells } from "@/lib/floor";
 import { onProjectSql } from "@/lib/visibility";
 import { quotationLabel } from "@/lib/labels";
-import type { PickerOption, QuotationTargets } from "@/lib/picker-option";
+import type { DispatchTargets, PickerOption, QuotationTargets } from "@/lib/picker-option";
 import { DISPATCHABLE, isLatestRevisionSql } from "@/lib/quotations";
 import type { Role, SessionUser } from "@/lib/types";
 
@@ -106,7 +106,7 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
     .orderBy(asc(companies.name), asc(projects.name));
 
   return rows.map((row) => ({
-    value: projectOptionValue(row.id, row.companyId),
+    value: optionValue(row.id, row.companyId),
     label: row.name,
     hint: row.companyName,
   }));
@@ -134,20 +134,21 @@ export async function quotationTargets(user: SessionUser): Promise<QuotationTarg
  * everywhere else (D12), so a rep cannot raise a second dispatch for stock the
  * first one already claimed.
  */
-export async function dispatchableQuotationOptions(user: SessionUser): Promise<PickerOption[]> {
+async function dispatchableRows(user: SessionUser) {
   if (!sells(user.role) || !holdsFloor(user.role) || user.viewedBy) return [];
 
-  const rows = await db
+  return db
     .select({
       id: quotations.id,
       number: quotations.number,
       revision: quotations.revision,
+      companyId: companies.id,
       companyName: companies.name,
       projectName: projects.name,
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(
       and(
         /*
@@ -158,10 +159,7 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
          * (D147). It asked whether HE raised the paper, which is neither the
          * drawer's question nor the action's: a quotation another rep raised on
          * his own customer was offered on the drawer and withheld from the
-         * screen built to raise dispatches (§5 #177). A quotation with no
-         * project is the company's own stock and only its rep sends against it,
-         * which falls out of the left join: `projects.rep_id` is null and the
-         * first clause is the only one that can be true.
+         * screen built to raise dispatches (§5 #177).
          */
         or(
           eq(companies.repId, user.id),
@@ -184,12 +182,39 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
       ),
     )
     .orderBy(desc(quotations.number));
+}
 
-  return rows.map((row) => ({
-    value: row.id,
+/**
+ * The customers and their dispatchable quotations, in one read (P12-10).
+ *
+ * The mirror of `quotationTargets` one step along the chain, and for the same
+ * finding: the screen asked for the middle of the chain first. `Q-31` over a
+ * job name is a row a rep reads by recognising the job, and on a real floor
+ * that list is every open paper in the building — while the thing he has in
+ * hand is the customer whose load he is arranging.
+ *
+ * The customers are derived from the same rows rather than read again, so the
+ * two lists cannot disagree about what he may send against; the hint on a
+ * quotation stays the JOB, because once the customer is chosen the job is the
+ * only thing that tells two of his papers apart.
+ */
+export async function dispatchTargets(user: SessionUser): Promise<DispatchTargets> {
+  const rows = await dispatchableRows(user);
+  const options = rows.map((row) => ({
+    value: optionValue(row.id, row.companyId),
     label: quotationLabel(row.number, row.revision),
-    hint: row.projectName ?? row.companyName,
+    // The job, always — every quotation names one (S18, P12-10). It read
+    // "the job, or the customer if there is no job", and the second half was a
+    // shape the form had already stopped producing.
+    hint: row.projectName,
   }));
+  // Keyed by the option's own value, so the customer's name is read from the
+  // row it came from rather than off a hint that is now saying something else.
+  const names = new Map(options.map((option, i) => [option.value, rows[i].companyName]));
+  return {
+    companies: companiesOf(options, (option) => names.get(option.value) ?? option.label),
+    quotations: options,
+  };
 }
 
 /**

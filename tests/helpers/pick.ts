@@ -68,3 +68,24 @@ export async function choose(page: Page, trigger: Locator, label: string): Promi
     page.locator('[data-slot="popover-content"]').getByText(label, { exact: true }).first(),
   );
 }
+
+/**
+ * Presses one chip of a `ChoiceChips` group — how it is paid for, what channel
+ * a log entry was (P12-10).
+ *
+ * The chip is a label around a visually hidden radio, so the radio is what the
+ * accessibility tree offers and `check()` is what presses it. Asserted after,
+ * because a press that lands on the wrong chip is a form saved with the wrong
+ * answer and nothing else in the walk would notice.
+ */
+export async function pressChip(scope: Locator, label: string): Promise<void> {
+  const chip = scope.getByRole("radio", { name: label, exact: true });
+  // The LABEL is pressed, not the input. The input is `sr-only` — a 1px box
+  // clipped out of the layout so a screen reader still reaches it — and
+  // Playwright will not click that: it scrolls to it, finds it outside the
+  // viewport or under the dialog's own overlay, and retries until the test
+  // times out. The label is the control anyway (D130), and it is what a thumb
+  // presses.
+  await scope.getByText(label, { exact: true }).click();
+  await expect(chip).toBeChecked();
+}

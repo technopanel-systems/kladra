@@ -880,6 +880,7 @@ transition the actions allow:
 | Requested / Sent back → Withdrawn | a confirmation (D32) | a dialog |
 | Submitted → Approved | SMAC's dispatch number, typed | a prompt |
 | Submitted → Refused | the coordinator's reason, typed | a prompt |
+| Refused → Submitted | the rep's edits, then asking again (P12-10) | the edit form |
 
 Nothing qualifies, and the two confirmations do not qualify either: a card dropped into a
 column and then asked "did the customer accept?" is the dialog with a longer gesture in front
@@ -892,15 +893,23 @@ never carries meaning alone: every coloured thing also says its word.
 
 | Token | Tone | Means | Worn by |
 |---|---|---|---|
-| `state-wait` | amber | somebody owes an answer, or it is due today | Requested, Sent back, Waiting; a follow-up due today; behind pace |
+| `state-wait` | amber | somebody owes an answer, or it is due today | Requested, Sent back, Refused, Waiting; a follow-up due today; behind pace |
 | `state-open` | blue | out in the world, nothing owed today | Issued; a company nobody has contacted yet |
 | `state-good` | green | it went the right way | Accepted, Approved; ahead of target |
-| `state-bad` | red | it went the wrong way, or it is late | Rejected, Refused, Lost; an overdue follow-up; a stuck request |
+| `state-bad` | red | it went the wrong way, or it is late | Rejected, Lost; an overdue follow-up; a stuck request |
 | `state-over` | neutral | finished, and no longer interesting | Withdrawn, Cancelled, Superseded, Archived |
 
 `src/lib/state-tone.ts` holds the one mapping from a status to a token; no component decides
 its own. A tint is `bg-state-x text-state-x-fg`, never a solid fill — a solid is for the
 primary button and nothing else.
+
+Refused moved from red to amber in P12-10, and the move is what the table is for: red is
+where a record STOPPED, and a refusal stopped being an ending the moment the rep could
+correct it and ask again (D160). The rep's own day screen had been painting that door amber
+for phases — the same amber as a quotation sent back, which is the same event in the founder's
+own sentence (§2 S53) — while the badge on the record beside it was red, so one state wore two
+colours depending on which screen you read it from. `tests/colour.spec.ts` holds the pair
+together by asking the two functions rather than by reading a pixel.
 
 **A drawer has a hierarchy.** Top: who this is and the one number that matters, then the
 actions. Under that, what happened last. Under that, the detail, and the fields nobody reads

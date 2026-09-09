@@ -2,8 +2,6 @@
   "request": "طلب عرض سعر",
   "requestFor": "طلب عرض سعر لمشروع {project}",
   "pickProject": "اختيار المشروع",
-  "pickCompany": "اختيار الشركة",
-  "pickCompanyFirst": "اختيار الشركة أولًا",
   "noContact": "باسم الشركة",
   "needsProject": "يُضاف مشروع أولًا — كل عرض سعر يتبع مشروعًا.",
   "noProjects": "لا توجد مشاريع لعرض سعر عليها بعد.",

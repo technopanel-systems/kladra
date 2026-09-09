@@ -16,6 +16,8 @@ import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
 import type { Day } from "@/lib/dates";
 import { waitingOnRep } from "@/lib/day";
+import { dispatchEvent } from "@/lib/dispatch-events";
+import { quotationEvent } from "@/lib/quotation-events";
 import { SUM_SQM, sqmOf } from "@/lib/sqm";
 
 export type CompanyStanding = {
@@ -341,6 +343,30 @@ export type QueueStanding = {
   arrivedToday: number;
 };
 
+/** What answering something looks like, at either end of either chain. */
+const ANSWERED = [
+  quotationEvent("issue"),
+  quotationEvent("sendBack"),
+  dispatchEvent("approve"),
+  dispatchEvent("refuse"),
+];
+
+/** What arriving looks like: raised, revised, or fixed and sent back to her. */
+const RAISED = [quotationEvent("request"), quotationEvent("revise"), dispatchEvent("request")];
+const RESUBMITTED = [quotationEvent("update"), dispatchEvent("update")];
+
+/**
+ * One bound parameter per member, never the array itself: Drizzle binds a JS
+ * array as a single value whose text is the members joined by commas, and the
+ * `in` list then asks whether the action equals one long string (rules/data.md).
+ */
+function actions(names: readonly string[]): SQL {
+  return sql.join(
+    names.map((name) => sql`${name}`),
+    sql`, `,
+  );
+}
+
 /**
  * The coordinator's own two figures (P8.6).
  *
@@ -349,37 +375,46 @@ export type QueueStanding = {
  * long the worst one has waited is read from the rows on the page, not from
  * here: a second query over the same tables named a request neither list
  * showed, because it never asked whether the company was archived (D95).
+ *
+ * **Counted from the events, not from the states the rows are in now (P12-10).**
+ * Both halves read `audit_log`, which is where every write in this app already
+ * records what happened and when. They used to read the records themselves —
+ * "issued or sent back, updated today" and "created today" — and that is a
+ * figure that can go DOWN as she works: the moment a rep fixes a dispatch she
+ * refused an hour ago, its status leaves `refused` and her answer stops being
+ * counted. She answered it. The row simply moved on, and a number about her
+ * afternoon must not depend on what somebody else did afterwards.
+ *
+ * The same reason puts a resubmission in `arrivedToday`. A refused dispatch the
+ * rep has fixed is work landing on her desk again, and counting only the first
+ * arrival gave a day where two things were answered and one arrived — which
+ * reads as a broken screen rather than as a busy afternoon. The two `update`
+ * events say which they were by the state they came FROM, the way both actions
+ * already write it.
+ *
+ * Every action is named in the `where`, so the count runs off
+ * `audit_log_action_at_idx` rather than over the day's whole log; the six are
+ * built from `@/lib/quotation-events` and `@/lib/dispatch-events` rather than
+ * typed out, so renaming an event cannot leave this figure quietly counting a
+ * word nothing writes any more.
  */
 export async function queueStanding(): Promise<QueueStanding> {
+  const dayStart = sql`((now() at time zone 'Asia/Riyadh')::date)::timestamp at time zone 'Asia/Riyadh'`;
   const result = await db.execute<{
     answered: number;
     arrived: number;
   }>(sql`
     select
-      (
-        select count(*)::int from (
-          select 1 from quotations q
-           where q.status in ('issued', 'returned')
-             and (q.updated_at at time zone 'Asia/Riyadh')::date
-                 = (now() at time zone 'Asia/Riyadh')::date
-          union all
-          select 1 from dispatches d
-           where d.status in ('approved', 'refused')
-             and (d.updated_at at time zone 'Asia/Riyadh')::date
-                 = (now() at time zone 'Asia/Riyadh')::date
-        ) answered
-      ) as answered,
-      (
-        select count(*)::int from (
-          select 1 from quotations q
-           where (q.created_at at time zone 'Asia/Riyadh')::date
-                 = (now() at time zone 'Asia/Riyadh')::date
-          union all
-          select 1 from dispatches d
-           where (d.created_at at time zone 'Asia/Riyadh')::date
-                 = (now() at time zone 'Asia/Riyadh')::date
-        ) arrived
-      ) as arrived
+      (count(*) filter (where a.action in (${actions(ANSWERED)})))::int as answered,
+      (count(*) filter (
+        where a.action in (${actions(RAISED)})
+           or (a.action = ${quotationEvent("update")} and a.details->>'from' = 'returned')
+           or (a.action = ${dispatchEvent("update")} and a.details->>'from' = 'refused')
+      ))::int as arrived
+      from audit_log a
+     where a.action in (${actions([...ANSWERED, ...RAISED, ...RESUBMITTED])})
+       and a.at >= ${dayStart}
+       and a.at < ${dayStart} + interval '1 day'
   `);
   const row = result.rows[0];
 

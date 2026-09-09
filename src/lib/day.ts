@@ -42,6 +42,7 @@ export type Waiting = {
   /** Its document number, or null for a row that has none — a lead (P12-7). */
   label: string | null;
   companyName: string;
+  /** The job, or null for the one row that has none — a lead (P12-7). */
   projectName: string | null;
   /** Why it is here, as a message key the screen renders. */
   reasonKey: WaitingReason;
@@ -110,7 +111,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
-      .leftJoin(projects, eq(projects.id, quotations.projectId))
+      .innerJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
           eq(companies.repId, repId),
@@ -133,7 +134,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       .from(dispatches)
       .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
       .innerJoin(companies, eq(companies.id, quotations.companyId))
-      .leftJoin(projects, eq(projects.id, quotations.projectId))
+      .innerJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
           eq(companies.repId, repId),
@@ -154,7 +155,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
-      .leftJoin(projects, eq(projects.id, quotations.projectId))
+      .innerJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
           eq(companies.repId, repId),

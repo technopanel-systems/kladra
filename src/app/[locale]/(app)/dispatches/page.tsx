@@ -9,7 +9,7 @@ import { ListTail } from "@/components/ui-ext/list-tail";
 import { requireUser } from "@/lib/authz";
 import { countDispatches, listDispatches, type DispatchStatus } from "@/lib/dispatches";
 import { LIST_LIMIT } from "@/lib/list-size";
-import { dispatchableQuotationOptions } from "@/lib/pickers";
+import { dispatchTargets } from "@/lib/pickers";
 import { viewCookie, viewFor } from "@/lib/view";
 
 /**
@@ -53,10 +53,10 @@ export default async function DispatchesPage({
     locale,
   };
 
-  const [t, rows, quotations] = await Promise.all([
+  const [t, rows, targets] = await Promise.all([
     getTranslations(),
     listDispatches({ ...narrowing, limit: LIST_LIMIT }),
-    dispatchableQuotationOptions(user),
+    dispatchTargets(user),
   ]);
 
   // Only when it came back full (D80).
@@ -66,9 +66,9 @@ export default async function DispatchesPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.dispatches")}</h1>
-        {quotations.length > 0 ? (
+        {targets.quotations.length > 0 ? (
           <RequestDispatchDialog
-            quotations={quotations}
+            targets={targets}
             trigger={
               <Button variant="brand">
                 {t("dispatches.request")}

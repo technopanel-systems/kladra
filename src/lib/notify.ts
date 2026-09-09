@@ -73,7 +73,11 @@ const CLEARED_BY: Record<NotificationKind, "work" | "reading"> = {
   quotationRejected: "reading",
   quotationCancelled: "reading",
   dispatchApproved: "reading",
-  dispatchRefused: "reading",
+  // Work, not news, since P12-10: a refused request is the dispatch chain's
+  // send-back, and the rep answers it by correcting the request and sending it
+  // again. Reading it is not doing it, which is exactly what its twin
+  // `quotationReturned` has said since D79.
+  dispatchRefused: "work",
   companyHandedOver: "reading",
   // He has to answer it — "I have him" — and the answer is what takes it off
   // his bell, not his having glanced at it (P12-7).

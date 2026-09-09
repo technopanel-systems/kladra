@@ -1,5 +1,5 @@
 import { ChevronRight, FileText, Pencil, Plus, Star } from "lucide-react";
-import { projectOptionValue } from "@/lib/picker-option";
+import { optionValue } from "@/lib/picker-option";
 import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -195,7 +195,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   const quotationProjects = projects
     .filter((row) => !row.lostAt && mayRaiseFor(user, company.repId, row.repId, row.onProject))
     .map((row) => ({
-      value: projectOptionValue(row.id, company.id),
+      value: optionValue(row.id, company.id),
       label: row.name,
     }));
 

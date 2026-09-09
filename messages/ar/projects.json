@@ -13,7 +13,6 @@
   "newProject": "إضافة مشروع",
   "newProjectIn": "إضافة مشروع لدى {company}",
   "newProjectHint": "الاسم، والمساحة المتوقعة، وموعد المتابعة.",
-  "pickCompany": "اختيار الشركة",
   "noCompanies": "لا توجد شركات على قائمتك بعد.",
   "namePlaceholder": "برج A",
   "expectedSqmHint": "تقديرك أنت. مجموع هذه المساحات هو إجمالي الفرص.",

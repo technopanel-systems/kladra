@@ -1,6 +1,7 @@
 import { login } from "./helpers/auth";
 import { one, query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
+import { dispatchLabel } from "@/lib/labels";
 
 /**
  * The queue says a quotation was revised under a waiting dispatch (P11E
@@ -60,9 +61,11 @@ test("a waiting dispatch whose quotation was revised says so, and cannot be appr
     await expect(page.getByRole("heading", { name: t("common.queue") })).toBeVisible(COLD);
 
     await test.step("the queue row says the quotation was revised", async () => {
-      const row = page.getByRole("row").filter({ hasText: waiting.company_name }).filter({
-        has: page.locator('[data-slot="revised-since"]'),
-      });
+      // Found by the dispatch's own number, which is unique, rather than by its
+      // customer's name: a revision marks EVERY waiting dispatch on that
+      // quotation, and one customer may have several — correct behaviour, and
+      // it made a count of "rows for this company carrying the mark" read 3.
+      const row = page.getByRole("row").filter({ hasText: dispatchLabel(waiting.label) });
       await expect(row).toHaveCount(1);
       await expect(row.locator('[data-slot="revised-since"]')).toHaveText(
         t("dispatches.revisedSince"),

@@ -63,6 +63,8 @@ export async function DispatchDrawer({
         warehouseId: String(dispatch.warehouseId),
         destination: dispatch.destination,
         paymentTerms: dispatch.paymentTerms,
+        paymentDetail: dispatch.paymentDetail,
+        paymentNote: dispatch.paymentNote,
         sending: dispatch.items.map((item) => ({
           quotationItemId: item.quotationItemId,
           qty: item.qty,

@@ -97,12 +97,15 @@ test("the same quotation picked twice is not a change, and the form does not fre
   const form = page.getByRole("dialog", { name: t("dispatches.request") });
   await expect(form).toBeVisible(COLD);
 
-  // The first field the dialog asks for when it opens with no quotation of
-  // its own — the Dispatches screen's primary action (SPEC §3, P8).
+  // The two fields the dialog asks for when it opens with no quotation of its
+  // own — the Dispatches screen's primary action (SPEC §3, P8), asked as the
+  // chain it is since P12-10: the customer, then that customer's papers.
+  const customer = form.getByRole("combobox", { name: t("common.company") });
   const picker = form.getByRole("combobox", { name: t("common.quotation") });
   const destination = form.getByLabel(t("common.destination"));
 
   await test.step("picking a quotation loads the real form, not the skeleton", async () => {
+    await pickFirst(customer);
     await pickFirst(picker);
     await expect(destination).toBeVisible(COLD);
   });

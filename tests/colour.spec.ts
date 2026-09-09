@@ -43,7 +43,11 @@ test("a status has exactly one tone, and the two chains agree about waiting", ()
   // A request waiting on the coordinator is the same fact in either chain.
   expect(dispatchTone("submitted")).toBe(quotationTone("requested"));
   expect(dispatchTone("approved")).toBe("good");
-  expect(dispatchTone("refused")).toBe("bad");
+  // And so is one she has sent back: since P12-10 a refused dispatch is
+  // corrected and sent again, which makes it a thing somebody owes an answer on
+  // rather than a thing that went the wrong way. §2 S53 groups the two events
+  // in one sentence; this is that sentence in colour.
+  expect(dispatchTone("refused")).toBe(quotationTone("returned"));
 });
 
 test("due today is not overdue, and a date in the future is nobody's problem", () => {

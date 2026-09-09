@@ -2,8 +2,6 @@
   "request": "Request quotation",
   "requestFor": "Request quotation for {project}",
   "pickProject": "Choose a project",
-  "pickCompany": "Choose a company",
-  "pickCompanyFirst": "Choose a company first",
   "noContact": "In the company’s name",
   "needsProject": "Add a project first. Every quotation belongs to one.",
   "noProjects": "No projects to quote on yet.",

@@ -42,6 +42,7 @@ import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
 import { issuesOwnQuotations, SELLING_ROLES } from "@/lib/floor";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
+import { withTheRep } from "@/lib/with-the-rep";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 import {
   mayRaiseFor,
@@ -91,12 +92,12 @@ type Loaded = {
   status: QuotationStatus;
   companyId: string;
   companyName: string;
-  projectId: string | null;
+  projectId: string;
   repId: string;
   /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
   companyRepId: string;
   /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
-  projectRepId: string | null;
+  projectRepId: string;
   shared: boolean;
   onProject: boolean;
 };
@@ -123,7 +124,7 @@ async function load(actor: SessionUser, quotationId: string): Promise<Loaded | n
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(eq(quotations.id, quotationId))
     .limit(1);
 
@@ -362,6 +363,10 @@ export async function requestQuotationAction(
         fieldErrors: { projectId: t("projectRequired") },
       };
     }
+    // Held in its own const, because the insert below is inside a transaction
+    // callback and a narrowing made out here does not survive into a closure:
+    // the compiler cannot know the property was not reassigned in between.
+    const projectId = input.projectId;
     const [project] = await db
       .select({
         companyId: projects.companyId,
@@ -370,7 +375,7 @@ export async function requestQuotationAction(
         onProject: onProjectSql(actor, sql`projects.id`).mapWith(Boolean),
       })
       .from(projects)
-      .where(eq(projects.id, input.projectId))
+      .where(eq(projects.id, projectId))
       .limit(1);
     if (!project) return { ok: false, error: t("projectNotFound") };
     if (project.companyId !== input.companyId) {
@@ -398,7 +403,7 @@ export async function requestQuotationAction(
     // Whose paper this is (D148). Resolved from the job rather than trusted
     // from the form, and a name that is not on the job is a refusal rather than
     // a silent fallback to the man who typed it.
-    const credit = await resolveCredit(input.projectId, actor.id, field(formData, "credit"));
+    const credit = await resolveCredit(projectId, actor.id, field(formData, "credit"));
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
     // Hers goes out as she raises it; everybody else's joins the queue.
@@ -413,7 +418,7 @@ export async function requestQuotationAction(
         .values({
           number: sql`nextval('quotation_numbers')`,
           companyId: input.companyId,
-          projectId: input.projectId,
+          projectId,
           contactId: addressing.contactId,
           warehouseId: addressing.warehouseId,
           repId: actor.id,
@@ -512,9 +517,9 @@ export async function updateQuotationAction(
     // only he edits it (SPEC §3, D147) — which was the same person as the
     // company's owner until a project could be shared, and is not any more.
     if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
-    if (quotation.status !== "requested" && quotation.status !== "returned") {
-      return { ok: false, error: tq("alreadyIssued") };
-    }
+    // Still his to change: asked for and unanswered, or sent back (S54, and
+    // `withTheRep`, which the dispatch chain asks the same question of).
+    if (!withTheRep(quotation.status)) return { ok: false, error: tq("alreadyIssued") };
 
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
@@ -540,7 +545,7 @@ export async function updateQuotationAction(
     const held = await db.transaction(async (tx) => {
       // Held for the rest of the transaction; issued meanwhile is not ours to edit (D85).
       const status = await holdQuotation(tx, quotation.id);
-      if (status !== "requested" && status !== "returned") return false;
+      if (!withTheRep(status as QuotationStatus)) return false;
 
       await tx.delete(quotationItems).where(eq(quotationItems.quotationId, quotation.id));
       await insertItems(tx, quotation.id, items);

@@ -141,5 +141,8 @@
     "split": "Split between everyone on the project",
     "help": "Chosen for this one, and never carried to the next.",
     "notOnProject": "That person is not on this project."
-  }
+  },
+  "paymentNote": "Payment note",
+  "pickCompany": "Choose a company",
+  "pickCompanyFirst": "Choose a company first"
 }

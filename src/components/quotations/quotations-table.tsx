@@ -288,11 +288,9 @@ export function QuotationsTable({
                       {row.repName}
                     </span>
                   ) : null}
-                  {row.projectName ? (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {row.projectName}
-                    </span>
-                  ) : null}
+                  <span className="truncate text-xs text-muted-foreground">
+                    {row.projectName}
+                  </span>
                   {/* The project was marked lost after this was raised (D138). A dead
                       project is not work to price, and nothing on her desk said so. */}
                   {row.projectLostOn ? (
@@ -362,7 +360,7 @@ export function QuotationsTable({
                         ) : null}
                       </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
-                        {row.projectName ?? "—"}
+                        {row.projectName}
                         {/* The project was marked lost after this was raised (D138). A dead
                             project is not work to price, and nothing on her desk said so. */}
                         {row.projectLostOn ? (
@@ -569,12 +567,10 @@ export function QuotationSheet({
               ) : null}
             </div>
             <SheetDescription>
-              {quotation.projectName
-                ? t("quotations.drawerDescription", {
-                    company: quotation.companyName,
-                    project: quotation.projectName,
-                  })
-                : quotation.companyName}
+              {t("quotations.drawerDescription", {
+                company: quotation.companyName,
+                project: quotation.projectName,
+              })}
             </SheetDescription>
 
             {/* The project is lost and this paper is still open on it (D138):
@@ -623,8 +619,8 @@ export function QuotationSheet({
               {/* Who at the customer this went to, and which store it was
                   priced out of (SPEC §3, P12-9). The name only when there is
                   one: a dash under a heading is a field a reader has to decide
-                  is empty, and a quotation for stock is addressed to nobody by
-                  design rather than by omission. */}
+                  is empty, and a price raised for the company rather than for a
+                  person is addressed to nobody by design, not by omission. */}
               {quotation.contactName ? (
                 <Fact label={t("common.contact")}>
                   <bdi>{quotation.contactName}</bdi>

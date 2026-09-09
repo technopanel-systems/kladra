@@ -273,16 +273,19 @@ test("her figures are the whole desk's, not the first two hundred rows'", async 
   const MARKER = "queue-cap.spec";
   const OVER = LIST_LIMIT + 6;
 
-  const [home] = await query<{ companyId: string; projectId: string | null; repId: string }>(
-    `select c.id as "companyId", c.rep_id as "repId",
-            (select p.id from projects p
-              where p.company_id = c.id and p.archived_at is null and p.lost_at is null
-              limit 1) as "projectId"
+  // A company WITH a live job on it, joined rather than looked up beside it:
+  // every quotation names one (S18, P12-10), so a customer whose jobs are all
+  // finished is not somewhere a request can be hung. This read the first
+  // company on the floor and took whatever job it found, which was null often
+  // enough to be a fixture that inserted nothing.
+  const [home] = await query<{ companyId: string; projectId: string; repId: string }>(
+    `select c.id as "companyId", c.rep_id as "repId", p.id as "projectId"
        from companies c
-      where c.archived_at is null
+       join projects p on p.company_id = c.id
+      where c.archived_at is null and p.archived_at is null and p.lost_at is null
       limit 1`,
   );
-  expect(home, "the seeded floor has a company to hang requests on").toBeTruthy();
+  expect(home, "the seeded floor has a company with a job to hang requests on").toBeTruthy();
 
   const [issued] = await query<{ id: string; repId: string }>(
     `select q.id, q.rep_id as "repId"
@@ -306,13 +309,17 @@ test("her figures are the whole desk's, not the first two hundred rows'", async 
       [home.companyId, home.projectId, home.repId, MARKER, OVER],
     );
     await query(
+      // Cash on delivery: this fixture is about how many rows the desk counts,
+      // not how they are paid for, and the column refuses a pair that does not
+      // go together (SPEC §3, P12-10).
       `insert into dispatches
          (number, quotation_id, rep_id, status, shipment_method_id, warehouse_id, destination,
-          payment_terms, created_at, updated_at)
+          payment_terms, payment_detail, created_at, updated_at)
        select nextval('dispatch_numbers')::int, $1, $2, 'submitted', $3,
-              (select id from warehouses order by id limit 1), $4, $5, now(), now()
-         from generate_series(1, $6::int)`,
-      [issued.id, issued.repId, method.id, MARKER, MARKER, OVER],
+              (select id from warehouses order by id limit 1), $4, 'cash', 'onDelivery',
+              now(), now()
+         from generate_series(1, $5::int)`,
+      [issued.id, issued.repId, method.id, MARKER, OVER],
     );
 
     // The same question the lists ask, asked here in SQL: everything requested

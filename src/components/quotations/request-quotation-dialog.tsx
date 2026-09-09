@@ -40,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { quotationTotals } from "@/lib/money";
 import type { LastQuotation } from "@/lib/quotation-draft";
-import { splitProjectOption, type QuotationTargets } from "@/lib/picker-option";
+import { splitOption, type QuotationTargets } from "@/lib/picker-option";
 
 /**
  * Request a quotation, from inside a company or a project (SPEC §3, S28).
@@ -255,9 +255,9 @@ function RequestForm({
    */
   const [pickedCompany, setPickedCompany] = useState("");
   const [chosen, setChosen] = useState("");
-  const picked = splitProjectOption(chosen);
+  const picked = splitOption(chosen);
   const company = companyId ?? pickedCompany;
-  const project = projectId ?? picked?.projectId ?? null;
+  const project = projectId ?? picked?.id ?? null;
 
   // The jobs of the customer in hand. Filtered here rather than fetched again:
   // the whole list came down with the screen, and a rep with a customer on the
@@ -265,7 +265,7 @@ function RequestForm({
   const jobs = useMemo(
     () =>
       (targets?.projects ?? []).filter(
-        (option) => splitProjectOption(option.value)?.companyId === company,
+        (option) => splitOption(option.value)?.companyId === company,
       ),
     [targets, company],
   );
@@ -471,7 +471,7 @@ function RequestForm({
                 setChosen("");
               }}
               disabled={pending}
-              placeholder={t("quotations.pickCompany")}
+              placeholder={t("common.pickCompany")}
               searchPlaceholder={t("forms.searchList")}
               emptyText={t("forms.noMatch")}
             />
@@ -497,7 +497,7 @@ function RequestForm({
               // every job in the building is what this field used to be.
               disabled={pending || !company}
               placeholder={
-                company ? t("quotations.pickProject") : t("quotations.pickCompanyFirst")
+                company ? t("quotations.pickProject") : t("common.pickCompanyFirst")
               }
               searchPlaceholder={t("forms.searchList")}
               emptyText={t("quotations.noProjects")}

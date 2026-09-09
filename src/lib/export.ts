@@ -82,7 +82,7 @@ async function quotationsCsv(): Promise<string> {
            coalesce(q.smac_number, '') as smac_number,
            q.status as status,
            c.name as company,
-           coalesce(p.name, '') as project,
+           p.name as project,
            u.name as rep,
            to_char((q.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as requested,
            to_char((q.issued_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as issued,
@@ -106,7 +106,7 @@ async function quotationsCsv(): Promise<string> {
       join fire_ratings fr on fr.id = qi.fire_rating_id
       join classes cl on cl.id = qi.class_id
       join thicknesses th on th.id = qi.thickness_id
-      left join projects p on p.id = q.project_id
+      join projects p on p.id = q.project_id
      order by q.number, q.revision, qi.position
   `);
 
@@ -159,11 +159,13 @@ async function dispatchesCsv(): Promise<string> {
            q.revision as q_revision,
            coalesce(q.smac_number, '') as quotation_smac_number,
            c.name as company,
-           coalesce(p.name, '') as project,
+           p.name as project,
            u.name as rep,
            sm.name_en as shipment,
            d.destination as destination,
            d.payment_terms as payment_terms,
+           coalesce(d.payment_detail::text, '') as payment_detail,
+           coalesce(d.payment_note, '') as payment_note,
            to_char((d.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as requested,
            to_char((d.approved_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as approved,
            qi.position as item,
@@ -181,7 +183,7 @@ async function dispatchesCsv(): Promise<string> {
       join shipment_methods sm on sm.id = d.shipment_method_id
       join dispatch_items di on di.dispatch_id = d.id
       join quotation_items qi on qi.id = di.quotation_item_id
-      left join projects p on p.id = q.project_id
+      join projects p on p.id = q.project_id
      order by d.number, qi.position
   `);
 
@@ -205,6 +207,8 @@ async function dispatchesCsv(): Promise<string> {
       "shipment",
       "destination",
       "payment_terms",
+      "payment_detail",
+      "payment_note",
       "requested",
       "approved",
       "item",

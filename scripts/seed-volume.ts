@@ -22,6 +22,7 @@ import { sql } from "drizzle-orm";
 import { loadEnv } from "../src/lib/env";
 import { addDays, todayRiyadh, type Day } from "../src/lib/dates";
 import { normalizePhone } from "../src/lib/phone";
+import type { PaymentDetail, PaymentTerms } from "../src/lib/payment";
 import { quotationEvent } from "../src/lib/quotation-events";
 
 loadEnv();
@@ -61,6 +62,42 @@ function rand(): number {
   return seed / 2147483648;
 }
 const pick = <T,>(list: readonly T[]): T => list[Math.floor(rand() * list.length)];
+
+/**
+ * How the nth dispatch on the volume floor is paid for (SPEC §3, P12-10).
+ *
+ * By position rather than at random, so the four ways to pay and both answers
+ * to each of the two questions all appear, in a fixed proportion a screenshot
+ * can be compared against. Credit carries the note the column requires.
+ */
+function paidBy(n: number): {
+  paymentTerms: PaymentTerms;
+  paymentDetail: PaymentDetail | null;
+  paymentNote: string | null;
+} {
+  switch (n % 6) {
+    case 0:
+      return { paymentTerms: "bankTransfer", paymentDetail: "fullAmount", paymentNote: null };
+    case 1:
+      return { paymentTerms: "bankTransfer", paymentDetail: "partAmount", paymentNote: null };
+    case 2:
+      return { paymentTerms: "cash", paymentDetail: "onDelivery", paymentNote: null };
+    case 3:
+      return { paymentTerms: "cash", paymentDetail: "atOffice", paymentNote: null };
+    case 4:
+      return {
+        paymentTerms: "credit",
+        paymentDetail: null,
+        paymentNote: "تحويل بنكي خلال 30 يومًا من تاريخ التسليم",
+      };
+    default:
+      return {
+        paymentTerms: "tasaheel",
+        paymentDetail: null,
+        paymentNote: "تمويل عبر تساهيل، الدفعة الأولى عند التوقيع",
+      };
+  }
+}
 const between = (low: number, high: number) => low + Math.floor(rand() * (high - low + 1));
 
 const FIRST = ["شركة", "مؤسسة", "مجموعة"];
@@ -361,7 +398,10 @@ async function main(): Promise<void> {
         shipmentMethodId: pick(methodIds),
         warehouseId: pick(warehouseIds),
         destination: `${pick(["الرياض", "جدة", "الدمام"])} — موقع المشروع`,
-        paymentTerms: pick(["تحويل بنكي 30 يوم", "50% مقدم", "نقدًا عند التسليم"]),
+        // The four ways to pay, spread across the volume floor so a list of
+        // hundreds carries every one of them (SPEC §3, P12-10). Credit takes
+        // its mandatory note with it, which the column refuses without.
+        ...paidBy(i),
         status,
         smacDispatchNumber: status === "approved" ? String(nextSmacDispatchNumber++) : null,
         approvedAt: status === "approved" && decided ? at(decided) : null,

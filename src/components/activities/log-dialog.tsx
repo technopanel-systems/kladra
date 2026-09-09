@@ -15,6 +15,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { editActivityAction, logActivityAction } from "@/actions/activities";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { ChoiceChips } from "@/components/ui-ext/choice-chips";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -243,7 +244,6 @@ function LogPanel({
   const textErrorId = `${ids}-text-error`;
   const projectId_ = `${ids}-project`;
   const contactId = `${ids}-contact`;
-  const channelLabelId = `${ids}-channel`;
   const happenedLabelId = `${ids}-happened`;
   const followUpLabelId = `${ids}-follow-up`;
 
@@ -341,44 +341,22 @@ function LogPanel({
             ) : null}
           </div>
 
-          <fieldset className="flex flex-col gap-1.5">
-            <legend id={channelLabelId} className="mb-1.5 text-sm font-medium">
-              {t("drawer.channel")}
-            </legend>
-            {/* Native radios: arrow keys, grouping and the announced state come
-                free; the chip is the label around a visually hidden input. */}
-            <div className="flex flex-wrap gap-2">
-              {CHANNELS.map(({ value, Icon }) => (
-                <label
-                  key={value}
-                  className={cn(
-                    // `touch`: the label is the control, and not a kit one (D130).
-                    "touch inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
-                    "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
-                    // Chosen is not a state: the five colours mean what
-                    // happened to a record, and painting the selected chip red
-                    // spends the loudest one on "you pressed this" (DESIGN §6).
-                    // The quiet fill is what the filter chips use, for the same
-                    // reason.
-                    channel === value
-                      ? "border-line-strong bg-secondary font-medium text-foreground"
-                      : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name={`${ids}-channel`}
-                    value={value}
-                    checked={channel === value}
-                    onChange={() => setChannel(value)}
-                    className="sr-only"
-                  />
-                  <Icon aria-hidden="true" className="size-3.5" />
-                  {t(`common.${value}`)}
-                </label>
-              ))}
-            </div>
-          </fieldset>
+          {/* Native radios drawn as chips, the same control the payment terms
+              use one screen along (P12-10): arrow keys, grouping and the
+              announced state come free, and the chip is the label around a
+              visually hidden input. */}
+          <ChoiceChips
+            legend={t("drawer.channel")}
+            name={`${ids}-channel`}
+            value={channel}
+            choices={CHANNELS.map(({ value, Icon }) => ({
+              value,
+              label: t(`common.${value}`),
+              Icon,
+            }))}
+            onChange={setChannel}
+            disabled={pending}
+          />
 
           {/* Neither of these is offered when correcting (D70): the day is the
               entry's identity, and the follow-up is a figure the company row and

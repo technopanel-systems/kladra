@@ -27,6 +27,7 @@ import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { Sqm } from "@/components/ui-ext/figures";
+import { paymentDetailLabel, paymentTermsLabel } from "@/lib/payment";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { formatSqm } from "@/lib/money";
@@ -270,11 +271,9 @@ export function DispatchesTable({
                       {t("dispatches.revisedSince")}
                     </span>
                   ) : null}
-                  {row.projectName ? (
-                    <span className="truncate text-xs text-muted-foreground">
-                      {row.projectName}
-                    </span>
-                  ) : null}
+                  <span className="truncate text-xs text-muted-foreground">
+                    {row.projectName}
+                  </span>
                   {/* The project was marked lost after this was raised (D138). A dead
                       project is not work to price, and nothing on her desk said so. */}
                   {row.projectLostOn ? (
@@ -345,7 +344,7 @@ export function DispatchesTable({
                         ) : null}
                       </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
-                        {row.projectName ?? "—"}
+                        {row.projectName}
                         {/* The project was marked lost after this was raised (D138). A dead
                             project is not work to price, and nothing on her desk said so. */}
                         {row.projectLostOn ? (
@@ -535,13 +534,7 @@ export function DispatchSheet({
               <StatusBadge status={dispatch.status} />
             </div>
             <SheetDescription>
-              {dispatch.projectName ? (
-                <>
-                  <bdi>{dispatch.companyName}</bdi> · <bdi>{dispatch.projectName}</bdi>
-                </>
-              ) : (
-                <bdi>{dispatch.companyName}</bdi>
-              )}
+              <bdi>{dispatch.companyName}</bdi> · <bdi>{dispatch.projectName}</bdi>
             </SheetDescription>
 
             {/* The project is lost and this material is still going out to it
@@ -697,7 +690,21 @@ export function DispatchSheet({
             </Row>
             <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
             <Row label={t("common.destination")}>{dispatch.destination}</Row>
-            <Row label={t("common.paymentTerms")}>{dispatch.paymentTerms}</Row>
+            {/* The choice, then the answer it asked for, with a mark between
+                them rather than a gap: a gap says nothing (§5 #181). */}
+            <Row label={t("common.paymentTerms")}>
+              {paymentTermsLabel(dispatch.paymentTerms, t)}
+              {dispatch.paymentDetail ? (
+                <> · {paymentDetailLabel(dispatch.paymentDetail, t)}</>
+              ) : null}
+            </Row>
+            {/* The rep's own words, on their own row: on credit and tasaheel
+                they are the terms, and finance is the reader (SPEC §3). */}
+            {dispatch.paymentNote ? (
+              <Row label={t("common.paymentNote")}>
+                <bdi>{dispatch.paymentNote}</bdi>
+              </Row>
+            ) : null}
           </dl>
 
           {/* Last, as on the quotation sheet: what the drawer is opened to do

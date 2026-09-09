@@ -96,7 +96,18 @@ export function dispatchTone(status: DispatchStatus): StateTone {
     case "approved":
       return "good";
     case "refused":
-      return "bad";
+      /*
+       * Amber, not red, since P12-10: somebody owes an answer, and it is the
+       * rep — he corrects the request and sends it again, exactly as he does
+       * with a quotation the desk sent back, which has been amber all along.
+       *
+       * The app already half-said this and contradicted itself doing it: the
+       * door on his day for refused dispatches has been drawn in `wait` since
+       * P11D while the badge on the row beside it was `bad`. One state cannot
+       * be two colours; §2 S53 groups "a request sent back or refused" as one
+       * kind of event, and this is that sentence in the palette.
+       */
+      return "wait";
   }
 }
 

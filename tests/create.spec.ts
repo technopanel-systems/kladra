@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
-import { choose, pickFirst } from "./helpers/pick";
+import { choose, pickFirst, pressChip } from "./helpers/pick";
 
 /**
  * P8.2 — a primary button of its own on Projects, Quotations and Dispatches
@@ -62,7 +62,9 @@ async function fillOneItem(form: Locator, t: Translate): Promise<void> {
 async function fillTheDetails(form: Locator, t: Translate): Promise<void> {
   await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill("Riyadh — King Fahd Road, site gate");
-  await form.getByLabel(t("common.paymentTerms")).fill("50% advance, balance on delivery");
+  // A bank transfer of the whole amount, which is the ordinary one (SPEC §3).
+  await pressChip(form, t("dispatches.payment.bankTransfer"));
+  await pressChip(form, t("dispatches.payment.fullAmount"));
 }
 
 /** The quotation's own name, Q-#, once its drawer has actually loaded. */
@@ -110,7 +112,7 @@ test("a project is added from the projects screen, without going to find its com
 
     const form = dialogNamed(page, t("projects.newProject"));
     const picker = form.getByRole("combobox", { name: t("common.company") });
-    await expect(picker).toContainText(t("projects.pickCompany"));
+    await expect(picker).toContainText(t("common.pickCompany"));
 
     await choose(page, picker, company.name);
     await expect(picker).toContainText(company.name);
@@ -182,12 +184,12 @@ test("a quotation is requested from the quotations screen", async ({ page, local
     // The pickers are gated behind the same lookups the lines need (suppliers,
     // fire ratings, classes), so they can arrive a moment after the dialog does.
     await expect(companyPicker).toBeVisible(COLD);
-    await expect(companyPicker).toContainText(t("quotations.pickCompany"));
+    await expect(companyPicker).toContainText(t("common.pickCompany"));
 
     // Until a customer is named there is nothing to choose from: the job list
     // used to be every job in the building (P12-9).
     const projectPicker = form.getByRole("combobox", { name: t("common.project") });
-    await expect(projectPicker).toContainText(t("quotations.pickCompanyFirst"));
+    await expect(projectPicker).toContainText(t("common.pickCompanyFirst"));
     await expect(projectPicker).toBeDisabled();
 
     await choose(page, companyPicker, project.company_name);
@@ -283,15 +285,22 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
     id: string;
     number: number;
     revision: number;
+    company_name: string;
     warehouse_en: string;
     warehouse_ar: string;
   }>(
-    `select q.id, q.number, q.revision, w.name_en as warehouse_en, w.name_ar as warehouse_ar
+    `select q.id, q.number, q.revision, c.name as company_name,
+            w.name_en as warehouse_en, w.name_ar as warehouse_ar
        from quotations q
        join companies c on c.id = q.company_id
        join warehouses w on w.id = q.warehouse_id
       where c.rep_id = $1::uuid
-        and q.status = 'issued'
+        -- Either state goods may move against (DISPATCHABLE), not issued
+        -- alone: since P12-10 raising a dispatch answers the quotation it is
+        -- raised on, so the walks that raise one leave accepted quotations
+        -- behind them, and a fixture demanding an unanswered one would starve
+        -- the specs that genuinely need one.
+        and q.status in ('issued', 'accepted')
         and not exists (
           select 1 from quotations later
            where later.number = q.number and later.revision > q.revision
@@ -337,13 +346,23 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
   await login(page, locale, "faisal");
   await page.goto(`/${locale}/dispatches`);
 
-  await test.step("nothing is asked until a quotation is chosen, then its lines load", async () => {
+  await test.step("the customer is asked first, and the papers offered are that customer's", async () => {
     await page.getByRole("button", { name: t("dispatches.request") }).first().click();
 
     const form = dialogNamed(page, t("dispatches.request"));
     await expect(form.getByText(t("dispatches.pickQuotationFirst"))).toBeVisible();
 
+    // The chain, in the order a rep has it (P12-10): until a customer is named
+    // the papers field says so and opens nothing at all. It was one flat list
+    // of every dispatchable quotation in the building.
     const picker = form.getByRole("combobox", { name: t("common.quotation") });
+    await expect(picker).toContainText(t("common.pickCompanyFirst"));
+    await expect(picker).toBeDisabled();
+
+    const customer = form.getByRole("combobox", { name: t("common.company") });
+    await expect(customer).toContainText(t("common.pickCompany"));
+    await choose(page, customer, quotation.company_name);
+
     await expect(picker).toContainText(t("dispatches.pickQuotation"));
     await choose(page, picker, label);
 

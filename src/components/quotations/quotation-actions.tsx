@@ -2,6 +2,7 @@
 
 import { Check, FileText, Pencil, PenLine, RotateCcw, Undo2, X } from "lucide-react";
 import { useCallback } from "react";
+import { withTheRep } from "@/lib/with-the-rep";
 import { useTranslations } from "next-intl";
 import {
   cancelQuotationAction,
@@ -63,7 +64,7 @@ export function QuotationActions({
     companyId: string;
     /** Under the SMAC prompts' titles: whose number is being typed (D98). */
     companyName: string;
-    projectId: string | null;
+    projectId: string;
     isLatest: boolean;
     /** SMAC's number, once it has one — the thing she may correct (D88). */
     smacNumber: string | null;
@@ -77,7 +78,9 @@ export function QuotationActions({
 
   const { id, label, status } = quotation;
   const waiting = status === "requested";
-  const withTheRep = status === "requested" || status === "returned";
+  // Still his to change: asked for and unanswered, or sent back. The dispatch
+  // drawer asks the same question of its own two states (`withTheRep`).
+  const his = withTheRep(status);
   const issued = status === "issued";
   const answered = status === "accepted" || status === "rejected";
 
@@ -135,7 +138,7 @@ export function QuotationActions({
         </>
       ) : null}
 
-      {scope.owner && withTheRep ? (
+      {scope.owner && his ? (
         <>
           <RequestQuotationDialog
             companyId={quotation.companyId}

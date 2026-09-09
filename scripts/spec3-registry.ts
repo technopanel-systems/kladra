@@ -271,7 +271,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "A dispatch implies the customer accepted that quotation",
-    owed: "P12-10 dispatches — the customer's acceptance is still a separate action a rep has to remember to record after the dispatch has gone.",
+    tests: [
+      "the dispatch chain: request part of a quotation, the queue, approval, and what is left",
+      "the quotation chain: request, send back, edit, issue, the customer's answer, a revision",
+    ],
   },
   {
     says: "One warehouse per whole quotation and per whole dispatch, never per line",
@@ -282,11 +285,14 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Payment terms are a choice plus notes, not free text",
-    owed: "P12-10 dispatches — payment terms are one free-text box the rep types, which is D12 as it stands.",
+    tests: [
+      "credit is refused until the rep says what was agreed, and the desk reads it",
+      "how a load is paid for is a choice the column holds to its own shape (0022, P12-10)",
+    ],
   },
   {
     says: "Nothing is ever carried forward from a previous record into a new one",
-    owed: "P12-14 across — a new quotation line still copies the sheet off the line above it, which is D81 as it stands.",
+    owed: "P12-14 across — a new quotation line still copies the sheet off the line above it and a repeat ask opens on the customer's last quotation (D74). The dispatch half is paid: P12-10 took the site, the terms and the shipment method off the dispatch before it, and the read behind them with it.",
   },
   {
     says: "every rep on it sees the company and all items beneath it",

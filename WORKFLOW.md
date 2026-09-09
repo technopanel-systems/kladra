@@ -142,7 +142,7 @@
       - [x] 8 Duplicate review: the customer number, the name rules in both languages, the
             manager's three answers
       - [x] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
-      - [ ] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
+      - [x] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
       - [ ] 11 The queue: the whole row opens it, and the SMAC number is the large one
       - [x] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
       - [ ] 13 Reports and the company log rebuilt as one thing, per person, per day
@@ -609,7 +609,27 @@ of the box's own gate rather than out of its screens: a gap between two names is
 (#181), and a walk that had been passing on warmth since P8 — it left a page on the strength of a
 heading and expected the browser to have written a cookie it had had no chance to write (#182), and
 a walk that hung on a list that had closed under its own retry, in a helper three specs had each
-written out by hand (#183). Boxes 10, 11, 13 and 14 are next, in that order.
+written out by hand (#183). Box 10 is the dispatch's own five sentences. **Payment terms are a
+choice plus notes** — the founder's decision tree, not one free-text box finance cannot count: an
+enum of four, a second question asked in its own words for the two that have one, a note the two
+finance reviews require, and three CHECKs that hold the shape where the form is not the only way
+in. **A dispatch implies the customer accepted**, inside the transaction that raises it and under
+the same hold, clearing the chase notice with it. **A refused dispatch is corrected and sent
+again**, which is what §2 S53 already called it, and three things that were true of a terminal
+refusal stopped being true with it — its notice is cleared by the work, its colour is the amber
+the rep's own day screen had been painting it for phases, and the desk's "answered today" is
+counted from what she DID rather than from the states the rows are in now (#185). **Nothing is
+carried forward**: the site, the terms and the shipment method are off the form and the read
+behind them is gone. **And every quotation names its job** — `project_id` was nullable with
+eighteen queries and eight screens carrying a state only the seed could produce, and the picker's
+own comment explaining it (#184); the column is NOT NULL, the `set null` is gone, and the one
+seeded row that had no job is the workshop order it always was. The dispatch dialog now asks the
+chain the way box 9's does — the customer, then that customer's papers with the job on the row —
+and moving one shared sentence to `common` found a third copy of it nobody had been looking for
+(#186), and the Arabic review found an order to a man that every check in the gate had passed,
+because a checker matching whole words cannot see the conjunction Arabic glues to the front of a
+verb — the second time that shape has shipped, and the first time the rule rather than the word
+was fixed (#187). Boxes 11, 13 and 14 are next, in that order.
 
 ## §4 Five days, walked (P9.1)
 
@@ -804,7 +824,7 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 4. She opens it, reads how many are going against how many were quoted, what other dispatches already hold and what is left once this one is counted (D112), and approves it with SMAC dispatch number 8810.
 5. Faisal is told; it reads Approved with the number; the approved m² is on this Riyadh month, by the approval's own date (S41, S43).
 6. The quotation now has that much less left to send.
-7. Raising a second dispatch against the same quotation opens on the first one's destination, terms and shipment method, with every quantity box empty (D81).
+7. Raising a second dispatch against the same quotation opens on NOTHING the first one said — the site, the terms and the shipment method are empty, and so are the quantity boxes. Nothing is ever carried forward from a previous record (§3, D160, overruling D81); the only field with an answer already in it is the store, which comes from the quotation itself.
 8. Second test: a request for more than a line has left is refused at the field as it is typed, and refused again by the action — the second one is the enforcement that counts.
 
 **The metrics tab (P12)** — `tests/metrics.spec.ts`
@@ -861,6 +881,16 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 5. Save. The drawer names the store and the person; the row carries the customer, the job, the contact and the warehouse that were picked, and the metres are width × length × qty of what he actually typed.
 6. He raises a dispatch against an issued quotation. The store opens on THAT QUOTATION's store, because the price was worked out of it — a child reading its own parent, never the dispatch before it. The dispatch drawer says which store the load leaves from, above how it travels and where it is going.
 7. The database refuses a quotation or a dispatch with no store on it, and a store that is not a store: there is no price out of nowhere and no load from nowhere.
+
+**How the load is paid for, and a refusal that can be answered (P12-10)** — `tests/dispatches.spec.ts`, `tests/create.spec.ts`, `tests/schema.spec.ts`, `tests/colour.spec.ts`
+1. Faisal opens Dispatches and presses the one button on it. It asks which CUSTOMER first: the quotation field says "Choose a customer first" and will not open until he has answered. He picks the customer, and the papers offered are that customer's, each with its job under the number.
+2. He picks one, types a quantity on a line that still has room, and answers how it is paid for. **Bank transfer** asks a second question in its own words — the full amount, or part of it. **Cash** asks a different one — on delivery, or at the office. **Credit** and **tasaheel** ask neither and make the note mandatory, because finance reads it; saving without it is refused at the field.
+3. The form opens on nothing it inherited. The site, the terms and the shipment method are empty however many loads have gone out against this paper before (§3): the only thing filled in for him is the store, and that comes from the quotation the price was worked out of.
+4. Save. The drawer says how it is paid for in words, and the quotation behind it now says **Accepted** — sending goods against a price is the customer's answer, and nobody had to remember to record it a second time. The chase notice about that quotation is off his bell.
+5. Rawan opens the queue and refuses the request with her reason. It goes to Faisal's day, in the same amber a quotation she sent back wears, with her words on it.
+6. Faisal opens it and presses Edit — the same form that raised it, not a new one. He corrects the quantity and sends it again. The request is back on her desk, her reason is gone with the state it explained, and the trail carries the whole story: raised, refused, corrected, waiting.
+7. Her figure counts what she DID today, so the refusal is still in it after he has fixed it, and his resubmission counts as work arriving. Both come off the audit log, so neither can move because somebody else touched the row afterwards.
+8. The database refuses the shapes the form refuses: a second answer where the terms ask none, the wrong second answer for the terms, a missing note where finance needs one, a note of nothing but spaces — and a quotation with no job at all.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -2788,3 +2818,51 @@ actually needed.
   found the other half: `choose`, the same act by name instead of by position, had been written out
   by hand in `create.spec`, `drawer-writes.spec` and `roles.spec` — three copies of a helper, which
   is the four-search-boxes defect (#143) inside the suite this time. One copy now, hardened once.
+- [x] 184 **A state the app could not create, carried by eighteen queries and eight screens.**
+  `quotations.project_id` was nullable, with `on delete set null` under it, and every reader
+  carried the second shape: eighteen left joins, four nullable types, eight `?? "—"` branches,
+  and a comment in the picker explaining that a quotation with no job is "the company's own
+  stock" — a sentence about a state no screen has been able to produce since D94, because
+  `requestQuotationAction` refuses it. **The only writer that ever made one was the seed**,
+  twenty-one times, so the demo showed dashes down a column that a real floor could never
+  produce and every branch behind them had never run. The cost is not the null; it is that
+  every reader of the column had to decide what to do about it, and eight of them decided
+  differently. A column looser than the form is the wrong way round (rules/data.md): the column
+  is the guard for the ways in that are not the app, and here it was the only thing still
+  claiming the state existed. NOT NULL in migration 0023, the `set null` dropped with it — a
+  project is archived and never deleted, so that clause only ever said "quietly detach the
+  prices" — the seed's history given real jobs, and the one row that genuinely had none given
+  the job it always was: a workshop buying sheets to cut up.
+- [x] 185 **A figure about this morning that somebody else's afternoon could take away.** The
+  coordinator's "answered today" counted quotations in `('issued','returned')` and dispatches in
+  `('approved','refused')` whose `updated_at` was today — a count of the states rows are in NOW,
+  standing in for a count of what she DID. It was almost right while a refusal was the end of a
+  dispatch. The moment P12-10 let the rep correct one and send it again, her own figure went
+  DOWN as he worked: she refused it at ten, he fixed it at two, and the row left the states the
+  query names. **A figure about an event is counted from the event.** Both halves read
+  `audit_log` now — the four answers, and the arrivals including a resubmission, which the two
+  update actions already record by the state they came from — so nothing anybody does
+  afterwards can move a number about her morning. The same read also found the older half of
+  it: the demo had never once shown that figure as anything but zero, so the green band on her
+  own screen had never been on a screen. The seed answers two things on the day it arrives now,
+  which is the ordinary shape of her morning (rules/data.md: a band needs a row on each side).
+- [x] 186 **One sentence, three keys, and the third found by moving the other two.** "Choose a
+  company" existed as `quotations.pickCompany` and `projects.pickCompany`, identical in both
+  languages, and the dispatch dialog was about to need a fourth. Moving the pair to `common`
+  made `check:messages` name the third immediately — the same sentence written three times is
+  the four-search-boxes defect (#143) in the message files, where nothing had been looking for
+  it because every copy was correct. One key now, and the two specs that read it read the
+  shared one.
+- [x] 187 **The same hole, one letter over: a checker that cannot see through a prefix.**
+  `فاكتب` — "so write", an order to a man — shipped in the payment hint and every check in
+  the gate passed it. `scripts/gendered-arabic.mts` lists `اكتب` and matches whole words, and
+  Arabic glues its conjunction to the front of the verb, so the prefix walked straight through.
+  **This is the second time.** P11H found `فاتركه` the same way, and the fix that time was to
+  add two more spellings to a list — which closed that word and left the rule open, because a
+  list of thirty verbs times two conjunctions times their attached objects is not a list
+  anybody keeps. It reads THROUGH the conjunction now: `ف` and `و` only, because the other
+  proclitics attach to nouns and to the imperfect and never to an imperative, so admitting
+  them would only widen the ways an innocent word can be mistaken for one. Found by the
+  arabic-reviewer, not by the gate — which is the point of running it — and the general
+  lesson is the one #171 already taught in another key: **a checker patched with one more
+  entry has been told about one case, not taught the rule.**

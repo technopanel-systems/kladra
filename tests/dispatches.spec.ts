@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
-import { pickFirst } from "./helpers/pick";
+import { pickFirst, pressChip } from "./helpers/pick";
 import { dispatchLabel } from "@/lib/labels";
 
 /**
@@ -80,15 +80,15 @@ async function nameOfTheOpenDispatch(page: Page): Promise<string> {
   return (await heading.innerText()).trim();
 }
 
-/** Fills the shipment, destination and terms every request needs. */
-/** Where it is going and how it is paid for — the job's, not this dispatch's. */
+/** Where it is going and how it is paid for — answered for THIS load (§3). */
 const DESTINATION = "Riyadh — King Fahd Road, site gate";
-const TERMS = "50% advance, balance on delivery";
 
 async function fillTheDetails(form: Locator, t: Translate) {
   await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill(DESTINATION);
-  await form.getByLabel(t("common.paymentTerms")).fill(TERMS);
+  // Cash, on delivery: the choice and the answer it asks for (SPEC §3).
+  await pressChip(form, t("dispatches.payment.cash"));
+  await pressChip(form, t("dispatches.payment.onDelivery"));
 }
 
 /**
@@ -105,10 +105,33 @@ async function issuedQuotation() {
        from quotations q
        join companies c on c.id = q.company_id
       where c.rep_id = $1::uuid
-        and q.status = 'issued'
+        -- Either state goods may move against (DISPATCHABLE in
+        -- src/lib/quotations.ts), and not issued alone: since P12-10 the first
+        -- test in this file ANSWERS the quotation it sends against, so a
+        -- fixture asking for an unanswered one would find none after it ran.
+        -- No backticks in this comment: it is template-literal source, and one
+        -- would close the template (rules/data.md).
+        and q.status in ('issued', 'accepted')
         and not exists (
           select 1 from quotations later
            where later.number = q.number and later.revision > q.revision
+        )
+        -- And with a line that has room for a PART-send, which is what the
+        -- first walk in this file needs and one more than the app's own picker
+        -- asks (dispatchableQuotationOptions asks for one). Once accepted
+        -- quotations are candidates the oldest of them is a delivered job from
+        -- the months behind us with every panel already sent, and after two
+        -- locale runs against one seeded database the survivors are thin.
+        and exists (
+          select 1 from quotation_items qi
+           where qi.quotation_id = q.id
+             and qi.qty > 1 + (
+               select coalesce(sum(di.qty), 0)
+                 from dispatch_items di
+                 join dispatches d on d.id = di.dispatch_id
+                where di.quotation_item_id = qi.id
+                  and d.status in ('submitted', 'approved')
+             )
         )
       order by q.created_at
       limit 1`,
@@ -166,8 +189,16 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
   const quotation = await issuedQuotation();
   const lines = await linesOf(quotation.id);
   expect(lines.length, "the seeded quotation has no lines").toBeGreaterThan(0);
-  const first = lines[0];
-  expect(first.remaining, "the first line has nothing left to send").toBeGreaterThan(1);
+  // The first line with room on it, not the first line. The fixture asks for a
+  // quotation with SOMETHING left on it, which is the question the app's own
+  // picker asks, and the room can be on the second line: a paper whose first
+  // line has gone out entirely is ordinary, and after two locale runs against
+  // one seeded database it is what is left (playwright.config.ts).
+  const index = lines.findIndex((line) => line.remaining > 1);
+  expect(index, "no line of the chosen quotation has room for a part-send").toBeGreaterThanOrEqual(
+    0,
+  );
+  const first = lines[index];
 
   // Part of it, never all of it: the point of the walk is that some is left.
   const sending = Math.min(AT_MOST, first.remaining - 1);
@@ -212,7 +243,7 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     const remaining = form.getByText(t("dispatches.remaining")).first();
     await expect(remaining).toBeVisible(COLD);
 
-    const box = form.getByLabel(t("dispatches.sending")).first();
+    const box = form.getByLabel(t("dispatches.sending")).nth(index);
     await box.fill(String(sending));
 
     // The m² appears as he types, on the same arithmetic the database will use.
@@ -231,6 +262,36 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     await expect(sheet.getByText(t("dispatches.statusSubmitted"), { exact: true })).toBeVisible();
     // What SQL added up, against the same arithmetic as the live figure.
     expect(await figure(sheet, "figure-sending")).toBe(expectedSqm);
+  });
+
+  await test.step("1a · and the quotation behind it now says the customer accepted", async () => {
+    // "A dispatch implies the customer accepted that quotation" (SPEC §3):
+    // sending goods against a price is the answer, and the rep is not asked to
+    // record a second, weaker one afterwards.
+    const row = await one<{ status: string; decided: string | null }>(
+      "select status, decided_at::text as decided from quotations where id = $1::uuid",
+      [quotation.id],
+    );
+    expect(row.status, "the quotation was left waiting on an answer it has").toBe("accepted");
+    expect(row.decided, "accepted with no day on it (quotations_decided_check)").not.toBeNull();
+
+    // One audit row, saying who and when — the trail the drawer prints (D143).
+    const trail = await query<{ id: string }>(
+      `select id from audit_log
+        where action = 'quotation.accepted' and record_id = $1::text`,
+      [quotation.id],
+    );
+    expect(trail, "the implied acceptance left no trail").toHaveLength(1);
+
+    // And the screen agrees: the drawer that offered "Customer accepted" does
+    // not offer it any more, because there is nothing left to record.
+    await page.goto(`/${locale}/quotations?open=${quotation.id}`);
+    const drawer = page.getByRole("dialog", { name: `Q-${quotation.number}` });
+    await expect(drawer.getByText(t("quotations.statusAccepted"), { exact: true })).toBeVisible(
+      COLD,
+    );
+    await expect(drawer.getByRole("button", { name: t("quotations.accepted") })).toHaveCount(0);
+    await page.keyboard.press("Escape");
   });
 
   await test.step("2 · it reaches Rawan's queue and her bell without a reload", async () => {
@@ -314,28 +375,124 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     });
     await expect(form.getByText(t("dispatches.remaining")).first()).toBeVisible(COLD);
 
-    // The first line's remaining count sits under "Left to send" on its card.
+    // That line's remaining count sits under "Left to send" on its own card.
     const left = form
       .getByText(t("dispatches.remaining"))
-      .first()
+      .nth(index)
       .locator("xpath=..")
       .getByText(String(first.remaining - sending), { exact: true });
     await expect(left).toBeVisible();
 
-    // And it opens on the last one's site and terms (D81). A second dispatch
-    // against a job goes to the same gate on the same terms, and both were
-    // typed from nothing every time — the same complaint as the quotation line
-    // one screen back (D74).
-    await expect(form.getByLabel(t("common.destination"))).toHaveValue(DESTINATION);
-    await expect(form.getByLabel(t("common.paymentTerms"))).toHaveValue(TERMS);
-
-    // What is NOT carried is the quantity, which is the whole of what this
-    // dispatch is: every box starts empty, however many the last one sent.
+    // And NOTHING is carried forward from the one before it (SPEC §3, which
+    // overrules D81): not the site, not how it is paid for, not the quantity.
+    // The form used to open on the last dispatch's answers on the argument that
+    // they belong to the job; the founder's rule is flatter than the argument.
+    await expect(form.getByLabel(t("common.destination"))).toHaveValue("");
+    await expect(form.getByLabel(t("common.paymentNote"))).toHaveValue("");
+    for (const chip of await form.getByRole("radio").all()) {
+      await expect(chip).not.toBeChecked();
+    }
     for (const box of await form.getByLabel(t("dispatches.sending")).all()) {
       await expect(box).toHaveValue("");
     }
 
+    // The one answer that does come from somewhere is the store, and it comes
+    // from the QUOTATION rather than from the dispatch before it: a child
+    // reading its own parent is not one record prefilling the next (D159).
+    await expect(form.getByRole("combobox", { name: t("common.warehouse") })).not.toHaveText(
+      t("forms.choose"),
+    );
+
     await page.keyboard.press("Escape");
+  });
+});
+
+/**
+ * How a load is paid for is a choice, and two of the four owe finance a
+ * sentence (SPEC §3, P12-10).
+ *
+ * The founder's rule has three halves and this walks all of them: the choice is
+ * four chips rather than a box to type in; the second question is asked only
+ * where it exists, in the words of the choice it belongs to; and credit and
+ * tasaheel are refused until the rep says what was agreed, because finance
+ * reviews those and cannot review a blank.
+ */
+test("credit is refused until the rep says what was agreed, and the desk reads it", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+  const quotation = await issuedQuotation();
+  const lines = await linesOf(quotation.id);
+  const index = lines.findIndex((line) => line.remaining >= 1);
+  expect(index, "nothing is left to send on this quotation").toBeGreaterThanOrEqual(0);
+  const note = "دفعة أولى 30% والباقي على ثلاث دفعات — معتمد من المالية";
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/quotations?open=${quotation.id}`);
+
+  const drawer = page.getByRole("dialog", { name: `Q-${quotation.number}` });
+  await drawer.getByRole("button", { name: t("dispatches.request") }).click();
+  const form = page.getByRole("dialog", {
+    name: t("dispatches.requestFor", { label: `Q-${quotation.number}` }),
+  });
+  await expect(form.getByLabel(t("dispatches.sending")).first()).toBeVisible(COLD);
+  await form.getByLabel(t("dispatches.sending")).nth(index).fill("1");
+  await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
+  await form.getByLabel(t("common.destination")).fill(DESTINATION);
+
+  await test.step("a transfer asks how much; cash asks when; credit asks neither", async () => {
+    await pressChip(form, t("dispatches.payment.bankTransfer"));
+    await expect(form.getByRole("radio", { name: t("dispatches.payment.fullAmount") })).toBeVisible();
+    await expect(
+      form.getByRole("radio", { name: t("dispatches.payment.onDelivery") }),
+    ).toHaveCount(0);
+
+    await pressChip(form, t("dispatches.payment.cash"));
+    await expect(form.getByRole("radio", { name: t("dispatches.payment.onDelivery") })).toBeVisible();
+    await expect(form.getByRole("radio", { name: t("dispatches.payment.fullAmount") })).toHaveCount(0);
+
+    // And the second question is asked in the words of the answer it belongs
+    // to: an amount for a transfer, a moment for cash.
+    await pressChip(form, t("dispatches.payment.bankTransfer"));
+    await expect(form.getByText(t("dispatches.payment.amount"))).toBeVisible();
+    await pressChip(form, t("dispatches.payment.cash"));
+    await expect(form.getByText(t("dispatches.payment.when"))).toBeVisible();
+
+    await pressChip(form, t("dispatches.payment.credit"));
+    await expect(form.getByRole("radio", { name: t("dispatches.payment.onDelivery") })).toHaveCount(0);
+    // It says why it is not optional, in the founder's own reason.
+    await expect(form.getByText(t("dispatches.payment.noteRequired"))).toBeVisible();
+  });
+
+  await test.step("saved with nothing written, it is refused at the field", async () => {
+    await form.getByRole("button", { name: t("common.save") }).click();
+    await expect(form.getByText(t("dispatches.payment.noteRequired")).last()).toBeVisible(COLD);
+    // Refused, not saved: the form is still open on the answers he gave.
+    await expect(form).toBeVisible();
+  });
+
+  await test.step("with the words, it goes, and the drawer reads them back", async () => {
+    await form.getByLabel(t("common.paymentNote")).fill(note);
+    await form.getByRole("button", { name: t("common.save") }).click();
+    await expect(page).toHaveURL(/\/dispatches\?open=/, COLD);
+
+    const id = new URL(page.url()).searchParams.get("open") ?? "";
+    const row = await one<{ terms: string; detail: string | null; note: string | null }>(
+      `select payment_terms as terms, payment_detail as detail, payment_note as note
+         from dispatches where id = $1::uuid`,
+      [id],
+    );
+    expect(row.terms).toBe("credit");
+    expect(row.detail, "credit was given an answer to a question it does not ask").toBeNull();
+    expect(row.note).toBe(note);
+
+    const sheet = page.getByRole("dialog").filter({ hasText: t("common.paymentTerms") }).first();
+    await expect(sheet.getByText(t("dispatches.payment.credit"), { exact: true })).toBeVisible(
+      COLD,
+    );
+    await expect(sheet.getByText(note)).toBeVisible();
   });
 });
 
@@ -355,8 +512,12 @@ test("a request for more than the quotation has left is refused, in the app's wo
 
   const quotation = await issuedQuotation();
   const lines = await linesOf(quotation.id);
-  const first = lines[0];
-  const tooMany = first.remaining + 1;
+  // The first line with room on it, not the first line: a quotation that has
+  // been partly sent already has boxes the form disables, and a walk that types
+  // into a disabled box proves nothing about the rule it was written for.
+  const index = lines.findIndex((line) => line.remaining >= 1);
+  expect(index, "nothing is left to send on this quotation").toBeGreaterThanOrEqual(0);
+  const tooMany = lines[index].remaining + 1;
 
   await login(page, locale, "faisal");
   await page.goto(`/${locale}/quotations?open=${quotation.id}`);
@@ -369,7 +530,7 @@ test("a request for more than the quotation has left is refused, in the app's wo
   const form = page.getByRole("dialog", {
     name: t("dispatches.requestFor", { label: quotationLabel }),
   });
-  const box = form.getByLabel(t("dispatches.sending")).first();
+  const box = form.getByLabel(t("dispatches.sending")).nth(index);
   await expect(box).toBeVisible(COLD);
   await box.fill(String(tooMany));
 
@@ -398,6 +559,20 @@ test("a request for more than the quotation has left is refused, in the app's wo
  * does (D79): it leaves Rawan's queue, and it lands on Faisal's day under
  * "Waiting on you" carrying her words, exactly like a sent-back quotation.
  */
+/**
+ * The coordinator's own "answered today" figure, read off her queue.
+ *
+ * The label and the number are a `dt`/`dd` pair in one tile of the standing
+ * strip (`src/components/ui-ext/standing-strip.tsx`), so the number is found
+ * through the word above it rather than by position — a strip that gains a
+ * figure would otherwise silently move this one.
+ */
+function answeredToday(page: Page, t: Translate): Locator {
+  return page
+    .locator('dt[data-slot="figure-label"]', { hasText: t("queue.answeredToday") })
+    .locator("xpath=following-sibling::dd[1]");
+}
+
 test("the desk refuses a dispatch with a reason, and the rep reads it on his day", async ({
   page,
   locale,
@@ -406,6 +581,9 @@ test("the desk refuses a dispatch with a reason, and the rep reads it on his day
   test.slow(); // Two sign-ins and a dialog.
 
   const start = new Date();
+  // Read off her screen after she refuses, and read again after he has fixed
+  // it. What she did this morning is not the rep's to undo (§5 #185).
+  let answered = 0;
   const dispatch = await one<{ id: string; number: number }>(
     `select id, number from dispatches where status = 'submitted' order by created_at limit 1`,
   );
@@ -431,6 +609,9 @@ test("the desk refuses a dispatch with a reason, and the rep reads it on his day
       // the same user who just acted, not the second-context check further up.
       await page.goto(`/${locale}/queue`);
       await expect(page.getByText(label, { exact: true })).toHaveCount(0);
+
+      answered = Number(await answeredToday(page, t).innerText());
+      expect(answered, "the refusal she just made is not in her own figure").toBeGreaterThan(0);
     });
 
     await test.step("the row and one audit row carry the refusal", async () => {
@@ -461,6 +642,64 @@ test("the desk refuses a dispatch with a reason, and the rep reads it on his day
       const card = labelText.locator("xpath=ancestor::li[1]");
       await expect(card.getByText(t("day.refused"), { exact: true })).toBeVisible();
       await expect(card.getByText(reason)).toBeVisible();
+    });
+
+    await test.step("he corrects it and sends it again, as the same request", async () => {
+      // A refusal is the dispatch chain's send-back (SPEC §3, P12-10): he
+      // answers it from the record itself, not by typing a new one from
+      // nothing — which is the only other way now that §3 forbids carrying
+      // anything forward.
+      await page.goto(`/${locale}/dispatches?open=${dispatch.id}`);
+      const sheet = sheetFor(page, label);
+      await expect(sheet).toBeVisible(COLD);
+      // Twice on this screen: the panel that says why it came back, and the
+      // trail underneath it (D143). The panel is the first.
+      await expect(sheet.getByText(reason).first()).toBeVisible();
+
+      await sheet.getByRole("button", { name: t("dispatches.editRequest") }).click();
+      const form = page.getByRole("dialog", { name: t("dispatches.editRequest") });
+      await expect(form.getByLabel(t("dispatches.sending")).first()).toBeVisible(COLD);
+      await form.getByRole("button", { name: t("common.save") }).click();
+      await expect(page.getByText(t("dispatches.updated"))).toBeVisible(COLD);
+
+      // Back on her desk as the same number, and her words are off the row:
+      // a reason lives exactly as long as the state it explains (D72).
+      const row = await one<{ status: string; reason: string | null }>(
+        "select status, refuse_reason as reason from dispatches where id = $1::uuid",
+        [dispatch.id],
+      );
+      expect(row.status).toBe("submitted");
+      expect(row.reason, "the refusal outlived the state it explained").toBeNull();
+
+      // The trail keeps the whole story, which is where a reason belongs once
+      // the row has moved on (D143).
+      const trail = await query<{ action: string }>(
+        `select action from audit_log
+          where record_type = 'dispatch' and record_id = $1::text and at >= $2::timestamptz
+          order by at`,
+        [dispatch.id, start.toISOString()],
+      );
+      expect(trail.map((line) => line.action)).toEqual(["dispatch.refuse", "dispatch.update"]);
+
+      // And the notice she raised is cleared by the WORK, not by his reading it
+      // (D79): the row he fixed is not still bold in his bell.
+      const bell = await query<{ kind: string }>(
+        `select kind from notifications
+          where subject_type = 'dispatch' and subject_id = $1::uuid
+            and created_at >= $2::timestamptz`,
+        [dispatch.id, start.toISOString()],
+      );
+      expect(bell.map((row) => row.kind)).toEqual(["dispatchRequested"]);
+    });
+
+    await test.step("her figure still counts the refusal she made this morning", async () => {
+      // It counted the STATES the rows were in — dispatches in
+      // ('approved','refused'), updated today — so the moment he fixed this
+      // one her own number went down, hours after she had done the work. It
+      // reads the audit log now, where the event is (§5 #185).
+      await login(page, locale, "rawan");
+      await page.goto(`/${locale}/queue`);
+      await expect(answeredToday(page, t)).toHaveText(String(answered), COLD);
     });
   } finally {
     await query(

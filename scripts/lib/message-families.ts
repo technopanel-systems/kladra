@@ -73,6 +73,11 @@ export const families: [string, string[]][] = [
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
   ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
   ["dispatches.event", union("src/lib/dispatch-events.ts", "DISPATCH_EVENTS")],
+  // How a load is paid for, and the second answer two of the four take (§3):
+  // the form and the drawer both render these from the lists themselves, so
+  // both locales are held to every member of them.
+  ["dispatches.payment", union("src/lib/payment.ts", "PAYMENT_TERMS")],
+  ["dispatches.payment", union("src/lib/payment.ts", "PAYMENT_DETAILS")],
   ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
   ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
   ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],

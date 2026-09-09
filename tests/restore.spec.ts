@@ -19,12 +19,21 @@ import { test, expect } from "./helpers/i18n";
  *  (tests/admin.spec.ts). */
 const COLD = { timeout: 30_000 };
 
-/** A card in one of the admin's lists, by the text in it — and, where two
- *  rows could share a name (a contact's card also names its company), by the
- *  kind badge on the row (tests/admin.spec.ts's `card`, narrowed). */
+/**
+ * A card in one of the admin's lists, by the text in it — and, where two rows
+ * could share a name (a contact's card also names its company), by the kind
+ * BADGE on the row.
+ *
+ * The badge is matched on its exact text, not with `hasText`, which is a
+ * substring: in Arabic the word for company is «شركة» and most Saudi companies
+ * are called «شركة …», so "a listitem naming this company and containing the
+ * word company" is every contact card on the customer as well as the company's
+ * own. It resolved to whichever the archive list drew first, which is a test
+ * that passes on the order of a list nobody promised an order for.
+ */
 function card(page: Page, name: string, kind?: string): Locator {
   const byName = page.getByRole("listitem").filter({ hasText: name });
-  return (kind ? byName.filter({ hasText: kind }) : byName).first();
+  return (kind ? byName.filter({ has: page.getByText(kind, { exact: true }) }) : byName).first();
 }
 
 async function openAdmin(page: Page, locale: string, path: string, heading: string) {

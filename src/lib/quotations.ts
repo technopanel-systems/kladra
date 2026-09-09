@@ -79,8 +79,8 @@ export type QuotationRow = {
   status: QuotationStatus;
   companyId: string;
   companyName: string;
-  projectId: string | null;
-  projectName: string | null;
+  projectId: string;
+  projectName: string;
   /**
    * The project this is against has been marked lost SINCE it was raised
    * (D138). A new request on a lost project is refused at the action, so the
@@ -245,8 +245,8 @@ type Selected = {
   status: string;
   companyId: string;
   companyName: string;
-  projectId: string | null;
-  projectName: string | null;
+  projectId: string;
+  projectName: string;
   projectLostOn: string | null;
   projectLostReason: string | null;
   repId: string;
@@ -274,8 +274,8 @@ function toRow(row: Selected): QuotationRow {
     status: row.status as QuotationStatus,
     companyId: row.companyId,
     companyName: row.companyName,
-    projectId: row.projectId ?? null,
-    projectName: row.projectName ?? null,
+    projectId: row.projectId,
+    projectName: row.projectName,
     projectLostOn: row.projectLostOn ?? null,
     projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
@@ -310,7 +310,7 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .where(and(...conditions))
     .orderBy(input.order === "oldest" ? asc(quotations.createdAt) : desc(quotations.createdAt))
@@ -379,7 +379,7 @@ export async function quotationWaitDays(input: ListQuotationsInput): Promise<Day
     .select({ day: riyadhDay(sql`quotations.created_at`) })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(and(...narrowTo(input)))
     .orderBy(asc(quotations.createdAt));
   return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
@@ -391,7 +391,7 @@ export async function countQuotations(input: ListQuotationsInput): Promise<numbe
     .select({ total: sql<number>`count(*)::int` })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(and(...narrowTo(input)));
   return Number(row?.total ?? 0);
 }
@@ -467,7 +467,7 @@ export type QuotationDetail = QuotationRow & {
    * the same question `requestDispatchAction` asks and not a narrower one
    * (§5 #163).
    */
-  projectRepId: string | null;
+  projectRepId: string;
   onProject: boolean;
   /**
    * Raised and issued by the same person, in one act (SPEC §3). Only the
@@ -529,7 +529,7 @@ export async function getQuotation(
     .innerJoin(users, eq(users.id, quotations.repId))
     .innerJoin(warehouses, eq(warehouses.id, quotations.warehouseId))
     .leftJoin(contacts, eq(contacts.id, quotations.contactId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .where(eq(quotations.id, id))
     .limit(1);
@@ -587,7 +587,7 @@ export async function getQuotation(
     revisionOf: row.revisionOf ?? null,
     selfIssued: Boolean(row.selfIssued),
     credit: await creditOnQuotation(id),
-    projectRepId: row.projectRepId ?? null,
+    projectRepId: row.projectRepId,
     onProject: Boolean(row.onProject),
     warehouseId: row.warehouseId,
     warehouseName: row.warehouseName,
@@ -632,7 +632,7 @@ export async function listQuotationsForProject(
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .where(
       and(
@@ -656,7 +656,7 @@ export async function listQuotationsForCompany(
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .where(
       and(

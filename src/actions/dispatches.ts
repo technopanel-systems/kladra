@@ -22,6 +22,8 @@
  */
 
 import { dispatchEvent } from "@/lib/dispatch-events";
+import { quotationEvent } from "@/lib/quotation-events";
+import { withTheRep } from "@/lib/with-the-rep";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -45,6 +47,14 @@ import { dispatchable, type QuotationStatus } from "@/lib/quotations";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
+import {
+  detailsFor,
+  needsNote,
+  PAYMENT_DETAILS,
+  PAYMENT_TERMS,
+  type PaymentDetail,
+  type PaymentTerms,
+} from "@/lib/payment";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { holdDispatch, holdQuotation, isLiveRevision } from "@/lib/hold";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
@@ -96,12 +106,12 @@ type Loaded = {
   status: DispatchStatus;
   quotationId: string;
   quotationLabel: string;
-  projectId: string | null;
+  projectId: string;
   companyId: string;
   /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
   companyRepId: string;
   /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
-  projectRepId: string | null;
+  projectRepId: string;
   shared: boolean;
   onProject: boolean;
 };
@@ -129,7 +139,7 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(eq(dispatches.id, dispatchId))
     .limit(1);
 
@@ -143,10 +153,10 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
     status: row.status as DispatchStatus,
     quotationId: row.quotationId,
     quotationLabel: quotationLabel(row.quotationNumber, row.quotationRevision),
-    projectId: row.projectId ?? null,
+    projectId: row.projectId,
     companyId: row.companyId,
     companyRepId: row.companyRepId,
-    projectRepId: row.projectRepId ?? null,
+    projectRepId: row.projectRepId,
     shared: row.shared,
     onProject: row.onProject,
   };
@@ -190,8 +200,55 @@ const detailsSchema = z.object({
    */
   warehouseId: z.coerce.number().int().positive(),
   destination: z.string().trim().min(1).max(500),
-  paymentTerms: z.string().trim().min(1).max(1000),
+  /**
+   * How it is being paid for (SPEC §3, P12-10): the choice, the second answer
+   * where the choice asks for one, and the note the other two require. Flat
+   * here and checked together below, because a refusal has to name the field
+   * that is wrong and a Zod refinement over the whole object names none.
+   */
+  paymentTerms: z.enum(PAYMENT_TERMS),
+  paymentDetail: z.enum(PAYMENT_DETAILS).optional(),
+  paymentNote: z.string().trim().max(1000).optional(),
 });
+
+type Payment = {
+  paymentTerms: PaymentTerms;
+  paymentDetail: PaymentDetail | null;
+  paymentNote: string | null;
+};
+
+/**
+ * The two rules that hold between the three answers, said once for the raise
+ * and the correction alike (SPEC §3).
+ *
+ * The second question is answered when it is asked, with one of ITS answers —
+ * "on delivery" is not a thing a bank transfer can be — and the note is there
+ * for the two finance reviews. Where there is no second question the detail is
+ * dropped rather than refused: a rep who chooses transfer, answers it, then
+ * changes his mind to credit has not made a mistake, and the browser is not
+ * where that gets decided (the column refuses it either way).
+ */
+function readPayment(
+  input: z.infer<typeof detailsSchema>,
+  says: { required: string; noteRequired: string },
+): { ok: true; payment: Payment } | { ok: false; field: string; message: string } {
+  const allowed = detailsFor(input.paymentTerms);
+  if (allowed.length > 0 && (!input.paymentDetail || !allowed.includes(input.paymentDetail))) {
+    return { ok: false, field: "paymentDetail", message: says.required };
+  }
+  const note = input.paymentNote?.trim() || null;
+  if (needsNote(input.paymentTerms) && !note) {
+    return { ok: false, field: "paymentNote", message: says.noteRequired };
+  }
+  return {
+    ok: true,
+    payment: {
+      paymentTerms: input.paymentTerms,
+      paymentDetail: allowed.length > 0 ? (input.paymentDetail ?? null) : null,
+      paymentNote: note,
+    },
+  };
+}
 
 type QuantityCheck = "ok" | "tooMuch" | "notOnQuotation";
 
@@ -284,6 +341,8 @@ export async function requestDispatchAction(
         warehouseId: field(formData, "warehouseId"),
         destination: field(formData, "destination"),
         paymentTerms: field(formData, "paymentTerms"),
+        paymentDetail: field(formData, "paymentDetail"),
+        paymentNote: field(formData, "paymentNote"),
       });
     if (!parsed.success) {
       return {
@@ -292,6 +351,15 @@ export async function requestDispatchAction(
         fieldErrors: fieldErrorsOf(parsed.error, tc("required"), tc("invalid")),
       };
     }
+
+    const paid = readPayment(parsed.data, {
+      required: tc("required"),
+      noteRequired: td("payment.noteRequired"),
+    });
+    if (!paid.ok) {
+      return { ok: false, error: paid.message, fieldErrors: { [paid.field]: paid.message } };
+    }
+    const { payment } = paid;
 
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: td("needsItems") };
@@ -311,7 +379,7 @@ export async function requestDispatchAction(
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
-      .leftJoin(projects, eq(projects.id, quotations.projectId))
+      .innerJoin(projects, eq(projects.id, quotations.projectId))
       .where(eq(quotations.id, parsed.data.quotationId))
       .limit(1);
     if (!quotation) return { ok: false, error: td("quotationNotFound") };
@@ -363,7 +431,12 @@ export async function requestDispatchAction(
       // requests against it run one after the other and the second reads the
       // lines the first wrote (D85). A revision raised meanwhile holds the
       // same row, which is why "still live" is asked after the hold.
-      await holdQuotation(tx, quotation.id);
+      const held = await holdQuotation(tx, quotation.id);
+      // And so is the STATUS asked after it. The read above happened before the
+      // row was held, so a quotation withdrawn or sent back in between would
+      // have taken a dispatch anyway — the hole D85 is about, in the one place
+      // that still had it (P12-10).
+      if (!dispatchable(held as QuotationStatus)) return { failure: "notDispatchable" } as const;
       if (!(await isLiveRevision(tx, quotation.id))) return { failure: "superseded" } as const;
       // Checked before anything is written, so a refusal is a sentence rather
       // than a rolled-back transaction wearing "something went wrong".
@@ -379,7 +452,7 @@ export async function requestDispatchAction(
           shipmentMethodId: parsed.data.shipmentMethodId,
           warehouseId: parsed.data.warehouseId,
           destination: parsed.data.destination,
-          paymentTerms: parsed.data.paymentTerms,
+          ...payment,
         })
         .returning({ id: dispatches.id, number: dispatches.number });
 
@@ -389,6 +462,55 @@ export async function requestDispatchAction(
       // (D148): one name on a job one rep works, and on a shared one whatever
       // he answered above.
       await creditDispatch(tx, row.id, credit);
+
+      /*
+       * "A dispatch implies the customer accepted that quotation" (SPEC §3).
+       *
+       * Sending goods against a price is the strongest answer a customer gives,
+       * and a rep had to remember to record a second, weaker one afterwards.
+       * Recorded here, under the hold the dispatch is written under, so the two
+       * facts cannot disagree: there is no moment where goods are moving
+       * against a quotation the app still says the customer has not answered.
+       *
+       * Not gated by "only its raiser may decide" the way the manual action is:
+       * a rep on a shared job who sends the goods is recording what the CUSTOMER
+       * did, not editing another rep's record. The manual action stays for the
+       * quotation accepted and not yet dispatched, which is the founder's own
+       * carve-out, and a later refusal by the desk does not undo this — she
+       * refuses the load, and the customer's yes is not hers to withdraw.
+       *
+       * No second notice: the coordinator is being told about the dispatch in
+       * this same transaction, and "he accepted" beside "he has sent you a
+       * request against it" is one event announced twice (D79).
+       */
+      if (held === "issued") {
+        await tx
+          .update(quotations)
+          .set({ status: "accepted", decidedAt: new Date() })
+          .where(eq(quotations.id, quotation.id));
+
+        await tx.insert(auditLog).values({
+          userId: actor.id,
+          action: quotationEvent("accepted"),
+          recordType: "quotation",
+          recordId: quotation.id,
+          details: { impliedBy: "dispatch" },
+        });
+
+        // What "issued" was telling him to chase has happened (D79).
+        await clearNotifications(tx, { type: "quotation", id: quotation.id }, ["quotationIssued"]);
+
+        await notifyLive(
+          tx,
+          await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]),
+          {
+            type: "quotation",
+            id: quotation.id,
+            number: quotationLabel(quotation.number, quotation.revision),
+            status: "accepted",
+          },
+        );
+      }
 
       const label = dispatchLabel(row.number);
       await tx.insert(auditLog).values({
@@ -426,7 +548,9 @@ export async function requestDispatchAction(
             ? td("tooMuch")
             : outcome.failure === "superseded"
               ? td("supersededQuotation")
-              : td("notOnQuotation"),
+              : outcome.failure === "notDispatchable"
+                ? td("quotationNotIssued")
+                : td("notOnQuotation"),
       };
     }
 
@@ -458,6 +582,8 @@ export async function updateDispatchAction(
         warehouseId: field(formData, "warehouseId"),
         destination: field(formData, "destination"),
         paymentTerms: field(formData, "paymentTerms"),
+        paymentDetail: field(formData, "paymentDetail"),
+        paymentNote: field(formData, "paymentNote"),
       });
     if (!parsed.success) {
       return {
@@ -467,6 +593,15 @@ export async function updateDispatchAction(
       };
     }
 
+    const paid = readPayment(parsed.data, {
+      required: tc("required"),
+      noteRequired: td("payment.noteRequired"),
+    });
+    if (!paid.ok) {
+      return { ok: false, error: paid.message, fieldErrors: { [paid.field]: paid.message } };
+    }
+    const { payment } = paid;
+
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: td("needsItems") };
 
@@ -474,7 +609,11 @@ export async function updateDispatchAction(
     if (!dispatch) return { ok: false, error: td("notFound") };
     if (!mayRaiseFor(actor, dispatch.companyRepId, dispatch.projectRepId, dispatch.onProject))
       throw new NotAllowed();
-    if (dispatch.status !== "submitted") return { ok: false, error: td("notWaiting") };
+    // Waiting on the desk, or sent back by it (SPEC §3, P12-10). Refusing a
+    // load is the dispatch chain's Send back — §2 S53 calls a request sent back
+    // or refused one kind of event — and a refusal that cannot be answered
+    // means retyping every line, now that nothing is carried forward.
+    if (!withTheRep(dispatch.status)) return { ok: false, error: td("notWaiting") };
 
     const asked = askedFor(items);
     if (asked.length === 0) return { ok: false, error: td("needsItems") };
@@ -487,10 +626,18 @@ export async function updateDispatchAction(
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
     const failure = await db.transaction(async (tx) => {
-      // Held: the dispatch must still be waiting, and the lines of the
-      // quotation are read after the hold, as for a new request (D85).
-      if ((await holdDispatch(tx, dispatch.id)) !== "submitted") return "answered";
-      await holdQuotation(tx, dispatch.quotationId);
+      // Held, and the state read AFTER the hold: approved while he was typing
+      // is not his to change, and the lines of the quotation are read after it
+      // too, as for a new request (D85).
+      const held = await holdDispatch(tx, dispatch.id);
+      // Null is a row that is not there any more, which is not his either.
+      if (!held || !withTheRep(held)) return "answered";
+      const cameBack = held === "refused";
+      const parent = await holdQuotation(tx, dispatch.quotationId);
+      // A refused request may have sat for a week, and the paper under it can
+      // have been revised or withdrawn since (S34, S38).
+      if (cameBack && !dispatchable(parent as QuotationStatus)) return "notDispatchable";
+      if (cameBack && !(await isLiveRevision(tx, dispatch.quotationId))) return "superseded";
       const check = await checkQuantities(tx, dispatch.quotationId, asked, dispatch.id);
       if (check !== "ok") return check;
       await replaceItems(tx, dispatch.id, asked);
@@ -504,7 +651,12 @@ export async function updateDispatchAction(
           // request waiting on the desk has moved nothing yet (SPEC §3, P12-9).
           warehouseId: parsed.data.warehouseId,
           destination: parsed.data.destination,
-          paymentTerms: parsed.data.paymentTerms,
+          ...payment,
+          // Back on the desk, and her words go with the state they explained:
+          // a request he has already fixed must not still say what was wrong
+          // with it (D72, and the constraint that holds the pair together).
+          status: "submitted",
+          refuseReason: null,
         })
         .where(eq(dispatches.id, dispatch.id));
 
@@ -513,8 +665,28 @@ export async function updateDispatchAction(
         action: dispatchEvent("update"),
         recordType: "dispatch",
         recordId: dispatch.id,
-        details: { lines: asked.length },
+        // Where it came from, always — the quotation's own update row has said
+        // it that way since P9, and the desk's "arrived today" reads it back to
+        // count a refusal he has fixed as work landing again (P12-10).
+        details: { lines: asked.length, from: held },
       });
+
+      // Only news to her if it had been sent back: an edit to something already
+      // on her desk is the same request with different lines. The mirror of
+      // what a fixed quotation does (src/actions/quotations.ts).
+      if (cameBack) {
+        // He has done what the refusal asked, so it stops being a row (D79).
+        await clearNotifications(tx, { type: "dispatch", id: dispatch.id }, ["dispatchRefused"]);
+        for (const userId of await coordinators()) {
+          await createNotification(tx, {
+            userId,
+            kind: "dispatchRequested",
+            params: { label: dispatch.label, repId: actor.id },
+            link: `/queue?dispatch=${dispatch.id}`,
+            subject: { type: "dispatch", id: dispatch.id },
+          });
+        }
+      }
 
       await notifyLive(tx, await liveAudienceForCompany(dispatch.companyId, actor.id, ["coordinator"]), {
         type: "dispatch",
@@ -528,6 +700,8 @@ export async function updateDispatchAction(
     if (failure === "answered") return { ok: false, error: td("notWaiting") };
     if (failure === "tooMuch") return { ok: false, error: td("tooMuch") };
     if (failure === "notOnQuotation") return { ok: false, error: td("notOnQuotation") };
+    if (failure === "notDispatchable") return { ok: false, error: td("quotationNotIssued") };
+    if (failure === "superseded") return { ok: false, error: td("supersededQuotation") };
 
     revalidateChain();
     return { ok: true, data: { dispatchId: dispatch.id } };

@@ -13,7 +13,6 @@
   "newProject": "Add project",
   "newProjectIn": "Add project at {company}",
   "newProjectHint": "The name, your m² estimate and when to follow up.",
-  "pickCompany": "Choose a company",
   "noCompanies": "No companies on your list yet.",
   "namePlaceholder": "Tower A",
   "expectedSqmHint": "Your own estimate. The pipeline is the sum of these.",

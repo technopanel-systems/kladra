@@ -95,18 +95,21 @@ export function mayKeepContacts(user: SessionUser, companyRepId: string, shared 
  * rules underneath, so an admin viewing as somebody and a role that holds no
  * floor are refused here for the reasons they are refused everywhere.
  *
- * A quotation with no project is a company's own stock, and there is no job to
- * be on: its company's rep raises it and nobody else.
+ * The job is never absent. Every quotation names one (S18, P12-10), and the
+ * third argument was nullable for the shape that used to exist beside it — a
+ * price raised against a company and no job at all, whose only way in was the
+ * seed. A null there meant "second way in closed", which is a rule this
+ * function does not have any more.
  */
 export function mayRaiseFor(
   user: SessionUser,
   companyRepId: string,
-  projectRepId: string | null,
+  projectRepId: string,
   onProject = false,
 ): boolean {
   if (!sells(user.role)) return false;
   if (mayWrite(user, companyRepId)) return true;
-  return projectRepId !== null && mayWorkProject(user, projectRepId, onProject);
+  return mayWorkProject(user, projectRepId, onProject);
 }
 
 /**

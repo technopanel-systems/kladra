@@ -27,6 +27,7 @@ import {
 
 // Relative, not "@/lib/types": drizzle-kit reads this file outside Next and
 // does not know the alias. types.ts imports nothing, so nothing follows it in.
+import { PAYMENT_DETAILS, PAYMENT_TERMS } from "../lib/payment";
 import { ROLES } from "../lib/types";
 
 export const roleEnum = pgEnum("role", ROLES);
@@ -41,6 +42,15 @@ export const quotationStatusEnum = pgEnum("quotation_status", [
   "cancelled",
 ]);
 export const dispatchStatusEnum = pgEnum("dispatch_status", ["submitted", "approved", "refused"]);
+
+/**
+ * How a load is being paid for (SPEC §3, P12-10), and the second answer two of
+ * the four take. Both lists live in `src/lib/payment.ts` with the rules that
+ * make them a tree rather than a list, and both are read from there so the
+ * column and the form cannot come to disagree about what an answer is.
+ */
+export const paymentTermsEnum = pgEnum("payment_terms", PAYMENT_TERMS);
+export const paymentDetailEnum = pgEnum("payment_detail", PAYMENT_DETAILS);
 
 // Human-facing numbers: Q-1, Q-2 … and D-1, D-2 … never reused.
 export const quotationNumbers = pgSequence("quotation_numbers", { startWith: 1 });
@@ -669,15 +679,34 @@ export const quotations = pgTable(
     companyId: uuid("company_id")
       .notNull()
       .references(() => companies.id),
-    projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    /**
+     * The job this price is for (SPEC §3 S18, P12-10).
+     *
+     * NOT NULL, and no `set null` under it. "Every quotation belongs to a
+     * project" is the founder's own sentence, and the form has refused a
+     * quotation without one since P12-9 — but the column stayed optional, so
+     * every reader of it carried a second shape that the app could no longer
+     * produce: eighteen left joins, four nullable types and eight `?? "—"`
+     * branches drawing a dash nobody has seen since the seed was written.
+     * A column looser than the form is the wrong way round (rules/data.md).
+     *
+     * `set null` went with it. It is a rule about deletion, and a project is
+     * archived rather than deleted here, so what it actually said was "if a job
+     * is ever removed, quietly detach its quotations" — the one outcome S18
+     * forbids. Without it the foreign key refuses the delete instead, which is
+     * the true answer.
+     */
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id),
     /**
      * Who at the customer this price is for (P12-9).
      *
      * The chain a rep thinks in is company → project → contact, and the last of
      * the three had nowhere to be recorded: the coordinator issuing the paper
      * had a company and a job and no name to address it to, so she asked on
-     * WhatsApp. Optional, because a price for stock is sometimes for the
-     * company rather than for anybody in particular.
+     * WhatsApp. Optional, because a price is sometimes for the company rather
+     * than for anybody in particular — the job beside it never is (S18).
      *
      * A plain reference and not a composite one against `(id, company_id)`,
      * which would guarantee that the person is at the company named beside him.
@@ -842,7 +871,21 @@ export const dispatches = pgTable(
       .notNull()
       .references(() => warehouses.id),
     destination: text("destination").notNull(),
-    paymentTerms: text("payment_terms").notNull(),
+    /**
+     * How it is being paid for: a choice, its second answer, and the rep's own
+     * words where the founder asked for them (SPEC §3, P12-10, overruling D12).
+     *
+     * It was one free-text box, which is a column finance cannot read: "50%
+     * مقدم والباقي عند التسليم" and "تحويل بنكي خلال 30 يوم" are the same
+     * arrangement typed by two people, and nothing can count either. The
+     * detail exists for two of the four and belongs to the one it was asked of;
+     * the note is mandatory for the two that finance reviews. Both rules are
+     * checks below, because the column is the guard for the ways in that are
+     * not the form.
+     */
+    paymentTerms: paymentTermsEnum("payment_terms").notNull(),
+    paymentDetail: paymentDetailEnum("payment_detail"),
+    paymentNote: text("payment_note"),
     smacDispatchNumber: text("smac_dispatch_number"),
     refuseReason: text("refuse_reason"),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
@@ -862,6 +905,43 @@ export const dispatches = pgTable(
       sql`(${t.smacDispatchNumber} is not null) = (${t.status} = 'approved')`,
     ),
     check("dispatches_refused_check", sql`(${t.refuseReason} is not null) = (${t.status} = 'refused')`),
+    /*
+     * The second question exists for exactly two of the four, and the answer
+     * belongs to the question it was asked of: "on delivery" is not a thing a
+     * bank transfer can be.
+     *
+     * Written with `is not null and` in front of every `in`, because a CHECK
+     * refuses a row only when its expression is FALSE and `null in (a, b)` is
+     * NULL — the shorter form reads correctly and lets a transfer through with
+     * no amount on it (§5 #176).
+     */
+    check(
+      "dispatches_payment_detail_check",
+      sql`case ${t.paymentTerms}
+            when 'bankTransfer'
+              then ${t.paymentDetail} is not null
+                   and ${t.paymentDetail} in ('fullAmount', 'partAmount')
+            when 'cash'
+              then ${t.paymentDetail} is not null
+                   and ${t.paymentDetail} in ('onDelivery', 'atOffice')
+            else ${t.paymentDetail} is null
+          end`,
+    ),
+    // "Credit and tasaheel — a note from the rep explaining the terms is
+    // mandatory, for finance to review" (SPEC §3).
+    check(
+      "dispatches_payment_note_check",
+      sql`case when ${t.paymentTerms} in ('credit', 'tasaheel')
+            then ${t.paymentNote} is not null
+            else true end`,
+    ),
+    // And a note that is there has something in it. `btrim` with no second
+    // argument trims spaces and not tabs or newlines, which is how an empty
+    // daily report got past its own constraint once (rules/data.md).
+    check(
+      "dispatches_payment_note_blank_check",
+      sql`${t.paymentNote} is null or ${t.paymentNote} ~ '[^[:space:]]'`,
+    ),
     // Raised, and THEN approved. The demo built the two instants on two clocks —
     // working days back from today for the raising, a fixed day of this month for
     // the approval, because a month is counted from approvals — and past the first

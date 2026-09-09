@@ -36,11 +36,11 @@ import { join } from "node:path";
 const ADDRESSED_TO_A_MAN = [
   // "leave it" with its object attached, which whole-word matching cannot
   // see through: "فاتركه" shipped in admin.lastDayHint until the P11H reviewer read it.
+  // The ATTACHED OBJECT still needs listing; the attached conjunction does not
+  // any more — see `CONJUNCTIONS` below.
   "اترك",
   "اتركه",
   "اتركها",
-  "فاتركه",
-  "فاتركها",
   "اتصل",
   "اتّصل",
   "اختر",
@@ -90,6 +90,28 @@ const WORD = /[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]+/g;
 
 const forbidden = new Set(ADDRESSED_TO_A_MAN.map((word) => word.replace(HARAKAT, "")));
 
+/**
+ * The two letters Arabic glues to the FRONT of a verb, and the hole they left.
+ *
+ * `فاكتب` — "so write" — shipped in P12-10's payment hint and nothing saw it:
+ * whole-word matching cannot see through a prefix, exactly as it could not see
+ * through the attached object in `فاتركه` one phase earlier (P11H). Two entries
+ * were added by hand that time; the same shape came back one letter over, so
+ * this reads through the prefix instead of asking the list to carry every
+ * combination of two conjunctions and thirty verbs.
+ *
+ * Only `ف` and `و`. The other proclitics — `ب`, `ل`, `ك`, `س` — attach to nouns
+ * and to the imperfect, never to an imperative, so admitting them would only
+ * widen the ways an innocent word can be mistaken for one.
+ */
+const CONJUNCTIONS = ["ف", "و"];
+
+/** Is this word an order to a man, with or without a conjunction in front? */
+function addressesAMan(bare: string): boolean {
+  if (forbidden.has(bare)) return true;
+  return CONJUNCTIONS.some((letter) => bare.startsWith(letter) && forbidden.has(bare.slice(1)));
+}
+
 type Finding = { file: string; key: string; word: string; text: string };
 
 function walk(node: unknown, path: string[], onString: (key: string, text: string) => void): void {
@@ -108,7 +130,7 @@ for (const file of readdirSync(dir).filter((name) => name.endsWith(".json")).sor
       // A damma on a verb is what makes it passive — "was logged", not "log it".
       if (word.includes(DAMMA)) continue;
       const bare = word.replace(HARAKAT, "");
-      if (forbidden.has(bare)) findings.push({ file, key, word, text });
+      if (addressesAMan(bare)) findings.push({ file, key, word, text });
     }
   });
 }

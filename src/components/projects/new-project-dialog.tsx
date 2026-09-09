@@ -154,7 +154,7 @@ export function NewProjectDialog({
                   setErrors((prev) => (prev.companyId ? { ...prev, companyId: "" } : prev));
                 }}
                 disabled={pending}
-                placeholder={t("projects.pickCompany")}
+                placeholder={t("common.pickCompany")}
                 searchPlaceholder={t("forms.searchList")}
                 emptyText={t("projects.noCompanies")}
               />

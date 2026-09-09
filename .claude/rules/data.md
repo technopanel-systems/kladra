@@ -153,6 +153,18 @@ broken at least once in FACET, Kladra's predecessor.
   belongs to one state: `(col is not null) = (status = …)`. An action that
   forgets then fails at the write instead of quietly in the column.
 
+- **A figure about an event is counted from the event, not from the state the
+  rows are in now.** The coordinator's "answered today" counted quotations in
+  `('issued','returned')` and dispatches in `('approved','refused')` whose
+  `updated_at` was today — a count of states standing in for a count of what she
+  DID. It was almost right while a refusal ended a dispatch, and wrong the moment
+  the rep could correct one and send it again: she refused it at ten, he fixed it
+  at two, and her own morning left her screen. `audit_log` is where every write in
+  this app already records what happened and when, so a figure about an act reads
+  the act. The test of the shape: **can somebody else's later work change this
+  number?** If it can, the number is about a state and it was asked as though it
+  were about an event.
+
 - **A figure the demo always shows as zero is a figure nobody has ever seen
   work.** The manager's "requests waiting" counted quotations stuck more than
   two working days, and the seed's oldest request was one working day old — so

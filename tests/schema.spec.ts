@@ -78,6 +78,85 @@ test("there is no price out of nowhere and no load from nowhere (0021, P12-9)", 
   expect(stranger).toContain("violates foreign key constraint");
 });
 
+test("every quotation names a job, and the column is what says so (0023, P12-10)", async () => {
+  const quotation = await one<{ id: string }>("select id from quotations limit 1");
+
+  // S18 is the founder's own sentence and the form has refused a quotation
+  // without a job since P12-9 — but the COLUMN stayed optional behind it, so
+  // eighteen queries carried a shape only the seed could produce (§5 #184).
+  // A column looser than the form is the wrong way round (rules/data.md).
+  expect(
+    await refused("update quotations set project_id = null where id = $1::uuid", [quotation.id]),
+    "a quotation with no job on it",
+  ).toContain("null value");
+
+  // And the job has to be a job. `on delete set null` went with the null: a
+  // project is archived and never deleted here, so that clause only ever said
+  // "quietly detach the prices if a job is somehow removed", which is the one
+  // outcome S18 forbids. The foreign key refuses the delete instead.
+  const project = await one<{ id: string }>(
+    "select project_id as id from quotations where id = $1::uuid",
+    [quotation.id],
+  );
+  expect(
+    await refused("delete from projects where id = $1::uuid", [project.id]),
+    "a job deleted out from under the prices raised on it",
+  ).toContain("violates foreign key constraint");
+});
+
+test("how a load is paid for is a choice the column holds to its own shape (0022, P12-10)", async () => {
+  const id = (await one<{ id: string }>("select id from dispatches limit 1")).id;
+  const set = (fields: string) =>
+    refused(`update dispatches set ${fields} where id = $1::uuid`, [id]);
+
+  // The second question is answered when it is asked. This is the case a CHECK
+  // written the short way lets through: `payment_detail in (…)` is NULL rather
+  // than FALSE when the column is null, and a CHECK refuses only on FALSE
+  // (§5 #176), so the constraint carries `is not null and` in front of it.
+  expect(
+    await set("payment_terms = 'bankTransfer', payment_detail = null, payment_note = null"),
+    "a transfer with no amount on it",
+  ).toContain("dispatches_payment_detail_check");
+
+  // And with the OTHER question's answer: "on delivery" is not a thing a bank
+  // transfer can be, and "the full amount" is not a place cash is handed over.
+  expect(
+    await set("payment_terms = 'bankTransfer', payment_detail = 'onDelivery'"),
+    "a transfer answered with a moment",
+  ).toContain("dispatches_payment_detail_check");
+  expect(
+    await set("payment_terms = 'cash', payment_detail = 'fullAmount'"),
+    "cash answered with an amount",
+  ).toContain("dispatches_payment_detail_check");
+
+  // Where there is no second question there is no second answer either.
+  expect(
+    await set("payment_terms = 'credit', payment_detail = 'fullAmount', payment_note = 'x'"),
+    "credit carrying an answer nobody asked for",
+  ).toContain("dispatches_payment_detail_check");
+
+  // "Credit and tasaheel — a note from the rep explaining the terms is
+  // mandatory, for finance to review" (SPEC §3).
+  for (const terms of ["credit", "tasaheel"]) {
+    expect(
+      await set(`payment_terms = '${terms}', payment_detail = null, payment_note = null`),
+      `${terms} with nothing written for finance`,
+    ).toContain("dispatches_payment_note_check");
+  }
+
+  // A note that is there says something. `btrim` trims spaces and not tabs or
+  // newlines, which is how an empty daily report once satisfied its own
+  // constraint (rules/data.md), so the emptiness test is a character class.
+  expect(await set("payment_note = E'\t\n'"), "a note of whitespace").toContain(
+    "dispatches_payment_note_blank_check",
+  );
+
+  // And the four are a closed set: a fifth way to pay is a migration, not a
+  // string somebody types.
+  expect(await set("payment_terms = 'cheque'"), "a way to pay that is not one of the four")
+    .toContain("invalid input value for enum");
+});
+
 test("a quotation names a person at its own customer, or nobody (0021, P12-9)", async () => {
   // The column is nullable and means it: a price for stock is addressed to the
   // company rather than to anybody, and the seed has one of those.

@@ -2,8 +2,9 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
-import { pickFirst } from "./helpers/pick";
+import { pickFirst, pressChip } from "./helpers/pick";
 import { quotationLabel } from "@/lib/labels";
+import { quotationEvent } from "@/lib/quotation-events";
 
 /**
  * P11A — two hands on one record (SPEC D85).
@@ -88,7 +89,9 @@ const TERMS = "Net 30, per the framework agreement";
 async function fillTheDetails(form: Locator, t: Translate): Promise<void> {
   await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill(DESTINATION);
-  await form.getByLabel(t("common.paymentTerms")).fill(TERMS);
+  // Credit, which is the one that makes the note mandatory (SPEC §3).
+  await pressChip(form, t("dispatches.payment.credit"));
+  await form.getByLabel(t("common.paymentNote")).fill(TERMS);
 }
 
 /**
@@ -212,6 +215,8 @@ type SpendableLine = {
   quotationId: string;
   number: number;
   revision: number;
+  /** What the fixture found it in — an answer a dispatch implies is undone. */
+  status: string;
   itemId: string;
   position: number;
   remaining: number;
@@ -221,21 +226,34 @@ type SpendableLine = {
  * One of Faisal's quotations, in one of `statuses`, still the live revision,
  * carrying a line with at least one panel left on it (D12) — read the same
  * way the app reads "left to send" (src/lib/dispatches.ts, checkQuantities).
+ *
+ * `raisedByHim` narrows it to paper he RAISED, which is a different question
+ * from whose customer it is: Revise, Accept and Reject are offered to the
+ * quotation's own rep (`owner` in the drawer is `mayWrite(user, quotation.repId)`),
+ * and a shared job puts another rep's quotation on his customer. A walk that
+ * presses one of those three has to say so, or it picks a paper whose drawer
+ * draws none of them and waits ninety seconds for a button.
+ *
+ * The status comes back with the row because it is now consumable: since
+ * P12-10 raising a dispatch ANSWERS the quotation, so a walk that starts from
+ * an unanswered one has to hand that back for the run after it.
  */
 async function pickSpendableLine(
   faisalId: string,
   statuses: string[],
   exclude: string[],
+  raisedByHim = false,
 ): Promise<SpendableLine> {
   const row = await one<{
     quotationId: string;
     number: number;
     revision: number;
+    status: string;
     itemId: string;
     position: number;
     remaining: string;
   }>(
-    `select q.id as "quotationId", q.number, q.revision,
+    `select q.id as "quotationId", q.number, q.revision, q.status::text as status,
             qi.id as "itemId", qi.position,
             (qi.qty - coalesce(committed.qty, 0))::text as remaining
        from quotations q
@@ -256,6 +274,7 @@ async function pickSpendableLine(
         )
         and (qi.qty - coalesce(committed.qty, 0)) >= 1
         and q.id <> all($3::uuid[])
+        ${raisedByHim ? "and q.rep_id = $1::uuid" : ""}
       order by q.created_at, qi.position
       limit 1`,
     [faisalId, statuses, exclude],
@@ -305,6 +324,30 @@ async function removeLaterRevisions(number: number, revision: number): Promise<v
     await query("delete from quotation_items where quotation_id = $1::uuid", [row.id]);
     await query("delete from quotations where id = $1::uuid", [row.id]);
   }
+}
+
+/**
+ * A quotation a dispatch answered goes back to unanswered, as the seed left it.
+ *
+ * Raising a dispatch marks the quotation accepted (SPEC §3, P12-10), which made
+ * an unanswered quotation a CONSUMABLE: the floor has few, both locale projects
+ * read one seeded database, and the English run was leaving the Arabic one with
+ * none — three specs starved at their fixtures, a hundred tests away from the
+ * walk that ate it. Guarded on the status and on the detail the action writes,
+ * so it can only undo an answer one of this file's own dispatches implied.
+ */
+async function unanswer(id: string): Promise<void> {
+  await query(
+    `update quotations set status = 'issued', decided_at = null, decision_reason = null
+      where id = $1::uuid and status = 'accepted'`,
+    [id],
+  );
+  await query(
+    `delete from audit_log
+      where record_type = 'quotation' and record_id = $1::text
+        and action = $2::text and details->>'impliedBy' = 'dispatch'`,
+    [id, quotationEvent("accepted")],
+  );
 }
 
 /** A request the test issued goes back to waiting, as the seed left it. */
@@ -427,6 +470,7 @@ test("two hands on the last panels: only one dispatch is written", async ({
 
   const faisal = await userId("faisal@technopanel.com.sa");
   const line = await pickSpendableLine(faisal, ["issued", "accepted"], usedQuotationIds);
+  if (line.status === "issued") cleanups.push(() => unanswer(line.quotationId));
   const label = quotationLabel(line.number, line.revision);
 
   const before = await query<{ id: string }>(
@@ -534,7 +578,17 @@ test("approved against the price the customer holds: a dispatch on a superseded 
   test.slow(); // Two sign-ins and three dialogs.
 
   const faisal = await userId("faisal@technopanel.com.sa");
-  const line = await pickSpendableLine(faisal, ["issued"], usedQuotationIds);
+  // His OWN paper, in either state goods may move against. This walk presses
+  // Revise, which the drawer offers to the quotation's own rep and not to the
+  // customer's, and a shared job puts another rep's paper on his customer — the
+  // walk found one and waited ninety seconds for a button nobody was drawing.
+  //
+  // It asked for `issued` alone before, which named his own paper by accident
+  // and cost the floor its one unanswered quotation: since P12-10 the dispatch
+  // this raises ANSWERS it, and the English run was starving three Arabic specs
+  // at their fixtures. The undo below hands it back.
+  const line = await pickSpendableLine(faisal, ["issued", "accepted"], usedQuotationIds, true);
+  if (line.status === "issued") cleanups.push(() => unanswer(line.quotationId));
   const label = quotationLabel(line.number, line.revision);
   const dispatchesBefore = new Set(
     (

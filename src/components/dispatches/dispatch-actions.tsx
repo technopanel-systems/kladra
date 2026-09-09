@@ -2,6 +2,7 @@
 
 import { Check, Pencil, PenLine, X } from "lucide-react";
 import { useCallback } from "react";
+import { withTheRep } from "@/lib/with-the-rep";
 import { useTranslations } from "next-intl";
 import {
   approveDispatchAction,
@@ -64,7 +65,15 @@ export function DispatchActions({
   const refresh = useCallback(() => router.refresh(), [router]);
 
   const { id, label, status, superseded } = dispatch;
+  /** Hers to answer: only while it is waiting. */
   const waiting = status === "submitted";
+  /**
+   * His to change: waiting on her, or refused by her (SPEC §3, P12-10). A
+   * refusal is the dispatch chain's send-back — he corrects the request and it
+   * goes back on her desk as the same number — so the door out of it is the one
+   * that raised it, exactly as a sent-back quotation's is.
+   */
+  const his = withTheRep(status);
 
   function withId(
     action: (
@@ -132,7 +141,7 @@ export function DispatchActions({
         </>
       ) : null}
 
-      {scope.owner && waiting ? (
+      {scope.owner && his ? (
         <RequestDispatchDialog
           quotationId={dispatch.quotationId}
           quotationLabel={dispatch.quotationLabel}

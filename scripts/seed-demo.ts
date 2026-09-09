@@ -139,6 +139,12 @@ const PASSWORD = process.env.SEED_PASSWORD ?? "kladra2026";
  * arithmetic is exact, and the result is clamped a minute behind now so nothing
  * in the dataset claims to have happened in the future.
  */
+/** The `dayOfMonth`th of the month `monthsBack` months before this one. */
+function monthDay(monthsBack: number, dayOfMonth: number): Day {
+  const month = addMonths(TODAY, -monthsBack);
+  return (month.slice(0, 8) + String(dayOfMonth).padStart(2, "0")) as Day;
+}
+
 function instant(day: Day, hour: number, minute = 0): Date {
   const { y, m, d } = parseDay(day);
   const t = Date.UTC(y, m - 1, d, hour - 3, minute);
@@ -681,7 +687,14 @@ async function seedProjects(
       .insert(projects)
       .values(
         PROJECTS.map((p, i) => {
-          const created = instant(addDays(TODAY, -(15 + i * 4)), 11, (i * 5) % 60);
+          // A job the history hangs off is older than the fortnight the rest of
+          // the floor was made in, because the paper on it is (P12-10). The day
+          // is the 3rd, so it comes before the 12th every history row is raised
+          // on, and the 27th for the archiving, after the 25th its last dispatch
+          // was approved on.
+          const created = p.fromMonthsBack
+            ? instant(monthDay(p.fromMonthsBack, 3), 9, 30)
+            : instant(addDays(TODAY, -(15 + i * 4)), 11, (i * 5) % 60);
           return {
             companyId: must(companyIds, p.company, "company"),
             repId: must(userIds, companyRep(p.company), "user"),
@@ -693,6 +706,11 @@ async function seedProjects(
             // made rather than with it (S20).
             lostAt: p.lost ? instant(addDays(TODAY, -p.lost.daysAgo), 14, 20) : null,
             lostReason: p.lost?.reason ?? null,
+            // Delivered, or given up on: the job is over and nobody works it
+            // any more, which is what archiving says (S16, P12-10).
+            archivedAt: p.archivedMonthsBack
+              ? instant(monthDay(p.archivedMonthsBack, 27), 16, 0)
+              : null,
             createdAt: created,
             updatedAt: created,
           };
@@ -938,7 +956,7 @@ async function seedQuotations(
           revision: q.revision ?? 1,
           revisionOf: q.revisionOf ? must(quotationIds, q.revisionOf, "quotation") : null,
           companyId: must(companyIds, q.company, "company"),
-          projectId: q.project ? must(projectIds, q.project, "project") : null,
+          projectId: must(projectIds, q.project, "project"),
           // Who at the customer, and which store it was priced out of (P12-9).
           // The warehouse defaults to the founder's first, which is what the
           // form opens on, so a row says nothing unless it means something else.
@@ -1071,6 +1089,8 @@ async function seedDispatches(
             : warehouseOfQuotation(d.quotation, lk),
           destination: d.destination,
           paymentTerms: d.paymentTerms,
+          paymentDetail: d.paymentDetail ?? null,
+          paymentNote: d.paymentNote ?? null,
           smacDispatchNumber: d.smacDispatchNumber ?? null,
           refuseReason: d.refuseReason ?? null,
           approvedAt,
@@ -1159,6 +1179,7 @@ async function seedDispatches(
  */
 async function seedHistory(
   companyIds: Map<string, string>,
+  projectIds: Map<string, string>,
   userIds: Map<string, string>,
   lk: Lookups,
 ): Promise<number> {
@@ -1185,7 +1206,9 @@ async function seedHistory(
           number,
           revision: 1,
           companyId: must(companyIds, h.company, "company"),
-          projectId: null,
+          // The job it was for. Every quotation belongs to one (S18), and these
+          // carried none until P12-10 — the only rows in the system that did.
+          projectId: must(projectIds, h.project, "project"),
           // The months behind us were all Riyadh work, and nobody was addressed
           // by name on them: the history exists to make the metres real, and a
           // contact on a quotation nobody will open is a fact with no reader.
@@ -1245,7 +1268,10 @@ async function seedHistory(
           shipmentMethodId: must(lk.shipmentByCode, "ct", "shipment method"),
           warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           destination: "موقع المشروع",
-          paymentTerms: "تحويل بنكي",
+          // The months behind us were all paid the same ordinary way: a
+          // transfer of the whole amount (SPEC §3, P12-10).
+          paymentTerms: "bankTransfer" as const,
+          paymentDetail: "fullAmount" as const,
           smacDispatchNumber: String(8000 + dispatchNumber),
           approvedAt: approved,
           createdAt: instant(on(24), 12, 15),
@@ -1329,7 +1355,7 @@ async function seedHistory(
           number,
           revision: 1,
           companyId: must(companyIds, l.company, "company"),
-          projectId: null,
+          projectId: must(projectIds, l.project, "project"),
           contactId: null,
           warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           repId: him,
@@ -1706,7 +1732,7 @@ try {
   const dispatchItemCount = await seedDispatches(quotationIds, itemIds, userIds, lk);
   console.log(`  dispatches       ${DISPATCHES.length} (${dispatchItemCount} items)`);
 
-  const historyCount = await seedHistory(companyIds, userIds, lk);
+  const historyCount = await seedHistory(companyIds, projectIds, userIds, lk);
   console.log(`  history          ${historyCount} quotations of business already done`);
 
   await seedTargets(userIds);

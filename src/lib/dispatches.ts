@@ -54,6 +54,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
+import type { PaymentDetail, PaymentTerms } from "@/lib/payment";
 import { warehouseName } from "@/lib/lookups";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
@@ -79,8 +80,8 @@ export type DispatchRow = {
   smacNumber: string | null;
   companyId: string;
   companyName: string;
-  projectId: string | null;
-  projectName: string | null;
+  projectId: string;
+  projectName: string;
   /**
    * The project this is against has been marked lost SINCE it was raised
    * (D138). A Riyadh day, as text, and the stored reason — a code or the rep's
@@ -96,7 +97,14 @@ export type DispatchRow = {
   /** The row behind that word — what the edit dialog opens its list on. */
   shipmentMethodId: number;
   destination: string;
-  paymentTerms: string;
+  /**
+   * How it is being paid for (SPEC §3, P12-10): the choice, the second answer
+   * where the choice asks one, and the rep's own words where the two finance
+   * reviews require them. `src/lib/payment.ts` holds the shape.
+   */
+  paymentTerms: PaymentTerms;
+  paymentDetail: PaymentDetail | null;
+  paymentNote: string | null;
   /** SMAC's own number for the dispatch, given at approval (S39). */
   smacDispatchNumber: string | null;
   refuseReason: string | null;
@@ -227,6 +235,8 @@ function selection(locale: string) {
     shipmentMethodId: dispatches.shipmentMethodId,
     destination: dispatches.destination,
     paymentTerms: dispatches.paymentTerms,
+    paymentDetail: dispatches.paymentDetail,
+    paymentNote: dispatches.paymentNote,
     smacDispatchNumber: dispatches.smacDispatchNumber,
     refuseReason: dispatches.refuseReason,
     approvedOn: riyadhDay(sql`dispatches.approved_at`),
@@ -268,8 +278,8 @@ type Selected = {
   smacNumber: string | null;
   companyId: string;
   companyName: string;
-  projectId: string | null;
-  projectName: string | null;
+  projectId: string;
+  projectName: string;
   projectLostOn: string | null;
   projectLostReason: string | null;
   repId: string;
@@ -277,7 +287,9 @@ type Selected = {
   companyRepId: string;
   shipmentMethodId: number;
   destination: string;
-  paymentTerms: string;
+  paymentTerms: PaymentTerms;
+  paymentDetail: PaymentDetail | null;
+  paymentNote: string | null;
   smacDispatchNumber: string | null;
   refuseReason: string | null;
   approvedOn: string | null;
@@ -300,8 +312,8 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     smacNumber: row.smacNumber ?? null,
     companyId: row.companyId,
     companyName: row.companyName,
-    projectId: row.projectId ?? null,
-    projectName: row.projectName ?? null,
+    projectId: row.projectId,
+    projectName: row.projectName,
     projectLostOn: row.projectLostOn ?? null,
     projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
@@ -311,6 +323,8 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     shipmentMethodId: row.shipmentMethodId,
     destination: row.destination,
     paymentTerms: row.paymentTerms,
+    paymentDetail: row.paymentDetail ?? null,
+    paymentNote: row.paymentNote ?? null,
     smacDispatchNumber: row.smacDispatchNumber ?? null,
     refuseReason: row.refuseReason ?? null,
     approvedOn: row.approvedOn ?? null,
@@ -342,7 +356,7 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, dispatches.repId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(and(...conditions))
     .orderBy(input.order === "oldest" ? asc(dispatches.createdAt) : desc(dispatches.createdAt))
@@ -396,7 +410,7 @@ export async function dispatchWaitDays(input: ListDispatchesInput): Promise<Day[
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(and(...narrowTo(input)))
     .orderBy(asc(dispatches.createdAt));
   return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
@@ -409,7 +423,7 @@ export async function countDispatches(input: ListDispatchesInput): Promise<numbe
     .from(dispatches)
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(and(...narrowTo(input)));
   return Number(row?.total ?? 0);
 }
@@ -484,7 +498,7 @@ export async function getDispatch(
     .innerJoin(users, eq(users.id, dispatches.repId))
     .innerJoin(warehouses, eq(warehouses.id, dispatches.warehouseId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(eq(dispatches.id, id))
     .limit(1);
@@ -540,57 +554,6 @@ export async function getDispatch(
 }
 
 /** The dispatches raised against one quotation, newest first — the drawer's tab. */
-/**
- * The last dispatch raised against one quotation, as a form fills from (D81).
- *
- * The same sentence as the quotation line one screen back (D74): a dispatch is
- * typed from nothing, and the second one against a job goes to the same site on
- * the same terms as the first. What carries over is what belongs to the JOB —
- * where it is going, how it is paid for, how it ships. What does not is the
- * quantity, which is the whole of what this dispatch is.
- *
- * Any status: a refused one describes the same site, and a dispatch that came
- * back is the likeliest reason a rep is raising another.
- */
-export type LastDispatch = {
-  label: string;
-  shipmentMethodId: string;
-  destination: string;
-  paymentTerms: string;
-};
-
-export async function lastDispatchForQuotation(
-  user: SessionUser,
-  quotationId: string,
-): Promise<LastDispatch | null> {
-  const [row] = await db
-    .select({
-      number: dispatches.number,
-      shipmentMethodId: dispatches.shipmentMethodId,
-      destination: dispatches.destination,
-      paymentTerms: dispatches.paymentTerms,
-    })
-    .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .where(
-      and(
-        eq(dispatches.quotationId, quotationId),
-        seesEveryDispatch(user) ? undefined : seesCompany(user),
-      ),
-    )
-    .orderBy(desc(dispatches.createdAt))
-    .limit(1);
-
-  if (!row) return null;
-  return {
-    label: dispatchLabel(row.number),
-    shipmentMethodId: String(row.shipmentMethodId),
-    destination: row.destination ?? "",
-    paymentTerms: row.paymentTerms ?? "",
-  };
-}
-
 export async function listDispatchesForQuotation(
   user: SessionUser,
   quotationId: string,
@@ -603,7 +566,7 @@ export async function listDispatchesForQuotation(
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, dispatches.repId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
-    .leftJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(
       and(

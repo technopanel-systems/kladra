@@ -115,13 +115,16 @@ test("a refused field is marked, on the forms a rep does not own either", async 
   });
 
   await test.step("Request a dispatch — the rep's, with three boxes under the lines", async () => {
-    // The one issued, still-latest quotation on Faisal's floor: named rather
-    // than hoped for, so this step cannot quietly skip itself.
+    // The one still-latest quotation on Faisal's floor goods may move against:
+    // named rather than hoped for, so this step cannot quietly skip itself.
     const faisal = await userId("faisal@technopanel.com.sa");
     const quotation = await one<{ id: string }>(
       `select q.id from quotations q
          join companies c on c.id = q.company_id
-        where c.rep_id = $1::uuid and q.status = 'issued'
+        -- Either state goods may move against, for the reason in
+        -- tests/create.spec.ts: a dispatch answers the quotation it is raised
+        -- against (SPEC §3, P12-10).
+        where c.rep_id = $1::uuid and q.status in ('issued', 'accepted')
           and not exists (
             select 1 from quotations later
              where later.number = q.number and later.revision > q.revision
@@ -141,11 +144,11 @@ test("a refused field is marked, on the forms a rep does not own either", async 
     const destination = form.getByLabel(t("common.destination"));
     await expect(destination).toBeVisible();
 
-    // Since D81 the form opens on the LAST dispatch's destination and terms
-    // where the quotation has one, so on a floor that has already raised a
-    // dispatch this box is not empty — and the test is about a box that is.
-    // Emptying it first keeps the question the same: a required field left
-    // blank is refused at the field, in the app's words.
+    // Empty already since P12-10 took the prefill off this form — nothing is
+    // carried forward from a previous record (SPEC §3) — and emptied anyway,
+    // so the question this test asks stays the same whatever the form opens
+    // on: a required field left blank is refused at the field, in the app's
+    // own words.
     await destination.fill("");
 
     // A blank required box: the box carries the answer.

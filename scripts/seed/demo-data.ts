@@ -1,4 +1,5 @@
 import type { NotificationKind } from "../../src/lib/notify";
+import type { PaymentDetail, PaymentTerms } from "../../src/lib/payment";
 
 /**
  * The demo customer base — **invented lookalikes, never Technopanel's real sheet.**
@@ -711,6 +712,23 @@ export type ProjectSeed = {
    * anything about one was drawn from an empty case.
    */
   lost?: { daysAgo: number; reason: string };
+  /**
+   * Created this many months back rather than in the last fortnight (P12-10).
+   *
+   * The jobs the history hangs off are older than the seed's default, because
+   * the paper on them is: a project created after its own quotation is a lie
+   * about the order things happened in, and the trail panels read in order.
+   */
+  fromMonthsBack?: number;
+  /**
+   * Archived on the 27th of that month back: the job is over (P12-10).
+   *
+   * Delivered, or given up on. Kladra has no "finished" state for a project and
+   * §3 refuses to add one, so archived is what a rep does with a job nobody
+   * works any more (S16) — and it keeps a delivered job out of the pipeline,
+   * which counts what is still to come.
+   */
+  archivedMonthsBack?: number;
 };
 
 export const PROJECTS: ProjectSeed[] = [
@@ -798,6 +816,73 @@ export const PROJECTS: ProjectSeed[] = [
   },
   // Rawan's own, and the only job on her floor (SPEC §3).
   { key: "p18", company: "r1", name: "واجهة معرض السيارات - طريق الخرج", expectedSqm: "520.00" },
+  /*
+   * The small one, and the reason it is here at all (P12-10).
+   *
+   * A workshop buying a few sheets to cut up is the nearest thing this floor
+   * has to a sale off the shelf, and it was seeded as a quotation with no job —
+   * the only shape in the system that could not be created through a screen.
+   * Every quotation belongs to a project (S18), so the job is named for what it
+   * is: an order, not a tower. Fifty metres, so it changes no figure anybody
+   * reads.
+   */
+  { key: "p19", company: "f8", name: "ألواح تشكيل - طلبية ورشة", expectedSqm: "50.00" },
+  /*
+   * The jobs the months behind us were for (P12-10, S18).
+   *
+   * Every quotation belongs to a project, and the history rows carried none:
+   * `project_id` was nullable, no screen in the app could write a quotation
+   * without a job, and this file was the only writer in the system that did —
+   * twenty-one of them, which is why two thirds of the quotations list read "—"
+   * where the job goes. Most of the history hangs off jobs that are already
+   * here; these are the six customers that had no job at all.
+   *
+   * Four are archived, because their story is over: delivered, or given up on.
+   * Two are live and stay in the pipeline, because the paper on them is still
+   * out — one quoted and never answered, one sent back and never fixed. That
+   * difference is the point of seeding them separately: both shapes exist on a
+   * real floor and only one of them is somebody's fault.
+   */
+  {
+    key: "h1",
+    company: "s3",
+    name: "مبنى إداري - حي الملقا",
+    expectedSqm: "1500.00",
+    fromMonthsBack: 2,
+    archivedMonthsBack: 1,
+  },
+  {
+    key: "h2",
+    company: "t3",
+    name: "لوحات معرض الظهران",
+    expectedSqm: "700.00",
+    fromMonthsBack: 2,
+    archivedMonthsBack: 1,
+  },
+  {
+    key: "h3",
+    company: "f11",
+    name: "Prime Facade Olaya Clinic",
+    expectedSqm: "450.00",
+    fromMonthsBack: 4,
+    archivedMonthsBack: 3,
+  },
+  { key: "h4", company: "t5", name: "مبنى النيل السكني", expectedSqm: "800.00", fromMonthsBack: 3 },
+  {
+    key: "h5",
+    company: "s8",
+    name: "Gulf Cladding Showroom",
+    expectedSqm: "560.00",
+    fromMonthsBack: 3,
+  },
+  {
+    key: "h6",
+    company: "s6",
+    name: "مدرسة أهلية - حي الروضة",
+    expectedSqm: "340.00",
+    fromMonthsBack: 2,
+    archivedMonthsBack: 1,
+  },
   // Turki's job on the record that turns out to be Faisal's customer (P12-8).
   // It moves onto the record that continues and stays TURKI's, which is the
   // whole of what a fold does and does not do: an item belongs to whoever made
@@ -1000,7 +1085,8 @@ export type SentBackSeed = {
 export type QuotationSeed = {
   key: string;
   company: string;
-  project?: string;
+  /** The job it is priced for. Required — every quotation names one (S18). */
+  project: string;
   rep: RepKey;
   /**
    * Who it counts for (D148). Absent means the rep who raised it, which is the
@@ -1074,6 +1160,7 @@ export const QUOTATIONS: QuotationSeed[] = [
   {
     key: "q2",
     company: "f8",
+    project: "p19",
     rep: "faisal",
     status: "returned",
     warehouse: "Malham",
@@ -1185,6 +1272,12 @@ export const QUOTATIONS: QuotationSeed[] = [
     // of a quotation the customer has just been given, and where the dispatch
     // chain starts (S38). Every other issued quotation in here has either been
     // revised or already partly dispatched.
+    //
+    // Issued TODAY, with d4 refused the same morning, because the coordinator's
+    // "answered today" turns green only when she is level with what came in and
+    // the demo had her answering nothing at all — three bands on her screen and
+    // one of them never on it (rules/data.md). Two arrive today and she answers
+    // two, which is the ordinary shape of her morning.
     key: "q7",
     company: "f3",
     project: "p3",
@@ -1192,7 +1285,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     status: "issued",
     contact: 0,
     createdBack: 5,
-    issuedBack: 3,
+    issuedBack: 0,
     smacNumber: "4531",
     items: [
       { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 100, width: "1.24", length: "5.8", pricePerSqm: "121.00" },
@@ -1303,7 +1396,17 @@ export type DispatchSeed = {
    */
   warehouse?: string;
   destination: string;
-  paymentTerms: string;
+  /**
+   * How it is being paid for (SPEC §3, P12-10): the choice, the second answer
+   * where the choice asks for one, and the note the two finance reviews need.
+   *
+   * All four ways to pay are on this floor, and both answers to each of the two
+   * questions, because a choice the demo never shows is a choice nobody has
+   * seen work (rules/data.md).
+   */
+  paymentTerms: PaymentTerms;
+  paymentDetail?: PaymentDetail;
+  paymentNote?: string;
   smacDispatchNumber?: string;
   /** Day of THIS month for `approved_at`, clamped to today. */
   approvedOnDayOfMonth?: number;
@@ -1320,7 +1423,8 @@ export const DISPATCHES: DispatchSeed[] = [
     status: "approved",
     shipmentMethod: "ct",
     destination: "موقع المشروع — طريق الملك فهد، الرياض",
-    paymentTerms: "50% مقدم والباقي عند التسليم",
+    paymentTerms: "bankTransfer",
+    paymentDetail: "partAmount",
     smacDispatchNumber: "8871",
     approvedOnDayOfMonth: 2,
     createdBack: 3,
@@ -1336,7 +1440,8 @@ export const DISPATCHES: DispatchSeed[] = [
     status: "approved",
     shipmentMethod: "tt",
     destination: "جدة — حي الشاطئ، بوابة الموقع الشمالية",
-    paymentTerms: "تحويل بنكي خلال 30 يوم من تاريخ التسليم",
+    paymentTerms: "credit",
+    paymentNote: "تحويل بنكي خلال 30 يومًا من تاريخ التسليم",
     smacDispatchNumber: "8874",
     approvedOnDayOfMonth: 3,
     createdBack: 2,
@@ -1349,7 +1454,8 @@ export const DISPATCHES: DispatchSeed[] = [
     status: "submitted",
     shipmentMethod: "cargo",
     destination: "الرياض — مستودع العميل، المصفاة",
-    paymentTerms: "نقداً عند الاستلام",
+    paymentTerms: "cash",
+    paymentDetail: "onDelivery",
     createdBack: 0,
     items: [
       { item: 0, qty: 20 },
@@ -1358,8 +1464,9 @@ export const DISPATCHES: DispatchSeed[] = [
   },
   // The state the demo never showed (P11A finding 37, D99): a dispatch the desk
   // refused, with her reason, waiting on the rep the way a returned quotation
-  // does. Against Faisal's accepted quotation, raised four days ago and refused
-  // the next morning; the audit rows carry both instants.
+  // does. Against Faisal's accepted quotation, raised yesterday and refused this
+  // morning; the audit rows carry both instants, and the refusal is one of the
+  // two answers that put her figure level with her morning.
   {
     key: "d4",
     quotation: "q4",
@@ -1368,8 +1475,9 @@ export const DISPATCHES: DispatchSeed[] = [
     refuseReason: "الكمية المطلوبة أكبر مما تبقّى في عرض السعر — يُراجع البند الثاني ثم يُعاد الطلب.",
     shipmentMethod: "ct",
     destination: "موقع المشروع — طريق الملك فهد، الرياض",
-    paymentTerms: "50% مقدم والباقي عند التسليم",
-    createdBack: 4,
+    paymentTerms: "bankTransfer",
+    paymentDetail: "fullAmount",
+    createdBack: 1,
     items: [{ item: 1, qty: 10 }],
   },
   {
@@ -1390,7 +1498,8 @@ export const DISPATCHES: DispatchSeed[] = [
     status: "approved",
     shipmentMethod: "ct",
     destination: "موقع البرج — طريق الملك فهد، الرياض",
-    paymentTerms: "50% مقدم والباقي عند التسليم",
+    paymentTerms: "cash",
+    paymentDetail: "atOffice",
     smacDispatchNumber: "8877",
     approvedOnDayOfMonth: 4,
     createdBack: 3,
@@ -1408,7 +1517,8 @@ export const DISPATCHES: DispatchSeed[] = [
     status: "approved",
     shipmentMethod: "ct",
     destination: "الرياض — طريق الخرج، موقع المعرض",
-    paymentTerms: "50% مقدم والباقي عند التسليم",
+    paymentTerms: "tasaheel",
+    paymentNote: "تمويل عبر تساهيل، الدفعة الأولى عند التوقيع",
     smacDispatchNumber: "8879",
     approvedOnDayOfMonth: 5,
     createdBack: 2,
@@ -1440,17 +1550,19 @@ export type HistorySeed = {
   monthsBack: number;
   rep: RepKey;
   company: string;
+  /** The job it was for — every quotation belongs to one (S18, P12-10). */
+  project: string;
   /** Sheets of 1.24 × 5.80 m. The m² is computed the way the app computes it. */
   sheets: number;
 };
 
 export const HISTORY: HistorySeed[] = [
-  { monthsBack: 5, rep: "faisal", company: "f2", sheets: 150 },
-  { monthsBack: 5, rep: "saad", company: "s1", sheets: 120 },
-  { monthsBack: 4, rep: "faisal", company: "f6", sheets: 170 },
-  { monthsBack: 4, rep: "saad", company: "s5", sheets: 140 },
-  { monthsBack: 3, rep: "faisal", company: "f2", sheets: 120 },
-  { monthsBack: 3, rep: "saad", company: "s1", sheets: 190 },
+  { monthsBack: 5, rep: "faisal", company: "f2", project: "p2", sheets: 150 },
+  { monthsBack: 5, rep: "saad", company: "s1", project: "p8", sheets: 120 },
+  { monthsBack: 4, rep: "faisal", company: "f6", project: "p5", sheets: 170 },
+  { monthsBack: 4, rep: "saad", company: "s5", project: "p10", sheets: 140 },
+  { monthsBack: 3, rep: "faisal", company: "f2", project: "p2", sheets: 120 },
+  { monthsBack: 3, rep: "saad", company: "s1", project: "p8", sheets: 190 },
   // The last two months sell to five kinds of customer rather than one, and the
   // sheets are untouched: every rep's month, every bar on the six-month card and
   // every pace band is exactly what it was. What changes is WHOSE they are.
@@ -1462,12 +1574,12 @@ export const HISTORY: HistorySeed[] = [
   // (rules/data.md), and a business that sells to stations, consultants,
   // factories and sign-makers as well as contractors is also the truer picture
   // of this floor. Each row stays on a company its own rep holds.
-  { monthsBack: 2, rep: "faisal", company: "f9", sheets: 200 },
-  { monthsBack: 2, rep: "saad", company: "s5", sheets: 160 },
-  { monthsBack: 2, rep: "turki", company: "t1", sheets: 60 },
-  { monthsBack: 1, rep: "faisal", company: "f2", sheets: 185 },
-  { monthsBack: 1, rep: "saad", company: "s3", sheets: 210 },
-  { monthsBack: 1, rep: "turki", company: "t3", sheets: 95 },
+  { monthsBack: 2, rep: "faisal", company: "f9", project: "p6", sheets: 200 },
+  { monthsBack: 2, rep: "saad", company: "s5", project: "p10", sheets: 160 },
+  { monthsBack: 2, rep: "turki", company: "t1", project: "p11", sheets: 60 },
+  { monthsBack: 1, rep: "faisal", company: "f2", project: "p2", sheets: 185 },
+  { monthsBack: 1, rep: "saad", company: "s3", project: "h1", sheets: 210 },
+  { monthsBack: 1, rep: "turki", company: "t3", project: "h2", sheets: 95 },
 ];
 
 /*
@@ -1485,6 +1597,8 @@ export type LostSeed = {
   monthsBack: number;
   rep: RepKey;
   company: string;
+  /** The job it was for — every quotation belongs to one (S18, P12-10). */
+  project: string;
   sheets: number;
   status: "rejected" | "cancelled" | "returned" | "issued";
   reason?: string;
@@ -1495,6 +1609,7 @@ export const HISTORY_LOST: LostSeed[] = [
     monthsBack: 4,
     rep: "faisal",
     company: "f5",
+    project: "p4",
     sheets: 90,
     status: "rejected",
     reason: "السعر أعلى من عرض منافس بحوالي 8%",
@@ -1503,16 +1618,18 @@ export const HISTORY_LOST: LostSeed[] = [
     monthsBack: 3,
     rep: "saad",
     company: "s4",
+    project: "p9",
     sheets: 130,
     status: "rejected",
     reason: "أجّل العميل المشروع إلى السنة القادمة",
   },
-  { monthsBack: 3, rep: "faisal", company: "f11", sheets: 60, status: "cancelled" },
-  { monthsBack: 2, rep: "turki", company: "t5", sheets: 110, status: "issued" },
+  { monthsBack: 3, rep: "faisal", company: "f11", project: "h3", sheets: 60, status: "cancelled" },
+  { monthsBack: 2, rep: "turki", company: "t5", project: "h4", sheets: 110, status: "issued" },
   {
     monthsBack: 2,
     rep: "saad",
     company: "s8",
+    project: "h5",
     sheets: 75,
     status: "returned",
     reason: "المقاسات غير مكتملة — أحتاج الطول والعرض لكل بند",
@@ -1521,12 +1638,13 @@ export const HISTORY_LOST: LostSeed[] = [
     monthsBack: 1,
     rep: "faisal",
     company: "f9",
+    project: "p6",
     sheets: 140,
     status: "rejected",
     reason: "اختار العميل مورّدًا آخر بمدة تسليم أقصر",
   },
-  { monthsBack: 1, rep: "turki", company: "t1", sheets: 80, status: "issued" },
-  { monthsBack: 1, rep: "saad", company: "s6", sheets: 45, status: "cancelled" },
+  { monthsBack: 1, rep: "turki", company: "t1", project: "p11", sheets: 80, status: "issued" },
+  { monthsBack: 1, rep: "saad", company: "s6", project: "h6", sheets: 45, status: "cancelled" },
 ];
 
 /** The one line every history quotation carries. */
