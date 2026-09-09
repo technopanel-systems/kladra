@@ -45,6 +45,15 @@ string**. `` `${company} · ${project}` `` is the same defect the loader fixes f
 messages — the · is neutral and settles against the paragraph, not against the
 name beside it. Render them as `<bdi>{company}</bdi> · <bdi>{project}</bdi>`.
 
+**And the separator is not optional.** Two values on one line with only a `gap`
+between them look separated and are not: each `<bdi>` keeps its own direction,
+but the two BOXES are laid out in the page's, so on an English screen a job and
+its customer — both Arabic — sat side by side with nothing between them, and a
+reader scanning that pair right to left read the customer first. The reverse of
+what the control said. A gap is space; a dot is a mark that says "two values, in
+the page's order", and only the second of those survives a reader whose eye runs
+the other way (P12-9, §5 #181).
+
 ## A key a screen COMPUTES is invisible to the parity check
 `t(`common.${role}`)` is one call site and five keys. The both-locales check
 compares en against ar, so a member missing from **both** — which is what a new

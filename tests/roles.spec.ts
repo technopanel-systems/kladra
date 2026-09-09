@@ -8,7 +8,7 @@ import {
   restoreCompanyFloor,
   userId,
 } from "./helpers/db";
-import { pickFirst } from "./helpers/pick";
+import { choose, pickFirst } from "./helpers/pick";
 import { test, expect, type Translate } from "./helpers/i18n";
 import { seesEveryLeadSource } from "@/lib/lookups";
 
@@ -111,8 +111,8 @@ test("a rep is not offered the Marketing lead source, and marketing is", async (
 
 /** Her own job — the floor SPEC §3 gave her, read from the role rather than a name. */
 async function herProject() {
-  return one<{ id: string; name: string }>(
-    `select p.id, p.name
+  return one<{ id: string; name: string; company_name: string }>(
+    `select p.id, p.name, c.name as company_name
        from projects p
        join companies c on c.id = p.company_id
        join users u on u.id = c.rep_id
@@ -121,14 +121,23 @@ async function herProject() {
   );
 }
 
-/** Opens a searchable select and picks the option carrying this exact text. */
-async function choose(page: Page, trigger: Locator, label: string): Promise<void> {
-  await trigger.click();
-  await page
-    .locator('[data-slot="popover-content"]')
-    .getByText(label, { exact: true })
-    .first()
-    .click();
+/**
+ * Her customer, then her job — the chain the form asks in (P12-9, D159).
+ *
+ * She is a selling role like any other (§3), so the door on the Quotations
+ * screen asks her the same two questions it asks a rep; only the verb on it and
+ * the SMAC box below differ.
+ */
+async function pickHerJob(
+  page: Page,
+  form: Locator,
+  t: Translate,
+  project: { name: string; company_name: string },
+): Promise<void> {
+  const company = form.getByRole("combobox", { name: t("common.company") });
+  await expect(company).toBeVisible(COLD);
+  await choose(page, company, project.company_name);
+  await choose(page, form.getByRole("combobox", { name: t("common.project") }), project.name);
 }
 
 /** The one line a quotation needs to be saved; the rest opens on S32's defaults. */
@@ -162,9 +171,7 @@ test("the coordinator raises her own quotation and issues it in the same act", a
   await door.click();
 
   const form = page.getByRole("dialog", { name: t("quotations.issueOwn") });
-  const picker = form.getByRole("combobox", { name: t("common.project") });
-  await expect(picker).toBeVisible(COLD);
-  await choose(page, picker, project.name);
+  await pickHerJob(page, form, t, project);
   await fillOneItem(form, t);
 
   // The field a rep never sees, and the reason this is one act rather than two.
@@ -396,9 +403,7 @@ test("she is taken to the number she left out, not left guessing at a full form"
   await page.getByRole("button", { name: t("quotations.issueOwn") }).click();
 
   const form = page.getByRole("dialog", { name: t("quotations.issueOwn") });
-  const picker = form.getByRole("combobox", { name: t("common.project") });
-  await expect(picker).toBeVisible(COLD);
-  await choose(page, picker, project.name);
+  await pickHerJob(page, form, t, project);
   await fillOneItem(form, t);
 
   // Everything but the number, which is the one field only she is asked for.

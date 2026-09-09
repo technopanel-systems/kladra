@@ -141,7 +141,7 @@
             and what an unacknowledged one looks like after two days
       - [x] 8 Duplicate review: the customer number, the name rules in both languages, the
             manager's three answers
-      - [ ] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
+      - [x] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
       - [ ] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
       - [ ] 11 The queue: the whole row opens it, and the SMAC number is the large one
       - [x] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
@@ -592,7 +592,24 @@ keys were checked by nobody (#173), a new namespace is where a second word for a
 in (#174), an ellipsis on a label deletes the meaning and leaves the number (#175), a CHECK
 refuses only on FALSE so a fold could be recorded with nothing continuing (#176), and the
 quotation and dispatch pickers asked one rule with a clause missing, withholding work their own
-actions would have taken (#177). Boxes 9, 10, 11, 13 and 14 are next, in that order.
+actions would have taken (#177). Box 9 put four of the founder's sentences on the screen a rep
+uses most. **Quantity is fifth** on a quotation line, where §3 put it and where it had not been
+for four phases — an order is not a value, so nothing in the gate could see it, and the debt was
+registered as "no test has walked this" rather than as "this is wrong" (#178). **The widths are
+written once**, in `src/lib/sheet.ts`: they had been a list in the form and a second list in the
+seed that nothing imported, which is not two copies drifting but one copy that is decoration
+(#179). **The warehouse** is a lookup and a NOT NULL column on the quotation and on the dispatch,
+never on their lines; a dispatch opens on its quotation's store, which is a child reading its
+parent rather than the carrying-forward §3 forbids. And the button asks **company → project →
+contact**, the order a rep has the answers in, instead of one flat list of every job in the
+building; the contact is a new column, optional, because a price for stock is addressed to
+nobody. Two founder decisions came off the owed list and the suite found the class the compiler
+could not: six fixtures that write a quotation or a dispatch in raw SQL (#180). Two more came out
+of the box's own gate rather than out of its screens: a gap between two names is not a separator
+(#181), and a walk that had been passing on warmth since P8 — it left a page on the strength of a
+heading and expected the browser to have written a cookie it had had no chance to write (#182), and
+a walk that hung on a list that had closed under its own retry, in a helper three specs had each
+written out by hand (#183). Boxes 10, 11, 13 and 14 are next, in that order.
 
 ## §4 Five days, walked (P9.1)
 
@@ -835,6 +852,15 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 6. On another pair he presses **Keep this one, and share it**: the same fold, and Saad is on the survivor's share list — he opens the drawer and reads everything under it, and the record is still Faisal's.
 7. On the third he presses **Not the same company**: both records stay exactly where they are, and the pair is never raised again — the index allows one row per pair for ever, whichever way round the detector offers it.
 8. Turki opens the record the manager folded weeks ago. It says what it became and who holds it. On the admin's archive screen it says the same thing and carries no Restore button, while the company archived for a reason keeps its own.
+
+**A store, a name on the paper, and the chain (P12-9)** — `tests/create.spec.ts`, `tests/schema.spec.ts`
+1. Faisal opens Quotations and presses the one button on it. The first field asks which CUSTOMER, not which job: the job field says "Choose a customer first" and will not open until he has answered.
+2. He picks the customer. The job list is that customer's jobs and nothing else — it was every job in the building, with the customer as a quieter line under each.
+3. He picks the job, then the person at the customer the paper is for, then the store it is priced out of. It opens on Riyadh, and he changes it, which is the only way anybody proves a field is a field.
+4. The line asks its nine boxes in the founder's order and **Qty is fifth**, before Thickness and Width — the order §3 dictates and the form had drifted out of. He opens the width list, which offers 1.24, 1.5 and 2.0, picks 1.5 and types a quantity.
+5. Save. The drawer names the store and the person; the row carries the customer, the job, the contact and the warehouse that were picked, and the metres are width × length × qty of what he actually typed.
+6. He raises a dispatch against an issued quotation. The store opens on THAT QUOTATION's store, because the price was worked out of it — a child reading its own parent, never the dispatch before it. The dispatch drawer says which store the load leaves from, above how it travels and where it is going.
+7. The database refuses a quotation or a dispatch with no store on it, and a store that is not a store: there is no price out of nowhere and no load from nowhere.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -2614,6 +2640,17 @@ actually needed.
   written, and arabic-reviewer runs against the app's existing namespaces and not only the new
   one. The English half of every fix landed too, because a word invented in one locale is
   invented in both — SPEC §5 is the glossary for the app, not for the Arabic.
+
+  **And it happened again in the very next box, which is the useful part.** P12-9's two new
+  placeholders said "Choose a customer" over a field whose own label, one line above it, says
+  **Company** — and §5's entry for that word is the one sentence in the glossary that anticipates
+  exactly this: "§2 S11 calls it the customer; the screens never do." `projects.pickCompany`, the
+  identical control on the Add-project form, had said «اختيار الشركة» since P8. The rule written
+  here was to search the existing files before writing, and writing D159's prose in the founder's
+  own register — where he says customer throughout — is what carried it onto the screen. So the
+  rule needs its sharper half: **the glossary is checked against the LABEL of the field, not
+  against the paragraph that describes it.** The reviewer caught both, both times, which is the
+  loop working; what it is not is a substitute for looking.
 - [x] 175 **An ellipsis on a LABEL deletes the meaning and leaves the number.** Found in the same
   pass (P12-8), by measuring rather than by looking: the four counts under each side of a pair were
   `grid-cols-4` inside two nested `p-3`, which is about 74px a column, and each caption was
@@ -2660,3 +2697,94 @@ actually needed.
   looking through somebody's eyes write nothing (D42) — which none of them did. It surfaced when a
   fold moved one rep's project onto another rep's company, which is the arrangement D147 made
   ordinary and which the seed had never contained until P12-8.
+- [x] 178 **A field order the founder dictated, drifted, and nothing could see it.** SPEC §3 lists
+  a quotation line as "Colour code · Supplier · Fire rating · Class · **Qty** · Thickness · Width ·
+  Length · Price per m²". Qty sat EIGHTH, after the three measurements, from the phase the form was
+  built in until P12-9. **The cause is that an order is not a value**: every check in the gate can
+  see that a field exists, that its word is in both locales and that its value round-trips, and not
+  one of them can see where it is drawn. `check:spec3` knew — the clause was registered as owed —
+  and what it was owed for was a TEST, so the debt read as "nobody has walked this" rather than as
+  "this is wrong", and it had been carried for four boxes. It matters more than a form-design
+  quibble: what a rep says out loud when he quotes is the colour, the make-up and how many, then
+  the sheet it is on, so asking the three dimensions first makes him hold the number he arrived
+  with while he answers three questions that are already filled in. `tests/create.spec.ts` reads
+  the nine labels off the line in drawing order now and compares them to §3 word for word, which is
+  the only shape of check that can catch this: **an order is proved by reading it, never by
+  asserting that its members exist.**
+- [x] 179 **The second copy nobody read was the one that was right.** The widths a sheet comes in
+  were written twice: `WIDTH_CHOICES` in the line editor, which the form offers, and
+  `STANDARD_WIDTHS` in `scripts/seed/lookups.ts`, which nothing imported. Both said
+  `["1.24", "1.5", "2.0"]`, so they agreed — and they agreed the way two clocks agree when one of
+  them has stopped: the seed's copy sat in a file of DATA, under a heading that made it look
+  authoritative, and could have been edited by anybody sure they were changing what the form
+  offers. The same shape as a list beside a union (rules/words.md), one step further out: not two
+  copies drifting, but one copy that is decoration. `src/lib/sheet.ts` holds the widths, the
+  standard sheet and the standard thickness now, and the seed re-exports it rather than restating
+  it. And the deciding question is worth keeping: **a value only ever read by nobody is not a
+  source, it is a comment that compiles.** Found while clearing #178, because the walk that opens
+  the width control had to know where the list came from.
+- [x] 180 **The compiler found every writer in the app and none of the six in the suite.** Adding
+  two NOT NULL columns in P12-9 was, from the app's side, a pleasure: `tsc` named the seed, the
+  volume seed, the history seed, the request action and the dispatch action, one after another,
+  which is "never land a column without its writer" (rules/data.md) working exactly as written. Six
+  more writers went unmentioned, because they are `insert into quotations (…)` in raw SQL inside
+  `tests/`, and a spec's fixture is a string. They failed thirty minutes later, in the run, six
+  times over — three of them in under 120ms, which is the shape of a fixture dying before its first
+  assertion. **The cause is that a fixture which names its columns is a second copy of the schema,
+  and it is the copy nothing checks.** Three of the six were immune to half of it already: they
+  build their row with `insert into quotations (…) select …, from quotations where id = $1`, which
+  copies a real record and overrides what must differ, so adding the column to both lists was one
+  word in each. The two that listed columns from nothing had to be told where a warehouse comes
+  from. The rule: **a fixture copies an existing row and overrides what must differ; it does not
+  describe a record from scratch.** What that buys is not tidiness — it is that the next NOT NULL
+  column costs one line in three files instead of a suite run to discover.
+- [x] 181 **A gap is space; only a mark says "two values".** Found by shot-looker on the rebuilt
+  quotation dialog (P12-9): the closed job picker carries the job and, quieter beside it, its
+  customer. Both are `<bdi>`, so each name kept its own direction — and the two BOXES are laid out
+  in the PAGE's direction, with nothing but a `gap-1.5` between them. On an English screen, two
+  Arabic names therefore sat side by side with white space between them, and a reader scanning that
+  pair the way Arabic is scanned read the CUSTOMER first: the reverse of what the control says.
+  **The cause is a rule applied to strings and not to elements.** rules/words.md already said it —
+  `` `${company} · ${project}` `` is a defect, render them as `<bdi>a</bdi> · <bdi>b</bdi>` — and
+  the shape it names is a joined STRING, so a component that put the same two values in two
+  elements read as compliant. It is not: what the rule is really about is that a neutral mark is
+  what tells a reader "two values, in the page's order", and a gap tells them nothing. One dot,
+  `aria-hidden`, in `searchable-select.tsx`, which fixes it for every picker in the app that shows
+  a parent's name beside a child's — the job picker, the quotation picker on a dispatch, and
+  whatever the next one is.
+
+- [x] 182 **A visible heading proves the server answered; it never proves the browser is
+  listening.** Found by P12-9's confirming run, in a walk that had passed since P8: "the view a
+  person chose is the view they get back" opened the board with `?view=board`, waited for the
+  heading, went to the bare screen and asked for the board back. It was given the list, polled
+  fifty-two times for the other answer and timed out — and it could never have recovered, because
+  the list it was given writes `list` over the memory it was waiting for. The memory is a cookie
+  `ViewSwitch` writes in an effect, which is the right place for it (DESIGN §6: a preference, not
+  data), and an effect runs after hydration while the heading it waited on is in the first byte of
+  HTML. On a warm server those are milliseconds apart and the walk had never lost the race; on the
+  first compile of a route that had just grown a second query they were seconds apart. **The cause
+  is that the step asserted the state it wanted — this page shows a board — instead of the evidence
+  the NEXT step needed: the browser has stored `board`.** It waits for the cookie itself now, in
+  both places it navigates away expecting to be remembered. The rule is not about cookies: **a step
+  that leaves a page on the strength of server HTML is racing that page's hydration**, so anything a
+  walk depends on that only the browser can produce — a cookie, local storage, a registered service
+  worker, a listener — is waited for by asking for that thing, never by looking at the screen it
+  arrived with. Swept: three effects write a cookie (`view-switch`, `page-tabs`, `range-chips`) and
+  the rail's hook writes a fourth, and the view walk is the only one that crossed a navigation on
+  one — every `?tab=` and `?range=` walk names the value in the URL, and the memories themselves are
+  proved by pure tests in `tests/ranges.spec.ts`.
+
+- [x] 183 **A wait for a list nobody was drawing any more, and the three copies of the helper that
+  waits.** The gate's own run hung for ninety seconds on the Arabic quotation chain: the fire-rating
+  option on the second line resolved, was "not stable" twice while the popover settled over a form
+  that P12-9 had grown two fields taller, and was then detached — and what followed was a wait for
+  an option in a list that had closed, which is a wait that cannot end. **The cause is that a click
+  which lands where a popover has just been is a click OUTSIDE it, and outside is how a popover is
+  dismissed**: the retry that was meant to survive the movement is the thing that shut the list. So
+  the pick opens the control again rather than waiting on a list that has gone — three goes, a short
+  timeout on each, and the failure stands after that. The same file already carried one scar of this
+  shape (P11E: the first `option` on the page belonged to the list that was closing), which is the
+  argument for putting the second one beside it rather than in the spec that met it. And the sweep
+  found the other half: `choose`, the same act by name instead of by position, had been written out
+  by hand in `create.spec`, `drawer-writes.spec` and `roles.spec` — three copies of a helper, which
+  is the four-search-boxes defect (#143) inside the suite this time. One copy now, hardened once.

@@ -37,6 +37,7 @@ import { personName, personNameOf } from "@/lib/people";
 import {
   classes,
   companies,
+  contacts,
   fireRatings,
   projects,
   quotationItems,
@@ -44,12 +45,14 @@ import {
   suppliers,
   thicknesses,
   users,
+  warehouses,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { riyadhDay } from "@/lib/dates";
 import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { numberInTerm, quotationLabel } from "@/lib/labels";
+import { warehouseName } from "@/lib/lookups";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
 import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotation-diff";
 import { draftLinesFrom, type LastQuotation } from "@/lib/quotation-draft";
@@ -475,6 +478,21 @@ export type QuotationDetail = QuotationRow & {
    * read.
    */
   selfIssued: boolean;
+  /**
+   * Which store it was priced out of, and who at the customer it is addressed
+   * to (SPEC §3, P12-9).
+   *
+   * On the DETAIL and not on the row, so the two joins are paid for by the one
+   * screen that reads them. The customer list is the app's longest query and a
+   * warehouse's name is not one of the things a reader scans it for.
+   *
+   * The contact is a name and an id: the drawer prints the name, and Edit and
+   * Revise open their picker on the id.
+   */
+  warehouseId: number;
+  warehouseName: string;
+  contactId: string | null;
+  contactName: string | null;
 };
 
 /**
@@ -501,10 +519,16 @@ export async function getQuotation(
       notes: quotations.notes,
       revisionOf: quotations.revisionOf,
       selfIssued: quotations.selfIssued,
+      warehouseId: quotations.warehouseId,
+      warehouseName: warehouseName(await getLocale()),
+      contactId: quotations.contactId,
+      contactName: contacts.name,
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
+    .innerJoin(warehouses, eq(warehouses.id, quotations.warehouseId))
+    .leftJoin(contacts, eq(contacts.id, quotations.contactId))
     .leftJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .where(eq(quotations.id, id))
@@ -565,6 +589,10 @@ export async function getQuotation(
     credit: await creditOnQuotation(id),
     projectRepId: row.projectRepId ?? null,
     onProject: Boolean(row.onProject),
+    warehouseId: row.warehouseId,
+    warehouseName: row.warehouseName,
+    contactId: row.contactId ?? null,
+    contactName: row.contactName ?? null,
     items: items.map((item) => ({
       id: item.id,
       position: item.position,

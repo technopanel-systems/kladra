@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { issuesOwnQuotations } from "@/lib/floor";
-import { projectOptions } from "@/lib/pickers";
+import { quotationTargets } from "@/lib/pickers";
 import { viewCookie, viewFor } from "@/lib/view";
 import { countQuotations, listQuotations, type QuotationStatus } from "@/lib/quotations";
 import { LIST_LIMIT } from "@/lib/list-size";
@@ -19,7 +19,10 @@ import { LIST_LIMIT } from "@/lib/list-size";
 /**
  * Every quotation this person may see, newest first (SPEC S28–S36).
  *
- * The primary action requests one, and asks which project first (SPEC §3, P8).
+ * The primary action requests one, and asks the chain a rep has the answers in:
+ * which customer, then which of that customer's jobs, then who at the customer
+ * it is for (SPEC §3, P8, P12-9). It asked for the job first, out of one flat
+ * list of every job in the building.
  * The coordinator sees every quotation on this screen and raises none, so she
  * is offered no button: she owns no companies, so the list of projects a
  * request could go on is empty and the control is never drawn.
@@ -72,10 +75,10 @@ export default async function QuotationsPage({
     locale,
   };
 
-  const [t, rows, projects] = await Promise.all([
+  const [t, rows, targets] = await Promise.all([
     getTranslations(),
     listQuotations({ ...narrowing, limit: LIST_LIMIT }),
-    projectOptions(user),
+    quotationTargets(user),
   ]);
 
   // She does not ask the desk for a price; she IS the desk (SPEC §3), so the
@@ -89,9 +92,9 @@ export default async function QuotationsPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.quotations")}</h1>
-        {projects.length > 0 ? (
+        {targets.projects.length > 0 ? (
           <RequestQuotationDialog
-            projects={projects}
+            targets={targets}
             issuesDirectly={direct}
             trigger={
               <Button variant="brand">

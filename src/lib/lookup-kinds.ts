@@ -28,6 +28,11 @@ export const LOOKUP_KINDS = [
   "classes",
   "thicknesses",
   "shipmentMethods",
+  // Where the panels are (SPEC §3, P12-9). A list rather than four constants:
+  // a company that opens a fifth store should not need a deployment, and the
+  // rows a quotation points at have to survive one closing — which is what
+  // `active` is for on every list here.
+  "warehouses",
 ] as const;
 
 export type LookupKind = (typeof LOOKUP_KINDS)[number];
@@ -87,6 +92,10 @@ export const LOOKUP_FIELDS: Record<LookupKind, LookupField[]> = {
     { key: "code", column: "code", labelKey: "admin.code" },
     { key: "en", column: "name", labelKey: "common.supplier" },
   ],
+  warehouses: [
+    { key: "en", column: "name_en", labelKey: "admin.inEnglish" },
+    { key: "ar", column: "name_ar", labelKey: "admin.inArabic" },
+  ],
   fireRatings: [{ key: "value", column: "name", labelKey: "common.fireRating" }],
   classes: [{ key: "value", column: "name", labelKey: "common.class" }],
   thicknesses: [
@@ -130,6 +139,8 @@ export function tableName(kind: LookupKind): string {
       return "thicknesses";
     case "shipmentMethods":
       return "shipment_methods";
+    case "warehouses":
+      return "warehouses";
   }
 }
 

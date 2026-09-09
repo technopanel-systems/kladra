@@ -190,6 +190,29 @@ export const thicknesses = pgTable("thicknesses", {
   ...stamps,
 });
 
+/**
+ * Where the panels are (SPEC §3, P12-9): Riyadh, Malham, Dammam, Khamis Mushait.
+ *
+ * The founder's sentence is "one warehouse per whole quotation and per whole
+ * dispatch, never per line", so it is a column on those two tables and not on
+ * their items. A quotation is priced out of one store and a load leaves from
+ * one store; a line that could name its own would make "where is this order
+ * coming from" a question with several answers, and the coordinator rings the
+ * store before she approves anything.
+ *
+ * No code column, unlike a shipment method. CT and TT are what a rep says out
+ * loud; a warehouse is said by its name, and a code nobody speaks is an internal
+ * code on a screen (§3).
+ */
+export const warehouses = pgTable("warehouses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  nameEn: text("name_en").notNull(),
+  nameAr: text("name_ar").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  ...stamps,
+});
+
 // CT (customer's truck) · TT (Technopanel truck) · Cargo (third party).
 export const shipmentMethods = pgTable("shipment_methods", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
@@ -647,6 +670,30 @@ export const quotations = pgTable(
       .notNull()
       .references(() => companies.id),
     projectId: uuid("project_id").references(() => projects.id, { onDelete: "set null" }),
+    /**
+     * Who at the customer this price is for (P12-9).
+     *
+     * The chain a rep thinks in is company → project → contact, and the last of
+     * the three had nowhere to be recorded: the coordinator issuing the paper
+     * had a company and a job and no name to address it to, so she asked on
+     * WhatsApp. Optional, because a price for stock is sometimes for the
+     * company rather than for anybody in particular.
+     *
+     * A plain reference and not a composite one against `(id, company_id)`,
+     * which would guarantee that the person is at the company named beside him.
+     * The guarantee is true when it is written — `requestQuotationAction`
+     * refuses a contact who is not there, and the picker only offers that
+     * company's people — and a fold may honestly break it afterwards: the
+     * arriving duplicate of a person both reps held is archived where it is
+     * (D153), so a quotation of the folded record's keeps pointing at the row it
+     * was actually addressed to. That is the true answer, and a composite key
+     * would force either a lie or a deletion to keep itself satisfied.
+     */
+    contactId: uuid("contact_id").references(() => contacts.id, { onDelete: "set null" }),
+    /** Which store this was priced out of (SPEC §3) — one per whole quotation. */
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => warehouses.id),
     repId: uuid("rep_id")
       .notNull()
       .references(() => users.id),
@@ -781,6 +828,19 @@ export const dispatches = pgTable(
     shipmentMethodId: integer("shipment_method_id")
       .notNull()
       .references(() => shipmentMethods.id),
+    /**
+     * Which store the load leaves from (SPEC §3) — one per whole dispatch.
+     *
+     * Asked again rather than taken from the quotation, and the two are separate
+     * facts: the price was worked out of one store and the panels may go out of
+     * another when that one is short. The dialog OPENS on the quotation's, which
+     * is not the carrying-forward §3 forbids — that rule is about one record
+     * prefilling the next one like it, and this is a child reading its own
+     * parent, the same way its lines do.
+     */
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => warehouses.id),
     destination: text("destination").notNull(),
     paymentTerms: text("payment_terms").notNull(),
     smacDispatchNumber: text("smac_dispatch_number"),
@@ -1170,6 +1230,8 @@ export const activitiesRelations = relations(activities, ({ one }) => ({
 export const quotationsRelations = relations(quotations, ({ one, many }) => ({
   company: one(companies, { fields: [quotations.companyId], references: [companies.id] }),
   project: one(projects, { fields: [quotations.projectId], references: [projects.id] }),
+  contact: one(contacts, { fields: [quotations.contactId], references: [contacts.id] }),
+  warehouse: one(warehouses, { fields: [quotations.warehouseId], references: [warehouses.id] }),
   rep: one(users, { fields: [quotations.repId], references: [users.id] }),
   items: many(quotationItems),
   dispatches: many(dispatches),
@@ -1193,6 +1255,7 @@ export const dispatchesRelations = relations(dispatches, ({ one, many }) => ({
     fields: [dispatches.shipmentMethodId],
     references: [shipmentMethods.id],
   }),
+  warehouse: one(warehouses, { fields: [dispatches.warehouseId], references: [warehouses.id] }),
   items: many(dispatchItems),
 }));
 

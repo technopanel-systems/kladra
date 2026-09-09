@@ -777,6 +777,16 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   form: **truncation is for a name, which the reader already knows, and never for a label, which
   is what tells them what they are looking at.**
 
+- **A form asks in the order the person has the answers, not the order the record stores them.**
+  Phase 12 (D159). A rep quoting has the customer in his head, then the job, then the person he is
+  sending it to; the Quotations screen asked for the job first, out of one flat list of every job
+  in the building with the customer as a quieter line under each — the middle of the chain, and on
+  a real floor hundreds of rows deep in the one thing he already knew. The chain is
+  **company → project → contact**, each field narrowing the next, and the field further down the
+  chain says what to answer first rather than opening on a list that means nothing yet. The same
+  rule one level in: a quotation line asks the colour, the make-up and how many before the sheet's
+  three measurements, because that is the sentence a rep says out loud.
+
 - **A row on a shared record says whose it is, and only where more than one person has one.**
   Phase 12 (D147, D158). Two reps on one customer each keep their own contacts, and a fold puts
   both lists on one record — so the same buyer, with the same number, is legitimately two rows in

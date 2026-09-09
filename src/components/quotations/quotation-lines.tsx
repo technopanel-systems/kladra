@@ -9,15 +9,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatMoney, formatSqm, lineSqm, lineTotal } from "@/lib/money";
 import type { DraftLine } from "@/lib/quotation-draft";
+import { STANDARD_LENGTH, STANDARD_WIDTH, STANDARD_WIDTHS } from "@/lib/sheet";
 
 /**
  * The lines of a quotation, as a rep fills them in (SPEC §3, S32).
  *
  * Nine fields in the founder's order: Colour code · Supplier · Fire rating ·
- * Class · Qty · Thickness · Width · Length · Price per m². m² is never one of
- * them — it is width × length × qty and the screen shows it as it is typed
+ * Class · **Qty** · Thickness · Width · Length · Price per m². m² is never one
+ * of them — it is width × length × qty and the screen shows it as it is typed
  * (S31), because a rep who can see the number appear stops doing the sum on his
  * phone.
+ *
+ * The order is the founder's and it is not decoration. Qty sat eighth, after
+ * the three measurements, for four phases: the list in §3 reads
+ * "…Class · Qty · Thickness · Width…", and what a rep says out loud when he
+ * quotes is the colour, the make-up and HOW MANY, then the sheet it is on. A
+ * form that asks the three dimensions before the count makes him hold the
+ * number he came with while he answers three questions about the standard sheet
+ * that are already filled in (P12-9, §5 #178).
  *
  * A card per line rather than a table. Nine columns do not fit across 375px and
  * a dialog that scrolls sideways is a dialog nobody fills in on site; the same
@@ -37,11 +46,6 @@ import type { DraftLine } from "@/lib/quotation-draft";
  * server numbers the lines by their order.
  */
 export type LineDraft = DraftLine & { key: string };
-
-/** The standard sheet: 1.24 × 5.8 m, 4 mm (S32). */
-const STANDARD_WIDTH = "1.24";
-const STANDARD_LENGTH = "5.8";
-const WIDTH_CHOICES = ["1.24", "1.5", "2.0"];
 
 let counter = 0;
 
@@ -166,7 +170,14 @@ export function QuotationLines({
         const total = lineTotal(line);
 
         return (
-          <div key={line.key} className="card-face flex flex-col gap-3 p-3">
+          <div
+            key={line.key}
+            // Named so a walk can read the nine boxes in the order they are
+            // drawn: the founder's order is a decision (§3) and an order nothing
+            // checks is an order that drifts back (P12-9).
+            data-slot="quotation-line"
+            className="card-face flex flex-col gap-3 p-3"
+          >
             <div className="flex items-center justify-between gap-2">
               <h4 className="text-sm font-medium">
                 {t("quotations.itemNumber", { number: index + 1 })}
@@ -247,6 +258,20 @@ export function QuotationLines({
               </div>
 
               <div className="flex flex-col gap-1.5">
+                <Label htmlFor={id("qty")}>{t("common.qty")}</Label>
+                <Input
+                  id={id("qty")}
+                  required
+                  disabled={disabled}
+                  inputMode="numeric"
+                  dir="ltr"
+                  className="num text-start"
+                  value={line.qty}
+                  onChange={(event) => patch(line.key, { qty: event.target.value })}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <Label id={id("thickness-label")}>{t("common.thickness")}</Label>
                 <SearchableSelect
                   aria-labelledby={id("thickness-label")}
@@ -266,7 +291,7 @@ export function QuotationLines({
                   aria-labelledby={id("width-label")}
                   value={line.width}
                   onChange={(value) => patch(line.key, { width: value })}
-                  options={WIDTH_CHOICES.map((width) => ({ value: width, label: width }))}
+                  options={STANDARD_WIDTHS.map((width) => ({ value: width, label: width }))}
                   disabled={disabled}
                   allowCustom
                   placeholder={t("forms.choose")}
@@ -286,20 +311,6 @@ export function QuotationLines({
                   className="num text-start"
                   value={line.length}
                   onChange={(event) => patch(line.key, { length: event.target.value })}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor={id("qty")}>{t("common.qty")}</Label>
-                <Input
-                  id={id("qty")}
-                  required
-                  disabled={disabled}
-                  inputMode="numeric"
-                  dir="ltr"
-                  className="num text-start"
-                  value={line.qty}
-                  onChange={(event) => patch(line.key, { qty: event.target.value })}
                 />
               </div>
 

@@ -46,9 +46,10 @@ test("a waiting dispatch whose quotation was revised says so, and cannot be appr
   // A later revision of the same number, as the revise action writes it:
   // requested, no SMAC number, no dates, pointing back at the one it revises.
   const revision = await one<{ id: string }>(
-    `insert into quotations (number, revision, revision_of, company_id, project_id, rep_id, status, notes)
+    `insert into quotations
+       (number, revision, revision_of, company_id, project_id, rep_id, status, notes, warehouse_id)
      select number, (select max(revision) from quotations where number = $2::int) + 1, id,
-            company_id, project_id, rep_id, 'requested', notes
+            company_id, project_id, rep_id, 'requested', notes, warehouse_id
        from quotations where id = $1::uuid
      returning id`,
     [waiting.quotation_id, waiting.quotation_number],

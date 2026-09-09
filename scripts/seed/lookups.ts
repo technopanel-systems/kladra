@@ -35,8 +35,12 @@ export const THICKNESSES: { mm: string; active: boolean; standard: boolean }[] =
   { mm: "8.0", active: false, standard: false },
 ];
 
-export const STANDARD_WIDTHS = ["1.24", "1.5", "2.0"] as const;
-export const STANDARD_LENGTH = "5.8";
+// The sheet itself is not a lookup — a width is a fact about the product, not a
+// preference an admin edits — so it lives in src/lib/sheet.ts and is re-exported
+// here for the seed rows below. It was written out a second time in this file
+// and read by nobody, which is how the two copies stayed in agreement for four
+// phases without either of them being checked (P12-9).
+export { STANDARD_WIDTHS, STANDARD_LENGTH } from "../../src/lib/sheet";
 
 // ---- company categories (FACET company-categories.ts, founder's order) --------
 export const COMPANY_CATEGORIES: Bilingual[] = [
@@ -72,6 +76,17 @@ export const SHIPMENT_METHODS: { code: string; en: string; ar: string }[] = [
   { code: "ct", en: "CT — the customer's own truck", ar: "CT — شاحنة العميل" },
   { code: "tt", en: "TT — a Technopanel truck", ar: "TT — شاحنة تكنوبانل" },
   { code: "cargo", en: "Cargo — a third party", ar: "Cargo — طرف ثالث" },
+];
+
+// ---- warehouses (SPEC §3: Riyadh, Malham, Dammam, Khamis Mushait) -------------
+// The founder's four, in his order — the Riyadh store first because it is where
+// most of what this floor sells ships from, and a list's first row is what a
+// form opens on.
+export const WAREHOUSES: Bilingual[] = [
+  { en: "Riyadh", ar: "الرياض" },
+  { en: "Malham", ar: "ملهم" },
+  { en: "Dammam", ar: "الدمام" },
+  { en: "Khamis Mushait", ar: "خميس مشيط" },
 ];
 
 // ---- contact positions (FACET had free text only; SPEC D21) -------------------

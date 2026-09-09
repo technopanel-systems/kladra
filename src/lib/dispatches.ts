@@ -49,10 +49,12 @@ import {
   quotationItems,
   quotations,
   shipmentMethods,
+  warehouses,
   users,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
+import { warehouseName } from "@/lib/lookups";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { creditOnDispatch, type CreditLine } from "@/lib/credit-rows";
@@ -437,6 +439,16 @@ export type DispatchItemRow = {
 export type DispatchDetail = DispatchRow & {
   items: DispatchItemRow[];
   /**
+   * Which store the load leaves from (SPEC §3, P12-9), and the row behind that
+   * word for the edit dialog to open its list on.
+   *
+   * On the DETAIL and not on the row, the same way the quotation carries it: the
+   * dispatch list is a queue somebody scans for what is waiting, and a store's
+   * name is not one of the things scanned for.
+   */
+  warehouseId: number;
+  warehouseName: string;
+  /**
    * Who its metres count for, and how much each takes (D148). One name on
    * every dispatch a single rep raised; two or more on a shared job, and then
    * the drawer is the only place a rep can see why his target moved by less
@@ -460,6 +472,8 @@ export async function getDispatch(
     .select({
       ...selection(locale ?? (await getLocale())),
       shipmentMethod: shipmentName(locale),
+      warehouseId: dispatches.warehouseId,
+      warehouseName: warehouseName(locale),
       // Whether this reader is on the company's share list, asked in the same
       // statement as its owner (D147).
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
@@ -468,6 +482,7 @@ export async function getDispatch(
     .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, dispatches.repId))
+    .innerJoin(warehouses, eq(warehouses.id, dispatches.warehouseId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
     .leftJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
@@ -510,6 +525,8 @@ export async function getDispatch(
   const detail = toRow(row, row.shipmentMethod);
   return {
     ...detail,
+    warehouseId: row.warehouseId,
+    warehouseName: row.warehouseName,
     credit: await creditOnDispatch(id, detail.totalSqm),
     items: items.map((item) => ({
       ...item,

@@ -182,6 +182,13 @@ function readItems(formData: FormData): z.infer<typeof itemsSchema> | "invalid" 
 
 const detailsSchema = z.object({
   shipmentMethodId: z.coerce.number().int().positive(),
+  /**
+   * Which store this load leaves from (SPEC §3, P12-9). One per whole dispatch,
+   * never per line: the coordinator rings one store before she approves it.
+   * The dialog opens on the quotation's own, and a rep changes it when the
+   * panels are coming out of somewhere else.
+   */
+  warehouseId: z.coerce.number().int().positive(),
   destination: z.string().trim().min(1).max(500),
   paymentTerms: z.string().trim().min(1).max(1000),
 });
@@ -274,6 +281,7 @@ export async function requestDispatchAction(
       .safeParse({
         quotationId: field(formData, "quotationId"),
         shipmentMethodId: field(formData, "shipmentMethodId"),
+        warehouseId: field(formData, "warehouseId"),
         destination: field(formData, "destination"),
         paymentTerms: field(formData, "paymentTerms"),
       });
@@ -369,6 +377,7 @@ export async function requestDispatchAction(
           quotationId: quotation.id,
           repId: actor.id,
           shipmentMethodId: parsed.data.shipmentMethodId,
+          warehouseId: parsed.data.warehouseId,
           destination: parsed.data.destination,
           paymentTerms: parsed.data.paymentTerms,
         })
@@ -446,6 +455,7 @@ export async function updateDispatchAction(
       .safeParse({
         dispatchId: field(formData, "dispatchId"),
         shipmentMethodId: field(formData, "shipmentMethodId"),
+        warehouseId: field(formData, "warehouseId"),
         destination: field(formData, "destination"),
         paymentTerms: field(formData, "paymentTerms"),
       });
@@ -490,6 +500,9 @@ export async function updateDispatchAction(
         .update(dispatches)
         .set({
           shipmentMethodId: parsed.data.shipmentMethodId,
+          // Correctable for exactly as long as the quantities beside it are: a
+          // request waiting on the desk has moved nothing yet (SPEC §3, P12-9).
+          warehouseId: parsed.data.warehouseId,
           destination: parsed.data.destination,
           paymentTerms: parsed.data.paymentTerms,
         })

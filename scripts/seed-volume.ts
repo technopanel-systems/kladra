@@ -126,6 +126,7 @@ async function main(): Promise<void> {
   const classRows = await db.execute<{ id: number }>(sql`select id from classes limit 5`);
   const thicknessRows = await db.execute<{ id: number }>(sql`select id from thicknesses limit 5`);
   const methodRows = await db.execute<{ id: number }>(sql`select id from shipment_methods limit 5`);
+  const warehouseRows = await db.execute<{ id: number }>(sql`select id from warehouses limit 8`);
 
   const cityIds = cityRows.rows.map((row) => Number(row.id));
   const categoryIds = categoryRows.rows.map((row) => Number(row.id));
@@ -135,6 +136,7 @@ async function main(): Promise<void> {
   const classIds = classRows.rows.map((row) => Number(row.id));
   const thicknessIds = thicknessRows.rows.map((row) => Number(row.id));
   const methodIds = methodRows.rows.map((row) => Number(row.id));
+  const warehouseIds = warehouseRows.rows.map((row) => Number(row.id));
 
   /** A Riyadh day this many days back. */
   const back = (days: number): Day => addDays(today, -days);
@@ -269,6 +271,10 @@ async function main(): Promise<void> {
         revision: 1,
         companyId: project.companyId,
         projectId: project.id,
+        // Nobody named and any store: this file exists to make ten thousand rows
+        // and measure the queries over them, not to be read (P11I).
+        contactId: null,
+        warehouseId: pick(warehouseIds),
         repId: project.repId,
         status,
         // The ERP's own number, which is what the coordinator types: nothing to
@@ -353,6 +359,7 @@ async function main(): Promise<void> {
         quotationId: source.id,
         repId: source.repId,
         shipmentMethodId: pick(methodIds),
+        warehouseId: pick(warehouseIds),
         destination: `${pick(["الرياض", "جدة", "الدمام"])} — موقع المشروع`,
         paymentTerms: pick(["تحويل بنكي 30 يوم", "50% مقدم", "نقدًا عند التسليم"]),
         status,

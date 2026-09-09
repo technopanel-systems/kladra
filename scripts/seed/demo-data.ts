@@ -1009,6 +1009,19 @@ export type QuotationSeed = {
    */
   creditTo?: RepKey[];
   status: "requested" | "returned" | "issued" | "accepted" | "rejected";
+  /**
+   * Which store it was priced out of, by its English name (SPEC §3, P12-9).
+   * Absent means Riyadh, which is where most of this floor's work ships from and
+   * what the form opens on; the rows that name another one are here so that all
+   * four are on a screen somebody has actually looked at (rules/data.md).
+   */
+  warehouse?: string;
+  /**
+   * Who at the customer it is addressed to — an index into the company's own
+   * `contacts` (P12-9). Absent means nobody, which is a real state: a price for
+   * stock is sometimes for the company rather than for a person.
+   */
+  contact?: number;
   notes?: string;
   smacNumber?: string;
   /**
@@ -1042,6 +1055,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p2",
     rep: "faisal",
     status: "requested",
+    contact: 0,
     /*
      * Four working days back, which is past the line (S53, D59): this is the one
      * row in the dataset that makes the manager's "requests waiting" figure and
@@ -1062,6 +1076,8 @@ export const QUOTATIONS: QuotationSeed[] = [
     company: "f8",
     rep: "faisal",
     status: "returned",
+    warehouse: "Malham",
+    contact: 0,
     createdBack: 6,
     /*
      * Sent back twice. Nothing on the row says so — it keeps the last reason and
@@ -1083,6 +1099,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p4",
     rep: "faisal",
     status: "issued",
+    contact: 1,
     createdBack: 7,
     // Came back once and went out the next day: the ordinary case, and the one
     // that proves a trail can carry rework and still end well.
@@ -1102,6 +1119,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p1",
     rep: "faisal",
     status: "accepted",
+    contact: 0,
     createdBack: 9,
     issuedBack: 8,
     decidedBack: 5,
@@ -1117,6 +1135,8 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p5",
     rep: "faisal",
     status: "rejected",
+    warehouse: "Dammam",
+    contact: 1,
     createdBack: 11,
     issuedBack: 10,
     decidedBack: 4,
@@ -1150,6 +1170,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p8",
     rep: "saad",
     status: "accepted",
+    contact: 2,
     createdBack: 8,
     issuedBack: 6,
     decidedBack: 2,
@@ -1169,6 +1190,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p3",
     rep: "faisal",
     status: "issued",
+    contact: 0,
     createdBack: 5,
     issuedBack: 3,
     smacNumber: "4531",
@@ -1188,6 +1210,8 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p13",
     rep: "turki",
     status: "requested",
+    warehouse: "Khamis Mushait",
+    contact: 1,
     createdBack: 3,
     notes: "العميل طلب السعر قبل قرار الترسية",
     items: [
@@ -1216,6 +1240,7 @@ export const QUOTATIONS: QuotationSeed[] = [
     rep: "saad",
     creditTo: ["faisal", "saad"],
     status: "accepted",
+    contact: 0,
     createdBack: 7,
     issuedBack: 6,
     decidedBack: 5,
@@ -1272,6 +1297,11 @@ export type DispatchSeed = {
   refuseReason?: string;
   /** `shipment_methods.code`. */
   shipmentMethod: string;
+  /**
+   * Which store the load leaves from, by its English name (SPEC §3, P12-9).
+   * Absent means the quotation's own, which is what the dialog opens on.
+   */
+  warehouse?: string;
   destination: string;
   paymentTerms: string;
   smacDispatchNumber?: string;

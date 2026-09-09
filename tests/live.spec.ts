@@ -469,8 +469,10 @@ test("the listener's outage ends with a resync, not a hole", async ({ page, loca
 
   const source = await pickRequestedQuotation();
   const inserted = await one<{ id: string; number: number }>(
-    `insert into quotations (number, company_id, project_id, rep_id, status, notes, created_at, updated_at)
-     select nextval('quotation_numbers'), company_id, project_id, rep_id, 'requested', notes, now(), now()
+    `insert into quotations
+       (number, company_id, project_id, rep_id, status, notes, warehouse_id, created_at, updated_at)
+     select nextval('quotation_numbers'), company_id, project_id, rep_id, 'requested', notes,
+            warehouse_id, now(), now()
        from quotations where id = $1::uuid
      returning id, number`,
     [source.id],

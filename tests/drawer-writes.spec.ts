@@ -3,7 +3,7 @@ import { addDays, formatDay, todayRiyadh, type Day } from "@/lib/dates";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
-import { pickFirst } from "./helpers/pick";
+import { choose, pickFirst } from "./helpers/pick";
 
 /**
  * P11A-7 — a drawer says what it writes (SPEC D94, S18).
@@ -35,20 +35,6 @@ const COLD = { timeout: 30_000 };
 /** A dialog or drawer by its title, exactly as the other specs name it. */
 function dialogNamed(page: Page, name: string): Locator {
   return page.getByRole("dialog", { name });
-}
-
-/**
- * Opens a searchable select and picks the option carrying this exact text.
- * Scoped to the popover's own content, as create.spec.ts's `choose` is —
- * the screen behind the dialog carries some of the same labels.
- */
-async function choose(page: Page, trigger: Locator, label: string): Promise<void> {
-  await trigger.click();
-  await page
-    .locator('[data-slot="popover-content"]')
-    .getByText(label, { exact: true })
-    .first()
-    .click();
 }
 
 /**

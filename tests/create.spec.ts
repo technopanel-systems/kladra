@@ -2,7 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
-import { pickFirst } from "./helpers/pick";
+import { choose, pickFirst } from "./helpers/pick";
 
 /**
  * P8.2 — a primary button of its own on Projects, Quotations and Dispatches
@@ -43,15 +43,6 @@ function dialogNamed(page: Page, name: string): Locator {
  * quotations list — and an open dialog does not stop Playwright from seeing
  * text underneath it, so an unscoped search can match the wrong one.
  */
-async function choose(page: Page, trigger: Locator, label: string): Promise<void> {
-  await trigger.click();
-  await page
-    .locator('[data-slot="popover-content"]')
-    .getByText(label, { exact: true })
-    .first()
-    .click();
-}
-
 /**
  * Fills the one line a quotation needs to be saved at all. Width, length,
  * thickness and quantity already open on a sensible default (S32); only the
@@ -165,52 +156,140 @@ test("a quotation is requested from the quotations screen", async ({ page, local
     [faisal],
   );
 
+  // Who at the customer, and a store that is NOT the one the form opens on —
+  // a field that is only ever left alone is a field nobody has proved works.
+  const person = await one<{ id: string; name: string }>(
+    `select id, name from contacts
+      where company_id = $1::uuid and archived_at is null
+      order by created_at
+      limit 1`,
+    [project.company_id],
+  );
+  const store = await one<{ id: number; name_en: string; name_ar: string }>(
+    `select id, name_en, name_ar from warehouses
+      where active order by sort_order desc, id desc limit 1`,
+  );
+  const storeName = locale === "ar" ? store.name_ar : store.name_en;
+
   await login(page, locale, "faisal");
   await page.goto(`/${locale}/quotations`);
 
-  await test.step("the button asks for the project first, its company a quieter line under it", async () => {
+  await test.step("company → project → contact, in the order a rep has the answers", async () => {
     await page.getByRole("button", { name: t("quotations.request") }).first().click();
 
     const form = dialogNamed(page, t("quotations.request"));
-    const picker = form.getByRole("combobox", { name: t("common.project") });
-    // The picker is gated behind the same lookups the lines need (suppliers,
-    // fire ratings, classes), so it can arrive a moment after the dialog does.
-    await expect(picker).toBeVisible(COLD);
-    await expect(picker).toContainText(t("quotations.pickProject"));
+    const companyPicker = form.getByRole("combobox", { name: t("common.company") });
+    // The pickers are gated behind the same lookups the lines need (suppliers,
+    // fire ratings, classes), so they can arrive a moment after the dialog does.
+    await expect(companyPicker).toBeVisible(COLD);
+    await expect(companyPicker).toContainText(t("quotations.pickCompany"));
 
-    await choose(page, picker, project.name);
-    await expect(picker).toContainText(project.company_name);
+    // Until a customer is named there is nothing to choose from: the job list
+    // used to be every job in the building (P12-9).
+    const projectPicker = form.getByRole("combobox", { name: t("common.project") });
+    await expect(projectPicker).toContainText(t("quotations.pickCompanyFirst"));
+    await expect(projectPicker).toBeDisabled();
 
+    await choose(page, companyPicker, project.company_name);
+    await expect(companyPicker).toContainText(project.company_name);
+    await expect(projectPicker).toBeEnabled();
+
+    await choose(page, projectPicker, project.name);
+    await expect(projectPicker).toContainText(project.name);
+
+    await choose(page, form.getByRole("combobox", { name: t("common.contact") }), person.name);
+    await choose(page, form.getByRole("combobox", { name: t("common.warehouse") }), storeName);
+  });
+
+  await test.step("the line asks its nine boxes in the founder's order, quantity fifth", async () => {
+    const form = dialogNamed(page, t("quotations.request"));
+    const line = form.locator('[data-slot="quotation-line"]').first();
+    // SPEC §3, word for word: "Colour code · Supplier (N/K/C/D) · Fire rating
+    // (B1/A2/Normal) · Class · Qty · Thickness · Width · Length · Price per m²".
+    // Read off the DOM in drawing order, so moving one box fails here and not
+    // in somebody's hands.
+    await expect(line.locator("label")).toHaveText([
+      t("common.colourCode"),
+      t("common.supplier"),
+      t("common.fireRating"),
+      t("common.class"),
+      t("common.qty"),
+      t("common.thickness"),
+      t("common.width"),
+      t("common.length"),
+      t("common.pricePerSqm"),
+    ]);
+
+    // The widths a sheet actually comes in are a list, and anything else is
+    // typed (§3, src/lib/sheet.ts). Nothing had ever opened this control.
+    const width = line.getByRole("combobox", { name: t("common.width") });
+    await expect(width).toContainText("1.24");
+    await choose(page, width, "1.5");
+    await expect(width).toContainText("1.5");
+
+    await line.getByLabel(t("common.qty")).fill("12");
     await fillOneItem(form, t);
     await form.getByRole("button", { name: t("common.save") }).click();
   });
 
-  await test.step("it lands on the new quotation, against the project and company chosen", async () => {
+  await test.step("it lands on the new quotation, with everything that was chosen on it", async () => {
     await expect(page.getByText(t("quotations.requested"))).toBeVisible(COLD);
     await expect(page).toHaveURL(/\/quotations\?open=/, COLD);
     const quotationId = new URL(page.url()).searchParams.get("open") ?? "";
     expect(quotationId).not.toBe("");
 
     const label = await nameOfTheOpenQuotation(page);
-    await expect(dialogNamed(page, label)).toBeVisible();
+    const drawer = dialogNamed(page, label);
+    await expect(drawer).toBeVisible();
+    // The store and the person are on the paper the coordinator will read.
+    await expect(drawer).toContainText(storeName);
+    await expect(drawer).toContainText(person.name);
 
-    const row = await one<{ company_id: string; project_id: string | null }>(
-      "select company_id, project_id from quotations where id = $1::uuid",
+    const row = await one<{
+      company_id: string;
+      project_id: string | null;
+      contact_id: string | null;
+      warehouse_id: number;
+    }>(
+      `select company_id, project_id, contact_id, warehouse_id
+         from quotations where id = $1::uuid`,
       [quotationId],
     );
     expect(row.company_id, "the quotation's company is not the picked project's own").toBe(
       project.company_id,
     );
     expect(row.project_id, "the quotation did not land on the project picked").toBe(project.id);
+    expect(row.contact_id, "the quotation is not addressed to the person picked").toBe(person.id);
+    expect(Number(row.warehouse_id), "the quotation is not out of the store picked").toBe(
+      Number(store.id),
+    );
+
+    // Width and quantity as typed, and the metres they make: the one figure on
+    // this screen a rep has to trust is the product of the two controls this
+    // walk is the first thing ever to open (rules/data.md).
+    const line = await one<{ width: string; qty: number; sqm: string }>(
+      "select width, qty, sqm from quotation_items where quotation_id = $1::uuid",
+      [quotationId],
+    );
+    expect(Number(line.width)).toBe(1.5);
+    expect(Number(line.qty)).toBe(12);
+    expect(Number(line.sqm)).toBeCloseTo(1.5 * 5.8 * 12, 2);
   });
 });
 
 test("a dispatch is requested from the dispatches screen", async ({ page, locale, t }) => {
   const faisal = await userId("faisal@technopanel.com.sa");
-  const quotation = await one<{ id: string; number: number; revision: number }>(
-    `select q.id, q.number, q.revision
+  const quotation = await one<{
+    id: string;
+    number: number;
+    revision: number;
+    warehouse_en: string;
+    warehouse_ar: string;
+  }>(
+    `select q.id, q.number, q.revision, w.name_en as warehouse_en, w.name_ar as warehouse_ar
        from quotations q
        join companies c on c.id = q.company_id
+       join warehouses w on w.id = q.warehouse_id
       where c.rep_id = $1::uuid
         and q.status = 'issued'
         and not exists (
@@ -279,6 +358,14 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
     await expect(box).toBeVisible(COLD);
     await box.fill(String(sending));
 
+    // The store the load leaves from opens on the QUOTATION's own, which is
+    // where the price was worked out and the answer nine times in ten (SPEC §3,
+    // P12-9) — a child reading its own parent, never the dispatch before it.
+    const store = form.getByRole("combobox", { name: t("common.warehouse") });
+    await expect(store).toContainText(
+      locale === "ar" ? quotation.warehouse_ar : quotation.warehouse_en,
+    );
+
     await fillTheDetails(form, t);
     await form.getByRole("button", { name: t("common.save") }).click();
   });
@@ -292,12 +379,17 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
     const dispatchLabel = await nameOfTheOpenDispatch(page);
     await expect(dialogNamed(page, dispatchLabel)).toBeVisible();
 
-    const row = await one<{ quotation_id: string }>(
-      "select quotation_id from dispatches where id = $1::uuid",
+    const row = await one<{ quotation_id: string; warehouse: string }>(
+      `select d.quotation_id, w.name_en as warehouse
+         from dispatches d join warehouses w on w.id = d.warehouse_id
+        where d.id = $1::uuid`,
       [dispatchId],
     );
     expect(row.quotation_id, "the dispatch is not against the quotation picked").toBe(
       quotation.id,
+    );
+    expect(row.warehouse, "the load did not leave from the store the price came out of").toBe(
+      quotation.warehouse_en,
     );
 
     const items = await query<{ qty: string }>(

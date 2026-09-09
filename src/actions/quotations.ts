@@ -21,7 +21,15 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { auditLog, companies, projects, quotationItems, quotations, users } from "@/db/schema";
+import {
+  auditLog,
+  companies,
+  contacts,
+  projects,
+  quotationItems,
+  quotations,
+  users,
+} from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditQuotation, resolveCredit } from "@/lib/credit-rows";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
@@ -252,6 +260,53 @@ async function insertItems(
  * somebody else's company, and the request would come back to the wrong person
  * — the same reason Add company is refused to them.
  */
+/**
+ * Which store, and who at the customer (SPEC §3, P12-9).
+ *
+ * One reader for the three forms that write a quotation — the first ask, the
+ * edit and the revision — because they ask the same two questions and a second
+ * copy of "is this person at this company" is the copy that would forget the
+ * archived case. A revision asks again rather than copying, which is §3's rule
+ * that nothing is carried forward from a previous record; a revision is one.
+ *
+ * The contact is checked against the company the quotation is ON, not against
+ * whatever the form said, so a form that named a person at a different customer
+ * is refused rather than believed.
+ */
+const addressingSchema = z.object({
+  contactId: z.uuid().optional(),
+  warehouseId: z.coerce.number().int().positive(),
+});
+
+type Addressing =
+  | { ok: true; contactId: string | null; warehouseId: number }
+  | { ok: false; key: "invalid" | "contactNotAtCompany" };
+
+async function readAddressing(formData: FormData, companyId: string): Promise<Addressing> {
+  const parsed = addressingSchema.safeParse({
+    contactId: field(formData, "contactId"),
+    warehouseId: field(formData, "warehouseId"),
+  });
+  if (!parsed.success) return { ok: false, key: "invalid" };
+
+  if (parsed.data.contactId) {
+    const [contact] = await db
+      .select({ companyId: contacts.companyId, archivedAt: contacts.archivedAt })
+      .from(contacts)
+      .where(eq(contacts.id, parsed.data.contactId))
+      .limit(1);
+    if (!contact || contact.archivedAt || contact.companyId !== companyId) {
+      return { ok: false, key: "contactNotAtCompany" };
+    }
+  }
+
+  return {
+    ok: true,
+    contactId: parsed.data.contactId ?? null,
+    warehouseId: parsed.data.warehouseId,
+  };
+}
+
 export async function requestQuotationAction(
   _prev: ActionResult<{ quotationId: string }> | null,
   formData: FormData,
@@ -294,13 +349,17 @@ export async function requestQuotationAction(
 
     // Every quotation belongs to a project (S18). The company drawer used to
     // raise one against no project at all, and the month's figures then hung
-    // off a customer with no job named (D94). The picker shows its refusal
-    // under the key `companyId`, because one option carries both ids.
+    // off a customer with no job named (D94).
+    //
+    // Reported under `projectId`, which is the field that is empty. It was
+    // `companyId` because one option carried both ids and there was one control
+    // to point at; there are two now, and a refusal that lights up the customer
+    // he did answer is a refusal that reads as a bug (P12-9).
     if (!input.projectId) {
       return {
         ok: false,
         error: t("projectRequired"),
-        fieldErrors: { companyId: t("projectRequired") },
+        fieldErrors: { projectId: t("projectRequired") },
       };
     }
     const [project] = await db
@@ -327,6 +386,15 @@ export async function requestQuotationAction(
     // A lost project is finished work (S20): nothing new hangs off it.
     if (project.lostAt) return { ok: false, error: t("alreadyLost") };
 
+    const addressing = await readAddressing(formData, input.companyId);
+    if (!addressing.ok) {
+      return {
+        ok: false,
+        error: addressing.key === "invalid" ? tc("invalid") : t("contactNotAtCompany"),
+        ...(addressing.key === "invalid" ? { fieldErrors: { warehouseId: tc("required") } } : {}),
+      };
+    }
+
     // Whose paper this is (D148). Resolved from the job rather than trusted
     // from the form, and a name that is not on the job is a refusal rather than
     // a silent fallback to the man who typed it.
@@ -346,6 +414,8 @@ export async function requestQuotationAction(
           number: sql`nextval('quotation_numbers')`,
           companyId: input.companyId,
           projectId: input.projectId,
+          contactId: addressing.contactId,
+          warehouseId: addressing.warehouseId,
           repId: actor.id,
           notes: input.notes ?? null,
           ...issuedNow(self),
@@ -455,6 +525,18 @@ export async function updateQuotationAction(
     const credit = await resolveCredit(quotation.projectId, actor.id, field(formData, "credit"));
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
+    // And so are the store and the name it goes to: a request waiting in the
+    // queue is correctable in every part of itself, and a rep who picked the
+    // wrong store should not have to withdraw it and type nine fields again.
+    const addressing = await readAddressing(formData, quotation.companyId);
+    if (!addressing.ok) {
+      const te = await getTranslations("errors");
+      return {
+        ok: false,
+        error: addressing.key === "invalid" ? tc("invalid") : te("contactNotAtCompany"),
+      };
+    }
+
     const held = await db.transaction(async (tx) => {
       // Held for the rest of the transaction; issued meanwhile is not ours to edit (D85).
       const status = await holdQuotation(tx, quotation.id);
@@ -469,7 +551,13 @@ export async function updateQuotationAction(
       // only count while the status is `returned` — one of them will not (D72).
       await tx
         .update(quotations)
-        .set({ status: "requested", notes, returnReason: null })
+        .set({
+          status: "requested",
+          notes,
+          returnReason: null,
+          contactId: addressing.contactId,
+          warehouseId: addressing.warehouseId,
+        })
         .where(eq(quotations.id, quotation.id));
 
       await tx.insert(auditLog).values({
@@ -900,6 +988,20 @@ export async function reviseQuotationAction(
     );
     if (!revisionCredit) return { ok: false, error: tc("credit.notOnProject") };
 
+    // Read from the form on every write rather than copied off the parent in
+    // SQL. A revision opens on what the paper it replaces says — the way it
+    // opens on its lines (D10) — and the rep may change either before he sends
+    // it, which is the difference between a form's starting point and a value
+    // the server quietly inherits.
+    const addressing = await readAddressing(formData, quotation.companyId);
+    if (!addressing.ok) {
+      const te = await getTranslations("errors");
+      return {
+        ok: false,
+        error: addressing.key === "invalid" ? tc("invalid") : te("contactNotAtCompany"),
+      };
+    }
+
     // A revision of her own paper goes out the same way the first one did, and
     // carries its own number: SMAC gives a revision a number of its own.
     const self = selfIssue(actor, formData);
@@ -929,6 +1031,8 @@ export async function reviseQuotationAction(
           revisionOf: quotation.id,
           companyId: quotation.companyId,
           projectId: quotation.projectId,
+          contactId: addressing.contactId,
+          warehouseId: addressing.warehouseId,
           repId: actor.id,
           notes: field(formData, "notes") ?? null,
           ...issuedNow(self),

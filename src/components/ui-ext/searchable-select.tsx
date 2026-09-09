@@ -182,9 +182,24 @@ export function SearchableSelect({
               <bdi>{shown ?? placeholder}</bdi>
             </span>
             {shown !== null && selected?.hint ? (
-              <span className="truncate text-xs text-muted-foreground">
-                <bdi>{selected.hint}</bdi>
-              </span>
+              <>
+                {/*
+                 * The separator two values need when they share one line
+                 * (rules/words.md). Without it the closed control carried a job
+                 * and its customer as two runs with nothing between them: on an
+                 * English page two Arabic names sat side by side, and a reader
+                 * scanning them right to left read the CUSTOMER first — the
+                 * reverse of what the control says. The dot is neutral, so it
+                 * settles against the page and marks the pair as two values in
+                 * the page's order, while each name keeps its own direction.
+                 */}
+                <span aria-hidden="true" className="shrink-0 text-faint">
+                  ·
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  <bdi>{selected.hint}</bdi>
+                </span>
+              </>
             ) : null}
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />

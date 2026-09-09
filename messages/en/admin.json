@@ -89,7 +89,8 @@
     "fireRatings": "Fire ratings",
     "classes": "Classes",
     "thicknesses": "Thicknesses",
-    "shipmentMethods": "Shipment methods"
+    "shipmentMethods": "Shipment methods",
+    "warehouses": "Warehouses"
   },
   "kind": {
     "holiday": "Holiday",

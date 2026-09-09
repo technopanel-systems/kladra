@@ -53,6 +53,7 @@
   "length": "الطول (م)",
   "pricePerSqm": "السعر / م²",
   "shipment": "طريقة الشحن",
+  "warehouse": "المستودع",
   "destination": "الوجهة",
   "paymentTerms": "شروط الدفع",
   "leadSource": "مصدر العميل",

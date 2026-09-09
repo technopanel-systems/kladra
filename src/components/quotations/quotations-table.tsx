@@ -481,7 +481,14 @@ function useCloseDrawer(): () => void {
 }
 
 export type QuotationSheetProps = {
-  quotation: QuotationRow & { notes: string | null; isLatest: boolean; selfIssued: boolean };
+  quotation: QuotationRow & {
+    notes: string | null;
+    isLatest: boolean;
+    selfIssued: boolean;
+    /** Where it was priced out of, and who it is for (SPEC §3, P12-9). */
+    warehouseName: string;
+    contactName: string | null;
+  };
   /**
    * Who it counts for (D148). Said only when it is worth saying — more than one
    * name, or one name that is not the man who raised it — so the ordinary
@@ -613,6 +620,19 @@ export function QuotationSheet({
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Fact label={t("common.raisedBy")}>{quotation.repName}</Fact>
+              {/* Who at the customer this went to, and which store it was
+                  priced out of (SPEC §3, P12-9). The name only when there is
+                  one: a dash under a heading is a field a reader has to decide
+                  is empty, and a quotation for stock is addressed to nobody by
+                  design rather than by omission. */}
+              {quotation.contactName ? (
+                <Fact label={t("common.contact")}>
+                  <bdi>{quotation.contactName}</bdi>
+                </Fact>
+              ) : null}
+              <Fact label={t("common.warehouse")}>
+                <bdi>{quotation.warehouseName}</bdi>
+              </Fact>
               {credit.length > 0 && (credit.length > 1 || credit[0].userId !== quotation.repId) ? (
                 <Fact label={t("common.credit.label")}>
                   {/* Each name in its own bdi: the separator is neutral and

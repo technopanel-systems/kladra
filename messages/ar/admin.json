@@ -89,7 +89,8 @@
     "fireRatings": "درجات مقاومة الحريق",
     "classes": "الفئات",
     "thicknesses": "السماكات",
-    "shipmentMethods": "طرق الشحن"
+    "shipmentMethods": "طرق الشحن",
+    "warehouses": "المستودعات"
   },
   "kind": {
     "holiday": "عطلة",

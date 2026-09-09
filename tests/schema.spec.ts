@@ -50,6 +50,64 @@ test("a quotation line cannot carry a zero or a minus", async () => {
   }
 });
 
+test("there is no price out of nowhere and no load from nowhere (0021, P12-9)", async () => {
+  const quotation = await one<{ id: string }>("select id from quotations limit 1");
+  const dispatch = await one<{ id: string }>("select id from dispatches limit 1");
+
+  // SPEC §3: one warehouse per whole quotation and per whole dispatch. NOT NULL
+  // is the whole of that rule on this side — the "never per line" half is the
+  // absence of the column on quotation_items, which nothing can assert but the
+  // schema itself.
+  for (const [table, id] of [
+    ["quotations", quotation.id],
+    ["dispatches", dispatch.id],
+  ] as const) {
+    const message = await refused(`update ${table} set warehouse_id = null where id = $1::uuid`, [
+      id,
+    ]);
+    expect(message, `${table}.warehouse_id took a null`).toContain("null value");
+  }
+
+  // And a store that is not a store. A row deleted out from under a quotation
+  // is the same refusal from the other side, which is why the reference has no
+  // cascade: a warehouse that closes is deactivated, never deleted.
+  const stranger = await refused(
+    "update quotations set warehouse_id = 987654321 where id = $1::uuid",
+    [quotation.id],
+  );
+  expect(stranger).toContain("violates foreign key constraint");
+});
+
+test("a quotation names a person at its own customer, or nobody (0021, P12-9)", async () => {
+  // The column is nullable and means it: a price for stock is addressed to the
+  // company rather than to anybody, and the seed has one of those.
+  const row = await one<{ n: string }>(
+    "select count(*)::text as n from quotations where contact_id is null",
+  );
+  expect(Number(row.n)).toBeGreaterThan(0);
+
+  // The pairing is not a database constraint and this says why, so the next
+  // reader does not add one: a fold archives the arriving duplicate of a person
+  // both reps held where it is (D153), so a quotation may honestly keep
+  // pointing at a contact whose company is now a tombstone. What the database
+  // does guarantee is that the person exists.
+  const stranger = await refused(
+    `update quotations set contact_id = '00000000-0000-0000-0000-000000000001'::uuid
+      where id = (select id from quotations limit 1)`,
+  );
+  expect(stranger).toContain("violates foreign key constraint");
+
+  // Every live one that names somebody names somebody at its own customer,
+  // which is the action's rule (`readAddressing`) holding on the seeded floor.
+  const wrong = await query(
+    `select 1 from quotations q
+       join contacts ct on ct.id = q.contact_id
+       join companies c on c.id = q.company_id
+      where ct.company_id <> q.company_id and c.merged_into_id is null`,
+  );
+  expect(wrong).toHaveLength(0);
+});
+
 test("a dispatch cannot be approved before it was raised", async () => {
   const row = await one<{ id: string }>(
     "select id from dispatches where status = 'approved' limit 1",

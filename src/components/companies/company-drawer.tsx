@@ -567,7 +567,10 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             <div className="flex">
               <RequestQuotationDialog
                 companyId={company.id}
-                projects={quotationProjects}
+                // The customer is known, so only the job is asked for: the
+                // dialog draws whichever links of company → project → contact
+                // it does not already have (P12-9).
+                targets={{ companies: [], projects: quotationProjects }}
                 issuesDirectly={direct}
                 trigger={requestQuotationTrigger}
               />

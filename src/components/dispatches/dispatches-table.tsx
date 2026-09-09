@@ -477,7 +477,10 @@ function useCloseDrawer(param: string): () => void {
 }
 
 export type DispatchSheetProps = {
-  dispatch: DispatchRow;
+  dispatch: DispatchRow & {
+    /** Which store the load leaves from (SPEC §3, P12-9). */
+    warehouseName: string;
+  };
   /**
    * Who its metres count for (D148). Drawn only when it is worth saying —
    * more than one name, or one name that is not the man who raised it — so an
@@ -687,6 +690,11 @@ export function DispatchSheet({
               </>
             ) : null}
             <div className="border-t border-line pt-1" />
+            {/* Where it leaves from, before how it travels and where it goes:
+                that is the order the load happens in (SPEC §3, P12-9). */}
+            <Row label={t("common.warehouse")}>
+              <bdi>{dispatch.warehouseName}</bdi>
+            </Row>
             <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
             <Row label={t("common.destination")}>{dispatch.destination}</Row>
             <Row label={t("common.paymentTerms")}>{dispatch.paymentTerms}</Row>

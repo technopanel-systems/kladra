@@ -36,8 +36,10 @@ test("the waiting list draws the cap, counts the rest, and keeps the oldest", as
     // seeded row, and the last is the newest thing waiting on him.
     await query(
       `insert into quotations
-         (number, revision, company_id, project_id, rep_id, status, return_reason, created_at, updated_at)
+         (number, revision, company_id, project_id, rep_id, status, return_reason, warehouse_id,
+          created_at, updated_at)
        select nextval('quotation_numbers')::int, 1, $1, $2, $3, 'returned', $4,
+              (select id from warehouses order by id limit 1),
               now() - (400 - g) * interval '1 day', now() - (400 - g) * interval '1 day'
          from generate_series(1, $5::int) g`,
       [home.company_id, home.project_id, faisal, MARKER, EXTRA],

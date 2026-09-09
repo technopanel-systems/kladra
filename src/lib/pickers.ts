@@ -16,7 +16,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { projectOptionValue } from "@/lib/picker-option";
+import { companiesOf, projectOptionValue } from "@/lib/picker-option";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
@@ -26,7 +26,7 @@ import { committedQtySql } from "@/lib/dispatches";
 import { holdsFloor, sells } from "@/lib/floor";
 import { onProjectSql } from "@/lib/visibility";
 import { quotationLabel } from "@/lib/labels";
-import type { PickerOption } from "@/lib/picker-option";
+import type { PickerOption, QuotationTargets } from "@/lib/picker-option";
 import { DISPATCHABLE, isLatestRevisionSql } from "@/lib/quotations";
 import type { Role, SessionUser } from "@/lib/types";
 
@@ -110,6 +110,19 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
     label: row.name,
     hint: row.companyName,
   }));
+}
+
+/**
+ * The customers and the jobs the Quotations screen's own button may raise on
+ * (P12-9), in one read.
+ *
+ * Every quotation names a project (D94), so the customers are the customers of
+ * the projects he may raise on — derived here rather than asked for again, which
+ * also means the two lists cannot disagree about what he is allowed to do.
+ */
+export async function quotationTargets(user: SessionUser): Promise<QuotationTargets> {
+  const projects = await projectOptions(user);
+  return { companies: companiesOf(projects), projects };
 }
 
 /**

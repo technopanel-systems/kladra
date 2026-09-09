@@ -57,6 +57,8 @@ import { formatSqm } from "@/lib/money";
 export type DispatchDraft = {
   dispatchId: string;
   shipmentMethodId: string;
+  /** Which store it leaves from (SPEC §3, P12-9). */
+  warehouseId: string;
   destination: string;
   paymentTerms: string;
   /** Quantities already on this request, by quotation line. */
@@ -100,6 +102,14 @@ export function RequestDispatchDialog({
   const [open, setOpen] = useState(false);
   const { lookups, failed } = useDispatchLookups(open);
   const [items, setItems] = useState<RemainingItem[] | null>(null);
+  /**
+   * The store the quotation was priced out of (SPEC §3, P12-9), which is what
+   * the store field opens on. `undefined` is "not answered yet" for the same
+   * reason `last` below is: the form reads it once, on mount, so mounting it
+   * while the answer is in flight would leave the field on the first store in
+   * the list and never correct itself.
+   */
+  const [quoted, setQuoted] = useState<string | undefined>(undefined);
   const [itemsFailed, setItemsFailed] = useState(false);
   const [chosen, setChosen] = useState("");
   /**
@@ -133,6 +143,7 @@ export function RequestDispatchDialog({
     setOpen(next);
     if (!next) {
       setItems(null);
+      setQuoted(undefined);
       setItemsFailed(false);
       setChosen("");
       setLast(undefined);
@@ -145,8 +156,10 @@ export function RequestDispatchDialog({
     let cancelled = false;
     guarded(remainingItemsAction)(active, existing?.dispatchId).then((outcome) => {
       if (cancelled) return;
-      if (outcome.ok && outcome.data) setItems(outcome.data);
-      else setItemsFailed(true);
+      if (outcome.ok && outcome.data) {
+        setItems(outcome.data.items);
+        setQuoted(outcome.data.warehouseId);
+      } else setItemsFailed(true);
     });
     // A failure here is not an error the rep should see: the question simply is
     // not asked, and the metres go to the man raising it, which is what they
@@ -242,6 +255,7 @@ export function RequestDispatchDialog({
           last={last ?? null}
           lookups={lookups}
           items={items}
+          quotedWarehouse={quoted ?? null}
           onSaved={onSaved}
           onCancel={() => change(false)}
         />
@@ -256,6 +270,7 @@ function DispatchForm({
   quotationId,
   mode,
   existing,
+  quotedWarehouse,
   credit,
   last,
   lookups,
@@ -270,6 +285,8 @@ function DispatchForm({
   credit: CreditChoices | null;
   /** The last dispatch on this quotation, where there is one (D81). */
   last: LastDispatch | null;
+  /** The store the quotation was priced out of, which this opens on (P12-9). */
+  quotedWarehouse: string | null;
   lookups: DispatchLookups;
   items: RemainingItem[];
   onSaved: (dispatchId: string | undefined) => void;
@@ -309,6 +326,20 @@ function DispatchForm({
   const [method, setMethod] = useState(
     existing?.shipmentMethodId ?? last?.shipmentMethodId ?? lookups.defaultMethod ?? "",
   );
+  /*
+   * Which store this load leaves from (SPEC §3). It opens on the QUOTATION's,
+   * which is the store the price was worked out of and the answer nine times
+   * in ten — and the tenth is why it is a field: a store that is short sends
+   * the panels from the next one along.
+   *
+   * The parent's own value and not the last dispatch's. A dispatch reading its
+   * quotation is a child reading the record it hangs off, the way its lines do;
+   * a dispatch reading the dispatch before it is one record prefilling the next
+   * one like it, which is the thing §3 forbids outright.
+   */
+  const [warehouse, setWarehouse] = useState(
+    existing?.warehouseId ?? quotedWarehouse ?? lookups.defaultWarehouse ?? "",
+  );
   const [destination, setDestination] = useState(existing?.destination ?? last?.destination ?? "");
   const [paymentTerms, setPaymentTerms] = useState(
     existing?.paymentTerms ?? last?.paymentTerms ?? "",
@@ -340,6 +371,7 @@ function DispatchForm({
       )}
       <input type="hidden" name="items" value={itemsPayload(lines)} />
       <input type="hidden" name="shipmentMethodId" value={method} />
+      <input type="hidden" name="warehouseId" value={warehouse} />
       <input type="hidden" name="credit" value={countsFor} />
 
       <FormBody>
@@ -361,6 +393,29 @@ function DispatchForm({
           sqm={sqm}
           id="dispatch-credit"
         />
+
+        {/* Where it leaves from, above how it travels: the store is decided
+            before the truck is (SPEC §3, P12-9). */}
+        <div className="flex flex-col gap-1.5">
+          <Label id="dispatch-warehouse-label">{t("common.warehouse")}</Label>
+          <SearchableSelect
+            aria-labelledby="dispatch-warehouse-label"
+            options={lookups.warehouses}
+            value={warehouse}
+            onChange={setWarehouse}
+            disabled={pending}
+            invalid={fieldErrors.warehouseId ? true : undefined}
+            aria-describedby={fieldErrors.warehouseId ? "dispatch-warehouse-error" : undefined}
+            placeholder={t("forms.choose")}
+            searchPlaceholder={t("forms.searchList")}
+            emptyText={t("forms.noMatch")}
+          />
+          {fieldErrors.warehouseId ? (
+            <p id="dispatch-warehouse-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.warehouseId}
+            </p>
+          ) : null}
+        </div>
 
         <div className="flex flex-col gap-1.5">
           <Label id="shipment-label">{t("common.shipment")}</Label>

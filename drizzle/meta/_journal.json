@@ -148,6 +148,13 @@
       "when": 1789452899156,
       "tag": "0020_the_number_tells_the_manager",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1789452959156,
+      "tag": "0021_a_store_and_a_name_on_the_paper",
+      "breakpoints": true
     }
   ]
 }

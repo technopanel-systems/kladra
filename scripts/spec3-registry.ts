@@ -78,7 +78,7 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Fire rating (B1/A2/Normal) · Class · Qty · Thickness · Width",
-    owed: "P12-9 quotations — Qty sits eighth on the line, after Thickness, Width and Length, not fifth where the founder put it, and no test has ever opened either that control or the width list beside it.",
+    tests: ["the line asks its nine boxes in the founder's order, quantity fifth"],
   },
   {
     says: "raised from inside a company or a project, in a popup",
@@ -275,7 +275,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "One warehouse per whole quotation and per whole dispatch, never per line",
-    owed: "P12-9 quotations — neither a quotation nor a dispatch carries a warehouse at all, per line or otherwise.",
+    tests: [
+      "company → project → contact, in the order a rep has the answers",
+      "the quantity typed on the line that still has room is what gets saved",
+    ],
   },
   {
     says: "Payment terms are a choice plus notes, not free text",

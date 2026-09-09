@@ -18,7 +18,7 @@
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
-import { findPossibleDuplicates } from "@/lib/companies";
+import { findPossibleDuplicates, getCompany } from "@/lib/companies";
 import { creditPoolNamed } from "@/lib/credit-rows";
 import {
   lastDispatchForQuotation,
@@ -42,8 +42,10 @@ import {
   listShipmentMethods,
   listSuppliers,
   listThicknesses,
+  listWarehouses,
 } from "@/lib/lookups";
 import type { LastQuotation } from "@/lib/quotation-draft";
+import { STANDARD_THICKNESS_MM } from "@/lib/sheet";
 import { getProject } from "@/lib/projects";
 import { getQuotation, lastQuotationForCompany } from "@/lib/quotations";
 import type { ActionResult } from "@/lib/types";
@@ -177,6 +179,13 @@ export type QuotationLookups = {
   thicknesses: Option[];
   /** 4 mm, the thickness on most lines (S32); null on a database that dropped it. */
   standardThickness: string | null;
+  /**
+   * Where the panels are (SPEC §3, P12-9). One per whole quotation, so it is
+   * here with the lists rather than with the lines.
+   */
+  warehouses: Option[];
+  /** The founder's first store, which is what the form opens on. */
+  defaultWarehouse: string | null;
 };
 
 export async function quotationLookupsAction(): Promise<ActionResult<QuotationLookups>> {
@@ -191,16 +200,19 @@ export async function quotationLookupsAction(): Promise<ActionResult<QuotationLo
   }
 
   try {
-    const [supplierRows, fireRatingRows, classRows, thicknessRows] = await Promise.all([
-      listSuppliers(),
-      listFireRatings(),
-      listClasses(),
-      listThicknesses(),
-    ]);
+    const [supplierRows, fireRatingRows, classRows, thicknessRows, warehouseRows] =
+      await Promise.all([
+        listSuppliers(),
+        listFireRatings(),
+        listClasses(),
+        listThicknesses(),
+        listWarehouses(),
+      ]);
 
     // Matched on the number, not on the row's position: an admin adding 3 mm
     // above it must not move what the dialog opens on.
-    const standard = thicknessRows.find((row) => Number(row.name) === 4) ?? null;
+    const standard =
+      thicknessRows.find((row) => Number(row.name) === STANDARD_THICKNESS_MM) ?? null;
 
     return {
       ok: true,
@@ -210,6 +222,11 @@ export async function quotationLookupsAction(): Promise<ActionResult<QuotationLo
         classes: classRows.map(toOption),
         thicknesses: thicknessRows.map(toOption),
         standardThickness: standard ? String(standard.id) : null,
+        warehouses: warehouseRows.map(toOption),
+        // The first ACTIVE row, which the query has already ordered by the
+        // founder's own order — never a name matched in code, because the admin
+        // may rename any of these in either language (D39).
+        defaultWarehouse: warehouseRows[0] ? String(warehouseRows[0].id) : null,
       },
     };
   } catch {
@@ -229,6 +246,14 @@ export type DispatchLookups = {
   shipmentMethods: Option[];
   /** The first one, so the dialog opens on something rather than on nothing. */
   defaultMethod: string | null;
+  /** Where the panels are (SPEC §3, P12-9) — one per whole dispatch. */
+  warehouses: Option[];
+  /**
+   * The first store, for the case where the dialog has no quotation to read
+   * one off. It opens on the QUOTATION's own where it has one, which is not
+   * carrying forward: a dispatch reads its own parent, the way its lines do.
+   */
+  defaultWarehouse: string | null;
 };
 
 export async function dispatchLookupsAction(): Promise<ActionResult<DispatchLookups>> {
@@ -243,12 +268,14 @@ export async function dispatchLookupsAction(): Promise<ActionResult<DispatchLook
   }
 
   try {
-    const rows = await listShipmentMethods();
+    const [rows, warehouseRows] = await Promise.all([listShipmentMethods(), listWarehouses()]);
     return {
       ok: true,
       data: {
         shipmentMethods: rows.map(toOption),
         defaultMethod: rows[0] ? String(rows[0].id) : null,
+        warehouses: warehouseRows.map(toOption),
+        defaultWarehouse: warehouseRows[0] ? String(warehouseRows[0].id) : null,
       },
     };
   } catch {
@@ -337,17 +364,29 @@ export async function lastDispatchAction(
 }
 
 /**
- * What is left to send on each line of one quotation (D12).
+ * What is left to send on each line of one quotation (D12), and which store it
+ * was priced out of (P12-9).
  *
- * Read fresh every time the dialog opens, because it moves: another dispatch
- * raised a minute ago has already spent some of it. The action re-checks the
- * same rule inside its transaction, so this is the courtesy and that is the
- * law.
+ * Read fresh every time the dialog opens, because the first of the two moves:
+ * another dispatch raised a minute ago has already spent some of it. The action
+ * re-checks the same rule inside its transaction, so this is the courtesy and
+ * that is the law.
+ *
+ * The store rides along rather than taking a round trip of its own. This read
+ * already loads the quotation — that is how it authorizes itself — and the
+ * dialog needs both answers before it can draw a field, so a second call would
+ * be a second wait for something already in hand.
  */
+export type QuotationToSendAgainst = {
+  items: RemainingItem[];
+  /** The quotation's own store, which the dispatch dialog opens on. */
+  warehouseId: string;
+};
+
 export async function remainingItemsAction(
   quotationId: unknown,
   dispatchId?: unknown,
-): Promise<ActionResult<RemainingItem[]>> {
+): Promise<ActionResult<QuotationToSendAgainst>> {
   const t = await getTranslations("common");
   let actor;
   try {
@@ -371,11 +410,60 @@ export async function remainingItemsAction(
     if (!quotation) return { ok: false, error: t("somethingWrong") };
     return {
       ok: true,
-      data: await remainingOnQuotation(parsed.data.quotationId, parsed.data.dispatchId),
+      data: {
+        items: await remainingOnQuotation(parsed.data.quotationId, parsed.data.dispatchId),
+        warehouseId: String(quotation.warehouseId),
+      },
     };
   } catch (error) {
     // A session that has ended says so, and a failure that is not a refusal at
     // all does not claim to be one (D135).
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
+  }
+}
+
+/**
+ * Who at a customer a quotation may be addressed to (P12-9).
+ *
+ * The last link of company → project → contact, and the only one that needs a
+ * round trip: the companies and the jobs are drawn before the dialog opens, and
+ * the people belong to whichever customer he has just picked.
+ *
+ * Everybody on the record, not only the reader's own. Two reps on one customer
+ * each keep their own contacts (§3, D147), and the person the paper goes to is
+ * the person the paper goes to whoever wrote him down first.
+ *
+ * Authorized by opening the company, never by a query of its own: a rep who may
+ * not open a customer may not learn who works there either.
+ */
+export type ContactChoices = {
+  people: Option[];
+  /** The one the form starts on: the only one there is, or nobody (D115). */
+  only: string;
+};
+
+export async function contactChoicesAction(input: unknown): Promise<ActionResult<ContactChoices>> {
+  const t = await getTranslations("common");
+  let actor;
+  try {
+    actor = await requireActor();
+  } catch (error) {
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
+  }
+
+  const parsed = z.object({ companyId: z.uuid() }).safeParse(input ?? {});
+  if (!parsed.success) return { ok: false, error: t("invalid") };
+
+  try {
+    const company = await getCompany(actor, parsed.data.companyId);
+    if (!company) return { ok: false, error: t("somethingWrong") };
+    const people = company.contacts.map((row) => ({ value: row.id, label: row.name }));
+    // The one there is, when there is only one; with several it opens on nobody,
+    // because a guess would put the wrong name on the paper (D115).
+    return { ok: true, data: { people, only: people.length === 1 ? people[0].value : "" } };
+  } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     return { ok: false, error: t("somethingWrong") };
   }

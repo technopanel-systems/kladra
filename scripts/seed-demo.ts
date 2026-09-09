@@ -46,6 +46,7 @@ import {
   PINNED_COUNTRIES,
   POSITIONS,
   SHIPMENT_METHODS,
+  WAREHOUSES,
   SUPPLIERS,
   THICKNESSES,
 } from "./seed/lookups";
@@ -120,6 +121,7 @@ const {
   quotationItems,
   quotations,
   shipmentMethods,
+  warehouses,
   suppliers,
   targets,
   thicknesses,
@@ -295,6 +297,7 @@ type Lookups = {
   classByName: Map<string, number>;
   thicknessByMm: Map<string, number>;
   shipmentByCode: Map<string, number>;
+  warehouseByName: Map<string, number>;
 };
 
 async function seedLookups(): Promise<Lookups> {
@@ -375,6 +378,16 @@ async function seedLookups(): Promise<Lookups> {
       .insert(positions)
       .values(POSITIONS.map((p, i) => ({ nameEn: p.en, nameAr: p.ar, sortOrder: i, active: true })));
 
+    // Where the panels are (SPEC §3, P12-9). Kept in the founder's order, and
+    // the first row is what every form opens on, so Riyadh stays first.
+    const insertedWarehouses = await tx
+      .insert(warehouses)
+      .values(
+        WAREHOUSES.map((w, i) => ({ nameEn: w.en, nameAr: w.ar, sortOrder: i, active: true })),
+      )
+      .returning({ id: warehouses.id, nameEn: warehouses.nameEn });
+    const warehouseByName = new Map(insertedWarehouses.map((w) => [w.nameEn, w.id]));
+
     const insertedShipment = await tx
       .insert(shipmentMethods)
       .values(
@@ -426,6 +439,7 @@ async function seedLookups(): Promise<Lookups> {
       classByName,
       thicknessByMm,
       shipmentByCode,
+      warehouseByName,
     };
   });
 }
@@ -856,6 +870,7 @@ function coordinatorKey(): string {
 async function seedQuotations(
   companyIds: Map<string, string>,
   projectIds: Map<string, string>,
+  contactIds: Map<string, string[]>,
   userIds: Map<string, string>,
   lk: Lookups,
 ): Promise<{ quotationIds: Map<string, string>; itemIds: Map<string, string[]>; numbers: Map<string, number>; items: number }> {
@@ -924,6 +939,14 @@ async function seedQuotations(
           revisionOf: q.revisionOf ? must(quotationIds, q.revisionOf, "quotation") : null,
           companyId: must(companyIds, q.company, "company"),
           projectId: q.project ? must(projectIds, q.project, "project") : null,
+          // Who at the customer, and which store it was priced out of (P12-9).
+          // The warehouse defaults to the founder's first, which is what the
+          // form opens on, so a row says nothing unless it means something else.
+          contactId:
+            q.contact === undefined
+              ? null
+              : (contactIds.get(q.company) ?? [])[q.contact] ?? null,
+          warehouseId: must(lk.warehouseByName, q.warehouse ?? "Riyadh", "warehouse"),
           repId: him,
           status: q.status,
           notes: q.notes ?? null,
@@ -979,6 +1002,19 @@ async function seedQuotations(
 // Phase 8 — dispatches and their items
 // ============================================================================
 
+/**
+ * Which store a seeded dispatch leaves from when its own row does not say.
+ *
+ * Read off the QUOTATION's seed row rather than off the database: the two are
+ * written in the same run and this keeps the demo's answer in the same file as
+ * the question, so a dispatch whose quotation moves store moves with it.
+ */
+function warehouseOfQuotation(quotationKey: string, lk: Lookups): number {
+  const parent = QUOTATIONS.find((q) => q.key === quotationKey);
+  if (!parent) throw new Error(`dispatch names quotation "${quotationKey}", which is not seeded`);
+  return must(lk.warehouseByName, parent.warehouse ?? "Riyadh", "warehouse");
+}
+
 async function seedDispatches(
   quotationIds: Map<string, string>,
   itemIds: Map<string, string[]>,
@@ -1028,6 +1064,11 @@ async function seedDispatches(
           repId: must(userIds, d.rep, "user"),
           status: d.status,
           shipmentMethodId: must(lk.shipmentByCode, d.shipmentMethod, "shipment method"),
+          // The store the load leaves from. Absent means the quotation's own,
+          // which is what the dialog opens on (P12-9).
+          warehouseId: d.warehouse
+            ? must(lk.warehouseByName, d.warehouse, "warehouse")
+            : warehouseOfQuotation(d.quotation, lk),
           destination: d.destination,
           paymentTerms: d.paymentTerms,
           smacDispatchNumber: d.smacDispatchNumber ?? null,
@@ -1145,6 +1186,11 @@ async function seedHistory(
           revision: 1,
           companyId: must(companyIds, h.company, "company"),
           projectId: null,
+          // The months behind us were all Riyadh work, and nobody was addressed
+          // by name on them: the history exists to make the metres real, and a
+          // contact on a quotation nobody will open is a fact with no reader.
+          contactId: null,
+          warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           repId: him,
           status: "accepted" as const,
           smacNumber: String(smac),
@@ -1197,6 +1243,7 @@ async function seedHistory(
           repId: must(userIds, h.rep, "user"),
           status: "approved" as const,
           shipmentMethodId: must(lk.shipmentByCode, "ct", "shipment method"),
+          warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           destination: "موقع المشروع",
           paymentTerms: "تحويل بنكي",
           smacDispatchNumber: String(8000 + dispatchNumber),
@@ -1283,6 +1330,8 @@ async function seedHistory(
           revision: 1,
           companyId: must(companyIds, l.company, "company"),
           projectId: null,
+          contactId: null,
+          warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           repId: him,
           status: l.status,
           smacNumber: issued ? String(smac) : null,
@@ -1651,7 +1700,7 @@ try {
   await seedFollowUps(companyIds, projectIds);
   console.log(`  follow-ups       ${FOLLOW_UPS.length}`);
 
-  const { quotationIds, itemIds, items } = await seedQuotations(companyIds, projectIds, userIds, lk);
+  const { quotationIds, itemIds, items } = await seedQuotations(companyIds, projectIds, contactIds, userIds, lk);
   console.log(`  quotations       ${quotationIds.size} (${items} items)`);
 
   const dispatchItemCount = await seedDispatches(quotationIds, itemIds, userIds, lk);

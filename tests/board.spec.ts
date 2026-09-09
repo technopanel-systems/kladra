@@ -1,6 +1,6 @@
 import { login } from "./helpers/auth";
 import { test, expect } from "./helpers/i18n";
-import { DEFAULT_VIEW, parseView, viewFor } from "@/lib/view";
+import { DEFAULT_VIEW, parseView, viewCookie, viewFor, type ListView } from "@/lib/view";
 
 /**
  * The second view, on the two screens that earn one (DESIGN §6).
@@ -17,6 +17,28 @@ import { DEFAULT_VIEW, parseView, viewFor } from "@/lib/view";
  */
 
 const COLD = { timeout: 30_000 };
+
+/**
+ * Waits until the BROWSER has stored the remembered view, not until the page
+ * looks right.
+ *
+ * The memory is a cookie `ViewSwitch` writes in an effect, so it exists only
+ * after the page hydrates — and the server's HTML, heading and all, is on
+ * screen well before that. A step that navigates away on the strength of a
+ * visible heading is racing the hydration of the page it is leaving, which is
+ * how this walk failed once on a cold compile and never on a warm one.
+ */
+async function remembered(page: import("@playwright/test").Page, view: ListView): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        const jar = await page.context().cookies();
+        return jar.find((one) => one.name === viewCookie("quotations"))?.value;
+      },
+      { timeout: COLD.timeout, message: `the browser never stored "${view}" as the view` },
+    )
+    .toBe(view);
+}
 
 /** The columns on screen, as the accessible name reports them: "Issued (3)". */
 async function columns(page: import("@playwright/test").Page) {
@@ -121,6 +143,7 @@ test("the view a person chose is the view they get back", async ({ page, locale,
 
   await page.goto(`/${locale}/quotations?view=board`);
   await expect(page.getByRole("heading").first()).toBeVisible(COLD);
+  await remembered(page, "board");
 
   // No query at all: the cookie written in the browser decides.
   await page.goto(`/${locale}/quotations`);
@@ -137,6 +160,7 @@ test("the view a person chose is the view they get back", async ({ page, locale,
     "true",
     COLD,
   );
+  await remembered(page, "list");
   await page.goto(`/${locale}/quotations`);
   await expect(page.getByRole("link", { name: t("common.viewList") })).toHaveAttribute(
     "aria-current",

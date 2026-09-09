@@ -53,6 +53,7 @@
   "length": "Length (m)",
   "pricePerSqm": "Price / m²",
   "shipment": "Shipment",
+  "warehouse": "Warehouse",
   "destination": "Destination",
   "paymentTerms": "Payment terms",
   "leadSource": "Lead source",

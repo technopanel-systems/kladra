@@ -18,7 +18,7 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import type { Role } from "@/lib/types";
@@ -33,6 +33,7 @@ import {
   shipmentMethods,
   suppliers,
   thicknesses,
+  warehouses,
 } from "@/db/schema";
 
 /** The one country whose cities are a picked list rather than free text. */
@@ -141,6 +142,38 @@ export async function listShipmentMethods(locale?: string): Promise<LookupOption
     .from(shipmentMethods)
     .where(eq(shipmentMethods.active, true))
     .orderBy(asc(shipmentMethods.sortOrder), asc(shipmentMethods.code));
+}
+
+/**
+ * A warehouse's name in the reader's script, as a SQL fragment, for the two
+ * records that carry one (P12-9).
+ *
+ * Here rather than beside either of them: the quotation drawer and the dispatch
+ * drawer both print it, and a second copy of "which column is the Arabic one"
+ * is the copy that gets forgotten the day a third record carries a store.
+ */
+export function warehouseName(locale: string | undefined): SQL<string> {
+  return isArabic(locale ?? "en") ? sql`${warehouses.nameAr}` : sql`${warehouses.nameEn}`;
+}
+
+/**
+ * Riyadh · Malham · Dammam · Khamis Mushait — where the panels are (SPEC §3).
+ *
+ * Translated, and ordered by the founder's own order rather than alphabetically:
+ * the Riyadh store is where most of this floor's work ships from, and the first
+ * row of a list is what a form opens on.
+ */
+export async function listWarehouses(locale?: string): Promise<LookupOption[]> {
+  const l = await labelLocale(locale);
+  return db
+    .select({
+      id: warehouses.id,
+      name: isArabic(l) ? warehouses.nameAr : warehouses.nameEn,
+      alt: isArabic(l) ? warehouses.nameEn : warehouses.nameAr,
+    })
+    .from(warehouses)
+    .where(eq(warehouses.active, true))
+    .orderBy(asc(warehouses.sortOrder), asc(warehouses.nameEn));
 }
 
 /**

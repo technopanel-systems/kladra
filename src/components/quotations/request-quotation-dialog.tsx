@@ -5,8 +5,10 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
+  contactChoicesAction,
   creditChoicesAction,
   lastQuotationAction,
+  type ContactChoices,
   type CreditChoices,
   type QuotationLookups,
 } from "@/actions/forms";
@@ -38,7 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { quotationTotals } from "@/lib/money";
 import type { LastQuotation } from "@/lib/quotation-draft";
-import { splitProjectOption, type PickerOption } from "@/lib/picker-option";
+import { splitProjectOption, type QuotationTargets } from "@/lib/picker-option";
 
 /**
  * Request a quotation, from inside a company or a project (SPEC §3, S28).
@@ -63,6 +65,9 @@ export type QuotationDraft = {
   creditTo?: string;
   quotationId: string;
   notes: string;
+  /** Which store it was priced out of, and who at the customer it is for (P12-9). */
+  warehouseId: string;
+  contactId: string;
   lines: Omit<LineDraft, "key">[];
 };
 
@@ -76,6 +81,12 @@ export type QuotationDraft = {
  */
 export type RequestMode = "request" | "edit" | "revise";
 
+/**
+ * The contact field's "nobody" answer, as a value rather than as emptiness
+ * (P12-9). `log-dialog.tsx` spells it the same way and for the same reason.
+ */
+const NOBODY = "none";
+
 const ACTIONS = {
   request: requestQuotationAction,
   edit: updateQuotationAction,
@@ -86,7 +97,7 @@ export function RequestQuotationDialog({
   companyId,
   projectId,
   projectName,
-  projects,
+  targets,
   mode = "request",
   existing,
   issuesDirectly = false,
@@ -97,8 +108,12 @@ export function RequestQuotationDialog({
   projectId?: string | null;
   /** Named in the title when the request is being raised on a project. */
   projectName?: string | null;
-  /** Offered as the first field when the project is NOT known. */
-  projects?: PickerOption[];
+  /**
+   * The customers and the jobs to choose between, when neither is known
+   * (P12-9). Offered as the first two fields, in that order: a rep knows who he
+   * has just spoken to before he knows which of that customer's jobs this is.
+   */
+  targets?: QuotationTargets;
   mode?: RequestMode;
   /** The lines to open on — required for `edit` and `revise`. */
   existing?: QuotationDraft;
@@ -177,7 +192,7 @@ export function RequestQuotationDialog({
         <RequestForm
           companyId={companyId ?? null}
           projectId={projectId ?? null}
-          projects={projects}
+          targets={targets}
           mode={mode}
           existing={existing}
           issuesDirectly={issuesDirectly}
@@ -195,7 +210,7 @@ export function RequestQuotationDialog({
 function RequestForm({
   companyId,
   projectId,
-  projects,
+  targets,
   mode,
   existing,
   issuesDirectly,
@@ -205,7 +220,7 @@ function RequestForm({
 }: {
   companyId: string | null;
   projectId: string | null;
-  projects?: PickerOption[];
+  targets?: QuotationTargets;
   mode: RequestMode;
   existing?: QuotationDraft;
   issuesDirectly: boolean;
@@ -224,12 +239,36 @@ function RequestForm({
   );
   const guarded = useWireGuard();
 
-  // The picker carries both ids in one option, so choosing a project chooses
-  // its company too. When the caller already knew them, it is not rendered.
+  /*
+   * Company → project → contact, which is the order a rep has the answers in
+   * (P12-9). He knows who he has just been speaking to; he then knows which of
+   * that customer's jobs this price is for. It asked for the job first, out of
+   * one flat list of every job in the building with the customer as a quieter
+   * line under it — which is the middle of the chain, and on a real floor is
+   * hundreds of rows deep in the one thing he already knew.
+   *
+   * Choosing a customer clears the job, because a job belongs to a customer and
+   * a stale one would be a quotation filed against the wrong record. It is done
+   * in the SETTER rather than in an effect: clearing state as a consequence of
+   * other state is the cascading render the lint refuses, and the value is
+   * already in hand at the moment of the choice.
+   */
+  const [pickedCompany, setPickedCompany] = useState("");
   const [chosen, setChosen] = useState("");
   const picked = splitProjectOption(chosen);
-  const company = companyId ?? picked?.companyId ?? "";
+  const company = companyId ?? pickedCompany;
   const project = projectId ?? picked?.projectId ?? null;
+
+  // The jobs of the customer in hand. Filtered here rather than fetched again:
+  // the whole list came down with the screen, and a rep with a customer on the
+  // phone should not wait for a round trip between two fields.
+  const jobs = useMemo(
+    () =>
+      (targets?.projects ?? []).filter(
+        (option) => splitProjectOption(option.value)?.companyId === company,
+      ),
+    [targets, company],
+  );
 
   const [lines, setLines] = useState<LineDraft[]>(() =>
     existing
@@ -289,6 +328,71 @@ function RequestForm({
   const countsFor = (creditPick?.projectId === project ? creditPick.value : "") || choices?.mine || "";
 
   /*
+   * Who at the customer the paper goes to (P12-9) — the last link of the chain,
+   * and the only one that needs a round trip: the customers and the jobs came
+   * down with the screen, and the people belong to whichever customer he has
+   * just picked.
+   *
+   * Kept exactly the way the credit question above is: the answers carry the
+   * company they are about and his choice carries it too, so a customer changed
+   * mid-form takes both with it rather than leaving a name from the last one on
+   * the field. Clearing them in an effect would be the cascading render the
+   * lint refuses, and would leave a moment where the field names somebody at
+   * another company.
+   */
+  const [people, setPeople] = useState<{ companyId: string; choices: ContactChoices } | null>(null);
+  const [contactPick, setContactPick] = useState<{ companyId: string; value: string } | null>(
+    /*
+     * An edit and a revision both open on the paper they came from — the same
+     * way they open on its lines (D10). What §3 forbids is a value carried from
+     * one record into the NEXT one like it, which is a different thing.
+     *
+     * `NOBODY` and not null when the paper names nobody: null means "he has not
+     * answered", which falls through to the only-contact-there-is below, so a
+     * quotation deliberately addressed to the company would have acquired a
+     * name the moment somebody opened it to change a price.
+     */
+    company && existing ? { companyId: company, value: existing.contactId || NOBODY } : null,
+  );
+  useEffect(() => {
+    if (!company) return;
+    let cancelled = false;
+    // A failure here is not an error the rep should see: the field simply
+    // offers nobody, and a quotation addressed to nobody is a real quotation.
+    guarded(contactChoicesAction)({ companyId: company }).then((outcome) => {
+      if (!cancelled && outcome.ok && outcome.data) {
+        setPeople({ companyId: company, choices: outcome.data });
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [company, guarded]);
+
+  const contacts = people?.companyId === company ? people.choices : null;
+  const addressedTo =
+    (contactPick?.companyId === company ? contactPick.value : "") || contacts?.only || "";
+  /*
+   * "Nobody in particular" is an OPTION and not the empty state, for the same
+   * reason it is one on the log dialog: without it a rep who picks the wrong
+   * person cannot put the field back — a searchable select has no way of
+   * un-picking, so the placeholder is reachable only before the first choice.
+   * A price addressed to the company rather than to a person is a real answer,
+   * so it has to be an answer he can give twice.
+   */
+  const addressees = [
+    { value: NOBODY, label: t("quotations.noContact") },
+    ...(contacts?.people ?? []),
+  ];
+
+  // Which store this is priced out of (SPEC §3). Opens on the paper's own when
+  // there is one, and otherwise on the first store — never on nothing, because
+  // there is no such thing as a price out of nowhere.
+  const [warehouse, setWarehouse] = useState(
+    existing?.warehouseId || lookups.defaultWarehouse || "",
+  );
+
+  /*
    * The last thing this customer was quoted, and one button to start from it
    * (D74). Only on a first ask: Edit already opens on its own lines and Revise
    * on its parent's, and an offer to overwrite those is an offer to lose work.
@@ -343,30 +447,104 @@ function RequestForm({
           objects that survives the round trip (src/actions/quotations.ts). */}
       <input type="hidden" name="items" value={linesPayload(lines)} />
       <input type="hidden" name="credit" value={countsFor} />
+      <input type="hidden" name="contactId" value={addressedTo === NOBODY ? "" : addressedTo} />
+      <input type="hidden" name="warehouseId" value={warehouse} />
 
       <FormBody>
-        {projects ? (
+        {/* Three ways in, and each renders only what it does not already know
+            (P12-9): from the Quotations screen both, from a customer's drawer
+            the job alone, from a job's drawer neither. */}
+        {targets && !companyId ? (
           <div className="flex flex-col gap-1.5">
-            <Label id="quotation-project-label">{t("common.project")}</Label>
+            <Label id="quotation-company-label">{t("common.company")}</Label>
             <SearchableSelect
-              aria-labelledby="quotation-project-label"
-              aria-describedby={fieldErrors.companyId ? "quotation-project-error" : undefined}
+              aria-labelledby="quotation-company-label"
+              aria-describedby={fieldErrors.companyId ? "quotation-company-error" : undefined}
               invalid={fieldErrors.companyId ? true : undefined}
-              options={projects}
-              value={chosen}
-              onChange={setChosen}
+              options={targets.companies}
+              value={pickedCompany}
+              // The job goes with the customer: one belongs to the other, and a
+              // job left behind from the last choice would file this price
+              // against a customer nobody picked.
+              onChange={(value) => {
+                setPickedCompany(value);
+                setChosen("");
+              }}
               disabled={pending}
-              placeholder={t("quotations.pickProject")}
+              placeholder={t("quotations.pickCompany")}
               searchPlaceholder={t("forms.searchList")}
-              emptyText={t("quotations.noProjects")}
+              emptyText={t("forms.noMatch")}
             />
             {fieldErrors.companyId ? (
-              <p id="quotation-project-error" role="alert" className="text-xs text-destructive">
+              <p id="quotation-company-error" role="alert" className="text-xs text-destructive">
                 {fieldErrors.companyId}
               </p>
             ) : null}
           </div>
         ) : null}
+
+        {targets && !projectId ? (
+          <div className="flex flex-col gap-1.5">
+            <Label id="quotation-project-label">{t("common.project")}</Label>
+            <SearchableSelect
+              aria-labelledby="quotation-project-label"
+              aria-describedby={fieldErrors.projectId ? "quotation-project-error" : undefined}
+              invalid={fieldErrors.projectId ? true : undefined}
+              options={jobs}
+              value={chosen}
+              onChange={setChosen}
+              // Nothing to choose from until a customer is named: a list of
+              // every job in the building is what this field used to be.
+              disabled={pending || !company}
+              placeholder={
+                company ? t("quotations.pickProject") : t("quotations.pickCompanyFirst")
+              }
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("quotations.noProjects")}
+            />
+            {fieldErrors.projectId ? (
+              <p id="quotation-project-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.projectId}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {/* Who at the customer the paper goes to, and which store it comes out
+            of (SPEC §3, P12-9). Side by side from `sm` up: both are one-line
+            answers about the whole quotation, and neither is worth a row of its
+            own on a form this tall. */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1.5">
+            <Label id="quotation-contact-label">{t("common.contact")}</Label>
+            <SearchableSelect
+              aria-labelledby="quotation-contact-label"
+              options={addressees}
+              value={addressedTo}
+              onChange={(value) =>
+                setContactPick(company ? { companyId: company, value } : null)
+              }
+              disabled={pending || !company}
+              placeholder={t("quotations.noContact")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("forms.noMatch")}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label id="quotation-warehouse-label">{t("common.warehouse")}</Label>
+            <SearchableSelect
+              aria-labelledby="quotation-warehouse-label"
+              options={lookups.warehouses}
+              value={warehouse}
+              onChange={setWarehouse}
+              disabled={pending}
+              placeholder={t("forms.choose")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("forms.noMatch")}
+            />
+          </div>
+        </div>
 
         {/* The offer belongs to the items, so it sits in their block and not in
             the form's own rhythm: eight pixels above the first card and the

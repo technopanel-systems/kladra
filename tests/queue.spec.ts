@@ -295,17 +295,22 @@ test("her figures are the whole desk's, not the first two hundred rows'", async 
 
   try {
     await query(
+      // Any store: this fixture is about how many rows the desk counts, not
+      // about where they come from (SPEC §3, P12-9).
       `insert into quotations
-         (number, revision, company_id, project_id, rep_id, status, notes, created_at, updated_at)
-       select nextval('quotation_numbers')::int, 1, $1, $2, $3, 'requested', $4, now(), now()
+         (number, revision, company_id, project_id, rep_id, status, notes, warehouse_id,
+          created_at, updated_at)
+       select nextval('quotation_numbers')::int, 1, $1, $2, $3, 'requested', $4,
+              (select id from warehouses order by id limit 1), now(), now()
          from generate_series(1, $5::int)`,
       [home.companyId, home.projectId, home.repId, MARKER, OVER],
     );
     await query(
       `insert into dispatches
-         (number, quotation_id, rep_id, status, shipment_method_id, destination, payment_terms,
-          created_at, updated_at)
-       select nextval('dispatch_numbers')::int, $1, $2, 'submitted', $3, $4, $5, now(), now()
+         (number, quotation_id, rep_id, status, shipment_method_id, warehouse_id, destination,
+          payment_terms, created_at, updated_at)
+       select nextval('dispatch_numbers')::int, $1, $2, 'submitted', $3,
+              (select id from warehouses order by id limit 1), $4, $5, now(), now()
          from generate_series(1, $6::int)`,
       [issued.id, issued.repId, method.id, MARKER, MARKER, OVER],
     );
