@@ -21,7 +21,14 @@ import type { NotificationKind } from "../../src/lib/notify";
  *             rep put them, weekend or not.
  */
 
-export type RepKey = "faisal" | "saad" | "turki" | "marketing";
+/**
+ * Whose name a company, a job or a piece of paper carries.
+ *
+ * Rawan is here since SPEC §3 made the coordinator a selling role: she has a
+ * floor of her own beside the desk she runs, and every screen that reads a
+ * rep's name has to have read hers once.
+ */
+export type RepKey = "faisal" | "saad" | "turki" | "marketing" | "rawan";
 export type Channel = "visit" | "call" | "whatsapp" | "other";
 
 // ---- users -------------------------------------------------------------------
@@ -505,6 +512,26 @@ export const COMPANIES: CompanySeed[] = [
     notes: "وصلت من الموقع، لم يتم التواصل بعد",
     contacts: [{ name: "ماجد الزهراني", phone: "0501129983", position: "Owner" }],
   },
+  // ---- Rawan — the desk that also sells (1) ---------------------------------
+  /*
+   * Hers, because SPEC §3 gives the coordinator companies of her own. One, and
+   * a small one: she runs the queue for five people and sells on the side, so a
+   * floor the size of a rep's would be a demo that says something untrue about
+   * the job. Source is a walk-in rather than Marketing, which is the one source
+   * she is not offered (§3, P12-5).
+   */
+  {
+    key: "r1",
+    name: "مؤسسة صدف الشرق للمقاولات",
+    rep: "rawan",
+    category: "Contractor",
+    source: "Direct contact",
+    city: "Riyadh",
+    notes: "اتصلوا على المكتب مباشرة، واجهة معرض واحد",
+    contacts: [
+      { name: "عبدالله الشمري", phone: "0556612094", position: "Owner", email: "a.alshammari@example.sa" },
+    ],
+  },
   // ---- Off the floor (1) -------------------------------------------------------
   // Saad's, archived six weeks ago with the reason he gave. It is on the admin's
   // archive screen and nowhere else; its contact stays as it was, the way the
@@ -625,6 +652,8 @@ export const PROJECTS: ProjectSeed[] = [
     expectedSqm: "880.00",
     lost: { daysAgo: 30, reason: "العميل اختار مورّدًا محليًا" },
   },
+  // Rawan's own, and the only job on her floor (SPEC §3).
+  { key: "p18", company: "r1", name: "واجهة معرض السيارات - طريق الخرج", expectedSqm: "520.00" },
 ];
 
 // ---- the log ------------------------------------------------------------------
@@ -823,6 +852,12 @@ export type QuotationSeed = {
   decidedBack?: number;
   /** Working days back for `created_at`. */
   createdBack: number;
+  /**
+   * Raised and issued in one act by the person whose customer it is (SPEC §3).
+   * Only the coordinator can do it — she is the desk everybody else asks — and
+   * the row carries the flag so the manager reads who did both.
+   */
+  selfIssued?: boolean;
   /** A revision copies the parent's number and its lines (SPEC D10). */
   revisionOf?: string;
   revision?: number;
@@ -1021,6 +1056,32 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 30, width: "1.24", length: "5.8", pricePerSqm: "119.00" },
     ],
   },
+  /*
+   * Rawan's own paper, asked for and issued by her in one act (SPEC §3, P12-5).
+   * There is nobody behind the desk to ask, so the request and the issue are the
+   * same press and the row is flagged — the founder's clause is that nobody
+   * issues their own work unseen, and the flag is what makes it seen.
+   *
+   * Accepted, so there is a dispatch under it and her month is metres rather
+   * than a permanent nought on the manager's table: a figure that is always
+   * zero in the demo is a figure nobody has ever seen work.
+   */
+  {
+    key: "q10",
+    company: "r1",
+    project: "p18",
+    rep: "rawan",
+    status: "accepted",
+    selfIssued: true,
+    smacNumber: "24-1189",
+    createdBack: 6,
+    issuedBack: 6,
+    decidedBack: 4,
+    notes: "العميل يريد التوريد على دفعتين",
+    items: [
+      { colourCode: "RAL 9007", supplier: "C", fireRating: "B1", className: "A", thickness: "4.0", qty: 60, width: "1.24", length: "5.8", pricePerSqm: "115.00" },
+    ],
+  },
 ];
 
 // ---- dispatches ---------------------------------------------------------------
@@ -1133,6 +1194,24 @@ export const DISPATCHES: DispatchSeed[] = [
     approvedOnDayOfMonth: 4,
     createdBack: 3,
     items: [{ item: 0, qty: 21 }],
+  },
+  /*
+   * Half of her customer's order, out this month: the coordinator's row on the
+   * manager's table is figures rather than dashes, and it lands between the
+   * bands rather than at either end of them.
+   */
+  {
+    key: "d6",
+    quotation: "q10",
+    rep: "rawan",
+    status: "approved",
+    shipmentMethod: "ct",
+    destination: "الرياض — طريق الخرج، موقع المعرض",
+    paymentTerms: "50% مقدم والباقي عند التسليم",
+    smacDispatchNumber: "8879",
+    approvedOnDayOfMonth: 5,
+    createdBack: 2,
+    items: [{ item: 0, qty: 30 }],
   },
 ];
 
@@ -1266,6 +1345,14 @@ export const HISTORY_ITEM = {
 /** m² per rep, this month and last (SPEC §1: no personal target above rep). */
 export const REP_TARGET_THIS_MONTH = "1500.00";
 export const REP_TARGET_LAST_MONTH = "1200.00";
+/*
+ * And the coordinator's own, which SPEC §3 gave her: a fraction of a rep's,
+ * because selling is the smaller half of her day and a target she could never
+ * meet is a number that says the wrong thing every month (the same reasoning
+ * that keeps marketing off this list entirely).
+ */
+export const DESK_TARGET_THIS_MONTH = "400.00";
+export const DESK_TARGET_LAST_MONTH = "320.00";
 // Near what the floor actually approves, and not above all six months of it.
 // At 4,500 every finished month on the manager's card was the same red, so the
 // amber and the green bands existed in the code and nowhere a person could see

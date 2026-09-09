@@ -233,7 +233,7 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "between reps is the **sales manager's** action",
-    owed: "P12-5 roles — handover is still the owner's as well as the manager's, which is D51 as it stands.",
+    tests: ["the sales manager moves a lead onto the floor that will price it"],
   },
   {
     says: "Marketing has its own module for bringing in a lead",
@@ -241,11 +241,20 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "The Marketing lead source is not offered to a rep adding a company",
-    owed: "P12-5 roles — the whole lead-source list is offered to everybody, which is D1 as it stands.",
+    tests: [
+      "a rep is not offered the Marketing lead source, and marketing is",
+      // The other half of the same sentence: not offered is about CHOOSING, and
+      // a company handed to him already filed under it stays his to work (#168).
+      "a company filed as marketing's stays editable by the rep it is handed to",
+    ],
   },
   {
     says: "a selling role too: department **Internal Sales**, her own m² target",
-    owed: "P12-5 roles — the coordinator holds no companies and carries no month of her own, which is D15 as it stands.",
+    tests: [
+      "only the coordinator issues her own quotations, and it is not a floor rule",
+      "the coordinator raises her own quotation and issues it in the same act",
+      "her month is a row of figures on the manager's table, not a row of dashes",
+    ],
   },
   {
     says: "A dispatch implies the customer accepted that quotation",

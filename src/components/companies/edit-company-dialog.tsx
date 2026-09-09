@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil } from "lucide-react";
-import { useActionState, useRef, useState, type ReactNode } from "react";
+import { useActionState, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { updateCompanyAction } from "@/actions/companies";
@@ -33,6 +33,15 @@ export type CompanyEditable = {
   name: string;
   categoryId: number;
   leadSourceId: number;
+  /**
+   * And its word, because the list this form draws may not contain it: a rep is
+   * not offered the Marketing source (SPEC §3), and a company handed to him by
+   * the manager carries it (§5 #168). A picker whose value is missing from its
+   * options renders the placeholder — so the screen would have said "Choose…"
+   * about a company that has an answer, which is a screen lying about its own
+   * record. Offered, and unchanged by anything he can do to it.
+   */
+  leadSourceName: string;
   countryId: number;
   cityId: number | null;
   cityText: string | null;
@@ -117,6 +126,26 @@ function EditForm({
     FormData
   >(guarded(updateCompanyAction), null);
 
+  /*
+   * The lists, with this company's own lead source in them whatever the role
+   * narrowing left out (§5 #168). A rep is not offered Marketing (SPEC §3) and
+   * a company handed to him by the manager carries it, so without this the
+   * picker fell back to its placeholder and read "Choose…" about a company that
+   * has an answer — and the save that followed sent the id back and was refused,
+   * which left him unable to edit the customer at all.
+   *
+   * Appended rather than merged into `@/lib/lookups`: the narrowing is right,
+   * and what a FORM offers is the narrowing plus the value it already holds.
+   */
+  const lists = useMemo<FormLookups>(() => {
+    const held = String(company.leadSourceId);
+    if (lookups.leadSources.some((row) => row.value === held)) return lookups;
+    return {
+      ...lookups,
+      leadSources: [...lookups.leadSources, { value: held, label: company.leadSourceName }],
+    };
+  }, [lookups, company.leadSourceId, company.leadSourceName]);
+
   const [draft, setDraft] = useState<CompanyDraft>(() => draftOf(company));
   const form = useRef<HTMLFormElement>(null);
   const saved = useRef("");
@@ -153,7 +182,7 @@ function EditForm({
       <FormBody>
         <CompanyFields
           idPrefix="edit-company"
-          lookups={lookups}
+          lookups={lists}
           value={draft}
           onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           errors={errors}

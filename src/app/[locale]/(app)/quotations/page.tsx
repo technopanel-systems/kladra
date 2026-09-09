@@ -10,6 +10,7 @@ import {
 } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
+import { issuesOwnQuotations } from "@/lib/floor";
 import { projectOptions } from "@/lib/pickers";
 import { viewCookie, viewFor } from "@/lib/view";
 import { countQuotations, listQuotations, type QuotationStatus } from "@/lib/quotations";
@@ -77,6 +78,10 @@ export default async function QuotationsPage({
     projectOptions(user),
   ]);
 
+  // She does not ask the desk for a price; she IS the desk (SPEC §3), so the
+  // same door says Issue and the form behind it asks for the SMAC number.
+  const direct = issuesOwnQuotations(user.role);
+
   // Only when it came back full (D80). This list is years long on a real floor.
   const total = rows.length === LIST_LIMIT ? await countQuotations(narrowing) : rows.length;
 
@@ -87,9 +92,10 @@ export default async function QuotationsPage({
         {projects.length > 0 ? (
           <RequestQuotationDialog
             projects={projects}
+            issuesDirectly={direct}
             trigger={
               <Button variant="brand">
-                {t("quotations.request")}
+                {t(direct ? "quotations.issueOwn" : "quotations.request")}
               </Button>
             }
           />

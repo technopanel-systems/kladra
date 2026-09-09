@@ -38,16 +38,18 @@ import type { Role } from "@/lib/types";
  * Where a company hit goes.
  *
  * Everybody who holds a floor or oversees one opens the company itself. The
- * coordinator holds none: `/companies` narrows to `rep_id = her id`, which is
- * nothing, and `getCompany` refuses the row — so the palette, which shows her
- * every company on purpose (`src/actions/search.ts`), used to land her on an
- * empty list with a sheet over it saying the company she had just read the name
- * of "is no longer available" (D139). What she wants a company for is what we
- * have quoted them, and that screen is hers, shows every rep's quotations and
- * searches company name first.
+ * coordinator is shown every company by name and may open only her own: the
+ * palette used to land her on an empty list with a sheet over it saying the
+ * company she had just read the name of "is no longer available" (D139). What
+ * she wants somebody else's company for is what we have quoted them, and that
+ * screen is hers, shows every rep's quotations and searches company name first.
+ *
+ * Since SPEC §3 she has customers of her own, so the answer is no longer about
+ * her role alone: a company on her own floor opens in the drawer like anybody's,
+ * and it is the row that says which this is, because the palette cannot ask.
  */
-function companyHref(role: Role, id: string, name: string): string {
-  return role === "coordinator"
+function companyHref(role: Role, id: string, name: string, mine: boolean): string {
+  return role === "coordinator" && !mine
     ? `/quotations?q=${encodeURIComponent(name)}`
     : `/companies?open=${id}`;
 }
@@ -221,7 +223,7 @@ export function SearchCommand({ role }: { role: Role }) {
                     <CommandItem
                       key={row.id}
                       value={`company-${row.id}`}
-                      onSelect={() => go(companyHref(role, row.id, row.name))}
+                      onSelect={() => go(companyHref(role, row.id, row.name, row.mine))}
                     >
                       <Building2 className="text-muted-foreground" />
                       <span className="truncate">{row.name}</span>
@@ -242,9 +244,11 @@ export function SearchCommand({ role }: { role: Role }) {
                       key={row.id}
                       value={`contact-${row.id}`}
                       // A contact is his company, so it lands where the
-                      // company lands — including for the role that has no
-                      // company screen, even though she is shown no contacts.
-                      onSelect={() => go(companyHref(role, row.companyId, row.companyName))}
+                      // company lands. Contacts are only ever offered off the
+                      // reader's own floor — the coordinator's included, since
+                      // §3 gave her one — so the company behind one is always
+                      // a company he may open (`src/actions/search.ts`).
+                      onSelect={() => go(companyHref(role, row.companyId, row.companyName, true))}
                     >
                       <UserRound className="text-muted-foreground" />
                       <span className="truncate">{row.name}</span>

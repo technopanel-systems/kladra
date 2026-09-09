@@ -53,12 +53,15 @@ export const COMPANY_CATEGORIES: Bilingual[] = [
 ];
 
 // ---- lead sources (FACET lead-sources.ts reshaped by SPEC §3) ----------------
-export const LEAD_SOURCES: Bilingual[] = [
+// `restricted` is offered to management and marketing and not to a rep adding a
+// company (SPEC §3, narrowing D1): a rep who can pick Marketing can file
+// somebody else's lead as his own.
+export const LEAD_SOURCES: (Bilingual & { restricted?: true })[] = [
   { en: "Field visit", ar: "زيارة ميدانية" },
   { en: "Direct contact", ar: "اتصال مباشر" },
   { en: "Referral", ar: "ترشيح" },
   { en: "Exhibition", ar: "معرض" },
-  { en: "Marketing", ar: "تسويق" },
+  { en: "Marketing", ar: "تسويق", restricted: true },
   { en: "Online", ar: "إنترنت" },
   { en: "WhatsApp", ar: "واتساب" },
   { en: "Other", ar: "أخرى" },

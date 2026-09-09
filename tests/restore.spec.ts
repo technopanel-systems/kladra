@@ -63,10 +63,16 @@ test("a role with no floor is refused while companies are still on the account",
     const dialog = page.getByRole("dialog", { name: t("admin.editUser") });
     await expect(dialog).toBeVisible(COLD);
 
+    // The admin, because it is the only role left that holds no floor: this
+    // asked for the coordinator until SPEC §3 gave her companies of her own,
+    // and the day it did, this test stopped testing the refusal and started
+    // performing the change — turning Faisal into a coordinator for every spec
+    // that ran after it, which is how a stale assertion becomes six failures
+    // in files that have nothing to do with it.
     await dialog.getByRole("combobox", { name: t("common.role") }).click();
     await page
       .locator('[data-slot="popover-content"]')
-      .getByText(t("common.coordinator"), { exact: true })
+      .getByText(t("common.admin"), { exact: true })
       .first()
       .click();
     await dialog.getByRole("button", { name: t("common.save") }).click();
@@ -85,6 +91,15 @@ test("a role with no floor is refused while companies are still on the account",
     const after = await one<{ role: string }>("select role from users where id = $1::uuid", [
       faisalId,
     ]);
+    // Put it back BEFORE asserting. The day the refusal stops happening — and
+    // it did, when SPEC §3 gave the coordinator a floor — this spec is no
+    // longer a test of a refusal, it is a rep being given another role in a
+    // database every later file shares (§5 #167). The assertion below still
+    // fails and still names it; this only stops it taking four other files
+    // down with it.
+    if (after.role !== "rep") {
+      await query("update users set role = 'rep' where id = $1::uuid", [faisalId]);
+    }
     expect(after.role, "the refused save changed Faisal's role anyway").toBe("rep");
   });
 });

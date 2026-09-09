@@ -8,11 +8,11 @@ import { CREDIT_SPLIT } from "@/lib/credit";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { mayWrite } from "@/lib/floor";
+import { issuesOwnQuotations, mayWrite } from "@/lib/floor";
 import { mayRaiseFor } from "@/lib/visibility";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { draftLinesFrom } from "@/lib/quotation-draft";
-import { getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
+import { dispatchable, getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
 import { quotationStanding } from "@/lib/standing";
 
 /**
@@ -84,7 +84,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   const canSend =
     mayRaiseFor(user, quotation.companyRepId, quotation.projectRepId, quotation.onProject) &&
     quotation.isLatest &&
-    (quotation.status === "issued" || quotation.status === "accepted");
+    dispatchable(quotation.status);
 
   return (
     <QuotationSheet
@@ -131,6 +131,9 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       }}
       scope={{
         coordinator: user.role === "coordinator",
+        // Her revision goes out as she raises it, so the dialog behind Revise
+        // asks for the SMAC number instead of joining a queue she owns (§3).
+        issuesDirectly: issuesOwnQuotations(user.role),
         // The rep whose COMPANY it is — not whoever raised it, and not a
         // manager, who sees everything and owns none of it (S8). The same fact
         // the actions check, so nothing is offered that would then be refused.

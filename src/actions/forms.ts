@@ -37,6 +37,7 @@ import {
   listCountries,
   listFireRatings,
   listLeadSources,
+  seesEveryLeadSource,
   listPositions,
   listShipmentMethods,
   listSuppliers,
@@ -111,8 +112,9 @@ export type DuplicateHit = {
  */
 export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
   const t = await getTranslations("common");
+  let actor;
   try {
-    await requireActor();
+    actor = await requireActor();
   } catch (error) {
     // A session that has ended says so, and a failure that is not a refusal at
     // all does not claim to be one (D135).
@@ -123,7 +125,10 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
   try {
     const [categories, leadSources, positions, countryRows] = await Promise.all([
       listCategories(),
-      listLeadSources(),
+      // Management and marketing are offered the whole list; a rep is not
+      // offered Marketing (SPEC §3, narrowing D1), and `addCompanyAction`
+      // refuses the id if he sends it anyway.
+      listLeadSources(undefined, seesEveryLeadSource(actor.role)),
       listPositions(),
       listCountries(),
     ]);

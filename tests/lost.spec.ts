@@ -121,11 +121,15 @@ test("a company found in the palette opens something for the coordinator", async
   locale,
   t,
 }) => {
+  // Somebody else's, explicitly: since SPEC §3 she has customers of her own,
+  // and her own open in the drawer like anybody's (tests/roles.spec.ts). The
+  // rule this walks is what happens on a company she may read and not work.
   const company = await one<{ name: string }>(
     `select c.name
        from quotations q
        join companies c on c.id = q.company_id
-      where c.archived_at is null
+       join users u on u.id = c.rep_id
+      where c.archived_at is null and u.role <> 'coordinator'
       group by c.name
       order by count(*) desc
       limit 1`,
@@ -142,8 +146,9 @@ test("a company found in the palette opens something for the coordinator", async
   await expect(hit).toBeVisible(COLD);
   await hit.click();
 
-  // She holds no floor, so the company screen has nothing on it for her. What
-  // she wants a company for is what we have quoted them.
+  // Not her customer, so the company screen has nothing on it for her — the
+  // drawer would refuse the row. What she wants somebody else's company for is
+  // what we have quoted them.
   await expect(page).toHaveURL(new RegExp(`/${locale}/quotations\\?q=`), COLD);
   await expect(page.getByRole("row").filter({ hasText: company.name }).first()).toBeVisible(COLD);
 });

@@ -158,8 +158,11 @@ export async function listLookup(kind: LookupKind): Promise<LookupRow[]> {
     .map((f) => `${f.column}::text as ${f.key}`)
     .join(", ");
 
+  // Only one list has the column, and the panel is one component: asked as a
+  // constant for the others rather than as a second query or a second shape.
+  const restricted = kind === "leadSources" ? sql`restricted` : sql`false`;
   const rows = await db.execute<Record<string, string | boolean | number>>(
-    sql`select id, ${sql.raw(columns)}, active
+    sql`select id, ${sql.raw(columns)}, active, ${restricted} as restricted
           from ${sql.raw(tableName(kind))}
          order by coalesce(sort_order, 0) asc, ${sql.raw(fields[0].column)} asc`,
   );
@@ -171,6 +174,7 @@ export async function listLookup(kind: LookupKind): Promise<LookupRow[]> {
       values,
       label: values.filter(Boolean).join(" · "),
       active: Boolean(row.active),
+      restricted: Boolean(row.restricted),
     };
   });
 }

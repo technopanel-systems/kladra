@@ -18,14 +18,24 @@ import { seesCompany } from "@/lib/visibility";
  * SQL before the limit (rules/data.md: filtering a fetched page returns
  * silently wrong screens). Five per group, four groups, run together.
  *
- * Who sees what (SPEC S8, S9): a rep only his own companies, contacts,
- * projects and quotations; manager and admin everything; the coordinator owns
- * no relationships, so she gets the two things her desk needs to find — a
- * company by name and a quotation by its number.
+ * Who sees what (SPEC S8, S9, §3): a rep only his own companies, contacts,
+ * projects and quotations; manager and admin everything. The coordinator is the
+ * one person the two halves differ for. Her DESK is every company and every
+ * quotation in the building, because her job is the paper on somebody else's
+ * customer; her FLOOR is the handful she sells herself, and the contacts and
+ * projects she is offered are only those. Both of those are the same split
+ * `mayOpen`/`mayWrite` has kept since D42, asked of a search box.
  */
 
 export type SearchResults = {
-  companies: { id: string; name: string; city: string }[];
+  /**
+   * `mine` is "the reader may OPEN this company" — his own, one shared with
+   * him, or any of them for a manager. Only the coordinator's palette reads it:
+   * she is shown every company by name and may open the ones on her own floor,
+   * so it sends her to the drawer for those and to the paper for the rest
+   * (D139, SPEC §3).
+   */
+  companies: { id: string; name: string; city: string; mine: boolean }[];
   contacts: { id: string; name: string; phone: E164; companyId: string; companyName: string }[];
   projects: { id: string; name: string; companyName: string }[];
   quotations: { id: string; number: string; companyName: string }[];
@@ -98,13 +108,30 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
 
   // The rep filter is a column comparison, so it lands in the WHERE clause and
   // the limit applies to rows he is allowed to see, never to a page of them.
-  const ownCompany: SQL | undefined = isRep ? seesCompany(actor) : undefined;
+  //
+  // The coordinator holds a floor of her own since SPEC §3 and is deliberately
+  // NOT narrowed to it here. What she wants a company for at the palette is the
+  // paper on it — every rep's, which is her desk (D139) — and a search that
+  // returned only her own customers would hide the ones she quotes all day. She
+  // is the one person whose floor and whose reading are different questions,
+  // which is exactly the split `mayOpen`/`mayWrite` exists for.
+  const ownCompany: SQL | undefined = isRep && !isCoordinator ? seesCompany(actor) : undefined;
+  // And the other half of her: the groups that are about WORKING a customer
+  // rather than about the paper on him. A contact and a project belong to a
+  // floor, and since §3 she has one — this is the same narrowing every rep
+  // gets, asked of her too, where `ownCompany` above deliberately lets her past.
+  const myFloor: SQL | undefined = all ? undefined : seesCompany(actor);
   if (!all && !isRep && !isCoordinator) return EMPTY;
 
   const companyRows = db
     .select({
       id: companies.id,
       name: companies.name,
+      // Asked of the database with the same predicate that narrows every other
+      // group, rather than compared to an id here: a company SHARED with the
+      // reader is one he may open, and `rep_id = me` would have sent him to a
+      // screen for somebody else's paper about a customer he works (D147).
+      mine: (seesCompany(actor) ?? sql`true`).mapWith(Boolean),
       cityName: cityName,
       cityText: companies.cityText,
     })
@@ -114,9 +141,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
     .orderBy(sql`case when ${companies.name} ilike ${prefix} then 0 else 1 end`, asc(companies.name))
     .limit(PER_GROUP);
 
-  const contactRows = isCoordinator
-    ? null
-    : db
+  const contactRows = db
         .select({
           id: contacts.id,
           name: contacts.name,
@@ -134,15 +159,13 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
               ilike(contacts.name, anywhere),
               needle ? ilike(contacts.phoneNormalized, `%${escapeLike(needle)}%`) : undefined,
             ),
-            ownCompany,
+            myFloor,
           ),
         )
         .orderBy(asc(contacts.name))
         .limit(PER_GROUP);
 
-  const projectRows = isCoordinator
-    ? null
-    : db
+  const projectRows = db
         .select({
           id: projects.id,
           name: projects.name,
@@ -155,7 +178,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
             isNull(projects.archivedAt),
             isNull(companies.archivedAt),
             ilike(projects.name, anywhere),
-            ownCompany,
+            myFloor,
           ),
         )
         .orderBy(
@@ -195,8 +218,8 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
 
   const [foundCompanies, foundContacts, foundProjects, foundQuotations] = await Promise.all([
     companyRows,
-    contactRows ?? Promise.resolve([]),
-    projectRows ?? Promise.resolve([]),
+    contactRows,
+    projectRows,
     quotationRows,
   ]);
 
@@ -205,6 +228,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
       id: row.id,
       name: row.name,
       city: row.cityName ?? row.cityText ?? "",
+      mine: Boolean(row.mine),
     })),
     contacts: foundContacts.map((row) => ({
       id: row.id,

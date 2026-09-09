@@ -17,7 +17,7 @@
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { projectOptionValue } from "@/lib/picker-option";
-import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personName } from "@/lib/people";
@@ -27,7 +27,7 @@ import { holdsFloor, sells } from "@/lib/floor";
 import { onProjectSql } from "@/lib/visibility";
 import { quotationLabel } from "@/lib/labels";
 import type { PickerOption } from "@/lib/picker-option";
-import { isLatestRevisionSql } from "@/lib/quotations";
+import { DISPATCHABLE, isLatestRevisionSql } from "@/lib/quotations";
 import type { Role, SessionUser } from "@/lib/types";
 
 export type { PickerOption };
@@ -112,7 +112,12 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
         // working one project send against each other's quotations, which is
         // what sharing the job means (D147).
         or(eq(quotations.repId, user.id), onProjectSql(user, sql`quotations.project_id`)),
-        eq(quotations.status, "issued"),
+        // The same two states the action allows and the drawer offers, said
+        // once (§5 #166). This read `issued` alone, so a quotation the customer
+        // had accepted vanished from the picker on the screen whose whole job
+        // is raising dispatches — while the drawer one click away still offered
+        // it, and the action behind both would have taken it.
+        inArray(quotations.status, DISPATCHABLE),
         isLatestRevisionSql(),
         sql`exists (
           select 1

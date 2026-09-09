@@ -28,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { listActivitiesForCompany } from "@/lib/activities";
-import { mayHandOver, mayQuote, mayShare, mayWrite } from "@/lib/floor";
+import { issuesOwnQuotations, mayHandOver, mayQuote, mayShare, mayWrite } from "@/lib/floor";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany, type CompanyDetail } from "@/lib/companies";
 import { floorHolderOptions } from "@/lib/pickers";
@@ -143,7 +143,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
    * to every reader: a rep put on a colleague's customer has to be able to see
    * that he is on it.
    */
-  const canHandOver = mayHandOver(user, company.repId);
+  const canHandOver = mayHandOver(user);
   const canShare = mayShare(user, company.repId);
   const sharers = await companySharers(company.id);
   const floorHolders =
@@ -205,10 +205,13 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
       {t("drawer.newProject")}
     </Button>
   );
+  // She does not ask the desk for a price; she IS the desk (SPEC §3), so the
+  // same door says Issue and the form behind it asks for the SMAC number.
+  const direct = issuesOwnQuotations(user.role);
   const requestQuotationTrigger = (
     <Button variant="outline">
       <FileText aria-hidden="true" />
-      {t("quotations.request")}
+      {t(direct ? "quotations.issueOwn" : "quotations.request")}
     </Button>
   );
 
@@ -240,6 +243,8 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             name: company.name,
             categoryId: company.categoryId,
             leadSourceId: company.leadSourceId,
+            // And its word, for the one source a rep is not offered (§5 #168).
+            leadSourceName: company.leadSourceName,
             countryId: company.countryId,
             cityId: company.cityId,
             cityText: company.cityText,
@@ -470,6 +475,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
               <RequestQuotationDialog
                 companyId={company.id}
                 projects={quotationProjects}
+                issuesDirectly={direct}
                 trigger={requestQuotationTrigger}
               />
             </div>

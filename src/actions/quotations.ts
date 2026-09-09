@@ -32,7 +32,7 @@ import { holdQuotation } from "@/lib/hold";
 import { quotationLabel } from "@/lib/labels";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
-import { SELLING_ROLES } from "@/lib/floor";
+import { issuesOwnQuotations, SELLING_ROLES } from "@/lib/floor";
 import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 import {
@@ -143,6 +143,33 @@ async function taken(
 ): Promise<ActionResult<{ quotationId: string }>> {
   const sentence = say(await smacHolder("quotation", number));
   return { ok: false, error: sentence, fieldErrors: { smacNumber: sentence } };
+}
+
+/**
+ * Is this person putting the paper out herself, and under which number?
+ *
+ * The coordinator does not ask the desk for a price; she IS the desk (SPEC §3),
+ * so her own quotation is requested and issued in one act. Anybody else asks
+ * and waits, and `kind: "no"` is that ordinary path.
+ *
+ * The SMAC number is required of exactly this path, because the schema requires
+ * one of anything issued. Refused here it lands on the field the person typed
+ * in; refused by the constraint it is "something went wrong" about a box they
+ * can still see (D88).
+ */
+type SelfIssue = { kind: "no" } | { kind: "yes"; smacNumber: string } | { kind: "missing" };
+
+function selfIssue(actor: SessionUser, formData: FormData): SelfIssue {
+  if (!issuesOwnQuotations(actor.role)) return { kind: "no" };
+  const parsed = z.string().trim().min(1).max(60).safeParse(field(formData, "smacNumber"));
+  return parsed.success ? { kind: "yes", smacNumber: parsed.data } : { kind: "missing" };
+}
+
+/** What an insert writes when the raiser issues it herself, and nothing when she does not. */
+function issuedNow(self: SelfIssue) {
+  return self.kind === "yes"
+    ? { status: "issued" as const, smacNumber: self.smacNumber, issuedAt: new Date(), selfIssued: true }
+    : {};
 }
 
 const idSchema = z.uuid();
@@ -306,6 +333,12 @@ export async function requestQuotationAction(
     const credit = await resolveCredit(input.projectId, actor.id, field(formData, "credit"));
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
+    // Hers goes out as she raises it; everybody else's joins the queue.
+    const self = selfIssue(actor, formData);
+    if (self.kind === "missing") {
+      return { ok: false, error: tc("required"), fieldErrors: { smacNumber: tc("required") } };
+    }
+
     const created = await db.transaction(async (tx) => {
       const [row] = await tx
         .insert(quotations)
@@ -315,6 +348,7 @@ export async function requestQuotationAction(
           projectId: input.projectId,
           repId: actor.id,
           notes: input.notes ?? null,
+          ...issuedNow(self),
         })
         .returning({ id: quotations.id, number: quotations.number });
 
@@ -334,24 +368,50 @@ export async function requestQuotationAction(
       });
 
       const label = quotationLabel(row.number, 1);
-      for (const userId of await coordinators()) {
-        await createNotification(tx, {
-          userId,
-          kind: "quotationRequested",
-          params: { label, repId: actor.id },
-          link: `/queue?open=${row.id}`,
-          subject: { type: "quotation", id: row.id },
+
+      // Two events, both hers, in the order they happened. The trail is what
+      // tells the manager reading it later that one person did both (D143), and
+      // an issue with no request before it reads as paper out of nothing.
+      if (self.kind === "yes") {
+        await tx.insert(auditLog).values({
+          userId: actor.id,
+          action: quotationEvent("issue"),
+          recordType: "quotation",
+          recordId: row.id,
+          details: { smacNumber: self.smacNumber },
         });
+      } else {
+        for (const userId of await coordinators()) {
+          await createNotification(tx, {
+            userId,
+            kind: "quotationRequested",
+            params: { label, repId: actor.id },
+            link: `/queue?open=${row.id}`,
+            subject: { type: "quotation", id: row.id },
+          });
+        }
       }
 
       await notifyLive(tx, await liveAudienceForCompany(input.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: row.id,
         number: label,
-        status: "requested",
+        status: self.kind === "yes" ? "issued" : "requested",
       });
       return { id: row.id, label };
+    }).catch(async (error: unknown) => {
+      // The index fired on her own number, named at the field exactly as it is
+      // when she types somebody else's onto the queue (D88).
+      if (self.kind === "yes" && isSmacClash(error, "quotation")) {
+        return taken(self.smacNumber, (holder) =>
+          holder
+            ? tq("smacTaken", { number: self.smacNumber, label: holder })
+            : tq("smacTakenSomewhere", { number: self.smacNumber }),
+        );
+      }
+      throw error;
     });
+    if ("ok" in created) return created;
 
     revalidateChain();
     return { ok: true, data: { quotationId: created.id } };
@@ -840,6 +900,13 @@ export async function reviseQuotationAction(
     );
     if (!revisionCredit) return { ok: false, error: tc("credit.notOnProject") };
 
+    // A revision of her own paper goes out the same way the first one did, and
+    // carries its own number: SMAC gives a revision a number of its own.
+    const self = selfIssue(actor, formData);
+    if (self.kind === "missing") {
+      return { ok: false, error: tc("required"), fieldErrors: { smacNumber: tc("required") } };
+    }
+
     const created = await db.transaction(async (tx) => {
       // Held: two revisions raised at once take consecutive numbers rather
       // than colliding on the unique index and crashing the second (D85).
@@ -864,6 +931,7 @@ export async function reviseQuotationAction(
           projectId: quotation.projectId,
           repId: actor.id,
           notes: field(formData, "notes") ?? null,
+          ...issuedNow(self),
         })
         .returning({ id: quotations.id, revision: quotations.revision });
 
@@ -889,24 +957,44 @@ export async function reviseQuotationAction(
       ]);
 
       const label = quotationLabel(quotation.number, row.revision);
-      for (const userId of await coordinators()) {
-        await createNotification(tx, {
-          userId,
-          kind: "quotationRequested",
-          params: { label, repId: actor.id },
-          link: `/queue?open=${row.id}`,
-          subject: { type: "quotation", id: row.id },
+      if (self.kind === "yes") {
+        await tx.insert(auditLog).values({
+          userId: actor.id,
+          action: quotationEvent("issue"),
+          recordType: "quotation",
+          recordId: row.id,
+          details: { smacNumber: self.smacNumber },
         });
+      } else {
+        for (const userId of await coordinators()) {
+          await createNotification(tx, {
+            userId,
+            kind: "quotationRequested",
+            params: { label, repId: actor.id },
+            link: `/queue?open=${row.id}`,
+            subject: { type: "quotation", id: row.id },
+          });
+        }
       }
 
       await notifyLive(tx, await liveAudienceForCompany(quotation.companyId, actor.id, ["coordinator"]), {
         type: "quotation",
         id: row.id,
         number: label,
-        status: "requested",
+        status: self.kind === "yes" ? "issued" : "requested",
       });
       return row.id;
+    }).catch(async (error: unknown) => {
+      if (self.kind === "yes" && isSmacClash(error, "quotation")) {
+        return taken(self.smacNumber, (holder) =>
+          holder
+            ? tq("smacTaken", { number: self.smacNumber, label: holder })
+            : tq("smacTakenSomewhere", { number: self.smacNumber }),
+        );
+      }
+      throw error;
     });
+    if (typeof created !== "string") return created;
 
     revalidateChain();
     return { ok: true, data: { quotationId: created } };

@@ -41,6 +41,15 @@ export type ActionScope = {
   coordinator: boolean;
   /** His company, so his to edit, decide and revise (S8). */
   owner: boolean;
+  /**
+   * Whoever puts their own paper out (SPEC §3) — the coordinator, since there
+   * is nobody behind her to ask. Asked of the ROLE by `issuesOwnQuotations`
+   * and not read off `coordinator` above, which happens to be the same people
+   * today and is a different question: one is "does she run the queue", the
+   * other is "does she need a queue at all". Two questions that share an answer
+   * are still two questions (D42).
+   */
+  issuesDirectly: boolean;
 };
 
 export function QuotationActions({
@@ -200,6 +209,7 @@ export function QuotationActions({
           projectId={quotation.projectId}
           mode="revise"
           existing={quotation.draft}
+          issuesDirectly={scope.issuesDirectly}
           trigger={
             <Button variant="outline">
               <RotateCcw aria-hidden="true" />

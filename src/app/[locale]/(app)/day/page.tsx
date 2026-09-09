@@ -50,9 +50,9 @@ export default async function DayPage({
     searchParams,
     cookies(),
   ]);
-  // The two roles that own companies. The coordinator has none and the manager
-  // reads the team screen for the same question; either one following a link
-  // here goes to their own home rather than to an empty screen (D15, S8).
+  // The roles that own companies — a rep, marketing, and the coordinator since
+  // SPEC §3. The manager reads the team screen for the same question, so he
+  // follows a link here to his own home rather than to an empty screen (S8).
   if (!ownsCompanies(user.role)) redirect({ href: homeFor(user.role), locale });
 
   // Marketing carries no target, so it gets no month card — an empty one would

@@ -312,27 +312,35 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
   });
 });
 
-test("the coordinator is offered no button she could not use", async ({ page, locale, t }) => {
+/*
+ * Rewritten in P12-5. It read "the coordinator is offered no button she could
+ * not use", and every step of it asserted an absence: no Request quotation, no
+ * Request dispatch, no New project, because she owned no company to raise
+ * anything on. SPEC §3 gave her one, so every one of those absences is now the
+ * defect it was written to catch — a door the action would allow and the screen
+ * does not show. The rule it was really testing has not changed, and this is it
+ * said the other way round: what her screens offer is what her role may do.
+ *
+ * The Request-quotation door is deliberately still asserted absent. Hers says
+ * Issue, because a request of hers would be a note to herself, and the walk
+ * through that dialog is tests/roles.spec.ts.
+ */
+test("the coordinator is offered the doors her floor gives her", async ({ page, locale, t }) => {
   await login(page, locale, "rawan");
 
-  await test.step("no button on /quotations — she owns no company to raise one on", async () => {
+  await test.step("on /quotations the door says Issue rather than Request", async () => {
     await page.goto(`/${locale}/quotations`);
+    await expect(page.getByRole("button", { name: t("quotations.issueOwn") })).toBeVisible(COLD);
     await expect(page.getByRole("button", { name: t("quotations.request") })).toHaveCount(0);
   });
 
-  await test.step("no button on /dispatches, either", async () => {
+  await test.step("on /dispatches she may send against her own paper", async () => {
     await page.goto(`/${locale}/dispatches`);
-    await expect(page.getByRole("button", { name: t("dispatches.request") })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: t("dispatches.request") })).toBeVisible(COLD);
   });
 
-  await test.step("on /projects she gets the earlier step instead of a dropdown that would open empty", async () => {
+  await test.step("and a new project on her own customer", async () => {
     await page.goto(`/${locale}/projects`);
-    await expect(page.getByRole("button", { name: t("projects.newProject") })).toHaveCount(0);
-    // The empty list has its own copy of the same link in its empty-state
-    // card (projects-table.tsx `EmptyProjects`), on top of the header's — the
-    // same doubling rep.spec.ts's "Add company" hits, and the same fix.
-    await expect(
-      page.getByRole("link", { name: t("projects.openCompanies") }).first(),
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: t("projects.newProject") })).toBeVisible(COLD);
   });
 });

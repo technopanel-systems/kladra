@@ -135,7 +135,7 @@
             and contacts, and the eleven visibility clauses re-pointed at one predicate
       - [x] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
             visible wherever the m² is, and no metre counted twice
-      - [ ] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
+      - [x] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
       - [x] 6 The three-tab shell: today's work · metrics · the team
       - [ ] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
             and what an unacknowledged one looks like after two days
@@ -541,7 +541,7 @@ the quantity column's position, the manager's target box, the long-press number 
 per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
 which is what slice 2 is for.
 
-**Where P12 has got to.** Boxes 1, 2, 3, 4, 6 and 12 are done. The freeze was fixed at
+**Where P12 has got to.** Boxes 1, 2, 3, 4, 5, 6 and 12 are done. The freeze was fixed at
 its cause and the same picker shape swept out of the company form; `npm run lint` now fails on a
 §3 sentence with no test behind it and prints what is owed (27 proved, 6 proved another way, 11
 owed); sharing is built end to end — a shared company, a shared project, an owner on every
@@ -558,7 +558,17 @@ add back; and achieved metres — the rep's card, the manager's table, the metri
 report — are the sum of what a person was credited rather than of what he raised (D148, D155).
 Three defects came out of building it, none of them about credit: a migration that reported
 success and did nothing, a drawer that hid a button the action would have allowed, and a query
-whose failure made a question stop being asked (§5 #162–#164). Boxes 5, 7, 8, 9, 10, 11, 13 and
+whose failure made a question stop being asked (§5 #162–#164). Box 5 gave three roles what §3
+asked for: the handover belongs to the sales manager alone, the Marketing lead source is not
+offered to a rep — as a column on the row, so renaming the lookup cannot switch the rule off — and
+the coordinator sells. She has a floor now, and the one thing about it that is hers alone is that
+she asks nobody for paper: the same dialog every rep uses gains a SMAC field for her, the button
+says Issue, and the quotation is raised and issued in one act, flagged so the manager reads who did
+both (D156). Two defects came out of it and neither was about roles: the Dispatches screen's own
+picker allowed only `issued`, so the door closed on a quotation the moment its rep recorded the
+customer's yes, while the drawer one click away still offered it (§5 #166); and a spec that proved
+a refusal stopped being refused, performed the change instead, and left a rep holding another role
+for every file that ran after it in the shared database (§5 #167). Boxes 7, 8, 9, 10, 11, 13 and
 14 are next, in that order.
 
 ## §4 Five days, walked (P9.1)
@@ -772,6 +782,15 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 5. Faisal puts Saad on the tower. Now Saad raises a quotation on it, and it is his; Faisal sees it and cannot edit it.
 6. Faisal takes Saad off the company. The tower goes with it — a job he cannot see the customer of would be a permission pointing at nothing — and Saad's own contact and his own quotation stay exactly where they are, because they are records of work that happened.
 7. Second test, the hand-over that collides with all of the above: Abdulrahman gives a company to the rep who already holds his own row for one of its people. It goes through; the new owner's own contact stands, still his main one; the arriving duplicate is archived where it is and keeps the name of the rep who wrote it; and nobody ends up with two main contacts on one customer (§5 #159, D153).
+
+**The three roles §3 rewrote (P12)** — `tests/roles.spec.ts`, `tests/floor.spec.ts`
+1. Faisal adds a company. The lead source list offers him everything except Marketing; marketing signs in, opens the same form, and is offered it. The rule is a column on the row, so the admin renaming the lookup in either language does not switch it off.
+2. Faisal opens one of his own customers and looks for Hand over. It is not there. Abdulrahman opens the same customer and it is, and moving it is audit-logged with both names (`tests/marketing.spec.ts`).
+3. Rawan signs in. Her sidebar carries her desk first and her floor after it, and the primary action on Quotations says **Issue quotation**, not Request — because a request of hers would be a note to herself.
+4. She presses it, picks her own job, types one line and the number SMAC gave it, and presses Issue. The quotation exists and is issued in one act: the trail says Requested then Issued, both hers, the drawer says Issued and says it was issued by the person who raised it, and no request landed in the queue she runs.
+5. Abdulrahman opens the team tab. Her name is a row on it, with a target of her own and the metres against it — not the row of dashes she carried for eleven phases.
+6. She presses Ctrl+K and types her own customer's name: it opens in the drawer, like a rep's. She types somebody else's and it opens the quotations screen filtered to that name, because the drawer would refuse the row. Her own customer's people are findable there too, and nobody else's are.
+7. Faisal is handed a company marketing filed under its own source. He edits its notes and saves: the picker says what the company says rather than "Choose…", the save goes through, and the source has not moved. Jerom opens Lookups and that source carries a badge saying whose it is.
 
 Faisal's Home target card (the old step 4) lands with P6, which is where the card exists.
 
@@ -2406,3 +2425,65 @@ actually needed.
   the app — the queue, the team, the company header, the project and quotation drawers — reads from
   the one component, so it was one line. The general form is the reason DESIGN §4 measures both
   locales: **a width that fits in English is not a width, it is a coincidence.**
+
+- [x] 166 **The dispatches screen closed its own door the moment a customer said yes.** Found by a
+  P12-5 walk that expected the coordinator to be offered a Request dispatch button on her own
+  accepted quotation and was not. "Goods may move against this paper" was written three times:
+  `requestDispatchAction` allows `issued` or `accepted`, the quotation drawer's Send button allows
+  both, and `dispatchableQuotationOptions` — the picker the Dispatches screen's own primary action
+  opens on — allowed only `issued`. So the door on the list screen closed on a quotation the
+  moment its rep recorded the answer he had been waiting for, while the same work stayed one click
+  away inside the drawer and the action behind both would have taken it. Nobody had noticed because
+  the demo's accepted quotations all had a dispatch on them already and the reps who tried it
+  reached for the drawer. One predicate now (`DISPATCHABLE` in `src/lib/quotations.ts`) and three
+  readers, which is what rules/data.md has said about figures since P9 and is just as true of a
+  rule: **a permission written twice is a permission that disagrees with itself, and the copy that
+  is wrong is always the one nobody is looking at.**
+
+- [x] 167 **A refusal that stopped happening rewrote the database for every spec after it.**
+  `tests/restore.spec.ts` proved D91 — a role with no floor cannot take an account that still holds
+  companies — by asking for Faisal to be made a coordinator and expecting the sentence that refuses
+  it. SPEC §3 gave the coordinator a floor, so the refusal correctly stopped firing and the save
+  went through. The spec did fail, twice and honestly, but only after the write had landed: Faisal
+  was a coordinator for every file that ran after it in the same database, and six more tests failed
+  in four files that have nothing to do with roles — each reporting a screen that was behaving
+  perfectly for the person it thought was signed in. Two lessons and the second is the one that
+  generalises. The small one: the only role with no floor now is the admin, and that is what this
+  asks for. The large one: **a spec that performs a write it expects to be refused is a spec that
+  writes, on the day the refusal moves** — and this suite shares one database across both locale
+  projects in file order, so its blast radius is everything downstream. Where a test drives a write
+  through the UI to see it refused, the fixture has to put the row back afterwards whatever
+  happened, the way `floorOfCompany`/`restoreCompanyFloor` already do for a handover
+  (tests/helpers/db.ts). A negative test is a test that changes something unless the app stops it.
+
+- [x] 168 **A rep could not edit a customer he had been given.** Found by the P12-5 gate, in
+  Arabic, on a spec about notes. Marketing files a lead under the Marketing source, the manager
+  hands the company to a rep — the exact path §3 describes — and from that moment the rep could not
+  save that company at all: not its notes, not its name, not its city. The new restriction asked
+  "is this a source he may pick" of every save, and the form was sending back the source the
+  company arrived with, so holding it read as claiming it. It was invisible until then because the
+  demo's marketing leads had not been handed on. Two halves, and both are the rule rather than the
+  patch. **Claiming is changing**: the guard now compares against the source the record already
+  carries, and a value that has not moved is not a claim. And **a form always offers the value its
+  record holds**: the narrowed list is right for choosing, and a picker whose value is missing from
+  its options silently renders the placeholder — so the screen said "Choose…" about a company that
+  has an answer, and the save that followed was refused on the strength of it. A screen that shows
+  a placeholder where the record has a value is the same defect as a figure that truncates (#165):
+  **it is not showing less, it is saying something else.**
+
+- [x] 169 **The caret never moved, on the two forms tall enough to need it.** `useFocusFirstError`
+  has been on nine dialogs since P4 and no spec had ever asserted `toBeFocused`, so nobody knew it
+  did nothing on the two biggest. The forms built on `useActionState` were fine: that hook delivers
+  the refusal and clears `pending` in one commit, so the field is alive when the caret is sent to
+  it. The two built on `useSubmitAction` — request a quotation, request a dispatch — are not:
+  `isPending` stays true for the whole of an async transition, the `setRefused` after the await
+  lands inside it, and every control on those dialogs is `disabled={pending}`. So at the one render
+  where the refused field first carried `aria-invalid`, it was disabled, and a disabled input cannot
+  take the caret. The effect fired, found its target unable to receive focus, did nothing, and never
+  ran again because the answer it watches had not changed since. Found by writing the first
+  `toBeFocused` in the suite, against the coordinator's own form, where the field that gets refused
+  sits on the scroller's clipped edge at 1366 and off the fold entirely at 375 — she would press
+  Issue, see nothing move, and press it again. The refusal is held back one commit now, so the
+  answer changes identity when the fields come back to life. The general form: **an effect that
+  acts on the DOM has to fire when the DOM can be acted on, not when the state says it should be** —
+  and a helper with no test is a helper nobody has watched work.

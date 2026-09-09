@@ -166,6 +166,23 @@ export function useSubmitAction<T>(
     // the same words never appear twice on one dialog.
     error: refused && Object.keys(fieldErrors).length === 0 ? refused.error : null,
     fieldErrors,
-    answer: refused,
+    /*
+     * Null while the submit is still in flight, and only then the refusal
+     * (§5 #169).
+     *
+     * `isPending` stays true for the whole of an async transition, and the
+     * `setRefused` that lands after the await is committed inside it — so at
+     * the render where the refused field first carries `aria-invalid`, every
+     * control on these dialogs is still `disabled={pending}`. A disabled input
+     * cannot take the caret, so `useFocusFirstError` fired at the one moment
+     * its target could not receive it, found nothing to do, and never ran
+     * again, because the answer it watches had not changed since.
+     *
+     * Held back one commit, it changes identity when `pending` goes false and
+     * the fields come back to life, which is when there is something to focus.
+     * `error` and `fieldErrors` above are deliberately NOT held back: the
+     * sentence should appear the moment it is known.
+     */
+    answer: pending ? null : refused,
   };
 }

@@ -64,13 +64,19 @@ export function mayWrite(user: SessionUser, repId: string): boolean {
  * Who carries a monthly m² target, and therefore a row of figures on the
  * manager's team table (S43, D44).
  *
- * The same sentence as `CARRIES_METRES` in src/lib/team.ts, said in TypeScript
- * for the screens that ask it. Marketing does not: it finds customers and hands
+ * `CARRIES_METRES` in src/lib/team.ts is this function, filtered over `ROLES`
+ * and handed to the query — one sentence, not two, since a hand-written role
+ * list beside a predicate is what D42 was. Marketing does not: it finds customers and hands
  * them on, and a target it can never meet would be a number that says the wrong
  * thing every month (P8.9).
+ *
+ * The coordinator does, since SPEC §3 — the founder's own words: she is "a
+ * selling role too: department Internal Sales, her own m² target", which
+ * overrules D15 and S9's "she does not own customer relationships". She was
+ * the one person in the building selling without a number against her name.
  */
 export function carriesMetres(role: Role): boolean {
-  return role === "rep" || role === "manager";
+  return role === "rep" || role === "manager" || role === "coordinator";
 }
 
 /**
@@ -78,10 +84,25 @@ export function carriesMetres(role: Role): boolean {
  *
  * Marketing owns companies and works them like a rep — logs, follow-ups,
  * projects — and stops there. Quoting is the sales conversation, and the person
- * who has it is the rep the lead was handed to (P8.9).
+ * who has it is the rep the lead was handed to (P8.9). The coordinator has that
+ * conversation too now (SPEC §3), and hers ends differently: she does not ask
+ * the desk for a price, because she IS the desk — see `issuesOwnQuotations`.
  */
 export function sells(role: Role): boolean {
   return carriesMetres(role);
+}
+
+/**
+ * Who puts the paper out themselves instead of asking for it (SPEC §3).
+ *
+ * The coordinator, and only her. A rep raises a request and waits; she types
+ * the SMAC number and the quotation is issued in one act, because there is
+ * nobody behind her to ask. That is the whole reason the record is marked: "so
+ * nobody issues their own work unseen" is the founder's own clause, and what it
+ * asks for is not a refusal but a name on a list the manager reads.
+ */
+export function issuesOwnQuotations(role: Role): boolean {
+  return role === "coordinator";
 }
 
 /** May this person raise a quotation or a dispatch on this floor? */
@@ -96,9 +117,16 @@ export function mayQuote(user: SessionUser, repId: string): boolean {
  * The manager is not here. He reads every floor and adds no company (S8,
  * WORKFLOW §3); a company reaches him by handover, and from then on his own id
  * is on it and `mayWrite` says yes for the same reason it says yes to Faisal.
+ *
+ * The coordinator is, since SPEC §3: "she creates companies, projects and
+ * quotations like a rep". Her desk work is unchanged — she still issues
+ * everybody's paper and approves everybody's dispatches — and this is the floor
+ * beside it, which is why the two questions this file keeps apart matter more
+ * than ever: she READS every quotation in the building by role, and WRITES only
+ * on the companies that are hers.
  */
 export function ownsCompanies(role: Role): boolean {
-  return role === "rep" || role === "marketing";
+  return role === "rep" || role === "marketing" || role === "coordinator";
 }
 
 /**
@@ -108,9 +136,14 @@ export function ownsCompanies(role: Role): boolean {
  * The people whose day is customer work: the reps, marketing and the
  * coordinator. The manager and the admin read it — a manager's day IS the team,
  * and a report he wrote about himself would be a report he also marks.
+ *
+ * It said `ownsCompanies(role) || role === "coordinator"` until SPEC §3 gave
+ * her companies, and the second half is now what the first half says. Left in,
+ * it would be a clause that can never be reached — the kind that survives a
+ * rewrite and quietly answers for a role nobody meant.
  */
 export function writesReports(role: Role): boolean {
-  return ownsCompanies(role) || role === "coordinator";
+  return ownsCompanies(role);
 }
 
 /**
@@ -122,16 +155,16 @@ export function writesReports(role: Role): boolean {
  * their functions for every role, so adding a sixth role cannot silently miss
  * one of them.
  */
-export const FLOOR_ROLES: Role[] = ["rep", "marketing"];
-export const SELLING_ROLES: Role[] = ["rep", "manager"];
+export const FLOOR_ROLES: Role[] = ["rep", "marketing", "coordinator"];
+export const SELLING_ROLES: Role[] = ["rep", "manager", "coordinator"];
 export const REPORTING_ROLES: Role[] = ["rep", "marketing", "coordinator"];
 
 /**
  * On whose floor may a company SIT.
  *
- * Whoever owns companies or sells: a rep, marketing, and the manager, who adds
- * none himself but can be handed one. Not the coordinator — she has no floor
- * (D15) — and not the admin, whose account is the one that survives everybody.
+ * Whoever owns companies or sells: a rep, marketing, the coordinator since §3,
+ * and the manager, who adds none himself but can be handed one. Not the admin,
+ * whose account is the one that survives everybody.
  */
 export function holdsFloor(role: Role): boolean {
   return ownsCompanies(role) || sells(role);
@@ -154,20 +187,33 @@ export function mayShare(user: SessionUser, ownerId: string): boolean {
 /**
  * May this person move a company to somebody else's floor?
  *
- * Its owner, so marketing can hand a lead to the rep who will price it — the
- * whole reason the role exists — and a rep can pass a customer on. And the
- * manager and the admin for anybody's, because assignment is the job: when
- * somebody leaves, his floor has to reach a living person, and until this
+ * The sales manager, and the admin behind him. Nobody else — not its owner
+ * (SPEC §3, which overrules D51), and not marketing, which is named in that
+ * sentence because handing a lead on used to be the whole reason the role
+ * existed. Assignment is the manager's job in two directions: a customer moved
+ * from one rep to another is a decision about whose metres these will be, and
+ * when somebody leaves, his floor has to reach a living person — until this
  * existed a deactivated account took its companies out of sight for good.
+ *
+ * Marketing loses nothing it will keep: §3 replaces the Add-company-then-hand-
+ * over path with a lead module where creating a lead IS the assignment, so the
+ * role stops owning companies rather than stops being able to give them away.
+ * That module is P12's box 7; between it and here, marketing hands a lead on by
+ * asking the manager, which is what it did before Kladra existed.
  *
  * This is not the exception to D42 it looks like. A manager still writes
  * nothing ON a floor — no log, no edit, no follow-up, no archive — and the
  * history of a company stays the report its rep wrote (S27). Who a customer
  * belongs to is a different question from what happened with him, and it is
  * the manager's to answer. Every handover is audit-logged with both names.
+ *
+ * It takes no company, because the answer no longer depends on one. It used to,
+ * and the argument every caller was passing is what made "the owner may too"
+ * easy to write and easy to keep; a permission with nothing to compare cannot
+ * quietly grow an exception.
  */
-export function mayHandOver(user: SessionUser, repId: string): boolean {
+export function mayHandOver(user: SessionUser): boolean {
   if (user.viewedBy) return false;
-  return repId === user.id || user.role === "manager" || user.role === "admin";
+  return user.role === "manager" || user.role === "admin";
 }
 

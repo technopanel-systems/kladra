@@ -30,6 +30,7 @@ import {
   companyShares,
   contacts,
   countries,
+  leadSources,
   projectShares,
   projects,
   users,
@@ -42,7 +43,7 @@ import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
 import { liveAudienceFor, liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { createNotification } from "@/lib/notify";
-import { SAUDI_CODE } from "@/lib/lookups";
+import { SAUDI_CODE, seesEveryLeadSource } from "@/lib/lookups";
 import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
@@ -146,6 +147,38 @@ async function resolvePlace(
 }
 
 /**
+ * Is this lead source one this person may not claim (SPEC §3, narrowing D1)?
+ *
+ * The Add company form is not offered the Marketing source unless the person
+ * filling it in is management or marketing. That list is the courtesy and this
+ * is the rule, asked by the write as well as by the read, because a screen that
+ * hides an option and an action that accepts it are the pair that has been
+ * wrong in both directions this phase (DESIGN §5). Asked on the EDIT too: a rep
+ * who cannot file a company as marketing's must not be able to re-file it that
+ * way an hour later.
+ */
+async function claimsRestrictedSource(
+  actor: SessionUser,
+  leadSourceId: number,
+  held?: number,
+): Promise<boolean> {
+  if (seesEveryLeadSource(actor.role)) return false;
+  // The one the record already carries is not a claim (§5 #168). Marketing
+  // files a lead as its own and the manager hands it to a rep, which is the
+  // whole path §3 describes — and asked without this, the rep could then never
+  // save that company again, not its notes, not its name, not anything, because
+  // the form sends back the source it arrived with and the guard read it as him
+  // filing somebody else's lead as his own.
+  if (held !== undefined && leadSourceId === held) return false;
+  const [source] = await db
+    .select({ restricted: leadSources.restricted })
+    .from(leadSources)
+    .where(eq(leadSources.id, leadSourceId))
+    .limit(1);
+  return Boolean(source?.restricted);
+}
+
+/**
  * Add company — the dialog with the first contact inside it (SPEC §3).
  * Returns the new id so the list can highlight the row and open its drawer.
  */
@@ -179,6 +212,14 @@ export async function createCompanyAction(
       };
     }
     const input = parsed.data;
+
+    if (await claimsRestrictedSource(actor, input.leadSourceId)) {
+      return {
+        ok: false,
+        error: t("leadSourceNotYours"),
+        fieldErrors: { leadSourceId: t("leadSourceNotYours") },
+      };
+    }
 
     const place = await resolvePlace(input.countryId, input.cityId, input.cityText, t);
     if (!place.ok) return { ok: false, error: tc("invalid"), fieldErrors: place.fieldErrors };
@@ -335,6 +376,18 @@ export async function updateCompanyAction(
     const input = parsed.data;
 
     await assertCompanyMine(actor, input.companyId);
+    const [held] = await db
+      .select({ leadSourceId: companies.leadSourceId })
+      .from(companies)
+      .where(eq(companies.id, input.companyId))
+      .limit(1);
+    if (await claimsRestrictedSource(actor, input.leadSourceId, held?.leadSourceId)) {
+      return {
+        ok: false,
+        error: t("leadSourceNotYours"),
+        fieldErrors: { leadSourceId: t("leadSourceNotYours") },
+      };
+    }
     const place = await resolvePlace(input.countryId, input.cityId, input.cityText, t);
     if (!place.ok) return { ok: false, error: tc("invalid"), fieldErrors: place.fieldErrors };
 
@@ -464,7 +517,7 @@ export async function handOverCompanyAction(
       .where(and(eq(companies.id, input.companyId), isNull(companies.archivedAt)))
       .limit(1);
     if (!company) return { ok: false, error: t("companyNotFound") };
-    if (!mayHandOver(actor, company.repId)) throw new NotAllowed();
+    if (!mayHandOver(actor)) throw new NotAllowed();
 
     // Active, and somebody a company can sit with. A deactivated account would
     // take the company back out of sight the moment it landed there, and the

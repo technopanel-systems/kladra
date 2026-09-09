@@ -10,7 +10,7 @@ import { z } from "zod";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
-import { mayShare, mayWrite } from "@/lib/floor";
+import { issuesOwnQuotations, mayShare, mayWrite } from "@/lib/floor";
 import { floorHolderOptions } from "@/lib/pickers";
 import { getProject } from "@/lib/projects";
 import { projectSharers } from "@/lib/shares";
@@ -116,12 +116,21 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   // Two ways in (D147): the customer is his, or the job is one he was put on —
   // the same sentence `requestQuotationAction` guards itself with.
   const mayRaise = mayRaiseFor(user, project.company.repId, project.repId, project.onProject);
+  // She does not ask the desk for a price; she IS the desk (SPEC §3), so the
+  // same door says Issue and the form behind it asks for the SMAC number.
+  const direct = issuesOwnQuotations(user.role);
+
   const requestTrigger = project.lostAt || !mayRaise ? null : (
     <RequestQuotationDialog
       companyId={project.companyId}
       projectId={project.id}
       projectName={project.name}
-      trigger={<Button variant="outline">{t("quotations.request")}</Button>}
+      issuesDirectly={direct}
+      trigger={
+        <Button variant="outline">
+          {t(direct ? "quotations.issueOwn" : "quotations.request")}
+        </Button>
+      }
     />
   );
 

@@ -43,6 +43,7 @@
   "showTitle": "Put “{name}” back in use?",
   "showHint": "It is offered in dropdowns again.",
   "hidden": "Out of use",
+  "forManagement": "Management and marketing",
   "addDay": "Add a day",
   "dayHint": "A holiday is for everyone; leave is for one person. Both are skipped by pace and by reminders.",
   "everyone": "Everyone",

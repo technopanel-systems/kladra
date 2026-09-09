@@ -97,11 +97,26 @@ export function LookupsPanel({
             key={row.id}
             className={cn("card-face flex flex-wrap items-center gap-3 p-3", !row.active && "opacity-70")}
           >
-            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            {/* Its own line on a phone. A badge is `w-fit shrink-0` by design,
+                so when the name and its badges need more width than the third
+                of the row left over by the two buttons, they do not shrink —
+                they run under the buttons, which is exactly what the Marketing
+                row did at 375 in English and not in Arabic (the Arabic words
+                are narrower). Given the whole width there is nothing to run
+                under, and the two controls get a full-width row of their own,
+                which is a better phone target anyway (DESIGN §5). */}
+            <span className="flex min-w-0 basis-full flex-wrap items-center gap-2 sm:flex-1 sm:basis-auto">
               <span data-slot="lookup-name" className="font-medium">
                 {named(row)}
               </span>
               {row.active ? null : <Badge variant="outline">{t("admin.hidden")}</Badge>}
+              {/* Why this row is missing from a rep's list (SPEC §3). Said on
+                  the screen that owns the row, because the admin may rename it
+                  in either language and nothing else here would tell him the
+                  rename does not change what it does. */}
+              {row.restricted ? (
+                <Badge variant="outline">{t("admin.forManagement")}</Badge>
+              ) : null}
             </span>
 
             <RowDialog

@@ -101,6 +101,14 @@ export type LookupRow = {
   /** What the row reads as on one line — the first value, then the rest. */
   label: string;
   active: boolean;
+  /**
+   * True on the one lead source a rep is not offered (SPEC §3, P12-5). False
+   * everywhere else, including every other kind of list, which has no such
+   * rule — the admin's screen says which row behaves differently, because a
+   * rule nobody can see on the screen that owns the row is a rule that reads
+   * as a bug the first time a rep asks why his list is short.
+   */
+  restricted: boolean;
 };
 
 /** The physical table behind a kind. Never built from user input. */

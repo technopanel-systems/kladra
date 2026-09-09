@@ -21,6 +21,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
+import type { Role } from "@/lib/types";
 import {
   cities,
   classes,
@@ -80,8 +81,20 @@ export async function listCategories(locale?: string): Promise<LookupOption[]> {
     .orderBy(asc(companyCategories.sortOrder), asc(companyCategories.nameEn));
 }
 
-/** Field visit · Direct contact · … · Other. "Other" last (D1). */
-export async function listLeadSources(locale?: string): Promise<LookupOption[]> {
+/**
+ * Field visit · Direct contact · … · Other. "Other" last (D1).
+ *
+ * `all` is management's and marketing's list; everybody else is offered the
+ * unrestricted rows, which today means the list without Marketing (SPEC §3,
+ * narrowing D1). A rep who can pick it can file somebody else's lead as his
+ * own, and the figure that says where business comes from stops meaning
+ * anything.
+ *
+ * The filter is here rather than in the form, because the ACTION has to ask the
+ * same question: a list that hides an option is a courtesy, and the write that
+ * refuses it is the rule (DESIGN §5).
+ */
+export async function listLeadSources(locale?: string, all = false): Promise<LookupOption[]> {
   const l = await labelLocale(locale);
   return db
     .select({
@@ -90,8 +103,24 @@ export async function listLeadSources(locale?: string): Promise<LookupOption[]> 
       alt: isArabic(l) ? leadSources.nameEn : leadSources.nameAr,
     })
     .from(leadSources)
-    .where(eq(leadSources.active, true))
+    .where(
+      all
+        ? eq(leadSources.active, true)
+        : and(eq(leadSources.active, true), eq(leadSources.restricted, false)),
+    )
     .orderBy(asc(leadSources.sortOrder), asc(leadSources.nameEn));
+}
+
+/**
+ * Who is offered the whole list: management, and marketing itself.
+ *
+ * Marketing is on it because the source describes marketing's own work — box 7
+ * will set it for them without asking — and management because a manager or an
+ * admin filing a company knows where it came from and is not competing for the
+ * credit.
+ */
+export function seesEveryLeadSource(role: Role): boolean {
+  return role === "manager" || role === "admin" || role === "marketing";
 }
 
 /**

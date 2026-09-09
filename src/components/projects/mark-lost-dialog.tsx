@@ -109,7 +109,14 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
                   setErrors((prev) => ({ ...prev, reason: undefined }));
                 }}
               >
-                <SelectTrigger id="loss-reason" className="w-full" aria-invalid={!!errors.reason}>
+                <SelectTrigger
+                  id="loss-reason"
+                  className="w-full"
+                  aria-invalid={errors.reason ? true : undefined}
+                  // The refusal is reachable from the control, not only
+                  // announced when it appears (DESIGN §5).
+                  aria-describedby={errors.reason ? "loss-reason-error" : undefined}
+                >
                   <SelectValue placeholder={t("projects.lossReasonPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -120,7 +127,7 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
                   ))}
                 </SelectContent>
               </Select>
-              <FieldError>{errors.reason}</FieldError>
+              <FieldError id="loss-reason-error">{errors.reason}</FieldError>
             </Field>
 
             {needsDetail ? (
@@ -130,7 +137,8 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
                   id="loss-detail"
                   rows={3}
                   value={detail}
-                  aria-invalid={!!errors.detail}
+                  aria-invalid={errors.detail ? true : undefined}
+                  aria-describedby={errors.detail ? "loss-detail-error" : undefined}
                   onChange={(event) => {
                     setDetail(event.target.value);
                     setErrors((prev) => ({ ...prev, detail: undefined }));
@@ -143,7 +151,7 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
                   }}
                 />
                 <FieldDescription>{t("projects.lossDetailRequired")}</FieldDescription>
-                <FieldError>{errors.detail}</FieldError>
+                <FieldError id="loss-detail-error">{errors.detail}</FieldError>
               </Field>
             ) : null}
           </FieldGroup>

@@ -19,17 +19,19 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { companies, companyTargets, quotations, targets, users } from "@/db/schema";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
+import { carriesMetres } from "@/lib/floor";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
 import { awayOn, type Away } from "@/lib/leave";
 import { personName, personNameOf } from "@/lib/people";
+import { ROLES } from "@/lib/types";
 import { openQuotationsForRep, pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { STUCK_SHOWN, topOf, type Group } from "@/lib/list-size";
 import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
@@ -118,14 +120,23 @@ function paceFor(today: Day, nonWorking: NonWorking[], userId?: string): Pace {
  * included as team", and S8 says a manager who sells carries no personal
  * target, which is exactly what a null renders as.
  *
- * Not the coordinator: she has no companies of her own, so every figure on her
- * row would be a dash (D15, S9). Not the admin either, for the same reason —
- * Jerom runs the app and sells nothing, and a permanent row of dashes on the
- * manager's main screen is one more thing to read past every morning. The
- * targets screen already refused to give him a box; this is the same sentence,
- * said once, so the two screens cannot disagree about who has a month (D44).
+ * The coordinator is here since SPEC §3, which overrules D15 and S9: she is a
+ * selling role with her own m² target, so her row carries figures rather than
+ * the dashes it would have carried before she had companies of her own.
+ *
+ * And it is not a second list any more. This was a hand-written `role in
+ * ('rep', 'manager')` beside `carriesMetres` in src/lib/floor.ts, which is the
+ * shape of D42: two copies of one sentence, and the day §3 moved it only one of
+ * them was edited. The SQL is derived from the predicate the screens ask, so
+ * there is one place to change and no way to change half of it.
+ *
+ * Not the admin: Jerom runs the app and sells nothing, and a permanent row of
+ * dashes on the manager's main screen is one more thing to read past every
+ * morning. The targets screen already refused to give him a box; this is the
+ * same sentence, said once, so the two screens cannot disagree about who has a
+ * month (D44).
  */
-export const CARRIES_METRES = sql`users.role in ('rep', 'manager')`;
+export const CARRIES_METRES = inArray(users.role, ROLES.filter(carriesMetres));
 
 /**
  * Everybody who carries metres, with their month beside them.

@@ -481,7 +481,7 @@ function useCloseDrawer(): () => void {
 }
 
 export type QuotationSheetProps = {
-  quotation: QuotationRow & { notes: string | null; isLatest: boolean };
+  quotation: QuotationRow & { notes: string | null; isLatest: boolean; selfIssued: boolean };
   /**
    * Who it counts for (D148). Said only when it is worth saying — more than one
    * name, or one name that is not the man who raised it — so the ordinary
@@ -551,6 +551,14 @@ export function QuotationSheet({
               <StatusBadge status={quotation.status} />
               {!quotation.isLatest ? (
                 <Badge variant="outline">{t("quotations.supersededBadge")}</Badge>
+              ) : null}
+              {/* One person asked for this paper and put it out (SPEC §3). Said
+                  here rather than only in the trail below, because the trail is
+                  read after a question has been asked and this is what makes
+                  somebody ask it. Everyone who may open the quotation sees it:
+                  a flag only one role can see is a flag nobody trusts. */}
+              {quotation.selfIssued ? (
+                <Badge variant="outline">{t("quotations.selfIssuedBadge")}</Badge>
               ) : null}
             </div>
             <SheetDescription>

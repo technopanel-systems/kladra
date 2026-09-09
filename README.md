@@ -2,8 +2,9 @@
 
 The CRM and operations tool for Technopanel — a Riyadh company selling aluminium composite
 panel (ACP) cladding, fourteen people. Reps log what happened with customers and ask for
-quotations and dispatches; the coordinator issues them in SMAC and types the numbers back;
-the manager sees targets, pace and what is stuck. Everybody adds one line to a day the
+quotations and dispatches; the coordinator issues them in SMAC and types the numbers back,
+and sells a little of her own besides — her paper goes out as she raises it; the manager
+sees targets, pace and what is stuck. Everybody adds one line to a day the
 system has already assembled, and the whole team reads that day on one screen. SMAC stays
 the financial record.
 

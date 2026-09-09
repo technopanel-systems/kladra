@@ -45,6 +45,17 @@ export function ProjectFields({
   const t = useTranslations();
   const id = (field: string) => `${idPrefix}-${field}`;
   const error = (field: string) => errors?.[field];
+  /*
+   * The sentence a control is refused with has to be reachable FROM the
+   * control, not only announced when it appears: somebody who tabs back to the
+   * box a minute later hears the label and nothing else. `FieldError` carries
+   * `role="alert"`, which is the announcement; this is the association.
+   *
+   * Derived from the same `id` rather than typed twice, so the pair cannot
+   * drift — a hand-written id beside a hand-written describedby is two copies
+   * of one fact, which is what DESIGN §5 keeps refusing everywhere else.
+   */
+  const errorId = (field: string) => (error(field) ? `${id(field)}-error` : undefined);
 
   return (
     <FieldGroup>
@@ -56,11 +67,12 @@ export function ProjectFields({
           value={value.name}
           autoComplete="off"
           disabled={disabled}
-          aria-invalid={!!error("name")}
+          aria-invalid={error("name") ? true : undefined}
+          aria-describedby={errorId("name")}
           placeholder={t("projects.namePlaceholder")}
           onChange={(event) => onChange({ name: event.target.value })}
         />
-        <FieldError>{error("name")}</FieldError>
+        <FieldError id={errorId("name")}>{error("name")}</FieldError>
       </Field>
 
       <Field data-invalid={error("expectedSqm") ? true : undefined}>
@@ -77,11 +89,12 @@ export function ProjectFields({
           value={value.expectedSqm}
           autoComplete="off"
           disabled={disabled}
-          aria-invalid={!!error("expectedSqm")}
+          aria-invalid={error("expectedSqm") ? true : undefined}
+          aria-describedby={errorId("sqm")}
           onChange={(event) => onChange({ expectedSqm: event.target.value })}
         />
         <FieldDescription>{t("projects.expectedSqmHint")}</FieldDescription>
-        <FieldError>{error("expectedSqm")}</FieldError>
+        <FieldError id={errorId("sqm")}>{error("expectedSqm")}</FieldError>
       </Field>
 
       <Field data-invalid={error("nextFollowUp") ? true : undefined}>
@@ -90,9 +103,10 @@ export function ProjectFields({
           id={id("follow-up")}
           value={value.nextFollowUp}
           disabled={disabled}
+          aria-describedby={errorId("follow-up")}
           onChange={(day: string | null) => onChange({ nextFollowUp: day })}
         />
-        <FieldError>{error("nextFollowUp")}</FieldError>
+        <FieldError id={errorId("follow-up")}>{error("nextFollowUp")}</FieldError>
       </Field>
 
       <Field data-invalid={error("notes") ? true : undefined}>
@@ -103,10 +117,12 @@ export function ProjectFields({
           rows={3}
           value={value.notes}
           disabled={disabled}
+          aria-invalid={error("notes") ? true : undefined}
+          aria-describedby={errorId("notes")}
           placeholder={t("projects.notesPlaceholder")}
           onChange={(event) => onChange({ notes: event.target.value })}
         />
-        <FieldError>{error("notes")}</FieldError>
+        <FieldError id={errorId("notes")}>{error("notes")}</FieldError>
       </Field>
     </FieldGroup>
   );

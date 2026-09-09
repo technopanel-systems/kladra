@@ -24,5 +24,6 @@
   "activityDayClosed": "That day is closed. Today’s entries and the last working day’s can still be corrected.",
   "activityNotFound": "That entry is no longer there.",
   "shareWho": "Choose who to share it with.",
-  "shareOwner": "It is already theirs."
+  "shareOwner": "It is already theirs.",
+  "leadSourceNotYours": "That lead source is for management and marketing."
 }

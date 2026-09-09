@@ -429,6 +429,25 @@ export type QuotationItemRow = {
   thicknessId: number;
 };
 
+/**
+ * The two states goods may move against (S38, §5 #166).
+ *
+ * Issued, because the paper exists; and accepted, because the customer has
+ * taken it and that is when most of it actually ships. It was written three
+ * times — the action's guard, the drawer's Send button and the picker on the
+ * dispatches screen — and the picker said only `issued`, so the moment a rep
+ * recorded the customer's yes the door on the list screen closed on him while
+ * the one inside the drawer stayed open. A screen refusing work the write
+ * allows is the same defect as offering work it refuses, one mirror over
+ * (§5 #163, DESIGN §5).
+ */
+export const DISPATCHABLE: QuotationStatus[] = ["issued", "accepted"];
+
+/** The same sentence, for a status already in hand. */
+export function dispatchable(status: QuotationStatus): boolean {
+  return DISPATCHABLE.includes(status);
+}
+
 export type QuotationDetail = QuotationRow & {
   notes: string | null;
   /**
@@ -456,6 +475,15 @@ export type QuotationDetail = QuotationRow & {
    */
   projectRepId: string | null;
   onProject: boolean;
+  /**
+   * Raised and issued by the same person, in one act (SPEC §3). Only the
+   * coordinator can do it, because only she is the desk everybody else asks —
+   * and the founder's own clause is that it is "flagged for the manager so
+   * nobody issues their own work unseen". This is that flag, on the record
+   * rather than in a report, so it is beside the paper wherever the paper is
+   * read.
+   */
+  selfIssued: boolean;
 };
 
 /**
@@ -481,6 +509,7 @@ export async function getQuotation(
       onProject: onProjectSql(user, sql`quotations.project_id`).mapWith(Boolean),
       notes: quotations.notes,
       revisionOf: quotations.revisionOf,
+      selfIssued: quotations.selfIssued,
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -541,6 +570,7 @@ export async function getQuotation(
     ...base,
     notes: row.notes ?? null,
     revisionOf: row.revisionOf ?? null,
+    selfIssued: Boolean(row.selfIssued),
     credit: await creditOnQuotation(id),
     projectRepId: row.projectRepId ?? null,
     onProject: Boolean(row.onProject),

@@ -142,6 +142,17 @@ export const leadSources = pgTable("lead_sources", {
   nameAr: text("name_ar").notNull(),
   sortOrder: integer("sort_order").notNull().default(0),
   active: boolean("active").notNull().default(true),
+  /**
+   * Offered to management and marketing, and not to a rep adding a company
+   * (SPEC §3, which narrows D1). One row carries it: the Marketing source,
+   * because a rep who can pick it can claim marketing's work as his own lead.
+   *
+   * A column rather than a name the code matches on. The admin may rename any
+   * of these lists in either language, and a rule that reads "the one called
+   * Marketing" stops being true the first time somebody types «تسويق رقمي»
+   * instead — a permission that a rename can switch off is not a permission.
+   */
+  restricted: boolean("restricted").notNull().default(false),
   ...stamps,
 });
 
@@ -462,6 +473,21 @@ export const quotations = pgTable(
     decisionReason: text("decision_reason"),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /**
+     * Issued by the person who raised it, with nobody in between (SPEC §3).
+     *
+     * The coordinator sells now, and on her own customers there is no desk to
+     * ask: she types the SMAC number and the paper exists in one act. The
+     * founder's clause is "flagged for the manager so nobody issues their own
+     * work unseen", and what that asks for is not a refusal but a name on a
+     * list he reads.
+     *
+     * A column rather than a question asked of the audit log. Two rows and
+     * their user ids would answer it today and stop answering it the first
+     * time somebody trims the log or replays an import; a fact about a record
+     * that a screen shows is a column on that record.
+     */
+    selfIssued: boolean("self_issued").notNull().default(false),
     ...stamps,
   },
   (t) => [
@@ -498,6 +524,10 @@ export const quotations = pgTable(
       "quotations_returned_check",
       sql`(${t.returnReason} is not null) = (${t.status} = 'returned')`,
     ),
+    // It can only be true of paper that exists. Written against `issued_at`
+    // rather than against the status, because a self-issued quotation can be
+    // withdrawn or rejected later and what it says stays true: she issued it.
+    check("quotations_self_issued_check", sql`not ${t.selfIssued} or ${t.issuedAt} is not null`),
   ],
 );
 

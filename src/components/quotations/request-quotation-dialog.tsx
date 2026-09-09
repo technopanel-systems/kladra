@@ -24,10 +24,13 @@ import {
 } from "@/components/quotations/quotation-lines";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { CreditField } from "@/components/ui-ext/credit-field";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -86,6 +89,7 @@ export function RequestQuotationDialog({
   projects,
   mode = "request",
   existing,
+  issuesDirectly = false,
   trigger,
 }: {
   /** Known when the dialog is opened from inside a company or a project. */
@@ -98,6 +102,18 @@ export function RequestQuotationDialog({
   mode?: RequestMode;
   /** The lines to open on — required for `edit` and `revise`. */
   existing?: QuotationDraft;
+  /**
+   * The coordinator, who is the desk this form otherwise writes to (SPEC §3).
+   * She types the SMAC number in here and the quotation is issued as she raises
+   * it: the same form, one field longer and a different verb on the button.
+   *
+   * Passed down from the server rather than read from the lookups this dialog
+   * fetches on open, because the trigger and the title are drawn before that
+   * answer could arrive and a heading that changes from Request to Issue a
+   * moment after it is read is worse than either word. `requestQuotationAction`
+   * asks the same question of the role again, and it is the one that decides.
+   */
+  issuesDirectly?: boolean;
   trigger?: ReactNode;
 }) {
   const t = useTranslations();
@@ -107,12 +123,22 @@ export function RequestQuotationDialog({
 
   const onSaved = useCallback(
     (quotationId: string | undefined) => {
-      toast.success(t(mode === "revise" ? "quotations.revised" : "quotations.requested"));
+      toast.success(
+        t(
+          mode === "revise"
+            ? issuesDirectly
+              ? "quotations.revisedOwn"
+              : "quotations.revised"
+            : issuesDirectly
+              ? "quotations.issuedOwn"
+              : "quotations.requested",
+        ),
+      );
       setOpen(false);
       if (quotationId) router.push(`/quotations?open=${quotationId}`);
       else router.refresh();
     },
-    [mode, router, t],
+    [mode, issuesDirectly, router, t],
   );
 
   const title =
@@ -120,21 +146,25 @@ export function RequestQuotationDialog({
       ? t("quotations.editRequest")
       : mode === "revise"
         ? t("quotations.revise")
-        : projectName
-          ? t("quotations.requestFor", { project: projectName })
-          : t("quotations.request");
+        : issuesDirectly
+          ? projectName
+            ? t("quotations.issueOwnFor", { project: projectName })
+            : t("quotations.issueOwn")
+          : projectName
+            ? t("quotations.requestFor", { project: projectName })
+            : t("quotations.request");
 
   return (
     <ResponsiveDialog
       open={open}
       onOpenChange={setOpen}
       title={title}
-      description={t("quotations.requestHint")}
+      description={t(issuesDirectly ? "quotations.issueOwnHint" : "quotations.requestHint")}
       trigger={
         trigger ?? (
           <Button variant="outline">
             <FileText aria-hidden="true" />
-            {t("quotations.request")}
+            {t(issuesDirectly ? "quotations.issueOwn" : "quotations.request")}
           </Button>
         )
       }
@@ -150,6 +180,7 @@ export function RequestQuotationDialog({
           projects={projects}
           mode={mode}
           existing={existing}
+          issuesDirectly={issuesDirectly}
           lookups={lookups}
           onSaved={onSaved}
           onCancel={() => setOpen(false)}
@@ -167,6 +198,7 @@ function RequestForm({
   projects,
   mode,
   existing,
+  issuesDirectly,
   lookups,
   onSaved,
   onCancel,
@@ -176,6 +208,7 @@ function RequestForm({
   projects?: PickerOption[];
   mode: RequestMode;
   existing?: QuotationDraft;
+  issuesDirectly: boolean;
   lookups: QuotationLookups;
   onSaved: (quotationId: string | undefined) => void;
   onCancel: () => void;
@@ -183,8 +216,11 @@ function RequestForm({
   const t = useTranslations();
   // Not useActionState: raising a revision removes the button this dialog hangs
   // off, so the answer has to survive the form's own unmount (useSubmitAction).
-  const { submit, pending, error, fieldErrors } = useSubmitAction(ACTIONS[mode], (data) =>
-    onSaved(data?.quotationId),
+  // `answer` is taken in this file by the copy-the-last-quotation offer below,
+  // so the refusal keeps its own name here.
+  const { submit, pending, error, fieldErrors, answer: refusal } = useSubmitAction(
+    ACTIONS[mode],
+    (data) => onSaved(data?.quotationId),
   );
   const guarded = useWireGuard();
 
@@ -202,6 +238,15 @@ function RequestForm({
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const form = useRef<HTMLFormElement>(null);
+  /*
+   * This form is taller than the screen — nine fields on one line, the totals,
+   * the credit question, and for the coordinator the SMAC number too — so a
+   * sentence beside a field is a sentence she may never scroll to. Measured at
+   * 1366: the SMAC box sits on the scroller's clipped edge, and the Notes field
+   * below it is off the fold entirely. The caret goes to the refused field, the
+   * browser scrolls it into view, and a screen reader reads its label with it.
+   */
+  useFocusFirstError(form, refusal);
 
   /*
    * Who this one counts for (D148), asked only where the job has more than one
@@ -368,8 +413,37 @@ function RequestForm({
           id="quotation-credit"
         />
 
+        {/* The number SMAC gave it, which is the act of issuing it (S31). Only
+            she sees this field, and it is never prefilled on a revision: SMAC
+            gives a revision a number of its own. Empty on an EDIT too, which
+            she never reaches — her own paper is issued the moment she raises
+            it, so there is no request of hers waiting to be edited. */}
+        {issuesDirectly ? (
+          <Field data-invalid={fieldErrors.smacNumber ? true : undefined}>
+            <FieldLabel htmlFor="quotation-smac">{t("common.smacNumber")}</FieldLabel>
+            <Input
+              id="quotation-smac"
+              name="smacNumber"
+              // The same three as the SMAC prompt on the queue, for the same
+              // reasons: the number is typed, so whichever script it is typed in
+              // decides which way it runs; it is a code, so there is nothing to
+              // correct and nothing to suggest.
+              dir="auto"
+              autoComplete="off"
+              spellCheck={false}
+              disabled={pending}
+              aria-invalid={fieldErrors.smacNumber ? true : undefined}
+              aria-describedby={fieldErrors.smacNumber ? "quotation-smac-error" : undefined}
+              placeholder={t("common.asSmacIssuedIt")}
+            />
+            <FieldError id="quotation-smac-error">{fieldErrors.smacNumber}</FieldError>
+          </Field>
+        ) : null}
+
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="quotation-notes">{t("quotations.notesToCoordinator")}</Label>
+          <Label htmlFor="quotation-notes">
+            {t(issuesDirectly ? "quotations.notesOwn" : "quotations.notesToCoordinator")}
+          </Label>
           <Textarea
             id="quotation-notes"
             name="notes"
@@ -377,12 +451,19 @@ function RequestForm({
             disabled={pending}
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
-            placeholder={t("quotations.notesPlaceholder")}
+            placeholder={t(
+              issuesDirectly ? "quotations.notesOwnPlaceholder" : "quotations.notesPlaceholder",
+            )}
           />
         </div>
       </FormBody>
 
-      <FormFooter error={error} pending={pending} onCancel={onCancel} />
+      <FormFooter
+        error={error}
+        pending={pending}
+        onCancel={onCancel}
+        confirmLabel={issuesDirectly ? t("quotations.issue") : undefined}
+      />
     </form>
   );
 }

@@ -3,6 +3,7 @@ import {
   carriesMetres,
   FLOOR_ROLES,
   holdsFloor,
+  issuesOwnQuotations,
   mayHandOver,
   mayOpen,
   mayQuote,
@@ -52,7 +53,9 @@ test("a manager and an admin see every floor; a rep and the coordinator see one"
   expect(seesAllRoles("manager")).toBe(true);
   expect(seesAllRoles("admin")).toBe(true);
   expect(seesAllRoles("rep")).toBe(false);
-  // She has no companies of her own at all (D15, S9) — her work is the queue.
+  // She reads every quotation and every dispatch by role, and that is a
+  // different question from a FLOOR: since SPEC §3 she has companies of her
+  // own, and the ones she may open are hers, exactly like a rep's.
   expect(seesAllRoles("coordinator")).toBe(false);
 
   expect(mayOpen(who("manager", "manager-id"), FAISAL)).toBe(true);
@@ -106,12 +109,15 @@ test("marketing owns companies, does not price them, and carries no month", () =
   expect(ownsCompanies("rep")).toBe(true);
   // The manager adds none; one reaches him by handover (S8, D51).
   expect(ownsCompanies("manager")).toBe(false);
-  expect(ownsCompanies("coordinator")).toBe(false);
+  // Hers since SPEC §3, which overrules D15 and S9: "she creates companies,
+  // projects and quotations like a rep".
+  expect(ownsCompanies("coordinator")).toBe(true);
   expect(ownsCompanies("admin")).toBe(false);
 
   expect(sells("marketing")).toBe(false);
   expect(sells("rep")).toBe(true);
   expect(sells("manager")).toBe(true);
+  expect(sells("coordinator")).toBe(true);
 
   // No target, for the same reason: a role that never closes a sale would read
   // as a permanent shortfall every month (D44).
@@ -160,32 +166,59 @@ test("a company can sit on a floor, or there is nobody to hand it to", () => {
   // He adds none and can be given one — that is how a floor survives somebody
   // leaving (D51).
   expect(holdsFloor("manager")).toBe(true);
-  expect(holdsFloor("coordinator")).toBe(false);
+  // Hers since SPEC §3. It was false for the whole of P11, and the reason it
+  // matters is `mayWrite`: a role with no floor writes nowhere, so until this
+  // turned over she could create a company and then not log a call against it.
+  expect(holdsFloor("coordinator")).toBe(true);
   expect(holdsFloor("admin")).toBe(false);
 });
 
-test("who may move a company: its owner, the manager, the admin — and nobody viewing", () => {
-  expect(mayHandOver(who("marketing", "marketing-id"), "marketing-id")).toBe(true);
-  expect(mayHandOver(who("rep", FAISAL), FAISAL)).toBe(true);
-  expect(mayHandOver(who("manager", "manager-id"), FAISAL)).toBe(true);
-  expect(mayHandOver(who("admin", "admin-id"), FAISAL)).toBe(true);
+/**
+ * Who puts their own paper out (SPEC §3, P12-5).
+ *
+ * Asked as its own question rather than off the role, because "does she run the
+ * queue" and "does she need a queue at all" happen to have the same answer
+ * today and are not the same question — which is the whole lesson of `mayTouch`
+ * (D42). A rep asks and waits; she types the SMAC number as she raises it,
+ * because there is nobody behind her to ask.
+ */
+test("only the coordinator issues her own quotations, and it is not a floor rule", () => {
+  expect(issuesOwnQuotations("coordinator")).toBe(true);
+  for (const role of ROLES) {
+    if (role === "coordinator") continue;
+    expect(issuesOwnQuotations(role), `${role} could issue their own paper`).toBe(false);
+  }
 
-  // Not a colleague's, and not the coordinator's business at all.
-  expect(mayHandOver(who("rep", SAAD), FAISAL)).toBe(false);
-  expect(mayHandOver(who("coordinator", "rawan-id"), FAISAL)).toBe(false);
+  // And it says nothing about whose floor anything sits on: she issues her own
+  // and still cannot write a line on Faisal's.
+  expect(mayWrite(who("coordinator", "rawan-id"), FAISAL)).toBe(false);
+  expect(mayQuote(who("coordinator", "rawan-id"), "rawan-id")).toBe(true);
+});
+
+test("who may move a company: the sales manager and the admin, and nobody else", () => {
+  expect(mayHandOver(who("manager", "manager-id"))).toBe(true);
+  expect(mayHandOver(who("admin", "admin-id"))).toBe(true);
+
+  // Not its owner — SPEC §3 says so in the founder's own words and overrules
+  // D51 — and not marketing, which is named in that sentence because handing a
+  // lead on used to be the whole reason the role existed.
+  expect(mayHandOver(who("rep", FAISAL))).toBe(false);
+  expect(mayHandOver(who("marketing", "marketing-id"))).toBe(false);
+  expect(mayHandOver(who("coordinator", "rawan-id"))).toBe(false);
 
   // Viewing is reading, here as everywhere (P8.8).
   const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };
-  expect(mayHandOver(viewing, FAISAL)).toBe(false);
+  expect(mayHandOver(viewing)).toBe(false);
 });
 
 /**
  * Who may put somebody else on a company or a project (SPEC §3, D147).
  *
- * The same three as `mayHandOver` — its owner, the manager, the admin — and
- * deliberately asked the same way, because the two are easy to conflate and
- * the difference is the whole rule: a handover moves whose metres these are;
- * a share does not, and takes nothing from the person who grants it.
+ * Its owner, the manager, the admin — and deliberately asked beside
+ * `mayHandOver`, because the two are easy to conflate and the difference is
+ * the whole rule: a handover moves whose metres these are and is the manager's
+ * alone (SPEC §3); a share does not, and takes nothing from the person who
+ * grants it, so inviting help with his own customer stays his call.
  */
 test("who may share a company or a project: its owner, the manager, the admin — and nobody viewing", () => {
   expect(mayShare(who("marketing", "marketing-id"), "marketing-id")).toBe(true);
@@ -193,9 +226,11 @@ test("who may share a company or a project: its owner, the manager, the admin �
   expect(mayShare(who("manager", "manager-id"), FAISAL)).toBe(true);
   expect(mayShare(who("admin", "admin-id"), FAISAL)).toBe(true);
 
-  // Not a colleague's, and not the coordinator's business at all.
+  // Not a colleague's — hers included, now that she has customers of her own:
+  // sharing is the owner's call about his own, and Faisal's is not hers.
   expect(mayShare(who("rep", SAAD), FAISAL)).toBe(false);
   expect(mayShare(who("coordinator", "rawan-id"), FAISAL)).toBe(false);
+  expect(mayShare(who("coordinator", "rawan-id"), "rawan-id")).toBe(true);
 
   // Viewing is reading, here as everywhere (P8.8).
   const viewing = { ...who("admin", "admin-id"), viewedBy: { id: "x", name: "Jerom" } };

@@ -3,8 +3,8 @@ import { one, personName, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
- * Marketing, the fifth role (SPEC §1, D50) and the handover that gives it a
- * point (D51).
+ * Marketing, the fifth role (SPEC §1, D50), and the handover that puts a lead
+ * on the floor that will price it (D51, narrowed by SPEC §3).
  *
  * What is checked is the boundary, because that is the whole role: it works a
  * company exactly as a rep does and stops at the price. A screen that offered
@@ -13,7 +13,12 @@ import { test, expect } from "./helpers/i18n";
  * hiding nothing at all.
  *
  * The handover is checked from both ends: the company leaves one floor and
- * arrives on the other, with its projects and its follow-up.
+ * arrives on the other, with its projects and its follow-up. It is the SALES
+ * MANAGER who moves it, since §3 — the founder's own words, "not the owner's,
+ * not marketing's" — and the walk starts by proving that the role who used to
+ * do it is no longer offered the control at all. A permission taken away is
+ * only taken away if the screen agrees with the action, and this is the pair
+ * that has been wrong in both directions this phase (§5 #163).
  */
 
 const COLD = { timeout: 30_000 };
@@ -79,7 +84,11 @@ test("marketing works its floor and is offered no price anywhere", async ({ page
   });
 });
 
-test("marketing hands a lead to the rep who will price it", async ({ page, locale, t }) => {
+test("the sales manager moves a lead onto the floor that will price it", async ({
+  page,
+  locale,
+  t,
+}) => {
   test.slow();
 
   const lead = await one<{ id: string; name: string }>(
@@ -100,9 +109,19 @@ test("marketing hands a lead to the rep who will price it", async ({ page, local
     lead.id,
   ]);
 
-  await login(page, locale, before.rep_id === faisal.id ? "faisal" : "marketing");
+  await test.step("1 · the man who owns it is not offered the control", async () => {
+    await login(page, locale, before.rep_id === faisal.id ? "faisal" : "marketing");
+    await page.goto(`/${locale}/companies?open=${lead.id}`);
+    const drawer = page.getByRole("dialog").first();
+    await expect(drawer).toBeVisible(COLD);
+    // His own customer, every other button on the drawer his — and this one
+    // gone, because whose floor a company sits on is the manager's answer
+    // (SPEC §3, which overrules D51).
+    await expect(drawer.getByRole("button", { name: t("drawer.handOver") })).toHaveCount(0);
+  });
 
-  await test.step("1 · the control is beside the name it changes", async () => {
+  await test.step("2 · the manager opens the same drawer and it is there", async () => {
+    await login(page, locale, "abdulrahman");
     await page.goto(`/${locale}/companies?open=${lead.id}`);
     const drawer = page.getByRole("dialog").first();
     await expect(drawer).toBeVisible(COLD);
@@ -116,7 +135,7 @@ test("marketing hands a lead to the rep who will price it", async ({ page, local
       ? await personName("marketing@technopanel.com.sa", locale)
       : faisal.name;
 
-  await test.step("2 · it asks who, and says what travels with the company", async () => {
+  await test.step("3 · it asks who, and says what travels with the company", async () => {
     const dialog = page.getByRole("dialog", { name: t("drawer.handOverTitle", { name: lead.name }) });
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText(t("drawer.handOverWarning"));
@@ -128,7 +147,7 @@ test("marketing hands a lead to the rep who will price it", async ({ page, local
     await dialog.getByRole("button", { name: t("drawer.handOver") }).click();
   });
 
-  await test.step("3 · the company is on the other floor, and the move is on the record", async () => {
+  await test.step("4 · the company is on the other floor, and the move is on the record", async () => {
     await expect
       .poll(
         async () =>

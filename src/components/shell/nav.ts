@@ -128,7 +128,12 @@ export function navFor(role: Role): NavGroup[] {
       // them on, and a screen it can only read is a screen it stops opening.
       return [{ items: [day, reports, companies, projects] }];
     case "coordinator":
-      return [{ items: [queue, reports, quotations, dispatches] }];
+      // Her desk first, and her own floor after it. She is a selling role since
+      // SPEC §3 — companies, projects and quotations of her own — and the queue
+      // stays home, because the work waiting on her is what she opens Kladra
+      // for and her own customers are what she opens it for second. Her day
+      // sits with them rather than at the front for the same reason.
+      return [{ items: [queue, reports, quotations, dispatches, day, companies, projects] }];
     case "manager":
       return [{ items: [team, reports, companies, projects, quotations, dispatches] }];
     case "admin":

@@ -709,6 +709,33 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   orphan over a recycled id is somebody seeing a customer nobody gave him. Two tables, real
   references, real cascades.
 
+- **A flag nobody can see is not a flag.** Phase 12 (D156). The founder asked for the
+  coordinator's own paper to be "flagged for the manager so nobody issues their own work unseen",
+  and the obvious reading is a mark only the manager is shown. That is the wrong shape twice over.
+  A badge one role sees is a badge nobody can check: the person it is about cannot tell it is
+  there, so nothing on the screen ever tests whether it is right, and the first time it is wrong
+  is the first time it matters. And a screen that says different things to two readers about the
+  same record is the shape this file has refused since P4, one mirror over from offering work the
+  action refuses. So the mark sits on the drawer for everybody who may open the quotation — she
+  reads it about her own, the manager reads it about hers, and neither is being told a private
+  thing about the other.
+
+- **Two questions with one answer are still two questions.** Phase 12 (D156). "Does she run the
+  queue" and "does she need a queue at all" name the same person today, and the screens ask them
+  separately — `scope.coordinator` and `issuesOwnQuotations` — rather than one off the other. This
+  is `mayTouch` again in advance (D42): the collapse only ever looks safe until the day a second
+  role runs the desk or a coordinator stops selling, and by then the two meanings have been one
+  boolean for a year and nobody remembers which of them each caller meant.
+
+- **A refusal is reachable from the control, not only announced once.** Phase 12 (P12-5 review).
+  `FieldError` carries `role="alert"`, so the sentence is read out the moment it appears — and that
+  is the whole of it: somebody who tabs back to the box a minute later hears its label and nothing
+  else, because nothing on the control pointed at the sentence. Half the app's forms already wired
+  `aria-describedby` by hand and the ones built on the `Field` primitives did not, which is two
+  idioms for one fact. Every `FieldError` now carries an id and every control beside one points at
+  it, derived from the control's own id rather than typed twice — a hand-written id beside a
+  hand-written describedby is the second copy this file refuses everywhere else.
+
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,

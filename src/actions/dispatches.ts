@@ -41,6 +41,7 @@ import {
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditDispatch, resolveCredit } from "@/lib/credit-rows";
 import { seesEveryDispatch, type DispatchStatus } from "@/lib/dispatches";
+import { dispatchable, type QuotationStatus } from "@/lib/quotations";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
@@ -311,7 +312,7 @@ export async function requestDispatchAction(
     if (quotation.companyArchived) return { ok: false, error: td("quotationNotFound") };
     // S38: the paper has to exist before goods move against it. A request that
     // has been sent back or refused is not a quotation yet.
-    if (quotation.status !== "issued" && quotation.status !== "accepted") {
+    if (!dispatchable(quotation.status as QuotationStatus)) {
       return { ok: false, error: td("quotationNotIssued") };
     }
     // And only the live revision: once it has been revised the customer holds

@@ -103,11 +103,13 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     // Exact: a rep's name also appears on the stuck rows underneath, and the
     // one being asked about is the row whose whole label is his name.
     await expect(page.getByRole("link", { name: faisal.name, exact: true })).toBeVisible();
-    // The coordinator carries no metres and no companies, so she is not a row
-    // of dashes on a screen about metres (D15, S9). Nor is the admin: he runs
-    // the app and sells nothing, and the targets screen already refuses to give
-    // him a box — one rule, two screens (D44).
-    await expect(page.getByRole("link", { name: rawan.name, exact: true })).toHaveCount(0);
+    // The coordinator IS a row since SPEC §3 made her a selling role with a
+    // target of her own — it read `toHaveCount(0)` here for eleven phases, on
+    // the strength of D15's "she owns no customers", and §3 overrules it.
+    // The admin is still not: he runs the app and sells nothing, and the
+    // targets screen already refuses to give him a box — one rule, two
+    // screens (D44).
+    await expect(page.getByRole("link", { name: rawan.name, exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: jerom.name, exact: true })).toHaveCount(0);
     // Nor marketing, which owns companies and closes none of them: a target it
     // could never meet would read as a shortfall every month (D44, D50).

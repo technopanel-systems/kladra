@@ -71,6 +71,8 @@ import {
   PROJECTS,
   QUOTATIONS,
   REP_TARGET_LAST_MONTH,
+  DESK_TARGET_LAST_MONTH,
+  DESK_TARGET_THIS_MONTH,
   REP_TARGET_THIS_MONTH,
   USERS,
 } from "./seed/demo-data";
@@ -355,7 +357,15 @@ async function seedLookups(): Promise<Lookups> {
 
     const insertedSources = await tx
       .insert(leadSources)
-      .values(LEAD_SOURCES.map((s, i) => ({ nameEn: s.en, nameAr: s.ar, sortOrder: i, active: true })))
+      .values(
+        LEAD_SOURCES.map((s, i) => ({
+          nameEn: s.en,
+          nameAr: s.ar,
+          sortOrder: i,
+          active: true,
+          restricted: s.restricted ?? false,
+        })),
+      )
       .returning({ id: leadSources.id, nameEn: leadSources.nameEn });
     const sourceByName = new Map(insertedSources.map((s) => [s.nameEn, s.id]));
 
@@ -838,6 +848,7 @@ async function seedQuotations(
           status: q.status,
           notes: q.notes ?? null,
           smacNumber: q.smacNumber ?? null,
+          selfIssued: q.selfIssued ?? false,
           returnReason: q.status === "returned" ? (openReturn?.reason ?? null) : null,
           decisionReason: q.decisionReason ?? null,
           issuedAt: q.issuedBack === undefined ? null : instant(back(q.issuedBack), 13, 5),
@@ -1241,7 +1252,14 @@ async function seedHistory(
 
 async function seedTargets(userIds: Map<string, string>): Promise<void> {
   const thisMonth = firstOfMonth(TODAY);
-  const reps = USERS.filter((u) => u.role === "rep");
+  /*
+   * Everybody who carries a month of their own: the five reps, and Rawan since
+   * SPEC §3 made the coordinator a selling role with a target of her own. Not
+   * the manager — SPEC §1's "no personal target above rep" — whose month is the
+   * company figure set beside these, and not marketing, which hands leads on
+   * and would carry a number it could never meet.
+   */
+  const carrying = USERS.filter((u) => u.role === "rep" || u.role === "coordinator");
 
   // Every month a bar is drawn for, not only this one and last: a month with
   // metres on it and no target is a bar with nothing to be measured against,
@@ -1250,11 +1268,18 @@ async function seedTargets(userIds: Map<string, string>): Promise<void> {
 
   await db.transaction(async (tx) => {
     await tx.insert(targets).values(
-      reps.flatMap((u) =>
+      carrying.flatMap((u) =>
         months.map((month) => ({
           userId: must(userIds, u.key, "user"),
           month,
-          sqm: month === thisMonth ? REP_TARGET_THIS_MONTH : REP_TARGET_LAST_MONTH,
+          sqm:
+            u.role === "coordinator"
+              ? month === thisMonth
+                ? DESK_TARGET_THIS_MONTH
+                : DESK_TARGET_LAST_MONTH
+              : month === thisMonth
+                ? REP_TARGET_THIS_MONTH
+                : REP_TARGET_LAST_MONTH,
         })),
       ),
     );

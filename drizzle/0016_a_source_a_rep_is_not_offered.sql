@@ -1,0 +1,14 @@
+-- A lead source a rep is not offered (SPEC §3, which narrows D1).
+--
+-- "The Marketing lead source is not offered to a rep adding a company.
+-- Management and marketing only." One row of one list carries the rule, and it
+-- carries it as a column rather than as a name the code matches on: the admin
+-- may rename any lookup in either language, and a permission a rename can
+-- switch off is not a permission.
+--
+-- The seed sets it on the Marketing source, and the admin's lookup panel says
+-- which row carries it — a rule nobody can see on the screen that owns the row
+-- reads as a bug the first time a rep asks why his list is short. The panel
+-- shows it and does not yet set it: changing which source is management's is a
+-- decision, not an edit, and nothing has asked for a second one.
+ALTER TABLE "lead_sources" ADD COLUMN "restricted" boolean DEFAULT false NOT NULL;
