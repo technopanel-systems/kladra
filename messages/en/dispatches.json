@@ -10,7 +10,7 @@
   "request": "Request dispatch",
   "requestFor": "Request dispatch against {label}",
   "pickQuotation": "Choose a quotation",
-  "pickQuotationFirst": "Choose the quotation this is going against.",
+  "pickQuotationFirst": "Choose the customer, then the quotation this is going against.",
   "noQuotations": "No issued quotation has anything left to send.",
   "requestHint": "What is going now, how it travels, and on what terms.",
   "editRequest": "Edit request",

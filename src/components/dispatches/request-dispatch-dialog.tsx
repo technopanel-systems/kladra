@@ -290,6 +290,9 @@ export function RequestDispatchDialog({
           {t("forms.listsUnavailable")}
         </p>
       ) : active === null ? (
+        /* Both steps in one sentence (P12-10). It said "choose the quotation"
+           over a field that will not open until a customer is named, which is
+           the screen telling a rep to do the one thing it is refusing. */
         <p className="px-4 pb-4 text-sm text-muted-foreground">
           {t("dispatches.pickQuotationFirst")}
         </p>

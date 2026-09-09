@@ -479,9 +479,14 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 - **A dialog with a text field is a form.** Phase 11D (D114). Enter submits it; a multi-line
   field keeps Enter as a new line and takes Ctrl/Cmd+Enter. A dialog that saves from a
   button's `onClick` is one that missed the form shell.
-- **A form starts from what the app knows.** Phase 11D (D115, with D74, D81 and D101 before
-  it). The last value of a recurring figure is shown where the new one is typed, with one
-  press to keep it; a list with one entry is chosen; a list with several is not guessed at.
+- **A form starts from what the app knows — never from the record before it.** Phase 11D
+  (D115, with D74 and D101 before it). The last value of a recurring figure is shown where the
+  new one is typed, with one press to keep it; a list with one entry is chosen; a list with
+  several is not guessed at. What the app knows is a PARENT's own answer — the store a
+  quotation was priced out of, on the dispatch under it — and never the answers of the last
+  record of this kind: D81 opened a dispatch on the previous dispatch's site and terms, and
+  §3 overruled it outright (D160). A child reading its own parent is not this rule's opposite;
+  one record prefilling the next one like it is (P12-10).
 - **A row names its person where the reader is not that person.** Phase 11D (D116). On a
   shared desk a row says whose it is, in the reader's script; on somebody's own list it does
   not tell him his own name.
