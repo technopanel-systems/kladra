@@ -29,6 +29,22 @@ function quotationLabel(number: number, revision: number): string {
   return revision > 1 ? `Q-${number}/${revision}` : `Q-${number}`;
 }
 
+/** Kladra's own name for a dispatch — src/lib/labels.ts's rule, kept here too. */
+function dispatchLabel(number: number): string {
+  return `D-${number}`;
+}
+
+/**
+ * The row carrying exactly this label.
+ *
+ * `hasText` is a SUBSTRING, and these labels nest: "Q-1" is inside Q-11, Q-13,
+ * Q-15 and Q-17, so a filter on it matches five rows and the failure reads as
+ * five numbers where one was expected.
+ */
+function rowNamed(page: Page, label: string): Locator {
+  return page.getByRole("row").filter({ has: page.getByText(label, { exact: true }) });
+}
+
 /** The drawer, which is named by the record itself (Q-12, D-3). */
 function sheetFor(page: Page, label: string): Locator {
   return page.getByRole("dialog", { name: label });
@@ -46,6 +62,152 @@ async function numberedQuotation(not?: string): Promise<Numbered> {
     [not ?? null],
   );
 }
+
+test("SMAC's number is the one a row leads with, and Kladra's own is the quiet one", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // Both chains, because the rule is about a record's number and not about
+  // either of them (P12-11).
+  const quotation = await one<{ number: number; revision: number; smac_number: string }>(
+    `select q.number, q.revision, q.smac_number
+       from quotations q join companies c on c.id = q.company_id
+       join users u on u.id = c.rep_id
+      where u.email = $1::text and q.smac_number is not null
+        and not exists (select 1 from quotations later
+                         where later.number = q.number and later.revision > q.revision)
+      order by q.created_at desc limit 1`,
+    ["faisal@technopanel.com.sa"],
+  );
+  const dispatch = await one<{
+    number: number;
+    smac_dispatch_number: string;
+    quotation_number: number;
+    quotation_revision: number;
+    quotation_smac_number: string;
+  }>(
+    `select d.number, d.smac_dispatch_number,
+            q.number as quotation_number, q.revision as quotation_revision,
+            q.smac_number as quotation_smac_number
+       from dispatches d
+       join quotations q on q.id = d.quotation_id
+       join companies c on c.id = q.company_id
+       join users u on u.id = c.rep_id
+      where u.email = $1::text and d.smac_dispatch_number is not null
+        and q.smac_number is not null
+      order by d.created_at desc limit 1`,
+    ["faisal@technopanel.com.sa"],
+  );
+
+  await login(page, locale, "faisal");
+
+  await test.step("the quotations list leads with the number the customer holds", async () => {
+    await page.goto(`/${locale}/quotations`);
+    await expect(page.getByRole("heading", { name: t("common.quotations") })).toBeVisible(COLD);
+
+    const label = quotationLabel(quotation.number, quotation.revision);
+    const row = rowNamed(page, label);
+    await expect(row.locator('[data-slot="row-number"]')).toHaveText(quotation.smac_number);
+    await expect(row.locator('[data-slot="row-second-number"]')).toHaveText(label);
+    // A number that names a paper is not one a translator may rewrite: on an
+    // Arabic page a helpful one turns Q-12's digits into Arabic-Indic ones and
+    // the paper has been renamed (D161, `Ref` in figures.tsx).
+    await expect(row.locator('[data-slot="row-number"] > span')).toHaveAttribute(
+      "translate",
+      "no",
+    );
+  });
+
+  await test.step("and the dispatches list leads with SMAC's dispatch number", async () => {
+    await page.goto(`/${locale}/dispatches`);
+    await expect(page.getByRole("heading", { name: t("common.dispatches") })).toBeVisible(COLD);
+
+    const label = dispatchLabel(dispatch.number);
+    const row = rowNamed(page, label);
+    await expect(row.locator('[data-slot="row-number"]')).toHaveText(
+      dispatch.smac_dispatch_number,
+    );
+    await expect(row.locator('[data-slot="row-second-number"]')).toHaveText(label);
+  });
+
+  await test.step("and the load names its quotation the way that list does", async () => {
+    // A cross-reference is looked up, so it says the number she will search
+    // for; Kladra's own goes under it, exactly as the first cell does.
+    const row = rowNamed(page, dispatchLabel(dispatch.number));
+    await expect(row.locator('[data-slot="row-quotation"]')).toHaveText(
+      dispatch.quotation_smac_number,
+    );
+    await expect(row.locator('[data-slot="row-quotation-second"]')).toHaveText(
+      quotationLabel(dispatch.quotation_number, dispatch.quotation_revision),
+    );
+  });
+
+  await test.step("and on his day the quiet number sits under the loud one", async () => {
+    // The card that carries both, in a flex column rather than a table cell —
+    // which is where this rule broke. A box carrying `dir="ltr"` resolves
+    // `text-align: start` against its OWN direction, so a block-level one goes
+    // to the left edge whatever the page does, and on the Arabic card Q-7 sat
+    // alone against the far left while 4531 was at the right (§5 #193). The
+    // assertion is where the two numbers START, which is the same edge in
+    // either language and the thing a reader actually sees.
+    const withCustomer = await one<{ number: number; revision: number; smac_number: string }>(
+      `select q.number, q.revision, q.smac_number
+         from quotations q
+         join companies c on c.id = q.company_id
+         join users u on u.id = c.rep_id
+        where u.email = $1::text and q.status = 'issued' and q.smac_number is not null
+          and not exists (select 1 from quotations later
+                           where later.number = q.number and later.revision > q.revision)
+        order by q.issued_at desc limit 1`,
+      ["faisal@technopanel.com.sa"],
+    );
+
+    await page.goto(`/${locale}/day`);
+    await expect(page.getByRole("heading", { name: t("day.waitingOnYou") })).toBeVisible(COLD);
+
+    const card = page
+      .getByRole("listitem")
+      .filter({ has: page.getByText(withCustomer.smac_number, { exact: true }) });
+    // The run inside each, not the box around it: the box is a flex item and
+    // stretches to the card, and it is the TEXT whose edge is being read.
+    const loud = card.locator('[data-slot="waiting-number"] > span');
+    const quiet = card.locator('[data-slot="waiting-second-number"] > span');
+    await expect(loud).toHaveText(withCustomer.smac_number);
+    await expect(quiet).toHaveText(quotationLabel(withCustomer.number, withCustomer.revision));
+
+    const above = await loud.boundingBox();
+    const below = await quiet.boundingBox();
+    expect(above, "the leading number has no box").not.toBeNull();
+    expect(below, "the quiet number has no box").not.toBeNull();
+    const startOf = (box: { x: number; width: number }) =>
+      locale === "ar" ? box.x + box.width : box.x;
+    expect(
+      Math.abs(startOf(above!) - startOf(below!)),
+      "the quiet number does not start where the loud one does",
+    ).toBeLessThan(8);
+    // And it is genuinely the line below, not beside.
+    expect(below!.y).toBeGreaterThan(above!.y);
+  });
+
+  await test.step("a record with no SMAC number yet leads with Kladra's own, alone", async () => {
+    // The other half of the rule, and the one that keeps a request readable:
+    // nothing has been issued, so there is no second number to be quiet about.
+    const waiting = await one<{ number: number; revision: number }>(
+      `select q.number, q.revision from quotations q
+         join companies c on c.id = q.company_id
+         join users u on u.id = c.rep_id
+        where u.email = $1::text and q.status = 'requested'
+        order by q.created_at limit 1`,
+      ["faisal@technopanel.com.sa"],
+    );
+    const label = quotationLabel(waiting.number, waiting.revision);
+    await page.goto(`/${locale}/quotations`);
+    const row = rowNamed(page, label);
+    await expect(row.locator('[data-slot="row-number"]')).toHaveText(label);
+    await expect(row.locator('[data-slot="row-second-number"]')).toHaveCount(0);
+  });
+});
 
 test("a SMAC number typed twice is refused by name, and the request stays waiting", async ({
   page,

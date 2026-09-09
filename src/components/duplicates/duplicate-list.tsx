@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { ruleDuplicateAction } from "@/actions/duplicates";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Ref } from "@/components/ui-ext/figures";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
@@ -49,9 +50,7 @@ export function DuplicateList({ rows }: { rows: DuplicateRow[] }) {
               </StateBadge>
               {/* The evidence, and the reason this pair exists at all. A number
                   is always read left to right (rules/words.md). */}
-              <span dir="ltr" className="num text-sm font-medium">
-                {row.phone}
-              </span>
+              <Ref className="text-sm font-medium">{row.phone}</Ref>
             </span>
             <span
               className={cn("text-xs", row.waited.late ? TONE_TEXT.bad : "text-muted-foreground")}

@@ -122,12 +122,12 @@ function ProjectTableRow({
   return (
     <TableRow
       data-state={openId === row.id ? "selected" : undefined}
-      className={cn("relative cursor-pointer", arrived && "row-arrived")}
+      className={cn("row-door cursor-pointer", arrived && "row-arrived")}
     >
       <TableCell className="max-w-[16rem] truncate p-3 font-medium">
-        {/* The link stretches over the row, so the whole row opens the drawer
-            while middle-click and "copy link" still work. */}
-        <Link href={href} className="after:absolute after:inset-0 hover:underline">
+        {/* The whole row opens the drawer while middle-click and "copy link"
+            still work (globals.css `row-door`). */}
+        <Link data-door href={href} className="hover:underline">
           <span className="sr-only">{t("projects.openProject", { name: row.name })}</span>
           <span aria-hidden="true">{row.name}</span>
           <LinkPending className="ms-1.5 align-middle" />

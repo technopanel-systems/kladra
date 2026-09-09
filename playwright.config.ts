@@ -49,6 +49,7 @@ export default defineConfig({
     },
   ],
   globalSetup: "./tests/global-setup.ts",
+  globalTeardown: "./tests/global-teardown.ts",
   webServer: {
     command: "npm run dev:test",
     url: "http://localhost:3101/api/health",

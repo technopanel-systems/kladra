@@ -57,7 +57,7 @@ export function CallBand({ band }: { band: CallBandData }) {
         {band.rows.map((row) => (
           <li
             key={row.id}
-            className="card-face relative flex flex-wrap items-center gap-x-4 gap-y-1.5 p-3"
+            className="card-face row-door flex flex-wrap items-center gap-x-4 gap-y-1.5 p-3"
           >
             {/* Its own line on a phone. Sharing one line with the date
                 and the phone chip left about 150px for the name, and
@@ -65,13 +65,12 @@ export function CallBand({ band }: { band: CallBandData }) {
                 cannot tell which customer he is about to call (D65). */}
             <span className="flex min-w-0 flex-1 basis-full flex-col gap-0.5 sm:basis-0">
               <Link
+                data-door
                 href={`/companies?open=${row.id}`}
-                // The whole card is the target; the phone link on top of
-                // it is the exception, which is why it carries a z-index.
-                // The same stretched-link pattern the table uses: the
-                // ring lands on the name, which is the only part of the
-                // card a keyboard reader can see it against.
-                className="truncate rounded-sm text-sm font-medium outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50"
+                // The whole card is the target; the phone link on top of it is
+                // the exception, which is why it carries a z-index
+                // (globals.css `row-door`).
+                className="truncate text-sm font-medium"
               >
                 <bdi>{row.name}</bdi>
               </Link>

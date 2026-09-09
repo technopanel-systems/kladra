@@ -2,7 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { DayText } from "@/components/ui-ext/day-text";
-import { Sqm } from "@/components/ui-ext/figures";
+import { Ref, Sqm } from "@/components/ui-ext/figures";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
@@ -101,9 +101,9 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
                   >
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="flex items-center gap-1.5">
-                        <span dir="ltr" className="num text-sm font-medium">
+                        <Ref className="text-sm font-medium">
                           {card.label}
-                        </span>
+                        </Ref>
                         <LinkPending />
                       </span>
                       <Sqm value={card.sqm} className="text-xs" />

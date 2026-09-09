@@ -54,22 +54,19 @@ type RowProps = {
   current: boolean;
 };
 
-const ROW_LINK =
-  "rounded-sm outline-none after:absolute after:inset-0 focus-visible:ring-3 focus-visible:ring-ring/50";
-
 function DeskRow({ row, href, today, current }: RowProps) {
   const t = useTranslations();
   const locale = useLocale();
   const arrived = useArrived(row.id);
 
   return (
-    <TableRow className={cn("relative", arrived && "row-arrived", current && "bg-surface-2")}>
+    <TableRow className={cn("row-door", arrived && "row-arrived", current && "bg-surface-2")}>
       <TableCell className="max-w-[20rem] font-medium">
         <Link
+          data-door
           href={href}
           aria-current={current ? "true" : undefined}
           aria-label={t("companies.openCompany", { name: row.name })}
-          className={ROW_LINK}
         >
           <span className="flex items-center gap-1.5">
             <span className="min-w-0 truncate">{row.name}</span>
@@ -110,17 +107,18 @@ function CardRow({ row, href, today, current }: RowProps) {
   return (
     <li
       className={cn(
-        "card-face relative px-3 py-3",
+        "card-face row-door px-3 py-3",
         arrived && "row-arrived",
         current && "bg-surface-2",
       )}
     >
       <div className="flex items-start justify-between gap-3">
         <Link
+          data-door
           href={href}
           aria-current={current ? "true" : undefined}
           aria-label={t("companies.openCompany", { name: row.name })}
-          className={cn(ROW_LINK, "min-w-0 flex-1 font-medium")}
+          className="min-w-0 flex-1 font-medium"
         >
           <span className="flex items-center gap-1.5">
             <span className="min-w-0 truncate">{row.name}</span>

@@ -2,6 +2,7 @@
 
 import { useLocale } from "next-intl";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Ref } from "@/components/ui-ext/figures";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
 import { TONE_TEXT } from "@/lib/state-tone";
@@ -51,9 +52,7 @@ export function StuckRows({ rows }: { rows: StuckRowData[] }) {
           >
             <span className="min-w-0 text-sm sm:flex-1">
               {row.label ? (
-                <span dir="ltr" translate="no" className="num">
-                  {row.label}
-                </span>
+                <Ref>{row.label}</Ref>
               ) : (
                 <bdi>{row.name}</bdi>
               )}

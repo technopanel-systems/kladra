@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { formatMoney, formatSqm, formatSqmWhole } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,52 @@ export function Money({
         {formatMoney(value)}
       </span>
       {currency ? <span className="ms-1 text-xs">{t("common.sar")}</span> : null}
+    </span>
+  );
+}
+
+/**
+ * A reference number — one that NAMES something rather than measures it: the
+ * paper's (Q-12, D-3, SMAC's own), the customer's, the telephone's. It sits
+ * beside `Sqm` and `Money` because it is read in the same places and set in the
+ * same face, and apart from them because two things are true of a name that are
+ * not true of a quantity.
+ *
+ * It runs left to right whatever the page does, because a person says it in
+ * that order in both languages. And it carries `translate="no"`: a browser
+ * translator that helpfully rewrites the digits of Q-12 into Arabic-Indic ones
+ * has renamed the paper the customer is holding, which is the one thing
+ * rules/words.md says must never happen to a number here. That attribute was on
+ * the phone chip and on one row of the manager's stuck list and nowhere else —
+ * which is what a rule applied once, rather than written down, looks like
+ * (P12-11). `one-look` keeps it here now.
+ *
+ * TWO elements, and the reason is the whole rule §5 #172 taught about `<bdi>`
+ * one shape over: a box that carries `dir="ltr"` resolves `text-align: start`
+ * against ITS OWN direction, so the moment such a box is block-level — a flex
+ * item, a grid item, anything given `block` — it stops sitting where the page
+ * puts things and goes to the left edge. On the rep's Arabic day card that put
+ * Q-7, the quiet line meant to sit under SMAC's 4531 at the right, alone
+ * against the far left of the card. So the OUTER element takes the layout and
+ * the page's own direction, and only the inner run is turned around. Every
+ * caller is then safe wherever it puts this, which is better than a rule each
+ * caller has to remember.
+ */
+export function Ref({
+  children,
+  className,
+  slot,
+}: {
+  children: ReactNode;
+  className?: string;
+  /** `data-slot`, for a test that names this number rather than reads it. */
+  slot?: string;
+}) {
+  return (
+    <span data-slot={slot} className={className}>
+      <span dir="ltr" translate="no" className="num">
+        {children}
+      </span>
     </span>
   );
 }

@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
+import { Ref } from "@/components/ui-ext/figures";
 import { formatMoney } from "@/lib/money";
 import type { QuotationRow } from "@/lib/quotations";
 
@@ -39,14 +40,12 @@ export async function QuotationMiniList({ rows }: { rows: QuotationRow[] }) {
           >
             <span className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="flex flex-wrap items-center gap-2">
-                <span dir="ltr" className="num font-medium">
-                  {row.label}
-                </span>
+                <Ref className="font-medium">{row.label}</Ref>
                 <Badge variant="secondary">{t(STATUS_KEYS[row.status])}</Badge>
                 {row.smacNumber ? (
-                  <span dir="ltr" className="num text-xs text-muted-foreground">
+                  <Ref className="text-xs text-muted-foreground">
                     {row.smacNumber}
-                  </span>
+                  </Ref>
                 ) : null}
               </span>
               <DayText

@@ -26,7 +26,7 @@ import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
-import { Sqm } from "@/components/ui-ext/figures";
+import { Ref, Sqm } from "@/components/ui-ext/figures";
 import { paymentDetailLabel, paymentTermsLabel } from "@/lib/payment";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
@@ -165,7 +165,10 @@ export function DispatchesTable({
       .map((row) => ({
         id: row.id,
         href: listHref(base, param, q, null, row.id, "board"),
-        label: row.label,
+        // The number anybody says out loud, which is SMAC's once there is one
+        // (P12-11). A board card has room for one number and this is it; the
+        // list beside it carries both, and the drawer carries both.
+        label: row.smacDispatchNumber ?? row.label,
         title: row.companyName,
         subtitle: row.projectName,
         sqm: row.totalSqm,
@@ -246,9 +249,9 @@ export function DispatchesTable({
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5">
-                      <span dir="ltr" className="num font-medium">
-                        {row.label}
-                      </span>
+                      <Ref className="font-medium">
+                        {row.smacDispatchNumber ?? row.label}
+                      </Ref>
                       <LinkPending />
                     </span>
                     {waiting?.[row.id] ? (
@@ -311,24 +314,34 @@ export function DispatchesTable({
                     <TableRow
                       key={row.id}
                       data-state={openId === row.id ? "selected" : undefined}
-                      className={cn(arrived.has(row.id) && "row-arrived")}
+                      // The whole row opens the record, not only the first cell
+                      // (P12-11): `row-door` stretches that cell's own link over
+                      // the row, so it stays one anchor and one tab stop.
+                      className={cn("row-door", arrived.has(row.id) && "row-arrived")}
                     >
                       <TableCell className="p-0">
                         <Link
+                          data-door
                           href={listHref(base, param, q, status, row.id)}
                           aria-current={openId === row.id ? "true" : undefined}
                           className="block p-3"
                         >
+                          {/* SMAC's number leads where there is one, and Kladra's own
+                              goes quietly under it (P12-11) — the same swap the
+                              quotations list makes, and for the same reason. */}
                           <span className="flex items-center gap-1.5">
-                            <span dir="ltr" className="num font-medium">
-                              {row.label}
-                            </span>
+                            <Ref slot="row-number" className="font-medium">
+                              {row.smacDispatchNumber ?? row.label}
+                            </Ref>
                             <LinkPending />
                           </span>
                           {row.smacDispatchNumber ? (
-                            <span dir="ltr" className="num block text-xs text-muted-foreground">
-                              {row.smacDispatchNumber}
-                            </span>
+                            <Ref
+                              slot="row-second-number"
+                              className="block text-xs text-muted-foreground"
+                            >
+                              {row.label}
+                            </Ref>
                           ) : null}
                         </Link>
                       </TableCell>
@@ -354,9 +367,21 @@ export function DispatchesTable({
                         ) : null}
                       </TableCell>
                       <TableCell className="p-3">
-                        <span dir="ltr" className="num text-sm">
-                          {row.quotationLabel}
-                        </span>
+                        {/* The quotation this load is against, named the way the
+                            quotations list now leads (P12-11): SMAC's number, with
+                            Kladra's under it where there are two. A cross-reference
+                            is looked up, so it says the number she will search for. */}
+                        <Ref slot="row-quotation" className="text-sm">
+                          {row.smacNumber ?? row.quotationLabel}
+                        </Ref>
+                        {row.smacNumber ? (
+                          <Ref
+                            slot="row-quotation-second"
+                            className="block text-xs text-muted-foreground"
+                          >
+                            {row.quotationLabel}
+                          </Ref>
+                        ) : null}
                         {waiting && row.superseded ? (
                           <span
                             data-slot="revised-since"
@@ -528,8 +553,8 @@ export function DispatchSheet({
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <SheetTitle dir="ltr" className="num text-lg">
-                {dispatch.label}
+              <SheetTitle className="text-lg">
+                <Ref>{dispatch.label}</Ref>
               </SheetTitle>
               <StatusBadge status={dispatch.status} />
             </div>
@@ -559,9 +584,9 @@ export function DispatchSheet({
                   href={`/quotations?open=${dispatch.quotationId}`}
                   className="hover:underline"
                 >
-                  <span dir="ltr" className="num">
-                    {dispatch.quotationLabel}
-                  </span>
+                  {/* A fact has room for one number, and it is the one she
+                      would search SMAC for (P12-11). */}
+                  <Ref>{dispatch.smacNumber ?? dispatch.quotationLabel}</Ref>
                 </Link>
               </Fact>
               <Fact label={t("common.raisedBy")}>{dispatch.repName}</Fact>
@@ -570,9 +595,7 @@ export function DispatchSheet({
               </Fact>
               {dispatch.smacDispatchNumber ? (
                 <Fact label={t("common.smacDispatchNumber")}>
-                  <span dir="ltr" className="num">
-                    {dispatch.smacDispatchNumber}
-                  </span>
+                  <Ref>{dispatch.smacDispatchNumber}</Ref>
                 </Fact>
               ) : null}
             </dl>

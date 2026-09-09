@@ -29,7 +29,7 @@ import { LinkPending } from "@/components/ui-ext/link-pending";
 import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
-import { Money, Sqm } from "@/components/ui-ext/figures";
+import { Ref, Money, Sqm } from "@/components/ui-ext/figures";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
@@ -184,7 +184,10 @@ export function QuotationsTable({
       .map((row) => ({
         id: row.id,
         href: listHref(base, q, null, row.id, "board"),
-        label: row.label,
+        // The number anybody says out loud, which is SMAC's once there is one
+        // (P12-11). A board card has room for one number and this is it; the
+        // list beside it carries both, and the drawer carries both.
+        label: row.smacNumber ?? row.label,
         title: row.companyName,
         subtitle: row.projectName,
         sqm: row.totalSqm,
@@ -269,9 +272,9 @@ export function QuotationsTable({
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="flex items-center gap-1.5">
-                      <span dir="ltr" className="num font-medium">
-                        {row.label}
-                      </span>
+                      <Ref className="font-medium">
+                        {row.smacNumber ?? row.label}
+                      </Ref>
                       <LinkPending />
                     </span>
                     {waiting?.[row.id] ? (
@@ -327,24 +330,35 @@ export function QuotationsTable({
                     <TableRow
                       key={row.id}
                       data-state={openId === row.id ? "selected" : undefined}
-                      className={cn(arrived.has(row.id) && "row-arrived")}
+                      // The whole row opens the record, not only the first cell
+                      // (P12-11): `row-door` stretches that cell's own link over
+                      // the row, so it stays one anchor and one tab stop.
+                      className={cn("row-door", arrived.has(row.id) && "row-arrived")}
                     >
                       <TableCell className="p-0">
                         <Link
+                          data-door
                           href={listHref(base, q, status, row.id)}
                           aria-current={openId === row.id ? "true" : undefined}
                           className="block p-3"
                         >
+                          {/* SMAC's number leads where there is one, and Kladra's own
+                              goes quietly under it (P12-11). It was the other way round:
+                              the paper the customer holds and finance files is the one
+                              anybody says out loud, and it was the small grey line. */}
                           <span className="flex items-center gap-1.5">
-                            <span dir="ltr" className="num font-medium">
-                              {row.label}
-                            </span>
+                            <Ref slot="row-number" className="font-medium">
+                              {row.smacNumber ?? row.label}
+                            </Ref>
                             <LinkPending />
                           </span>
                           {row.smacNumber ? (
-                            <span dir="ltr" className="num block text-xs text-muted-foreground">
-                              {row.smacNumber}
-                            </span>
+                            <Ref
+                              slot="row-second-number"
+                              className="block text-xs text-muted-foreground"
+                            >
+                              {row.label}
+                            </Ref>
                           ) : null}
                         </Link>
                       </TableCell>
@@ -550,8 +564,8 @@ export function QuotationSheet({
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <SheetTitle dir="ltr" className="num text-lg">
-                {quotation.label}
+              <SheetTitle className="text-lg">
+                <Ref>{quotation.label}</Ref>
               </SheetTitle>
               <StatusBadge status={quotation.status} />
               {!quotation.isLatest ? (
@@ -604,9 +618,7 @@ export function QuotationSheet({
                 {
                   label: t("common.smacNumber"),
                   value: quotation.smacNumber ? (
-                    <span dir="ltr" className="num">
-                      {quotation.smacNumber}
-                    </span>
+                    <Ref>{quotation.smacNumber}</Ref>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   ),

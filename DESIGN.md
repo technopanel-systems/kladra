@@ -490,6 +490,40 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 - **A row names its person where the reader is not that person.** Phase 11D (D116). On a
   shared desk a row says whose it is, in the reader's script; on somebody's own list it does
   not tell him his own name.
+- **A row is a door, all of it, and the door is written once.** Phase 12-11 (D161). Where a
+  list draws records, pressing anywhere on the row opens the record — the phone's cards have
+  been whole links since P8 and the laptop's tables are the same rule in a wider shape. It is
+  the row's own title link stretched over the row, never a click handler on the row: one
+  anchor, one tab stop, one thing a screen reader announces, and Cmd-click and the middle
+  button still work from anywhere along it. A second link inside such a row has to lift itself
+  out of the overlay (`relative z-10`, as the phone chip does), and text inside the row cannot
+  be mouse-selected — the accepted trade, because the drawer behind the row is where the text
+  worth copying is. **One spelling.** Customers, projects and the call band each stretched
+  their own link by hand, in three arrangements of the same four classes, and P12-11 was about
+  to write a fourth: `row-door` on the row or card and `data-door` on its link is the whole
+  pattern now, the overlay and the focus ring live in `globals.css`, and `one-look` refuses
+  the fifth spelling.
+- **A record leads with the number the world outside Kladra knows it by.** Phase 12-11 (D161,
+  with S3 and S4). SMAC's number is on the paper the customer holds and in the system that
+  holds the money; Kladra's own Q-12 or D-3 is how this app refers to the record. So a row
+  leads with SMAC's where there is one and says Kladra's quietly under it, and leads with
+  Kladra's alone where there is not — a request nobody has issued has no other paper to name,
+  and an empty slot is a field a reader has to decide is empty. A row that names ANOTHER
+  record names it the same way, because the reader is about to go and look it up. Drawer
+  titles, notifications and pickers keep Kladra's name: they are the app talking about its own
+  record.
+- **A number that names something is not a figure.** Phase 12-11 (D161). A quantity is
+  measured and a reference number is said: the paper's (Q-12, D-3, SMAC's own), the customer's,
+  the telephone's. It is set in the same face as a figure so a column of them lines up, it runs
+  left to right whatever the page does because a person says it in that order in both
+  languages, and it is never translated — a browser that rewrites its digits into another
+  script has renamed the paper the customer is holding. One component, `Ref`, beside `Sqm` and
+  `Money`.
+- **A direction belongs to a run, never to a box.** Phase 12-11, generalising the `<bdi>` rule
+  of P12-8. An element that carries `dir` resolves `text-align: start` against its own
+  direction, so a block-level one — anything given `block`, or simply a child of a flex column
+  — leaves the side of the page everything else is on. Turn the RUN around and let the box keep
+  the page's direction. It is why `Ref` is two elements and why `<bdi>` is never the block.
 - **A count is a door.** Phase 11E (D117). A number that counts rows opens those rows, with
   the filter the list itself uses, and is underlined so the reader knows it is a door; a zero
   is plain text, because a door onto an empty room is a dead end. A bare count a person has to

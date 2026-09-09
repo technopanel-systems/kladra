@@ -2,6 +2,7 @@
 
 import { MessageCircle, Phone as PhoneIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Ref } from "@/components/ui-ext/figures";
 import { formatPhone, telHref, whatsappHref, type E164 } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -42,9 +43,7 @@ export function PhoneLinks({
     <span className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>
       <a href={whatsappHref(phone)} target="_blank" rel="noopener noreferrer" className={link}>
         <MessageCircle aria-hidden="true" className={icon} />
-        <span dir="ltr" translate="no" className="num">
-          {formatPhone(phone)}
-        </span>
+        <Ref>{formatPhone(phone)}</Ref>
         {/* The number is the visible label, so it stays IN the accessible name
             and this extends it (DESIGN §5). */}
         <span className="sr-only">{t("companies.whatsappContact", { name })}</span>

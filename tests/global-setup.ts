@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { testDatabaseUrl } from "../src/lib/env";
 import { testDatabaseName } from "../scripts/test-database";
+import { takeSuiteLock } from "./suite-lock";
 
 const ORIGIN = "http://localhost:3101";
 const repoRoot = path.resolve(fileURLToPath(import.meta.url), "..", "..");
@@ -65,6 +66,9 @@ function run(command: string): void {
  * `fullyParallel: false` and `workers: 1`.
  */
 export default async function globalSetup(): Promise<void> {
+  // Before anything is checked and long before anything is deleted: is another
+  // run already walking this database? (tests/suite-lock.ts)
+  takeSuiteLock();
   await assertServerIsOnTheTestDatabase();
   // Clear BEFORE migrate. A migration never meets residue — there is no
   // production data (rules/migrations.md) — and the old order handed it the

@@ -143,7 +143,7 @@
             manager's three answers
       - [x] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
       - [x] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
-      - [ ] 11 The queue: the whole row opens it, and the SMAC number is the large one
+      - [x] 11 The queue: the whole row opens it, and the SMAC number is the large one
       - [x] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
       - [ ] 13 Reports and the company log rebuilt as one thing, per person, per day
       - [ ] 14 Across: the panel's width, one primary action per list, the board ruling written
@@ -629,7 +629,39 @@ and moving one shared sentence to `common` found a third copy of it nobody had b
 (#186), and the Arabic review found an order to a man that every check in the gate had passed,
 because a checker matching whole words cannot see the conjunction Arabic glues to the front of a
 verb — the second time that shape has shipped, and the first time the rule rather than the word
-was fixed (#187). Boxes 11, 13 and 14 are next, in that order.
+was fixed (#187). Box 11 is the queue's two sentences, and most of what it cost was found by
+reading its own work rather than by writing it. **A row is a door, all of it**: the coordinator
+reads across to how long a thing has waited and presses there, nine hundred pixels from the only
+cell that opened anything, and the fix is the row's own title link stretched over it rather than a
+handler on the row — one anchor, one tab stop, and Cmd-click still opens a new tab from anywhere
+along it. The checkpoint read then found that customers, projects and the call band had been doing
+exactly that since P8, in three arrangements of the same four classes, and that this box was
+writing a fourth which would not have fitted a card at all (#190); one utility owns the overlay
+and the ring now, six call sites read alike, `one-look` refuses the next spelling, and the escape
+hatch — the phone number that has to stay ON TOP of the overlay — got the test it never had.
+**SMAC's number is the large one**: the number on the paper the customer holds, that finance files
+and that anybody says out loud, was the small grey line under Kladra's own, and they are swapped
+on both lists, on the cards those lists draw on a phone, on the board tiles and on the rep's own
+waiting cards; where there is no SMAC number — a request nobody has issued, a load nobody has
+approved — Kladra's leads alone, because a dash under a heading is a field a reader has to decide
+is empty. A row that points AT another record points the same way (#191): the dispatch list still
+said Q-12 while the quotations list had just started leading with SMAC's, so following the
+reference meant reading one number and searching for another. The guidelines pass then asked why
+the loudest number on the row could be rewritten by a browser's translator, and the answer was
+that two places in the app carried `translate="no"` and about twenty hand-built the same four
+attributes without it (#192) — so a reference number is a component now, `Ref`, beside the two the
+app has had for metres and money since P8. And the Arabic screenshots caught what every gate had
+passed (#193): on the rep's day card the quiet number sat alone against the far left, because **an
+element that carries a direction resolves `text-align: start` against its own**, and the tables
+had been hiding it behind a column width. The rule is `<bdi>`'s rule one attribute over, it is
+written in DESIGN as its own line now, and the component carries it rather than every caller. Two
+more properties came out of the box's own gate and neither is about Kladra: a suite that takes
+thirty-five minutes cannot be started at midnight, because the seed's "today" is fixed when it
+starts and the app reads the Riyadh clock on every request (#188); and stopping a run stops the
+shell in front of it and nothing below it, so a replacement run cleared the database under the
+first one's browser and every symptom pointed at the code — `globalSetup` takes a lock now and
+refuses the second run before a single row is deleted (#189). Boxes 13 and 14 are next, in that
+order.
 
 ## §4 Five days, walked (P9.1)
 
@@ -787,7 +819,11 @@ audit is broader: treat the previous model's work as another developer's and che
 shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix → web-design-guidelines.
 
 **Before every commit:** `npm run typecheck && npm run lint && npm run build && npm run test`.
-If a box cannot get green, cut scope inside it, note the cut in §0, commit green.
+If a box cannot get green, cut scope inside it, note the cut in §0, commit green. The suite takes
+about thirty-five minutes and seeds a floor dated to the day it starts, so do not start one near
+midnight (#188). Only one suite runs at a time — `globalSetup` now refuses a second one — and
+stopping a run means `taskkill /PID <pid> /T /F` on the `npm run test` process, because on Windows
+killing the shell in front of it leaves the server and the browser running (#189).
 
 **Guards.** Never `docker stop/down/rm` outside compose project `kladra` (H12). If Docker is down,
 retry every minute for 30 minutes. If `git push` fails, commit locally and continue. FACET at
@@ -891,6 +927,14 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 6. Faisal opens it and presses Edit — the same form that raised it, not a new one. He corrects the quantity and sends it again. The request is back on her desk, her reason is gone with the state it explained, and the trail carries the whole story: raised, refused, corrected, waiting.
 7. Her figure counts what she DID today, so the refusal is still in it after he has fixed it, and his resubmission counts as work arriving. Both come off the audit log, so neither can move because somebody else touched the row afterwards.
 8. The database refuses the shapes the form refuses: a second answer where the terms ask none, the wrong second answer for the terms, a missing note where finance needs one, a note of nothing but spaces — and a quotation with no job at all.
+
+**The whole row is the door, and SMAC's number leads (P12-11)** — `tests/presses.spec.ts`, `tests/smac.spec.ts`
+1. Rawan opens the queue and presses a quotation row at its far END — how long it has waited, about nine hundred pixels from the number. The drawer opens. She does the same on a dispatch row and gets the dispatch drawer, not the quotation one.
+2. On the customers list a row has a number on it. Pressing the number is still pressing the number — it is the one thing that lifts itself out of the door — and pressing the city beside it opens the customer.
+3. Faisal opens Quotations. A quotation the customer is holding leads with SMAC's number and says Kladra's own quietly under it; a request nobody has issued leads with Kladra's alone, with no empty second line to read past.
+4. Dispatches reads the same way, and the load names the quotation it is against by SMAC's number too — the number she would type into SMAC — with Kladra's under it.
+5. On his phone the same records are cards and lead with the same number; on the board a tile carries the leading number alone, because a tile has room for one.
+6. His own day lists what is waiting on him. The quotation with the customer leads with SMAC's number; the lead, the sent-back request and the refused load have no SMAC paper and lead with Kladra's.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -2853,6 +2897,20 @@ actually needed.
   the four-search-boxes defect (#143) in the message files, where nothing had been looking for
   it because every copy was correct. One key now, and the two specs that read it read the
   shared one.
+- [x] 188 **A suite that takes half an hour cannot be started at midnight.** The box-11 gate
+  failed on the daily report's own figures — "logged" said 1 where the walk had just written 2 —
+  and nothing in the app was wrong: the run began at 23:54, `tests/global-setup.ts` seeded a
+  floor whose "today" was the 9th, and by the time the report specs ran it was the 10th. Every
+  row the seed places relative to today is placed ONCE, at the start, and the app reads the
+  Riyadh clock on every request, so a run that crosses midnight is a run whose fixture and whose
+  app disagree about what day it is — for the second half of it, silently, on the figures rather
+  than on the screens. It is not a defect in Kladra and it is not worth engineering around: the
+  seed is deliberately relative (a demo floor dated to a fixed day is a demo that ages), and a
+  run pinned to a frozen clock would stop proving the thing rules/data.md cares about most, which
+  is that "today" is Riyadh's. **The rule is about when to press the button**: a full run is
+  thirty-five minutes, so one started after about eleven at night will be read as a failure the
+  next morning by somebody who did not start it. Start it earlier, or read the timestamps before
+  believing the tally.
 - [x] 187 **The same hole, one letter over: a checker that cannot see through a prefix.**
   `فاكتب` — "so write", an order to a man — shipped in the payment hint and every check in
   the gate passed it. `scripts/gendered-arabic.mts` lists `اكتب` and matches whole words, and
@@ -2866,3 +2924,76 @@ actually needed.
   arabic-reviewer, not by the gate — which is the point of running it — and the general
   lesson is the one #171 already taught in another key: **a checker patched with one more
   entry has been told about one case, not taught the rule.**
+- [x] 189 **Stopping a run stopped the shell in front of it, and nothing below it.** The
+  midnight rerun failed twice in its first two minutes — Jerom could not get past the sign-in
+  page, and a dev-server worker died of "2 child process exceptions" — and the app was fine.
+  The run it replaced was still going. Killing the background command ended one Git Bash
+  process; `npm run test` under it, Playwright under that, and the whole `npm run dev:test`
+  chain down to `next dev` on 3101 were all still alive, so the new run attached to the old
+  server (`reuseExistingServer`) and cleared the database while the old run's browser was
+  still signing people in. Two suites, one database, and every symptom pointing at the code.
+  **On Windows a process tree does not die with its shell** — `taskkill /PID <pid> /T /F` is
+  what ends one — and `scripts/dev-test.ts` already carried the orphan watch that was supposed
+  to catch this, from the last time it happened (#68); it did not fire, because the parent it
+  watches was never killed either. So the guard moved to where the damage is done rather than
+  where the process is: `tests/suite-lock.ts` takes a lock in `globalSetup` BEFORE the health
+  check and long before `db:clear`, refuses to start when the holding process is alive, names
+  the process to end, and is released in `globalTeardown`; a lock whose process is gone is
+  stale and gets taken, so a crashed run never blocks the next one. **The reading lesson is
+  the wider one**: two failures at the very top of a suite that passed an hour ago are almost
+  never two new bugs, and the first question is what else is running.
+- [x] 190 **The pattern was already there four times; the box was about to write it a fifth.**
+  Box 11 set out to make the whole row open the record and found, in its own checkpoint read,
+  that customers, projects and the call band had all been doing it since P8 — `relative` on the
+  row, `after:absolute after:inset-0` on the link — in three arrangements of the same four
+  classes, two of them with a focus ring and one without. The new work added a CSS utility that
+  did the same thing a fourth way, scoped to `td:first-child`, which would not have fitted a
+  card at all. **A rule written twice is a rule that will disagree with itself**, and this one
+  is worse than most because the way it fails is invisible: an overlay covers a second link and
+  the phone number in that row simply stops answering, on one screen, with nothing on any
+  console. So `row-door` owns the overlay AND the ring now, the row or card takes the class and
+  its link takes `data-door`, all six call sites read the same, and `one-look` refuses
+  `after:inset-0` anywhere but shadcn's avatar — the same shape as the rule that stopped the
+  primary button being a class string in fourteen files. The escape hatch got the test it never
+  had: `elementFromPoint` over a customer row proves the phone chip is still on top and the
+  cell beside it is the door, which is the assertion that would have caught a covered number.
+- [x] 191 **A number the row shows and a number the row points at are the same question.**
+  Swapping the two lists to lead with SMAC's number left the dispatch list saying "Q-12" in its
+  quotation column — a cross-reference to a record whose own list now leads with a different
+  number, so following it meant reading one number and searching for another. The rule was
+  written for what a row leads with and it is really about what a reader is about to look up,
+  which is the same thing whether the record is this row or the one it names. The column and
+  the drawer's Quotation fact both say SMAC's number now, with Kladra's under it in the list
+  where there is room for two. The general form: **when a figure or a name changes on the
+  screen that owns it, every screen that points at it has changed too.**
+- [x] 192 **A number that names something is not a number, and only two places knew.** The
+  guidelines pass on box 11 asked why the row's new headline number carried no `translate="no"`,
+  and the answer was that two places in the whole app did: the phone chip, and one row of the
+  manager's stuck list. Everywhere else — both lists, both drawers, the board tiles, the rep's
+  day, the mini lists inside a drawer, the search results — a document number was a hand-built
+  `<span dir="ltr" className="num">`, the same four attributes written out about twenty times.
+  It matters more than it sounds: a browser's translator rewrites Western digits into
+  Arabic-Indic ones, rules/words.md forbids exactly that, and a Q-12 whose digits have changed
+  script is no longer the name of the paper the customer is holding. **A reference number is not
+  a figure** — `Sqm` and `Money` have been components since P8 for the same reason and this one
+  never was — so `Ref` sits beside them, carries the direction, the face and the attribute, and
+  `one-look` now keeps `translate="no"` in that one file. Found by the guidelines pass rather
+  than by the gate, on the box that made those numbers the loudest thing on a row, which is
+  where a rule applied twice out of twenty was always going to show.
+- [x] 193 **The same rule as `<bdi>`, one attribute over, found by looking at the Arabic.** The
+  shot-looker read the rep's day card and measured what the eye had already caught: SMAC's 4531
+  sat correctly at the right of the Arabic card and Q-7, the quiet line meant to sit under it,
+  was alone against the far LEFT edge, 1036 pixels wide in a card whose number is 33. The cause
+  is the one §5 #172 wrote down for `<bdi>` and nobody generalised: **an element carrying a
+  direction resolves `text-align: start` against ITS OWN direction**, so the moment such an
+  element is block-level — `block`, or simply a child of a flex column — it stops going where
+  the page puts things. The tables hid it: a table cell constrains the box to the column, so the
+  stretched span happened to end up under the number anyway. That is luck, and it would have
+  come back in the first wide column anybody added. The fix is in the component rather than at
+  the call sites, because a rule every caller has to remember is a rule (`Ref` is two elements
+  now: the outer takes the layout and the page's own direction, only the inner run is turned
+  around). The test measures where the two numbers START — the same edge in either language —
+  which is the assertion that reads the way a person looks at the card, and it runs in Arabic
+  where the defect lives. **The lesson about looking**: every gate in the repo was green over
+  this, in both locales, for the whole box; the defect was visible in the first Arabic
+  screenshot, and nothing but a screenshot was ever going to say so.

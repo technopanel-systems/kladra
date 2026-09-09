@@ -318,6 +318,58 @@
       scroll;
 }
 
+/*
+ * The whole row is the door (P12-11, D161). `row-door` on the row or the card,
+ * `data-door` on the link inside it that opens the record.
+ *
+ * On a phone every list draws cards and the whole card has been a link since
+ * P8; on a laptop the same records were a table and only the first cell was
+ * one. The coordinator reads a row across — the customer, the job, the metres,
+ * how long it has waited — and then presses where her eye stopped, which on a
+ * 1366-wide screen is nine hundred pixels away from the only thing that opened
+ * anything. She pressed the row, nothing happened, and she pressed again.
+ *
+ * The row's own title link is stretched over it rather than a click handler put
+ * on the row: it stays ONE anchor, so it is one tab stop, it is what a screen
+ * reader announces, and Cmd-click and the middle button still open a new tab
+ * from anywhere on the row — none of which a `tr onClick` gives.
+ *
+ * A second link inside the row would be covered by the overlay and stop
+ * working; one that is wanted takes `relative z-10` and lifts itself back out,
+ * as the phone chip on a customer row does. The cost is that text in the row
+ * cannot be selected with the mouse, which is the accepted trade of this
+ * pattern: these rows are pressed, and the drawer behind them is where the text
+ * worth copying is.
+ *
+ * The ring lives here rather than at the six call sites because it is the ONE
+ * thing a keyboard reader has, and it lands on the title — the only part of a
+ * row whose outline says which record is about to open. Customers, projects and
+ * the call band each wrote this by hand, in three arrangements of the same four
+ * classes, before it had a name; `one-look` now refuses a seventh.
+ *
+ * An OUTLINE and not a ring of shadow, which is what four of those six were:
+ * `outline: none` plus `focus-visible:ring-3` looks identical and disappears
+ * entirely in Windows' high-contrast mode, where a box-shadow is dropped and an
+ * outline is forced to the system's own colour. It also follows the radius, and
+ * it is the same property the base layer already tints for every other control
+ * in the app, so the door focuses like everything else rather than like itself.
+ */
+@utility row-door {
+  position: relative;
+  & [data-door] {
+    border-radius: var(--radius-sm);
+  }
+  & [data-door]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  & [data-door]:focus-visible {
+    outline: 3px solid color-mix(in oklab, var(--ring) 50%, transparent);
+    outline-offset: 0;
+  }
+}
+
 /* Card texture: 1px line, hairline highlight on top, shadow lift on hover. */
 @utility card-face {
   position: relative;

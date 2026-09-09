@@ -5,6 +5,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { searchAllAction, type SearchResults } from "@/actions/search";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { Ref } from "@/components/ui-ext/figures";
 import {
   Command,
   CommandGroup,
@@ -256,9 +257,7 @@ export function SearchCommand({ role }: { role: Role }) {
                         {row.companyName}
                       </span>
                       <CommandShortcut className="tracking-normal">
-                        <span dir="ltr" className="num">
-                          {formatPhone(row.phone)}
-                        </span>
+                        <Ref>{formatPhone(row.phone)}</Ref>
                       </CommandShortcut>
                     </CommandItem>
                   ))}

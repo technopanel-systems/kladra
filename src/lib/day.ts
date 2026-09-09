@@ -41,6 +41,16 @@ export type Waiting = {
   href: string;
   /** Its document number, or null for a row that has none — a lead (P12-7). */
   label: string | null;
+  /**
+   * SMAC's number, where the paper has one (P12-11).
+   *
+   * Only one of the four kinds ever does: a quotation the customer is holding
+   * has been issued, and being issued IS having a SMAC number. A request sent
+   * back was never issued and a refused dispatch was never approved, so those
+   * rows carry Kladra's own number and nothing else — which is the right answer
+   * rather than a gap, because there is no other paper to name yet.
+   */
+  smacNumber: string | null;
   companyName: string;
   /** The job, or null for the one row that has none — a lead (P12-7). */
   projectName: string | null;
@@ -151,6 +161,8 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
         revision: quotations.revision,
         companyName: companies.name,
         projectName: projects.name,
+        // The number he is about to say on the telephone (P12-11).
+        smacNumber: quotations.smacNumber,
         since: quotations.issuedAt,
       })
       .from(quotations)
@@ -175,6 +187,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       // A lead has no document number, and the company's name is the heading of
       // its own card rather than a code above it.
       label: null,
+      smacNumber: null,
       companyName: row.name,
       projectName: null,
       reasonKey: "day.newLead" as const,
@@ -188,6 +201,8 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       id: row.id,
       href: `/quotations?open=${row.id}`,
       label: quotationLabel(row.number, row.revision),
+      // Sent back, so it was never issued, so there is no SMAC paper for it.
+      smacNumber: null,
       companyName: row.companyName,
       projectName: row.projectName,
       reasonKey: "day.sentBack" as const,
@@ -198,6 +213,8 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       id: row.id,
       href: `/dispatches?open=${row.id}`,
       label: dispatchLabel(row.number),
+      // Refused, so it was never approved, so SMAC has no number for it either.
+      smacNumber: null,
       companyName: row.companyName,
       projectName: row.projectName,
       reasonKey: "day.refused" as const,
@@ -208,6 +225,8 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       id: row.id,
       href: `/quotations?open=${row.id}`,
       label: quotationLabel(row.number, row.revision),
+      // The one kind that has one: issued IS having a SMAC number (P12-11).
+      smacNumber: row.smacNumber,
       companyName: row.companyName,
       projectName: row.projectName,
       reasonKey: "day.withCustomer" as const,

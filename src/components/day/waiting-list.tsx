@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Ref } from "@/components/ui-ext/figures";
 import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Link } from "@/i18n/navigation";
@@ -166,9 +167,13 @@ export function WaitingList({
                     is comes out with its punctuation on the wrong side
                     (rules/words.md). */}
                 {row.label ? (
-                  <span dir="ltr" className="num font-medium">
-                    {row.label}
-                  </span>
+                  // SMAC's number where the paper has one, which on this list
+                  // means the quotation he is about to ring the customer about
+                  // (P12-11): that is the number the customer is holding, and
+                  // Kladra's own is the quiet line under the pair of them.
+                  <Ref slot="waiting-number" className="font-medium">
+                    {row.smacNumber ?? row.label}
+                  </Ref>
                 ) : (
                   <span className="max-w-full truncate font-medium">
                     <bdi>{row.companyName}</bdi>
@@ -176,6 +181,14 @@ export function WaitingList({
                 )}
                 <StateBadge tone={TONE_OF[row.reasonKey] ?? "wait"}>{t(row.reasonKey)}</StateBadge>
               </span>
+              {/* Kladra's own number, on its own line under SMAC's, and only
+                  where there are two: a line with one number on it twice is a
+                  line to read past. The table rows say it the same way. */}
+              {row.smacNumber ? (
+                <Ref slot="waiting-second-number" className="text-xs text-muted-foreground">
+                  {row.label}
+                </Ref>
+              ) : null}
               {/* The customer under the number. Not on a lead, where he is the
                   line above and printing him twice would say nothing twice. */}
               {row.label ? (

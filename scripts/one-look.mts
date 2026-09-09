@@ -57,6 +57,33 @@ const RULES: Rule[] = [
     fix: "use <Prose text={…} />",
   },
   {
+    // 6. The row door. A list row whose whole width opens the record does it by
+    //    stretching its own title link over the row (D161), and customers,
+    //    projects and the call band each wrote that by hand — `relative` on the
+    //    row, `after:absolute after:inset-0` on the link, and two of the three
+    //    added a focus ring the third did not. P12-11 was about to make it four.
+    //    `row-door` in globals.css owns the overlay and the ring; a row marks
+    //    itself with it and its link with `data-door`.
+    name: "the row door is written once",
+    pattern: /after:inset-0/,
+    // shadcn's avatar uses the same overlay for its own ring, not for a door.
+    allow: ["src/components/ui/avatar.tsx"],
+    fix: 'put `row-door` on the row or card and `data-door` on its link',
+  },
+  {
+    // 7. A number that NAMES something is not translated (P12-11, D161). A
+    //    browser translator rewrites Western digits into Arabic-Indic ones, and
+    //    a Q-12 that comes out in another script is no longer the name of the
+    //    paper the customer is holding. `translate="no"` was on the phone chip
+    //    and on one row of the stuck list and nowhere else — right twice, and
+    //    absent from the two lists where a document number is the loudest thing
+    //    on the row. `Ref` in figures.tsx carries it now.
+    name: "a reference number is written once, and never translated",
+    pattern: /translate="no"/,
+    allow: ["src/components/ui-ext/figures.tsx"],
+    fix: "use <Ref>…</Ref> from @/components/ui-ext/figures",
+  },
+  {
     // 5. A `<bdi>` that is the BLOCK is a block that changes direction
     //    (P12-8, §5 #172). `<bdi>` carries `dir=auto`, so as a flex item, a
     //    grid item or anything given `block`, `truncate`, `flex-1` or
@@ -111,6 +138,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(
-  "one-look — the primary button, the surface edge, typed text, the phone line and the direction " +
-    "of a name are each written once",
+  "one-look — the primary button, the surface edge, typed text, the phone line, the direction " +
+    "of a name, the row door and a reference number are each written once",
 );
