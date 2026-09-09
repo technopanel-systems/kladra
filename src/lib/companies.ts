@@ -68,6 +68,11 @@ import {
  * a raw `from`, so the join condition and the name expression cannot drift.
  */
 const leadFinder = alias(users, "lead_finder");
+/** The record a tombstone became, and whoever holds it now (P12-8). */
+const mergedInto = alias(companies, "merged_into");
+const mergedIntoRep = alias(users, "merged_into_rep");
+/** Whoever keeps a contact, for a company more than one person keeps people on. */
+const contactRep = alias(users, "contact_rep");
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
 export { listActivitiesForCompany as listCompanyActivities } from "@/lib/activities";
@@ -362,6 +367,11 @@ export type CompanyContact = {
   isMain: boolean;
   /** Whose contact this is (D147) — only he may change it. */
   repId: string;
+  /**
+   * And his name, in the reader's script (D68), for the one case where the
+   * drawer has to say it: a company more than one person keeps people on.
+   */
+  repName: string;
 };
 
 export type CompanyProject = {
@@ -424,6 +434,31 @@ export type CompanyDetail = {
    * half of it.
    */
   lead: CompanyLead | null;
+  /**
+   * What this record turned out to be, when the manager ruled it a duplicate
+   * (P12-8). Null on every record that is still a record, which is all but a
+   * handful.
+   */
+  folded: CompanyFolded | null;
+};
+
+/**
+ * A tombstone, read from the drawer over it (P12-8).
+ *
+ * "Archived" on its own says the wrong thing here — nobody gave this customer
+ * up — so the drawer says what actually happened, and the rep who typed the
+ * name finds out where his customer went. Whether the survivor's name is a
+ * DOOR is D121's rule, unchanged: his own floor is the one he may open, and
+ * where it is another rep's the answer is the rep's name, which is the person
+ * to ring.
+ */
+export type CompanyFolded = {
+  intoId: string;
+  intoName: string;
+  /** Who holds the record that continues, in the reader's script (D68). */
+  intoRepName: string;
+  /** Whether this reader may open it (S8, D121). */
+  mine: boolean;
 };
 
 /** What makes a company a lead (SPEC §3, P12-7). */
@@ -478,6 +513,14 @@ export async function getCompany(
       leadFromName: personNameOf("lead_finder", label),
       leadQuery: companies.leadQuery,
       leadAcknowledgedAt: companies.leadAcknowledgedAt,
+      // What it became, if it stopped being a record of its own (P12-8). A
+      // third alias of `companies` and a third of `users`, joined LEFT for the
+      // same reason the lead's finder is: almost nothing has one.
+      mergedIntoId: companies.mergedIntoId,
+      mergedIntoName: mergedInto.name,
+      mergedIntoRepId: mergedInto.repId,
+      mergedIntoRepName: personNameOf("merged_into_rep", label),
+      mergedIntoShared: onCompanySql(user, sql`merged_into.id`).mapWith(Boolean),
       nextFollowUp: companies.nextFollowUp,
       followUpState: followUpStateSql(sql`companies.next_follow_up`),
       archivedAt: companies.archivedAt,
@@ -489,6 +532,8 @@ export async function getCompany(
     .innerJoin(countries, eq(countries.id, companies.countryId))
     .innerJoin(users, eq(users.id, companies.repId))
     .leftJoin(leadFinder, eq(leadFinder.id, companies.leadFromId))
+    .leftJoin(mergedInto, eq(mergedInto.id, companies.mergedIntoId))
+    .leftJoin(mergedIntoRep, eq(mergedIntoRep.id, mergedInto.repId))
     .leftJoin(cities, eq(cities.id, companies.cityId))
     .where(eq(companies.id, id))
     .limit(1);
@@ -507,6 +552,7 @@ export async function getCompany(
         email: contacts.email,
         notes: contacts.notes,
         repId: contacts.repId,
+        repName: personNameOf("contact_rep", label),
         // Derived, never the raw column: the flag alone says nobody is main
         // once the marked contact has been archived (D18). Per rep rather than
         // per company, because on a shared one each of them has his own person
@@ -514,6 +560,7 @@ export async function getCompany(
         isMain: sql<boolean>`contacts.id = ${mainContactForRepSql(sql`${id}::uuid`)}`,
       })
       .from(contacts)
+      .innerJoin(contactRep, eq(contactRep.id, contacts.repId))
       .where(and(eq(contacts.companyId, id), isNull(contacts.archivedAt)))
       .orderBy(sql`contacts.is_main desc`, asc(contacts.createdAt)),
 
@@ -565,6 +612,17 @@ export async function getCompany(
           mine: mayWrite(user, row.repId),
         }
       : null,
+    folded:
+      row.mergedIntoId && row.mergedIntoName && row.mergedIntoRepId
+        ? {
+            intoId: row.mergedIntoId,
+            intoName: row.mergedIntoName,
+            intoRepName: row.mergedIntoRepName,
+            // The same rule the duplicate warning follows (D121): a name is a
+            // door only where the reader may open what it points at.
+            mine: maySeeCompany(user, row.mergedIntoRepId, row.mergedIntoShared),
+          }
+        : null,
     cityName: row.cityId === null ? null : row.cityName,
     followUpState: row.followUpState ?? null,
     contacts: contactRows.map((c) => ({
@@ -659,8 +717,34 @@ export async function findPossibleDuplicates(input: {
            and ct.phone_normalized = ${phone}
       )`
     : null;
+  /*
+   * The name, compared with the spelling taken out of it (P12-8, migration
+   * 0020). `ilike 'what he typed%'` is a rule about letters, and two people
+   * typing one Saudi customer do not agree about letters: الوطنية against
+   * وطنية, a fatha typed or not, ة against ه, Al-Watania against AL WATANIA
+   * TRADING CO. Each of those was a different string and the same customer, and
+   * the warning that exists to catch exactly that saw none of them.
+   *
+   * Three clauses because a rep types the name he has, which may be shorter or
+   * longer than the one on file: equal, his is the start of it, or it is the
+   * start of his. The pattern is built out of the fold without escaping,
+   * because the fold keeps only letters, digits and single spaces — a LIKE
+   * metacharacter cannot survive it, which is a property of `fold_name` and is
+   * written down beside it.
+   *
+   * The minimum length is asked of the FOLD, not of what he typed: مصنع الف is
+   * eight characters and folds to one, and one letter matches a quarter of the
+   * floor.
+   */
   const nameMatch: SQL | null = byName
-    ? sql`companies.name ilike ${escapeLike(name) + "%"}`
+    ? sql`(
+        length(fold_name(${name})) >= ${MIN_DUPLICATE_NAME}
+        and (
+          companies.name_folded = fold_name(${name})
+          or companies.name_folded like fold_name(${name}) || '%'
+          or fold_name(${name}) like companies.name_folded || '%'
+        )
+      )`
     : null;
 
   const matches = [phoneMatch, nameMatch].filter((clause): clause is SQL => clause !== null);
@@ -693,7 +777,9 @@ export async function findPossibleDuplicates(input: {
     )
     .orderBy(
       sql`case when ${phoneMatch ?? sql`false`} then 0 else 1 end`,
-      sql`case when lower(trim(companies.name)) = lower(${name}) then 0 else 1 end`,
+      // The same name, however either of them spelled it, before one that
+      // merely starts the same way.
+      sql`case when companies.name_folded = fold_name(${name}) then 0 else 1 end`,
       // Somebody's live customer before a record nobody works.
       sql`companies.archived_at is null desc`,
       asc(companies.name),

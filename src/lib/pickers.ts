@@ -32,8 +32,18 @@ import type { Role, SessionUser } from "@/lib/types";
 
 export type { PickerOption };
 
-/** The companies this person may add a project to: their own, not archived. */
+/**
+ * The companies this person may add a project to: their own, not archived.
+ *
+ * A share is not one of them. Seeing a customer lets a rep keep his own people
+ * on it and nothing else (D147, `mayKeepContacts`); the job belongs to whoever
+ * holds the customer. The two other halves of `mayWrite` are asked here for the
+ * reason they are asked in every picker below: a role with no floor and an admin
+ * looking through somebody's eyes write nothing (D42).
+ */
 export async function companyOptions(user: SessionUser): Promise<PickerOption[]> {
+  if (!holdsFloor(user.role) || user.viewedBy) return [];
+
   const rows = await db
     .select({ id: companies.id, name: companies.name })
     .from(companies)
@@ -49,11 +59,24 @@ export async function companyOptions(user: SessionUser): Promise<PickerOption[]>
  * A lost project is finished work (S20) and an archived one is off the floor,
  * so neither is offered — quoting either would be a mistake nobody would spot
  * until the coordinator asked why.
+ *
+ * **The sentence is `mayRaiseFor`'s, in SQL, and it has THREE ways in.** It had
+ * two — his own project, or a job he was put on — and the project drawer, which
+ * asks `mayRaiseFor` directly, has always had three: the customer is his. So a
+ * rep whose own company carried a project another rep created was offered the
+ * button on the project's drawer and not on the Quotations screen, and the
+ * action behind both accepted it. That is the defect `onProjectSql` warns about
+ * turned the other way round: not a control that refuses, but work a screen
+ * withholds. It surfaced the day a fold moved one rep's project onto another
+ * rep's company (§5 #177) — which is exactly the arrangement D147 made ordinary.
  */
 export async function projectOptions(user: SessionUser): Promise<PickerOption[]> {
   // Nothing to offer somebody who does not quote: the Quotations screen then
-  // draws no button at all, rather than one that would be refused (P8.9).
-  if (!sells(user.role)) return [];
+  // draws no button at all, rather than one that would be refused (P8.9). The
+  // other two halves of `mayWrite` belong here for the same reason: a role that
+  // holds no floor, and an admin looking through somebody's eyes, write nothing
+  // (D42) — and a picker is a control like any other.
+  if (!sells(user.role) || !holdsFloor(user.role) || user.viewedBy) return [];
 
   const rows = await db
     .select({
@@ -66,9 +89,15 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
     .innerJoin(companies, eq(companies.id, projects.companyId))
     .where(
       and(
-        // His own, and the jobs he has been put on (D147). A shared project is
-        // a worked project: quoting on it is the point of being on it.
-        or(eq(projects.repId, user.id), onProjectSql(user, sql`projects.id`)),
+        // His customer, his own job, or a job he has been put on (D147,
+        // `mayRaiseFor`). A shared project is a worked project: quoting on it is
+        // the point of being on it; and a company of his own carries every job
+        // on it, whoever created them.
+        or(
+          eq(companies.repId, user.id),
+          eq(projects.repId, user.id),
+          onProjectSql(user, sql`projects.id`),
+        ),
         isNull(companies.archivedAt),
         isNull(projects.archivedAt),
         isNull(projects.lostAt),
@@ -93,7 +122,7 @@ export async function projectOptions(user: SessionUser): Promise<PickerOption[]>
  * first one already claimed.
  */
 export async function dispatchableQuotationOptions(user: SessionUser): Promise<PickerOption[]> {
-  if (!sells(user.role)) return [];
+  if (!sells(user.role) || !holdsFloor(user.role) || user.viewedBy) return [];
 
   const rows = await db
     .select({
@@ -108,10 +137,24 @@ export async function dispatchableQuotationOptions(user: SessionUser): Promise<P
     .leftJoin(projects, eq(projects.id, quotations.projectId))
     .where(
       and(
-        // The paper he raised, and the paper on a job he is on: two reps
-        // working one project send against each other's quotations, which is
-        // what sharing the job means (D147).
-        or(eq(quotations.repId, user.id), onProjectSql(user, sql`quotations.project_id`)),
+        /*
+         * `mayRaiseFor` again, in SQL, and asked of the same three things the
+         * quotation drawer asks it of: the customer is his, the job is his, or
+         * the job is one he was put on — two reps working one project send
+         * against each other's quotations, which is what sharing the job means
+         * (D147). It asked whether HE raised the paper, which is neither the
+         * drawer's question nor the action's: a quotation another rep raised on
+         * his own customer was offered on the drawer and withheld from the
+         * screen built to raise dispatches (§5 #177). A quotation with no
+         * project is the company's own stock and only its rep sends against it,
+         * which falls out of the left join: `projects.rep_id` is null and the
+         * first clause is the only one that can be true.
+         */
+        or(
+          eq(companies.repId, user.id),
+          eq(projects.repId, user.id),
+          onProjectSql(user, sql`quotations.project_id`),
+        ),
         // The same two states the action allows and the drawer offers, said
         // once (§5 #166). This read `issued` alone, so a quotation the customer
         // had accepted vanished from the picker on the screen whose whole job

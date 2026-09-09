@@ -156,11 +156,11 @@ test("a quotation is requested from the quotations screen", async ({ page, local
     `select p.id, p.name, c.id as company_id, c.name as company_name
        from projects p
        join companies c on c.id = p.company_id
-      where c.rep_id = $1::uuid
+      where p.rep_id = $1::uuid
         and c.archived_at is null
         and p.archived_at is null
         and p.lost_at is null
-      order by p.created_at
+      order by p.created_at, p.id
       limit 1`,
     [faisal],
   );

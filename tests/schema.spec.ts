@@ -524,11 +524,18 @@ test("a company cannot be shared with the same person twice (0014, D147)", async
   // The seed's own standing example (scripts/seed/demo-data.ts): Anmaa,
   // shared with Saad, so this asks about a row that is guaranteed to exist
   // rather than an arbitrary `limit 1` a later test's own fixture could shift.
+  //
+  // One of its shares and not its only one. The seeded fold puts Turki on this
+  // same company as well (P12-8), which is what "keep it and share it" means —
+  // so the named company pins WHICH list this is about, and the order pins
+  // which row of it, without either of them claiming the list has one row.
   const row = await one<{ company_id: string; user_id: string; granted_by: string }>(
     `select cs.company_id, cs.user_id, cs.granted_by
        from company_shares cs
        join companies c on c.id = cs.company_id
-      where c.name = $1::text`,
+      where c.name = $1::text
+      order by cs.user_id
+      limit 1`,
     ["شركة أنماء للمقاولات"],
   );
   // Pressing "Add" a second time on somebody already on the list is the
@@ -601,6 +608,146 @@ test("contacts_one_main_idx is now per rep: two mains on one company for two rep
   } finally {
     await query("delete from contacts where phone_normalized = '+966500000011'");
   }
+});
+
+test("fold_name takes the spelling out of a name, and the stored column is not stale (0020, D158)", async () => {
+  /*
+   * The pairs a duplicate warning has to see through. Every left-hand name is a
+   * different STRING from its right-hand one and the same customer: the
+   * definite article Arabic glues to a word, a fatha somebody typed, ة against
+   * ه, ى against ي, Arabic-Indic digits, and the words every second firm in
+   * this trade carries in front of its own name.
+   */
+  const same = [
+    ["الشركة الوطنية للتشييد", "شركة الوطنية للتشييد"],
+    ["مؤسسة الفَهْد للتجارة", "الفهد للتجاره"],
+    ["مصنع ٢٤ للألمنيوم", "24 للالمنيوم"],
+    ["Al-Watania Trading Co.", "AL WATANIA TRADING COMPANY"],
+    ["مكتب المعمار الحديث", "المعمار الحديث"],
+  ];
+  for (const [a, b] of same) {
+    const row = await one<{ same: boolean }>(
+      "select fold_name($1::text) = fold_name($2::text) as same",
+      [a, b],
+    );
+    expect(row.same, `${a} and ${b} should fold alike`).toBe(true);
+  }
+
+  // And two firms that merely start the same way do not become one name.
+  const apart = await one<{ same: boolean }>(
+    "select fold_name($1::text) = fold_name($2::text) as same",
+    ["شركة الفهد للمقاولات", "شركة النصر للمقاولات"],
+  );
+  expect(apart.same).toBe(false);
+
+  // A name that is nothing but the trade's own words folds to NULL, so it
+  // matches nothing rather than everything.
+  const noise = await one<{ folded: string | null }>("select fold_name('شركة') as folded");
+  expect(noise.folded).toBeNull();
+
+  /*
+   * The trap that comes with a stored generated column: Postgres does not
+   * recompute one when the function behind it changes. A fold edited without
+   * rewriting the column leaves every company on file compared by last year's
+   * rule, and no screen looks any different. This is the only thing that would
+   * ever say so.
+   */
+  const stale = await query(
+    "select id from companies where name_folded is distinct from fold_name(name)",
+  );
+  expect(stale, "companies.name_folded is stale — rewrite it in the migration that changed fold_name").toHaveLength(0);
+});
+
+test("one duplicate flag per pair, for ever, whichever way round it arrives (0020, D158)", async () => {
+  const flag = await one<{ company_id: string; other_id: string; matched_phone: string }>(
+    "select company_id, other_id, matched_phone from duplicate_flags limit 1",
+  );
+
+  // The same pair again, as the detector offers it on every later run.
+  const again = await refused(
+    "insert into duplicate_flags (company_id, other_id, matched_phone) values ($1::uuid, $2::uuid, $3::text)",
+    [flag.company_id, flag.other_id, flag.matched_phone],
+  );
+  expect(again).toContain("duplicate_flags_pair_idx");
+
+  // And the other way round, which is how it arrives when the second record is
+  // the one whose number changed. This is what "a false duplicate is remembered
+  // so the same pair is never raised again" IS.
+  const reversed = await refused(
+    "insert into duplicate_flags (company_id, other_id, matched_phone) values ($1::uuid, $2::uuid, $3::text)",
+    [flag.other_id, flag.company_id, flag.matched_phone],
+  );
+  expect(reversed).toContain("duplicate_flags_pair_idx");
+
+  // A pair of one is not a pair.
+  const itself = await refused(
+    "insert into duplicate_flags (company_id, other_id, matched_phone) values ($1::uuid, $1::uuid, '+966500000099')",
+    [flag.company_id],
+  );
+  expect(itself).toContain("duplicate_flags_pair_check");
+});
+
+test("a ruling and its survivor stand or fall together (0020, D158)", async () => {
+  const flag = await one<{ id: string }>(
+    "select id from duplicate_flags where status = 'open' limit 1",
+  );
+  const jerom = await userId("jerom@technopanel.com.sa");
+
+  // Answered with nobody having answered it.
+  const noRuler = await refused(
+    "update duplicate_flags set status = 'notDuplicate' where id = $1::uuid",
+    [flag.id],
+  );
+  expect(noRuler).toContain("duplicate_flags_ruled_check");
+
+  // A fold with no record continuing.
+  const noSurvivor = await refused(
+    "update duplicate_flags set status = 'kept', ruled_by = $2::uuid, ruled_at = now() where id = $1::uuid",
+    [flag.id, jerom],
+  );
+  expect(noSurvivor).toContain("duplicate_flags_survivor_check");
+
+  // A survivor that is neither of the two records.
+  const stranger = await one<{ id: string }>(
+    `select c.id from companies c
+      where c.id not in (select company_id from duplicate_flags where id = $1::uuid
+                          union select other_id from duplicate_flags where id = $1::uuid)
+      limit 1`,
+    [flag.id],
+  );
+  const wrongSurvivor = await refused(
+    `update duplicate_flags set status = 'kept', survivor_id = $3::uuid,
+            ruled_by = $2::uuid, ruled_at = now() where id = $1::uuid`,
+    [flag.id, jerom, stranger.id],
+  );
+  expect(wrongSurvivor).toContain("duplicate_flags_survivor_check");
+
+  // And a status nothing has a word for.
+  const unknown = await refused(
+    "update duplicate_flags set status = 'merged', ruled_by = $2::uuid, ruled_at = now() where id = $1::uuid",
+    [flag.id, jerom],
+  );
+  expect(unknown).toContain("duplicate_flags_status_check");
+});
+
+test("a tombstone is off the floor by construction, and is never its own survivor (0020, D158)", async () => {
+  const pair = await one<{ folded: string; survivor: string }>(
+    "select id as folded, merged_into_id as survivor from companies where merged_into_id is not null limit 1",
+  );
+
+  // Back on the floor while still pointing at another record: the state the
+  // admin's restore refuses in a sentence, refused here in the column.
+  const onFloor = await refused(
+    "update companies set archived_at = null where id = $1::uuid",
+    [pair.folded],
+  );
+  expect(onFloor).toContain("companies_merged_check");
+
+  const itself = await refused(
+    "update companies set merged_into_id = id where id = $1::uuid",
+    [pair.folded],
+  );
+  expect(itself).toContain("companies_merged_check");
 });
 
 test("the schema file and the catalogue agree, both ways (D106)", async () => {

@@ -56,6 +56,20 @@ const RULES: Rule[] = [
     allow: ["src/components/ui-ext/prose.tsx"],
     fix: "use <Prose text={…} />",
   },
+  {
+    // 5. A `<bdi>` that is the BLOCK is a block that changes direction
+    //    (P12-8, §5 #172). `<bdi>` carries `dir=auto`, so as a flex item, a
+    //    grid item or anything given `block`, `truncate`, `flex-1` or
+    //    `max-w-full` it becomes a box wider than its own text whose alignment
+    //    follows the NAME rather than the page — and an Arabic company name sat
+    //    flush right on an English card with every field under it flush left.
+    //    The block belongs to the page and only the run belongs to the writer:
+    //    put the layout on a wrapping element and leave the `<bdi>` bare.
+    name: "a bdi is a run inside a block, never the block",
+    pattern: /<bdi[^>]*className="[^"]*\b(truncate|line-clamp-\d|block|flex-1|grow|max-w-full|w-full)\b/,
+    allow: [],
+    fix: "wrap it: <span className={…}><bdi>{…}</bdi></span>",
+  },
 ];
 
 const root = resolve(import.meta.dirname, "..");
@@ -97,5 +111,6 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(
-  "one-look — the primary button, the surface edge, typed text and the phone line are each written once",
+  "one-look — the primary button, the surface edge, typed text, the phone line and the direction " +
+    "of a name are each written once",
 );

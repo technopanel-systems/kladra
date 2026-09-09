@@ -170,7 +170,9 @@ export function WaitingList({
                     {row.label}
                   </span>
                 ) : (
-                  <bdi className="max-w-full truncate font-medium">{row.companyName}</bdi>
+                  <span className="max-w-full truncate font-medium">
+                    <bdi>{row.companyName}</bdi>
+                  </span>
                 )}
                 <StateBadge tone={TONE_OF[row.reasonKey] ?? "wait"}>{t(row.reasonKey)}</StateBadge>
               </span>
@@ -178,15 +180,17 @@ export function WaitingList({
                   line above and printing him twice would say nothing twice. */}
               {row.label ? (
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-                  <bdi className="max-w-full truncate">{row.companyName}</bdi>
+                  <span className="max-w-full truncate">
+                    <bdi>{row.companyName}</bdi>
+                  </span>
                   {row.projectName ? (
                     <>
                       <span aria-hidden="true" className="text-faint">
                         ·
                       </span>
-                      <bdi className="max-w-full truncate text-muted-foreground">
-                        {row.projectName}
-                      </bdi>
+                      <span className="max-w-full truncate text-muted-foreground">
+                        <bdi>{row.projectName}</bdi>
+                      </span>
                     </>
                   ) : null}
                 </span>

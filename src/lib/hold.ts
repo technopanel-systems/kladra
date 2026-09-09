@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import type { db } from "@/db";
-import { dispatches, quotations } from "@/db/schema";
+import { dispatches, duplicateFlags, quotations, type DuplicateFlagStatus } from "@/db/schema";
 import type { DispatchStatus } from "@/lib/dispatches";
 import type { QuotationStatus } from "@/lib/quotations";
 
@@ -41,6 +41,31 @@ export async function holdDispatch(tx: Tx, id: string): Promise<DispatchStatus |
     .where(eq(dispatches.id, id))
     .for("update");
   return row?.status ?? null;
+}
+
+/**
+ * Holds a duplicate flag; the pair and its status now, or null (P12-8).
+ *
+ * The same reason as the two above, with more at stake: two managers on one
+ * pair would each read `open`, each fold, and the second would move a customer
+ * onto a record that had already stopped existing. The pair comes back with the
+ * status because the ruling needs both, and reading them apart is the window
+ * the lock exists to close.
+ */
+export async function holdDuplicateFlag(
+  tx: Tx,
+  id: string,
+): Promise<{ status: DuplicateFlagStatus; companyId: string; otherId: string } | null> {
+  const [row] = await tx
+    .select({
+      status: duplicateFlags.status,
+      companyId: duplicateFlags.companyId,
+      otherId: duplicateFlags.otherId,
+    })
+    .from(duplicateFlags)
+    .where(eq(duplicateFlags.id, id))
+    .for("update");
+  return row ?? null;
 }
 
 /**

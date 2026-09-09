@@ -139,7 +139,7 @@
       - [x] 6 The three-tab shell: today's work · metrics · the team
       - [x] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
             and what an unacknowledged one looks like after two days
-      - [ ] 8 Duplicate review: the customer number, the name rules in both languages, the
+      - [x] 8 Duplicate review: the customer number, the name rules in both languages, the
             manager's three answers
       - [ ] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
       - [ ] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
@@ -577,7 +577,22 @@ marketing's list and off the manager's stuck band, all three from one column; an
 the two working days everything else on those screens is late at. Marketing loses Add company and
 gains its own home. What the box found on top was a shape rather than a defect: adding a fourth
 kind to a list of three would have quietly grown two figures that count by `else` and by `!==`
-(§5 #170). Boxes 8, 9, 10, 11, 13 and 14 are next, in that order.
+(§5 #170). Box 8 brought FACET's S21–S23 forward as D158 with one split the founder's own
+sentences make: the NAME warns the rep on the form, where he is looking at the customer's card
+and can decide in a second, and the NUMBER tells the MANAGER, who is the person deciding whose
+customer this is. One telephone number is one company; a name lookalike is ordinary in this
+trade, and a queue of pairs that are not duplicates is a queue nobody reads. The name rules are
+one immutable SQL function and `companies.name_folded` is generated from it, so no insert can
+forget it. The three answers reuse what exists — `company_shares` for "and share it", the
+hand-over permission for who may rule, `moveContacts` for the arriving people — so the box added
+one table, two columns and one screen rather than a parallel system. What it found on top was
+worth more than the screen: a migration rewritten after it was applied is applied to nothing in
+silence (#171), a `<bdi>` given a width is a block that changes direction (#172), the rail's own
+keys were checked by nobody (#173), a new namespace is where a second word for an old thing gets
+in (#174), an ellipsis on a label deletes the meaning and leaves the number (#175), a CHECK
+refuses only on FALSE so a fold could be recorded with nothing continuing (#176), and the
+quotation and dispatch pickers asked one rule with a clause missing, withholding work their own
+actions would have taken (#177). Boxes 9, 10, 11, 13 and 14 are next, in that order.
 
 ## §4 Five days, walked (P9.1)
 
@@ -810,6 +825,16 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 5. He opens the customer. The drawer says who passed it and what they asked for, in amber, above the tabs. He presses Acknowledge: the toast says the customer is his, the row leaves his day, the notice leaves his bell, and marketing is told.
 6. The leads screen now shows that one as acknowledged with the day, and marketing's own two — the ones it kept — beside them.
 7. Abdulrahman opens the team screen. The lead nobody has answered in more than two working days is a group on his stuck list, under a line that says what "too long" means, with the name of the floor it is sitting on.
+
+**Two records, one customer (P12-8)** — `tests/duplicates.spec.ts`, `tests/schema.spec.ts`
+1. Saad opens a customer whose telephone number Faisal already holds. He types the name the way he heard it — no مصنع in front of it, no definite article, ة written as ه, a fatha on one letter — and the warning under the field names Faisal's company anyway. It is advice: Save is live and he presses it.
+2. The company is on his floor, whole, with his own contact row and the number on it. Nothing was withheld and nothing asked him a question (S15).
+3. He types the address of the duplicates screen and lands back on his day. An open flag is a question about whose customer this is; he cannot answer it and is told nothing about it.
+4. Abdulrahman signs in. The first band on his own screen is Duplicates, and its rows carry the customer and the two people holding a record each. The screen behind it draws the pair side by side: the same fields in the same order on both sides, the number that raised it above them, and how long it has waited.
+5. He presses **Keep this one** on Faisal's side. Saad's record becomes a tombstone pointing at Faisal's; Saad's own contact moves across and stays Saad's; Saad gains no access to the customer.
+6. On another pair he presses **Keep this one, and share it**: the same fold, and Saad is on the survivor's share list — he opens the drawer and reads everything under it, and the record is still Faisal's.
+7. On the third he presses **Not the same company**: both records stay exactly where they are, and the pair is never raised again — the index allows one row per pair for ever, whichever way round the detector offers it.
+8. Turki opens the record the manager folded weeks ago. It says what it became and who holds it. On the admin's archive screen it says the same thing and carries no Restore button, while the company archived for a reason keeps its own.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -2525,3 +2550,113 @@ actually needed.
   the pills and the one that caps the list — because each keeps its own copy of "what is waiting on
   him" and each copy had to learn the fourth kind. That is the copies doing their job; a spec that
   restates the app's arithmetic in the app's own shape is not a second opinion.
+- [x] 171 **A migration rewritten after it was applied is applied to nothing, in silence.**
+  Found in P12-8, by me, doing it: migration 0020 was written, applied, and then edited to add a
+  notification kind. `npm run db:migrate` printed success, the ledger still had as many rows as the
+  journal had entries — so the count guard from #162 saw nothing — and the database kept the old
+  statements while the file, the snapshot and `src/db/schema.ts` all described the new ones. It
+  surfaced a minute later as a CHECK constraint that refused a kind the code was about to write,
+  which is the lucky version; the unlucky one is a column that quietly is not there. **The cause is
+  the same as #162 and the guard could not see it**: the migrator applies an entry only when its
+  `when` is past the newest applied, and a rewritten file's `when` never moves, so it is skipped
+  exactly as a backdated one is. The count guard was written for the shape where the ledger is
+  SHORTER than the journal; here it is the same length and every row is about a file that has since
+  changed. `scripts/db-migrate.ts` now compares each ledger row's hash — the migrator's own sha256
+  of the file — against the file on disk, names the ones that have changed, and says what to do:
+  there is no production data, so the answer is to drop the public and drizzle schemas and run it
+  again. Proved by touching a migration and watching it fail. The rule underneath: **a guard that
+  checks a count is a guard against one shape of a failure, and the failure has as many shapes as
+  the thing it is guarding has states.** A ledger row is not "a migration happened", it is "this
+  file happened", and only the hash says which.
+- [x] 172 **A `<bdi>` that is the block is a block that changes direction.** Found by shot-looker
+  on the duplicate screen (P12-8): «شركة الواجهة الذهبية للتجارة» sat flush RIGHT at the top of an
+  English card while every field under it — the rep, the city, the dates, the four figures — started
+  flush left. The name looked like it belonged to the card beside it. **The cause is one line of
+  HTML no rule had noticed.** `<bdi>` carries `dir=auto`, which is what makes it right for an
+  inline run inside a sentence; but a `<bdi>` given `truncate`, `block`, `flex-1` or `max-w-full`,
+  or dropped straight into a `flex flex-col`, becomes a BOX wider than its own text, and that box
+  aligns by the name's direction rather than by the page's. rules/words.md already knew the shape —
+  "an Arabic line on a wide English card sat at the far right edge, detached from its company" — and
+  said it about `<Prose>` for a typed caption. Nobody had said it about a NAME. The oldest screen in
+  the app had it right by accident: `stuck-rows.tsx` puts the layout on a `<span>` and the `<bdi>`
+  inside it, which is the pattern. Fifteen sites in five files did not — the leads table shipped in
+  P12-7 with it, and the board, the searchable select and the waiting list have had it for phases.
+  All swept: **the block belongs to the page and only the run belongs to the writer.**
+  `scripts/one-look.mts` refuses a `<bdi>` whose own class list makes it a box, which is the check
+  that would have caught every one of them.
+- [x] 173 **The rail's own keys were checked by nobody.** Found while adding the duplicates entry
+  to the rail (P12-8): it carried a `shortKey` and no locale had a word for it, and every check in
+  the gate passed. `navFor` hands a component `item.labelKey` and `item.shortKey`, and the
+  component renders `t(item.labelKey)` — one call site, fifteen keys, so the both-locales check
+  (which compares en against ar) sees nothing, `unused-messages` sees nothing, and the literal-`t()`
+  scan sees nothing. A short label is drawn only on the phone's bottom bar and only for the roles
+  whose first four items include that entry, so the raw key would have surfaced on one width for
+  some people and never in a screenshot. The same shape as `common.marketing` the day the fifth
+  role landed (rules/words.md), one list further out. `scripts/check-messages.ts` reads nav.ts and
+  demands a word for every `labelKey` and `shortKey` in it. Proved by putting the key back and
+  watching it fail.
+- [x] 174 **A new namespace is where a second word for an old thing gets in.** Found by
+  arabic-reviewer across the twenty-two strings box 8 added (P12-8). The Arabic was correct
+  Arabic; what it was not was THIS app's Arabic. «السجل» is the app's word for a record, used
+  eleven times in the same file, and the keep dialog also used it bare for the activity log —
+  «تنتقل إليه … والسجل» inside a sentence that already says «هذا السجل», so the manager reads
+  "the record moves onto the record". «الوصول» was a fifth word for access on a screen whose
+  sibling already says «يتوقف اطّلاع هذا الشخص على الشركة». «الزوج» — the word I reached for to
+  say "pair" — is a husband before it is a pair to a Riyadh sales manager. And in English
+  "Last worked" sat over `lastActivityOn`, the same figure the drawer, the company list and the
+  duplicate warning all call "Last activity", with its own empty state one line below it.
+  **The cause is that a namespace is written in one sitting, by somebody holding the new screen
+  in mind and not the eleven old ones.** Every check in the gate passed: both locales had the
+  key, every key was rendered, no string addressed a gender. None of them can see that two
+  strings in two files mean one thing — that is what the glossary is for, and the glossary is
+  read by a person. So the rule is about the ORDER of the work, and it is now in the loop: the
+  words a new screen needs are searched for in the files that already have them BEFORE they are
+  written, and arabic-reviewer runs against the app's existing namespaces and not only the new
+  one. The English half of every fix landed too, because a word invented in one locale is
+  invented in both — SPEC §5 is the glossary for the app, not for the Arabic.
+- [x] 175 **An ellipsis on a LABEL deletes the meaning and leaves the number.** Found in the same
+  pass (P12-8), by measuring rather than by looking: the four counts under each side of a pair were
+  `grid-cols-4` inside two nested `p-3`, which is about 74px a column, and each caption was
+  `truncate` at 11px. In English the four words fit. In Arabic «جهات الاتصال» and «عروض الأسعار» —
+  `common.contacts` and `common.quotations`, the app's own words, correct on every screen that has
+  room for them — are wider than the column, so the manager comparing two records would have read
+  four figures and two captions. **The cause is that the card was designed at the width it was
+  drawn at**, and the count block is the one thing on it that is neither a name nor a sentence: a
+  name may truncate because the reader already knows it and the row is a door to the whole of it,
+  and a sentence wraps, but a caption is the only thing that says WHICH figure this is. Truncated,
+  it is not a shorter caption; it is no caption. Two columns until the card is wide enough for
+  four, and the caption wraps. `standing-strip.tsx` and `months-card.tsx` had each learned half of
+  this the same way — a date that truncates IS a different date — and the general form is now in
+  DESIGN §5: **truncation is for a name and never for a label.** The other sixty-seven `truncate`
+  sites were read against it; every one of them is a name, a city, a person or a typed value, and
+  the two nav rails truncate a destination whose short word is chosen for that bar (§5 #173).
+- [x] 176 **A CHECK refuses a row only when its expression is FALSE, and `null in (a, b)` is
+  NULL.** `duplicate_flags_survivor_check` read `case when status in ('kept','keptAndShared') then
+  survivor_id in (company_id, other_id) else survivor_id is null end`, which is the sentence the
+  column means and is not the sentence the database enforces: with `survivor_id` null the `in`
+  yields NULL, the CHECK is satisfied, and the database accepted a fold with nothing continuing —
+  the one state the whole screen exists to prevent. Nothing in the app writes it; every ruling goes
+  through `ruleDuplicateAction`, which refuses first. **That is exactly why the column has to.** A
+  constraint is the guard for the ways in that are not the app (rules/data.md), and the way in here
+  is next year's import or a hand-written UPDATE at 10pm. Found by `tests/schema.spec.ts` asking the
+  database directly, which is the rule that already exists — every CHECK gets a row it must refuse —
+  doing its job on the first run of a new table. `is not null and …` in front of it now, in the
+  schema, the migration and the snapshot, proved from `pg_get_constraintdef`. The general form:
+  **write a three-valued predicate as though NULL were an attacker**, and never trust a CHECK you
+  have not watched refuse something.
+- [x] 177 **Two screens asked one rule and one of them asked it with a clause missing.** The project
+  drawer offers Request quotation when `mayRaiseFor` says yes — the customer is his, the job is
+  his, or the job is one he was put on — and `requestQuotationAction` guards itself with the same
+  sentence. `projectOptions`, which fills the picker on the Quotations screen's own primary action,
+  asked only the last two. So a rep whose own company carried a project another rep created could
+  raise a quotation from the project's drawer and was not offered it on the screen built for
+  raising quotations. **The cause is that the SQL twin of a rule is written in a different file from
+  the rule**, and a clause added to one is not added to the other: `onProjectSql`'s own comment
+  records this defect the other way round — a control that refuses — and the missing-work direction
+  is the quieter half, because nothing errors and nobody knows what they were not shown.
+  `dispatchableQuotationOptions` had it too, and worse: it asked whether the READER raised the
+  paper, which is not one of `mayRaiseFor`'s three clauses at all. Both now say the three, and all
+  three pickers ask the other two halves of `mayWrite` — a role that holds no floor and an admin
+  looking through somebody's eyes write nothing (D42) — which none of them did. It surfaced when a
+  fold moved one rep's project onto another rep's company, which is the arrangement D147 made
+  ordinary and which the seed had never contained until P12-8.

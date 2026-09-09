@@ -10,6 +10,7 @@
   "emptyContacts": "No contacts yet — add the person you deal with.",
   "emptyProjects": "No projects yet — add the first project at this company.",
   "mainContact": "Main contact",
+  "contactKeptBy": "Kept by {name}",
   "noFollowUp": "No date set",
   "followUpSet": "Next follow-up {date}",
   "followUpCleared": "Follow-up date cleared",

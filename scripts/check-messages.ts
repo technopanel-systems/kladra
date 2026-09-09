@@ -148,6 +148,27 @@ for (const [namespace, members] of families) {
 }
 
 /**
+ * The rail's own keys, which no `t("a.b")` in any file spells out.
+ *
+ * `navFor` hands a component `item.labelKey` and `item.shortKey` and the
+ * component renders `t(item.labelKey)` — one call site, fifteen keys, invisible
+ * to every check above. A `shortKey` naming a word nobody wrote reaches the
+ * phone's bottom bar as MISSING_MESSAGE, and only on a phone, and only for the
+ * roles whose first four items include it. P12-8 added a rail entry with a
+ * shortKey and no word for it, and nothing said so.
+ */
+{
+  const navSource = readFileSync(
+    resolve(import.meta.dirname, "..", "src", "components", "shell", "nav.ts"),
+    "utf8",
+  );
+  for (const call of navSource.matchAll(/(labelKey|shortKey):\s*"([^"]+)"/g)) {
+    const key = call[2];
+    if (!en.has(key)) problems.push(`nav.ts names ${key}, which no locale has`);
+  }
+}
+
+/**
  * A key a SPEC names, which nothing else does.
  *
  * `day.quietMeans` moved into `common` and the specs kept asking for it by its

@@ -697,12 +697,26 @@ export async function restoreAction(
       if (kind === "company") {
         // The reason lives as long as the state it explains (D87, and the note
         // on return_reason in the schema): back on the floor, it is gone.
+        //
+        // A tombstone is refused (P12-8). It is archived, so it is on this
+        // screen, and it is the one archived company that cannot come back: its
+        // people, its jobs and its papers are on the record that continues, and
+        // restoring it would put an empty name on a floor next to the customer
+        // it IS. `companies_merged_check` would refuse the row anyway; refusing
+        // it here is what turns a constraint violation into a sentence.
         const rows = await tx
           .update(companies)
           .set({ archivedAt: null, archiveReason: null })
-          .where(eq(companies.id, id))
+          .where(and(eq(companies.id, id), isNull(companies.mergedIntoId)))
           .returning({ id: companies.id });
-        if (rows.length === 0) return "gone" as const;
+        if (rows.length === 0) {
+          const [exists] = await tx
+            .select({ mergedIntoId: companies.mergedIntoId })
+            .from(companies)
+            .where(eq(companies.id, id))
+            .limit(1);
+          return exists?.mergedIntoId ? ("merged" as const) : ("gone" as const);
+        }
       } else if (kind === "contact") {
         const [child] = await tx
           .select({ companyArchivedAt: companies.archivedAt })
@@ -729,6 +743,7 @@ export async function restoreAction(
       return "ok" as const;
     });
     if (outcome === "gone") return { ok: false, error: ta("notFound") };
+    if (outcome === "merged") return { ok: false, error: ta("restoreMerged") };
     if (outcome === "companyArchived") {
       // One sentence per kind: Arabic gives the row a gender, English does not.
       return {

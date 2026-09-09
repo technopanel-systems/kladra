@@ -480,9 +480,18 @@ test("a repeat request opens on the last quotation, and a second line on the fir
 
   const faisal = await userId("faisal@technopanel.com.sa");
 
-  // The newest quotation on any of Faisal's companies that also has a project to
-  // raise the next one from — so it IS what the offer will name, computed the
-  // way the app computes it rather than hard-coded to a seeded row.
+  /*
+   * The newest quotation on any of Faisal's companies that also has a project of
+   * HIS to raise the next one from — so it IS what the offer will name, computed
+   * the way the app computes it rather than hard-coded to a seeded row.
+   *
+   * `p.rep_id`, not only `c.rep_id`: a company of his can carry another rep's
+   * job (D147, and a fold puts one there), and this walk is about his own repeat
+   * request. And the line count is a scalar subquery rather than a window over
+   * the join — `count(*) over (partition by q.id)` counted projects times items,
+   * so the moment the company had a second project it asked the form for twice
+   * as many lines as the quotation has.
+   */
   const previous = await one<{
     projectId: string;
     projectName: string;
@@ -495,17 +504,19 @@ test("a repeat request opens on the last quotation, and a second line on the fir
             p.name as "projectName",
             q.number,
             q.revision,
-            first_value(i.colour_code) over (partition by q.id order by i.position) as "colourCode",
-            count(*) over (partition by q.id)::int as lines
+            (select i.colour_code from quotation_items i
+              where i.quotation_id = q.id order by i.position limit 1) as "colourCode",
+            (select count(*) from quotation_items i where i.quotation_id = q.id)::int as lines
        from projects p
        join companies c on c.id = p.company_id
        join quotations q on q.company_id = c.id
-       join quotation_items i on i.quotation_id = q.id
       where c.rep_id = $1::uuid
+        and p.rep_id = $1::uuid
         and c.archived_at is null
         and p.archived_at is null
         and p.lost_at is null
-      order by q.created_at desc, i.position
+        and exists (select 1 from quotation_items i where i.quotation_id = q.id)
+      order by q.created_at desc, p.created_at, p.id
       limit 1`,
     [faisal],
   );

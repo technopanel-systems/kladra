@@ -18,6 +18,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
 import { assertContactMine, assertMayKeepContacts } from "@/lib/activities";
+import { flagDuplicates } from "@/lib/duplicates";
 import { sharersOfCompany } from "@/lib/visibility";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
@@ -145,6 +146,12 @@ export async function createContactAction(
           })
           .returning({ id: contacts.id });
 
+        // A number is what says two records are one customer (S14), so the
+        // detector runs when a company is registered AND whenever a number
+        // arrives on it or changes (P12-8). Nothing here blocks the rep and
+        // nothing asks him anything; the manager is told (D158).
+        await flagDuplicates(tx, input.companyId);
+
         await tx.insert(auditLog).values({
           userId: actor.id,
           action: "contact.create",
@@ -217,6 +224,13 @@ export async function updateContactAction(
             notes: input.notes ?? null,
           })
           .where(eq(contacts.id, input.contactId));
+
+        // The other half of "checked at registration and again whenever a
+        // phone changes" (P12-8). Run unconditionally rather than only when the
+        // number differs: a pair the detector would raise is a fact about the
+        // company as it stands, and comparing the old value to decide whether
+        // to ask is a second definition of "the number changed".
+        await flagDuplicates(tx, row.companyId);
 
         await tx.insert(auditLog).values({
           userId: actor.id,

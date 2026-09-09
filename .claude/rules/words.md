@@ -114,6 +114,29 @@ page's alignment so the line starts where its row starts, and only the words,
 in a `<bdi>`, take the writer's direction. Aligned its own way, an Arabic line
 on a wide English card sat at the far right edge, detached from its company.
 
+## A `<bdi>` is a RUN inside a block, never the block itself
+`<bdi>` carries `dir=auto`. Inside a sentence that is exactly right — the run
+settles its own way and the paragraph keeps the page's. Give the same element
+`truncate`, `block`, `flex-1` or `max-w-full`, or drop it straight into a
+`flex flex-col`, and it stops being a run: it is a BOX wider than its own text,
+and the box aligns by the NAME rather than by the page. An Arabic company name
+then sits flush right at the top of an English card with every field under it
+flush left, which reads as a name belonging to the card beside it (P12-8, §5
+#172).
+
+So the layout goes on a wrapping element and the `<bdi>` stays bare:
+
+```tsx
+<span className="min-w-0 flex-1 truncate font-medium">
+  <bdi>{company.name}</bdi>
+</span>
+```
+
+`scripts/one-look.mts` refuses a `<bdi>` whose own class list makes it a box.
+The same sentence, one level up, is why a typed paragraph is `<Prose>` and a
+typed caption is `<Prose line>`: **the block belongs to the page and only the
+run belongs to the writer.**
+
 ## Two figures with almost the same name are one figure with a bug
 "Follow-ups overdue" (more than three days past) sat two inches above "Overdue
 follow-ups" (any day past) on the manager's own screen, and both were correct.

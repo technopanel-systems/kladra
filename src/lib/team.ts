@@ -26,6 +26,7 @@ import { companies, companyTargets, quotations, targets, users } from "@/db/sche
 import { listNonWorkingDays } from "@/lib/calendar";
 import { firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
+import { countOpenDuplicates, listOpenDuplicates } from "@/lib/duplicates";
 import { carriesMetres } from "@/lib/floor";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
@@ -35,7 +36,7 @@ import { personName, personNameOf } from "@/lib/people";
 import { ROLES } from "@/lib/types";
 import { openQuotationsForRep, pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { STUCK_SHOWN, topOf, type Group } from "@/lib/list-size";
-import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
+import { LATE_AFTER_WORKING_DAYS, waitedSince, type Waited } from "@/lib/waiting";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
 import type { Role } from "@/lib/types";
 
@@ -462,11 +463,36 @@ export type Stuck = {
    * touched it. Two clocks for one idea of "too long" is what D141 was.
    */
   leads: StuckGroup<LeadWithWait>;
+  /**
+   * Two records that hold one telephone number, waiting on HIM (P12-8).
+   *
+   * First on the screen, and the only group here that is his own work rather
+   * than somebody else's that he is watching: nobody but the manager can answer
+   * it (§3, `mayHandOver`), and until he does, two reps are ringing one customer
+   * and neither of them knows.
+   *
+   * Not filtered by age, unlike a request or a follow-up. There is no such thing
+   * as a duplicate flag that is young enough to leave alone — the question was
+   * answerable the second it was raised, and every day it waits is a day of
+   * somebody's work going onto the wrong record.
+   */
+  duplicates: StuckGroup<StuckDuplicate>;
+};
+
+/** A pair on the manager's stuck list; the screen behind it is `/duplicates`. */
+export type StuckDuplicate = {
+  id: string;
+  /** The record that arrived, which is the one he has probably not seen. */
+  name: string;
+  /** Both holders, named in one sentence rather than joined into one string. */
+  older: string;
+  newer: string;
+  waited: Waited;
 };
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   const locale = await getLocale();
-  const [waiting, followUps, never, quiet, away, leads] = await Promise.all([
+  const [waiting, followUps, never, quiet, away, leads, pairs] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -578,7 +604,24 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     // days are `@/lib/workdays`'s business and a second copy of that arithmetic
     // is how a rep back from Eid gets told he is late (D141).
     unacknowledgedLeads(),
+
+    // The manager's own queue, read here so that his home screen names it
+    // (P12-8). Capped at the size the band draws, because this read exists to
+    // fill that band and the whole list is one click away on `/duplicates`.
+    listOpenDuplicates(STUCK_SHOWN),
   ]);
+
+  /*
+   * How many there are in all, asked only when the list came back full (D80).
+   *
+   * NOT `rows.length`, which is the cap. Every other group on this screen hands
+   * `top()` a whole list and lets it carry the length; this one is capped in
+   * SQL, so `top()` would report the cap as the total and the band's "and N
+   * more" would be silently zero for ever — a figure that is the length of a
+   * capped list (D144).
+   */
+  const openPairs =
+    pairs.length === STUCK_SHOWN ? await countOpenDuplicates() : pairs.length;
 
   // What is due on a floor nobody is standing on. Asked here rather than in the
   // read above because it needs `away`, and asked BEFORE the holidays because
@@ -599,6 +642,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     waiting[0]?.since as Day | undefined,
     followUps.rows[0]?.day,
     leads[0]?.givenOn,
+    pairs[0]?.raisedOn,
     ...uncovered.map((row) => row.day),
   ].reduce<Day>((soonest, candidate) => (candidate && candidate < soonest ? candidate : soonest), firstOfMonth(day));
   const nonWorking = await listNonWorkingDays(earliest, day);
@@ -678,5 +722,15 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
       })),
     ),
     leads: top(lateLeads(ageLeads(leads, day, nonWorking))),
+    duplicates: {
+      rows: pairs.map((pair) => ({
+        id: pair.id,
+        name: pair.newer.name,
+        older: pair.older.repName,
+        newer: pair.newer.repName,
+        waited: waitedSince(pair.raisedOn, day, nonWorking),
+      })),
+      total: openPairs,
+    },
   };
 }

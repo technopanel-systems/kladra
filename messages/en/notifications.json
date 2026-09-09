@@ -13,5 +13,7 @@
   "leadAcknowledged": "{rep} acknowledged {company}.",
   "unreadMark": "Unread",
   "companyShared": "{rep} shared {label} with you.",
-  "projectShared": "{rep} put you on {label}."
+  "projectShared": "{rep} put you on {label}.",
+  "companyFolded": "{company} was folded into {rep}’s record for the same customer.",
+  "companyAbsorbed": "{rep} folded a second record for {company} into yours."
 }

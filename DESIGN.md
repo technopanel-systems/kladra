@@ -753,6 +753,38 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   is the part that must not break: a set of counts that no longer sums to the total it splits is
   the figure-that-lies (rules/data.md), so a new kind gets a pill even when it has nowhere to go.
 
+- **A decision between two records draws both of them the same.** Phase 12 (D158). The duplicate
+  screen asks the manager which of two records continues, and the answer is a comparison: same
+  fields, same order, same width, same four figures under each, on both sides. The moment one side
+  is described better than the other the screen has answered for him — and the side the detector
+  happened to write into `company_id` is not the side that deserves to win. The two are ordered by
+  age, which is a fact about them rather than about the row that stored them, and the answer is
+  pressed ON the record it is about, so choosing the survivor and saying what happens to the other
+  are one act rather than a radio button and a submit.
+
+- **An irreversible act names what it will do to the record that loses.** Phase 12 (D158). Every
+  confirmation in this app says what happens (D24); the two that fold say it about the OTHER
+  record, by name, and say who ends up with access — because that is the half the manager cannot
+  see from where he is standing and the half he cannot undo. The third answer says the opposite:
+  both records stay exactly as they are, and the pair is never raised again.
+
+- **A figure's caption wraps; it never truncates.** Phase 12 (D158). A row of small figures under
+  a card is read as "how much work is on this record", and the caption is the only thing that says
+  which figure is which — so an ellipsis there deletes the meaning and leaves the number. Four
+  counts across half a card is under 75px a column, and «جهات الاتصال» and «عروض الأسعار» — the
+  app's own words, correct on every other screen — are wider than that. The columns drop to two
+  until the card is wide enough for four, and the caption is allowed a second line. The general
+  form: **truncation is for a name, which the reader already knows, and never for a label, which
+  is what tells them what they are looking at.**
+
+- **A row on a shared record says whose it is, and only where more than one person has one.**
+  Phase 12 (D147, D158). Two reps on one customer each keep their own contacts, and a fold puts
+  both lists on one record — so the same buyer, with the same number, is legitimately two rows in
+  the Contacts tab. Without a name on them the drawer reads as a screen showing one person twice,
+  which is the reading that makes somebody ring the wrong rep to complain. The name appears only
+  when the rows actually belong to more than one person: on a company one rep keeps people on,
+  a caption that never varies is a word to read past on every row.
+
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,

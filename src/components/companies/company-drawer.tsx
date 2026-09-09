@@ -168,6 +168,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   const keepsContacts = mayKeepContacts(user, company.repId, company.shared);
 
   const contacts: readonly CompanyContact[] = company.contacts;
+  // More than one person keeps people on this customer (D147). Asked of the
+  // rows themselves rather than of the share list: a company can be shared with
+  // somebody who has added nobody, and what the reader needs to be told apart
+  // is the rows in front of him.
+  const manyKeepers = new Set(contacts.map((row) => row.repId)).size > 1;
   const projects: readonly CompanyProject[] = company.projects;
   const logContacts: LogContact[] = contacts.map((row) => ({ id: row.id, name: row.name }));
   const quotations = await listQuotationsForCompany(user, company.id);
@@ -261,6 +266,45 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
       />
 
       {/*
+        What this record turned out to be (P12-8).
+
+        First, above everything else about it, because it changes what the rest
+        of the drawer means: these contacts and this history belong to a record
+        that is no longer the record. "Archived" alone would have said somebody
+        gave this customer up, which is not what happened.
+
+        The survivor's name is a door only for a reader who may open it, which
+        is D121's rule and not a new one; for everybody else the sentence names
+        the person holding it, who is the one to ring.
+      */}
+      {company.folded ? (
+        /* A fact the drawer opens holding, not an announcement: no `role="status"`,
+           which is a live region and would have this read out again over whatever
+           the reader was on. The slot is how a walk names it (P12-8). */
+        <div
+          data-slot="folded-band"
+          className="mx-4 mt-3 flex flex-col gap-1 rounded-lg bg-surface-2 px-3 py-2.5 text-xs"
+        >
+          <span className="font-medium">
+            {t("duplicates.foldedInto", {
+              name: company.folded.intoName,
+              rep: company.folded.intoRepName,
+            })}
+          </span>
+          {company.folded.mine ? (
+            <Link
+              href={`/companies?open=${company.folded.intoId}`}
+              scroll={false}
+              data-slot="open-survivor"
+              className="w-fit underline underline-offset-2 hover:text-foreground"
+            >
+              {t("forms.openMatch", { name: company.folded.intoName })}
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/*
         Where this customer came from, when marketing filed him as a lead
         (SPEC §3, P12-7). Above the tabs, because it is the first thing the
         person who has just been handed him needs to read, and it stops being
@@ -343,7 +387,22 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                   return (
                   <li key={row.id} className="card-face flex flex-col gap-1.5 p-3">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{row.name}</span>
+                      <span className="font-medium">
+                        <bdi>{row.name}</bdi>
+                      </span>
+                      {/* Whose person this is, and only where the answer is not
+                          obvious. Two reps on one customer each keep their own
+                          contacts (§3, D147) and a fold puts both lists on one
+                          record — so the same buyer, with the same number, is
+                          two rows here, and without a name on them the drawer
+                          reads as a screen showing one person twice. On a
+                          company one person keeps people on, saying it on every
+                          row would be a word that never varies. */}
+                      {manyKeepers ? (
+                        <span className="text-xs text-muted-foreground">
+                          {t("drawer.contactKeptBy", { name: row.repName })}
+                        </span>
+                      ) : null}
                       {row.isMain ? (
                         <Badge variant="secondary" className="gap-1">
                           <Star aria-hidden="true" />

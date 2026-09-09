@@ -108,9 +108,13 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
                       </span>
                       <Sqm value={card.sqm} className="text-xs" />
                     </span>
-                    <bdi className="truncate text-sm">{card.title}</bdi>
+                    <span className="truncate text-sm">
+                      <bdi>{card.title}</bdi>
+                    </span>
                     {card.subtitle ? (
-                      <bdi className="truncate text-xs text-muted-foreground">{card.subtitle}</bdi>
+                      <span className="truncate text-xs text-muted-foreground">
+                        <bdi>{card.subtitle}</bdi>
+                      </span>
                     ) : null}
                     {card.day ? (
                       <DayText

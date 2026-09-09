@@ -41,8 +41,27 @@ type ContactedCompany = {
   phone: string;
 };
 
+/*
+ * Two conditions in both helpers that are about D147 rather than about calling.
+ *
+ * `ct2.rep_id = c.rep_id` — a company two reps work has a main contact EACH
+ * (`contacts_one_main_idx` is per rep), and the number the day card and the
+ * customer row show is the reader's own. Faisal is the rep here, so his is the
+ * one the screen will be carrying, and picking whichever row sorted first asked
+ * the screen about somebody else's person.
+ *
+ * And the name must be its own on that record: two reps may hold the same buyer
+ * and that is not a duplicate (§3), so a drawer can legitimately carry his name
+ * twice — which is a real row for a person to read and an ambiguous locator for
+ * a walk. This picks a contact there is only one of.
+ */
+
 /** Faisal's live companies, due today or overdue, with a main contact carrying a phone. */
-async function dueWithContact(repId: string, today: string): Promise<ContactedCompany[]> {
+async function dueWithContact(
+  repId: string,
+  today: string,
+  minContacts = 1,
+): Promise<ContactedCompany[]> {
   return query<ContactedCompany>(
     `select c.id, c.name, c.next_follow_up::text as next_follow_up,
             ct.name as contact_name, ct.phone_normalized as phone
@@ -50,6 +69,7 @@ async function dueWithContact(repId: string, today: string): Promise<ContactedCo
        join contacts ct on ct.id = (
          select ct2.id from contacts ct2
           where ct2.company_id = c.id and ct2.archived_at is null
+            and ct2.rep_id = c.rep_id
           order by ct2.is_main desc, ct2.created_at asc
           limit 1
        )
@@ -58,14 +78,23 @@ async function dueWithContact(repId: string, today: string): Promise<ContactedCo
         and c.next_follow_up is not null
         and c.next_follow_up <= $2::date
         and ct.phone_normalized is not null
+        and not exists (
+          select 1 from contacts x
+           where x.company_id = c.id and x.archived_at is null
+             and x.id <> ct.id and x.name = ct.name
+        )
+        and (
+          select count(*) from contacts n
+           where n.company_id = c.id and n.archived_at is null
+        ) >= $3::int
       order by c.next_follow_up asc
       limit 1`,
-    [repId, today],
+    [repId, today, minContacts],
   );
 }
 
 /** Any of Faisal's live companies that has a main contact with a phone, due or not. */
-async function anyWithContact(repId: string): Promise<ContactedCompany> {
+async function anyWithContact(repId: string, minContacts = 1): Promise<ContactedCompany> {
   return one<ContactedCompany>(
     `select c.id, c.name, c.next_follow_up::text as next_follow_up,
             ct.name as contact_name, ct.phone_normalized as phone
@@ -73,15 +102,25 @@ async function anyWithContact(repId: string): Promise<ContactedCompany> {
        join contacts ct on ct.id = (
          select ct2.id from contacts ct2
           where ct2.company_id = c.id and ct2.archived_at is null
+            and ct2.rep_id = c.rep_id
           order by ct2.is_main desc, ct2.created_at asc
           limit 1
        )
       where c.rep_id = $1::uuid
         and c.archived_at is null
         and ct.phone_normalized is not null
+        and not exists (
+          select 1 from contacts x
+           where x.company_id = c.id and x.archived_at is null
+             and x.id <> ct.id and x.name = ct.name
+        )
+        and (
+          select count(*) from contacts n
+           where n.company_id = c.id and n.archived_at is null
+        ) >= $2::int
       order by c.name
       limit 1`,
-    [repId],
+    [repId, minContacts],
   );
 }
 
@@ -319,9 +358,13 @@ test("the log from a call card starts on the contact the card names", async ({
   const faisal = await userId("faisal@technopanel.com.sa");
   const today = todayRiyadh();
 
-  const found = await dueWithContact(faisal, today);
+  // Two people at least: the second step asserts the header opens on NOBODY,
+  // and a company with exactly one contact opens on that one by design (D115).
+  // A fixture that did not say so proved the opposite of what it claims the day
+  // the row it happened to pick had one person on it.
+  const found = await dueWithContact(faisal, today, 2);
   let wroteFollowUp = false;
-  const company = found[0] ?? (await anyWithContact(faisal));
+  const company = found[0] ?? (await anyWithContact(faisal, 2));
   if (!found[0]) {
     wroteFollowUp = true;
     await query(`update companies set next_follow_up = $2::date where id = $1::uuid`, [

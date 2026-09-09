@@ -70,12 +70,25 @@ export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
             {row.reason ? (
               <Prose line text={row.reason} className="text-xs text-muted-foreground" />
             ) : null}
+            {/* A tombstone says what it became instead of why it left: nobody
+                gave this customer up, and there is no reason column that could
+                say so in the reader's language anyway (P12-8, D13). */}
+            {row.mergedIntoName ? (
+              <span className="text-xs text-muted-foreground">
+                {t("duplicates.foldedIntoShort", { name: row.mergedIntoName })}
+              </span>
+            ) : null}
           </div>
           <span className="flex flex-col text-xs text-muted-foreground">
             {t("admin.archivedOn")}
             <DayText day={row.archivedOn} locale={locale} />
           </span>
-          {row.companyArchived ? (
+          {/* No work a screen offers that the action would refuse (DESIGN §5):
+              a tombstone cannot be restored, so it carries the sentence and no
+              button, exactly as a child under an archived company does. */}
+          {row.mergedIntoName ? (
+            <span className="text-xs text-muted-foreground">{t("admin.restoreMerged")}</span>
+          ) : row.companyArchived ? (
             <span className="text-xs text-muted-foreground">
               {row.kind === "contact"
                 ? t("admin.restoreCompanyFirstContact")

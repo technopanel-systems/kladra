@@ -56,6 +56,7 @@ import {
   COMPANY_TARGET_LAST_MONTH,
   COMPANY_TARGET_THIS_MONTH,
   DISPATCHES,
+  FOLD,
   FOLLOW_UPS,
   HISTORY,
   HISTORY_ITEM,
@@ -92,6 +93,7 @@ if (!process.env.DATABASE_URL) {
 // rather than on import now, but this file's first use is a few lines below and
 // a static import would hoist above the loadEnv() call regardless.
 const { db, pool } = await import("../src/db/index");
+const { flagDuplicates, foldCompany } = await import("../src/lib/duplicates");
 const {
   activities,
   auditLog,
@@ -447,10 +449,15 @@ async function seedCompanies(
           // Spread the book back over about five months so "recently added" and
           // "never contacted for 14 days" mean something on the rep's home.
           // A lead's age is the point of it (P12-7), so it sets its own day
-          // rather than taking the spread the rest of the book gets.
-          const created = c.lead
-            ? instant(addDays(TODAY, -c.lead.daysAgo), 9, 15)
-            : instant(addDays(TODAY, -(20 + i * 6)), 10, (i * 7) % 60);
+          // rather than taking the spread the rest of the book gets — and so is
+          // a duplicate's, because a flag is raised the day the second record
+          // arrives (P12-8).
+          const created =
+            c.addedDaysAgo !== undefined
+              ? instant(addDays(TODAY, -c.addedDaysAgo), 9, 40)
+              : c.lead
+                ? instant(addDays(TODAY, -c.lead.daysAgo), 9, 15)
+                : instant(addDays(TODAY, -(20 + i * 6)), 10, (i * 7) % 60);
           const code = c.country ?? "SA";
           return {
             name: c.name,
@@ -547,6 +554,62 @@ async function seedCompanies(
   });
 
   return { companyIds, contactIds };
+}
+
+// ============================================================================
+// Phase 3b — duplicates: what the detector raises, and one answer already given
+// ============================================================================
+
+/**
+ * Every flag the app itself would have raised, and the pair the manager
+ * answered (P12-8).
+ *
+ * `flagDuplicates` is the app's own detector, run here rather than copied: a
+ * demo whose flags were written by hand would look right on the day a broken
+ * detector shipped. `foldCompany` is the app's own fold, for the same reason.
+ *
+ * The one thing the seed does that the app does not is DATE them. A flag is
+ * raised the instant the second record is written, so its day is the newer of
+ * the two records' — and without that every pair on the screen would be raised
+ * today and the amber-then-red badge on it would only ever be amber.
+ */
+async function seedDuplicates(
+  companyIds: Map<string, string>,
+  userIds: Map<string, string>,
+): Promise<{ open: number }> {
+  for (const id of companyIds.values()) await flagDuplicates(db, id);
+
+  await db.execute(sql`
+    update duplicate_flags f
+       set created_at = greatest(a.created_at, b.created_at),
+           updated_at = greatest(a.created_at, b.created_at)
+      from companies a, companies b
+     where a.id = f.company_id and b.id = f.other_id
+  `);
+
+  await db.transaction(async (tx) => {
+    await foldCompany(tx, {
+      survivorId: must(companyIds, FOLD.into, "company"),
+      foldedId: must(companyIds, FOLD.folded, "company"),
+      share: FOLD.ruling === "keptAndShared",
+      actorId: must(userIds, FOLD.by, "user"),
+    });
+    await tx.execute(sql`
+      update duplicate_flags
+         set status = ${FOLD.ruling},
+             survivor_id = ${must(companyIds, FOLD.into, "company")}::uuid,
+             ruled_by = ${must(userIds, FOLD.by, "user")}::uuid,
+             ruled_at = now()
+       where ${must(companyIds, FOLD.folded, "company")}::uuid in (company_id, other_id)
+    `);
+  });
+
+  const [row] = (
+    await db.execute<{ open: number }>(
+      sql`select count(*)::int as open from duplicate_flags where status = 'open'`,
+    )
+  ).rows ?? [];
+  return { open: Number(row?.open ?? 0) };
 }
 
 // ============================================================================
@@ -1580,6 +1643,10 @@ try {
 
   const activityCount = await seedActivities(companyIds, projectIds, contactIds, userIds);
   console.log(`  activities       ${activityCount}`);
+
+  // After the projects and the log, so the fold has something to move (P12-8).
+  const { open } = await seedDuplicates(companyIds, userIds);
+  console.log(`  duplicates       ${open} waiting on the manager, 1 already folded`);
 
   await seedFollowUps(companyIds, projectIds);
   console.log(`  follow-ups       ${FOLLOW_UPS.length}`);

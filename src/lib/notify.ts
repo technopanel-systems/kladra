@@ -82,6 +82,10 @@ const CLEARED_BY: Record<NotificationKind, "work" | "reading"> = {
   leadAcknowledged: "reading",
   companyShared: "reading",
   projectShared: "reading",
+  // The manager has already decided and the work has already moved. There is
+  // nothing for either of them to do with it but find out (P12-8).
+  companyFolded: "reading",
+  companyAbsorbed: "reading",
 };
 
 /** The kinds that die when they are read. Derived, never listed twice. */

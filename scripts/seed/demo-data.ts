@@ -190,6 +190,17 @@ export type CompanySeed = {
    * tell — which is what `createLeadAction` writes and what these rows copy.
    */
   lead?: { from: RepKey; query: string; daysAgo: number; acknowledgedDaysAgo?: number };
+  /**
+   * Opened this many days ago, instead of taking the spread the book gets
+   * (P12-8).
+   *
+   * Only the duplicates use it, and they need it: a flag is raised the moment
+   * the second record appears, so the age of the pair IS the age of the newer
+   * company. The spread starts twenty days back, which would make every pair on
+   * the screen late and leave the amber half of that badge a branch nobody has
+   * ever seen (rules/data.md).
+   */
+  addedDaysAgo?: number;
 };
 
 export const COMPANIES: CompanySeed[] = [
@@ -338,6 +349,11 @@ export const COMPANIES: CompanySeed[] = [
   // band that had existed on his screen since P8 with nothing in it. Marketing
   // and Saad each had one, so the band was exercised somewhere and invisible
   // where anybody looks: a rep's day is demonstrated on Faisal (D66).
+  // Faisal's half of the pair that is NOT a duplicate (P12-8). It holds the
+  // same number as Rawan's «مؤسسة صدف الشرق للمقاولات» and is a different firm
+  // with a different owner at it — one office, two trades, which is exactly
+  // what the manager's "not the same company" answer exists for. Both records
+  // are old, so this pair is the late one on his screen.
   {
     key: "f13",
     name: "شركة الواجهة الذهبية للتجارة",
@@ -610,11 +626,56 @@ export const COMPANIES: CompanySeed[] = [
     category: "Contractor",
     source: "Direct contact",
     city: "Riyadh",
+    // Rawan's half of the pair that is NOT a duplicate (P12-8). Its day is set
+    // rather than spread, because the flag is dated at whichever of the two
+    // records arrived second: on the spread it landed three months back, and a
+    // pair that has waited a working quarter reads as a broken screen rather
+    // than as a backlog.
+    addedDaysAgo: 12,
     notes: "اتصلوا على المكتب مباشرة، واجهة معرض واحد",
     contacts: [
       { name: "عبدالله الشمري", phone: "0556612094", position: "Owner", email: "a.alshammari@example.sa" },
     ],
   },
+  /*
+   * Two records of one customer, twice over (P12-8).
+   *
+   * `d1` is the pair the manager has not answered yet and it arrived TODAY, so
+   * the flag on his screen is amber rather than red — the other open pair is
+   * weeks old and red, and a badge with only one of its two colours ever drawn
+   * is a colour nobody has seen work (rules/data.md). Turki took the call and
+   * typed the customer's name the way he heard it; Faisal has had the same firm
+   * since the spring, spelled with مؤسسة in front of it. One number between
+   * them, two different spellings, and neither man knows about the other.
+   *
+   * `d2` is the pair that has been answered: the manager kept Faisal's record
+   * and shared it, so this one is a tombstone. It carries a project and a log
+   * entry, both of which move to the record that continues and stay Turki's —
+   * which is what makes the fold worth looking at on a screen rather than only
+   * in a test.
+   */
+  {
+    key: "d1",
+    name: "إبداع للدعاية والإعلان",
+    rep: "turki",
+    category: "Advertising",
+    source: "Online",
+    city: "Riyadh",
+    addedDaysAgo: 0,
+    notes: "اتصل يسأل عن لوحات واجهة، ما عندي تفاصيل أكثر",
+    contacts: [{ name: "فهد العنزي", phone: "0554478812", position: "Owner" }],
+  },
+  {
+    key: "d2",
+    name: "انماء للمقاولات",
+    rep: "turki",
+    category: "Contractor",
+    source: "WhatsApp",
+    city: "Riyadh",
+    addedDaysAgo: 12,
+    contacts: [{ name: "ماجد الغامدي", phone: "0503391182", position: "Project manager" }],
+  },
+
   // ---- Off the floor (1) -------------------------------------------------------
   // Saad's, archived six weeks ago with the reason he gave. It is on the admin's
   // archive screen and nowhere else; its contact stays as it was, the way the
@@ -737,6 +798,11 @@ export const PROJECTS: ProjectSeed[] = [
   },
   // Rawan's own, and the only job on her floor (SPEC §3).
   { key: "p18", company: "r1", name: "واجهة معرض السيارات - طريق الخرج", expectedSqm: "520.00" },
+  // Turki's job on the record that turns out to be Faisal's customer (P12-8).
+  // It moves onto the record that continues and stays TURKI's, which is the
+  // whole of what a fold does and does not do: an item belongs to whoever made
+  // it (D147).
+  { key: "pd2", company: "d2", name: "واجهة برج مكتبي - طريق الملك عبدالعزيز", expectedSqm: "260.00" },
 ];
 
 // ---- the log ------------------------------------------------------------------
@@ -841,7 +907,29 @@ export const ACTIVITIES: ActivitySeed[] = [
   { company: "t4", contact: 0, channel: "whatsapp", back: 8, text: "عميل شخصي، يبي يكسي واجهة استراحة" },
 
   { company: "t5", contact: 0, channel: "other", back: 6, onWeekend: true, text: "Enquiry from the Cairo office, asked about export pricing" },
+
+  // What Turki wrote before anybody knew this was Faisal's customer (P12-8).
+  // The fold moves it onto the record that continues, with his name still on
+  // it: an entry records who did it, and rewriting that would be rewriting the
+  // report (S27).
+  { company: "d2", contact: 0, channel: "call", back: 9, text: "اتصل يسأل عن كلادينج لبرج مكتبي، طلب زيارة" },
 ];
+
+/**
+ * The pair the manager has already answered (P12-8).
+ *
+ * He kept Faisal's record — the older one, with the history and the shared
+ * floor on it — and shared it, so Turki keeps the customer he found without
+ * taking him. The seed folds it through the app's own `foldCompany`, not by
+ * hand: a demo that wrote a tombstone itself would be a second answer to what
+ * folding IS, and the one that drifts is the one nobody runs against a screen.
+ */
+export const FOLD = {
+  folded: "d2",
+  into: "f2",
+  ruling: "keptAndShared",
+  by: "abdulrahman",
+} as const;
 
 // ---- follow-ups ---------------------------------------------------------------
 // Faisal's six are the shape the rep home is built to show: exactly two overdue,

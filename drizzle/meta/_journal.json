@@ -141,6 +141,13 @@
       "when": 1789366499156,
       "tag": "0019_a_lead_lands_on_a_bell",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789452899156,
+      "tag": "0020_the_number_tells_the_manager",
+      "breakpoints": true
     }
   ]
 }

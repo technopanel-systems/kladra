@@ -103,11 +103,13 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
               <TableRow key={row.id}>
                 <TableCell className="max-w-[16rem] font-medium">
                   <span className="flex min-w-0 flex-col gap-0.5">
-                    <bdi className="truncate">{row.name}</bdi>
+                    <span className="truncate">
+                      <bdi>{row.name}</bdi>
+                    </span>
                     {row.city ? (
-                      <bdi className="truncate text-xs font-normal text-muted-foreground">
-                        {row.city}
-                      </bdi>
+                      <span className="truncate text-xs font-normal text-muted-foreground">
+                        <bdi>{row.city}</bdi>
+                      </span>
                     ) : null}
                   </span>
                 </TableCell>
@@ -119,11 +121,15 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
                 </TableCell>
                 {showFinder ? (
                   <TableCell className="max-w-[10rem]">
-                    <bdi className="block truncate">{row.fromName}</bdi>
+                    <span className="block truncate">
+                      <bdi>{row.fromName}</bdi>
+                    </span>
                   </TableCell>
                 ) : null}
                 <TableCell className="max-w-[10rem]">
-                  <bdi className="block truncate">{row.repName}</bdi>
+                  <span className="block truncate">
+                    <bdi>{row.repName}</bdi>
+                  </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <DayText day={row.givenOn} locale={locale} />
@@ -141,7 +147,9 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
         {rows.map((row) => (
           <li key={row.id} className="card-face flex flex-col gap-1.5 px-3 py-3">
             <div className="flex items-start justify-between gap-3">
-              <bdi className="min-w-0 flex-1 truncate font-medium">{row.name}</bdi>
+              <span className="min-w-0 flex-1 truncate font-medium">
+                <bdi>{row.name}</bdi>
+              </span>
               <span className="shrink-0 text-xs text-muted-foreground">
                 <span className="sr-only">{t("leads.givenOn")}</span>
                 <DayText day={row.givenOn} locale={locale} />

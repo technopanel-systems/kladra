@@ -8,7 +8,17 @@
  * loudly if either is empty — or if the ledger is SHORTER than the journal,
  * which is what a skipped migration looks like from here and is the only shape
  * of this failure a person can see without knowing to go looking (§5 #162).
+ *
+ * And one more shape of the same silence, found in P12-8 (§5 #171): a migration
+ * REWRITTEN after it was applied. The count guard above cannot see it — the
+ * ledger has as many rows as the journal has entries, and every one of them is
+ * about a file whose contents have since changed. The migrator compares `when`
+ * against the newest applied and skips it, prints success, and the database
+ * keeps the old statements while the repo, the snapshot and the schema file all
+ * describe the new ones. The ledger stores a hash of each file it applied, so
+ * the guard is a comparison it already has the material for.
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
@@ -61,6 +71,32 @@ try {
     );
     process.exit(1);
   }
+
+  // What the database applied against what the repo now says. The hash is the
+  // migrator's own: sha256 of the file, whole, before it is split on the
+  // statement breakpoints.
+  const changed = journal.entries
+    .map((entry, index) => ({
+      tag: entry.tag,
+      applied: ledger.rows[index]?.hash,
+      onDisk: createHash("sha256")
+        .update(readFileSync(`./drizzle/${entry.tag}.sql`, "utf-8"))
+        .digest("hex"),
+    }))
+    .filter((row) => row.applied !== row.onDisk);
+  if (changed.length > 0) {
+    console.error(
+      `Migration reported success, and ${changed.length} file(s) have changed since they were ` +
+        `applied: ${changed.map((row) => row.tag).join(", ")}.`,
+    );
+    console.error(
+      "What is in this database is not what is in the repo. There is no production data " +
+        "(rules/migrations.md), so the answer is to rebuild: drop the public and drizzle " +
+        "schemas and run this again.",
+    );
+    process.exit(1);
+  }
+
   console.log(`db:migrate — ${ledger.rowCount} migration(s) in the ledger`);
   console.log(`db:migrate — ${tables.rowCount} table(s):`);
   for (const t of tables.rows) console.log("  " + t.table_name);

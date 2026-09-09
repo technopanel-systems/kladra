@@ -20,6 +20,7 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 
 // ---- enums -----------------------------------------------------------------
@@ -277,11 +278,42 @@ export const companies = pgTable(
      * stamped at the moment he files it, because there is nobody to tell.
      */
     leadAcknowledgedAt: timestamp("lead_acknowledged_at", { withTimezone: true }),
+    /**
+     * The name with the spelling taken out of it, so two records of one
+     * customer can be compared (P12-8).
+     *
+     * The database computes it from `name` and nothing else may write it: a
+     * fold kept in TypeScript beside a fold kept in SQL is two answers to one
+     * question, and the one that drifts is the one nobody runs. `fold_name`
+     * is what it means — the function is the definition, migration 0020 — and
+     * `tests/schema.spec.ts` holds every stored value to it, because a
+     * generated column does NOT recompute itself when its function changes.
+     */
+    nameFolded: text("name_folded").generatedAlwaysAs(sql`fold_name(name)`),
+    /**
+     * The company this one turned out to be (P12-8, S16, FACET S22).
+     *
+     * Two records of one customer, ruled on by the manager: the work moves to
+     * the survivor and this row stays where it is, pointing at it. Not deleted,
+     * because a rep who typed this name is entitled to find out what happened
+     * to it, and every audit row, notification and report already written
+     * against it still points here.
+     *
+     * A tombstone is archived by construction — the check below says so — so it
+     * falls out of every list in the app without one of them being told about
+     * it, and the drawer is where it says what it became.
+     */
+    mergedIntoId: uuid("merged_into_id").references((): AnyPgColumn => companies.id),
     ...stamps,
   },
   (t) => [
     index("companies_rep_idx").on(t.repId),
     index("companies_name_idx").on(t.name),
+    // How the duplicate warning asks: the fold, and the folds it starts.
+    index("companies_name_folded_idx").using(
+      "btree",
+      t.nameFolded.op("text_pattern_ops"),
+    ),
     index("companies_follow_up_idx").on(t.nextFollowUp),
     index("companies_updated_idx").on(t.updatedAt),
     // Saudi picks a city, everywhere else types one (S3). Both or neither is a
@@ -306,6 +338,13 @@ export const companies = pgTable(
     ),
     // Marketing's own screen reads by who brought it in; nothing else does.
     index("companies_lead_from_idx").on(t.leadFromId),
+    // A record that became another one is off the floor, always: every list in
+    // the app hides it because it is archived, not because it knows about
+    // folding. And it is not its own survivor.
+    check(
+      "companies_merged_check",
+      sql`${t.mergedIntoId} is null or (${t.archivedAt} is not null and ${t.mergedIntoId} <> ${t.id})`,
+    ),
   ],
 );
 
@@ -440,6 +479,115 @@ export const projectShares = pgTable(
   (t) => [
     uniqueIndex("project_shares_project_user_idx").on(t.projectId, t.userId),
     index("project_shares_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * The manager's three answers to "these two are the same customer" (P12-8).
+ *
+ * `notDuplicate` — they are two firms with one number between them, which
+ * happens: a receptionist, a father and a son, one office holding two trades.
+ * Remembered for ever by the pair index below, so the pair is never raised a
+ * second time.
+ *
+ * `kept` — one record continues. The other's people and work move onto it and
+ * it stays behind as a tombstone; the rep who loses it gains nothing.
+ *
+ * `keptAndShared` — the same fold, and every rep who held the folded record is
+ * put on the survivor's share list. Access to the customer, never ownership of
+ * the deals: `company_shares` already means exactly that (D147), so this is one
+ * more row in it and no new idea.
+ */
+export const DUPLICATE_RULINGS = ["notDuplicate", "kept", "keptAndShared"] as const;
+export type DuplicateRuling = (typeof DUPLICATE_RULINGS)[number];
+
+/** A flag is open until it is ruled on, and then it is its ruling. */
+export const DUPLICATE_FLAG_STATUSES = ["open", ...DUPLICATE_RULINGS] as const;
+export type DuplicateFlagStatus = (typeof DUPLICATE_FLAG_STATUSES)[number];
+
+/**
+ * Two records that hold one telephone number (P12-8, S14, S15).
+ *
+ * S15 says a company is always created, even when it looks like a duplicate,
+ * and nothing blocks the rep. That is a property of the detector, not of its
+ * absence: the row is written, and then this one is, inside the same
+ * transaction. Nobody is stopped and nobody is asked a question at the door.
+ *
+ * The number is what raises it, never the name. A name lookalike is ordinary in
+ * this trade — Riyadh is full of firms whose names differ by one word — and a
+ * queue of pairs that are not duplicates is a queue the manager learns to clear
+ * without reading. The name warns the rep, who is looking at the customer's
+ * card; the number tells the manager, who is deciding whose customer it is
+ * (D158).
+ *
+ * `matchedPhone` is the evidence, stored rather than recomputed: the numbers on
+ * both records can change after the flag is raised, and a review screen that
+ * showed today's numbers would be showing the manager a coincidence he cannot
+ * check. It is the one place in the app that keeps a copy of a value, and it
+ * keeps it because the copy is the point.
+ */
+export const duplicateFlags = pgTable(
+  "duplicate_flags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** The record that arrived and matched something already on file. */
+    companyId: uuid("company_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    /** The one it matched. */
+    otherId: uuid("other_id")
+      .notNull()
+      .references(() => companies.id, { onDelete: "cascade" }),
+    /** The number both of them held when this was raised, in storage form. */
+    matchedPhone: text("matched_phone").notNull(),
+    status: text("status").$type<DuplicateFlagStatus>().notNull().default("open"),
+    /** Which record continues. Null while it is open, and for `notDuplicate`. */
+    survivorId: uuid("survivor_id").references(() => companies.id),
+    ruledBy: uuid("ruled_by").references(() => users.id),
+    ruledAt: timestamp("ruled_at", { withTimezone: true }),
+    ...stamps,
+  },
+  (t) => [
+    /**
+     * One row per pair, for ever, whichever way round it arrives.
+     *
+     * This is what "a false duplicate is remembered so the same pair is never
+     * raised again" IS: the detector inserts and lets the index refuse it. No
+     * second table of settled pairs, no read before the write, and no window
+     * between the two in which the same pair is raised twice.
+     */
+    uniqueIndex("duplicate_flags_pair_idx").on(
+      sql`least(${t.companyId}, ${t.otherId})`,
+      sql`greatest(${t.companyId}, ${t.otherId})`,
+    ),
+    // The manager's list: the open ones, oldest first.
+    index("duplicate_flags_status_idx").on(t.status, t.createdAt),
+    check("duplicate_flags_pair_check", sql`${t.companyId} <> ${t.otherId}`),
+    check(
+      "duplicate_flags_status_check",
+      sql`${t.status} in (${sql.raw(DUPLICATE_FLAG_STATUSES.map((v) => `'${v}'`).join(", "))})`,
+    ),
+    // Ruled and open are one fact told three ways, so they cannot disagree.
+    check(
+      "duplicate_flags_ruled_check",
+      sql`(${t.status} = 'open') = (${t.ruledAt} is null and ${t.ruledBy} is null)`,
+    ),
+    /*
+     * A survivor is one of the two, and only a fold has one.
+     *
+     * `is not null` first, and it is not belt and braces. A CHECK refuses a row
+     * only when its expression is FALSE, and `null in (a, b)` is NULL — so the
+     * first draft of this line let a fold be recorded with nothing continuing,
+     * which is the one state the whole screen exists to prevent. `tests/schema.spec.ts`
+     * asked it directly and the database said yes (§5 #176).
+     */
+    check(
+      "duplicate_flags_survivor_check",
+      sql`case when ${t.status} in ('kept', 'keptAndShared')
+            then ${t.survivorId} is not null
+                 and ${t.survivorId} in (${t.companyId}, ${t.otherId})
+            else ${t.survivorId} is null end`,
+    ),
   ],
 );
 
@@ -866,6 +1014,14 @@ export const NOTIFICATION_KINDS = [
   // customer two people each think the other is calling.
   "leadAssigned",
   "leadAcknowledged",
+  // Two records of one customer, ruled on by the manager (P12-8). S53: a
+  // decision that ends somebody's work reaches him, and this one ends a whole
+  // customer's worth of it. Two kinds because they are two facts: one rep's
+  // record stopped being a record, and another rep's gained everything that was
+  // on it. A single sentence would have to be true of both readers and would
+  // therefore say neither thing.
+  "companyFolded",
+  "companyAbsorbed",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

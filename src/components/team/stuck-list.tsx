@@ -8,8 +8,10 @@ import type { Stuck } from "@/lib/team";
 /**
  * What is waiting longer than it should be (SPEC D14).
  *
- * Six questions, each with its own window: work due today on the floor of
- * somebody who is on leave (D75), a lead marketing handed somebody and nobody
+ * Seven questions, each with its own window: two records that hold one
+ * telephone number and are waiting on him to say whether they are one customer
+ * (P12-8), work due today on the floor of somebody who is on leave (D75), a
+ * lead marketing handed somebody and nobody
  * has picked up (§3, P12-7), a quotation request more than two WORKING days on
  * the coordinator's desk, a follow-up more than three days past its date, a
  * company added more than fourteen days ago and never contacted, and a customer
@@ -24,7 +26,12 @@ import type { Stuck } from "@/lib/team";
  * that is somebody's introduction to Kladra — the rest are people already in
  * the middle of something.
  *
- * The first is the only one about TODAY, so it is first on the screen. The rest
+ * The duplicates are first because they are the only rows here that are the
+ * MANAGER's own work rather than somebody else's that he is watching, and the
+ * only ones he can finish from where he is standing. Every other group asks him
+ * to ring somebody.
+ *
+ * The uncovered are next, because they are the only ones about TODAY. The rest
  * have been waiting for days and will still be there tomorrow; a customer
  * expecting a call this morning from a rep who is not at work will not.
  *
@@ -44,6 +51,7 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
 
   const nothing =
+    stuck.duplicates.total === 0 &&
     stuck.uncovered.total === 0 &&
     stuck.leads.total === 0 &&
     stuck.requests.total === 0 &&
@@ -65,6 +73,25 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   /** A company row points at the company; a project row at its project. */
   const hrefOf = (row: { kind: "company" | "project"; id: string }) =>
     row.kind === "company" ? `/companies?open=${row.id}` : `/projects?open=${row.id}`;
+
+  /*
+   * The customer as the arriving record spells him, and the two people holding
+   * a record each. Both names go through one message with two placeholders
+   * rather than being joined here: the loader isolates each one, so an Arabic
+   * name beside a Latin one keeps its own direction (rules/words.md).
+   *
+   * Every row goes to the same screen, which is the one place the pair can
+   * actually be read side by side and answered. That is not the same as a list
+   * of doors onto nothing: the row names what is waiting, and the door is where
+   * the answer is given.
+   */
+  const duplicates: StuckRowData[] = stuck.duplicates.rows.map((row) => ({
+    key: row.id,
+    href: "/duplicates",
+    name: row.name,
+    who: t("duplicates.between", { a: row.older, b: row.newer }),
+    note: t("team.waitingDays", { count: row.waited.days }),
+  }));
 
   const uncovered: StuckRowData[] = stuck.uncovered.rows.map((row) => ({
     key: `away-${row.kind}-${row.id}`,
@@ -137,9 +164,19 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     <section className="flex flex-col gap-4">
       <h2 className="text-sm font-medium text-muted-foreground">{t("team.stuck")}</h2>
 
-      {/* First, because it is the only group here about TODAY: a customer
-          expecting a call this morning from somebody who is on leave. The rest
-          have been waiting days and will still be waiting tomorrow. */}
+      {/* First, because it is the only group here he can finish himself. */}
+      {stuck.duplicates.total > 0 ? (
+        <Group
+          title={t("duplicates.title")}
+          means={t("duplicates.means")}
+          rows={duplicates}
+          more={stuck.duplicates.total - duplicates.length}
+        />
+      ) : null}
+
+      {/* Then the only group about TODAY: a customer expecting a call this
+          morning from somebody who is on leave. The rest have been waiting days
+          and will still be waiting tomorrow. */}
       {stuck.uncovered.total > 0 ? (
         <Group
           title={t("team.uncovered")}

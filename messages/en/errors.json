@@ -26,5 +26,7 @@
   "shareWho": "Choose who to share it with.",
   "shareOwner": "It is already theirs.",
   "leadSourceNotYours": "That lead source is for management and marketing.",
-  "leadNeedsAFloor": "Choose someone a customer can sit with."
+  "leadNeedsAFloor": "Choose someone a customer can sit with.",
+  "duplicateWhichOne": "Say which record continues.",
+  "duplicateAnswered": "Somebody has already answered this one."
 }

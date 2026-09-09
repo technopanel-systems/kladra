@@ -199,17 +199,25 @@ function CompanyForm({
           ) : (
             <>
               <span>{t("forms.duplicateCompany", { name: duplicate.name, rep: duplicate.rep })}</span>
+              {/* A city NAME beside a sentence, with a neutral dot between
+                  them: joined into one string the dot settles against the
+                  paragraph rather than against the name, and an Arabic city on
+                  an English form read the wrong way round (rules/words.md).
+                  Each run is its own `bdi`. */}
               <span className="opacity-80">
-                {[
-                  duplicate.city,
-                  duplicate.lastActivityOn
+                {duplicate.city ? (
+                  <>
+                    <bdi>{duplicate.city}</bdi>
+                    {" · "}
+                  </>
+                ) : null}
+                <bdi>
+                  {duplicate.lastActivityOn
                     ? t("forms.duplicateLastActivity", {
                         date: formatDay(duplicate.lastActivityOn, locale),
                       })
-                    : t("forms.duplicateNeverContacted"),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                    : t("forms.duplicateNeverContacted")}
+                </bdi>
               </span>
             </>
           )}

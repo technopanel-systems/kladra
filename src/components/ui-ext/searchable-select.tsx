@@ -178,9 +178,13 @@ export function SearchableSelect({
           )}
         >
           <span className="flex min-w-0 items-baseline gap-1.5 truncate text-start">
-            <bdi className="truncate">{shown ?? placeholder}</bdi>
+            <span className="truncate">
+              <bdi>{shown ?? placeholder}</bdi>
+            </span>
             {shown !== null && selected?.hint ? (
-              <bdi className="truncate text-xs text-muted-foreground">{selected.hint}</bdi>
+              <span className="truncate text-xs text-muted-foreground">
+                <bdi>{selected.hint}</bdi>
+              </span>
             ) : null}
           </span>
           <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
@@ -254,9 +258,13 @@ function Row({
       onSelect={() => onChoose(option.value)}
     >
       <span className="flex min-w-0 flex-col">
-        <bdi className="truncate">{option.label}</bdi>
+        <span className="truncate">
+          <bdi>{option.label}</bdi>
+        </span>
         {option.hint ? (
-          <bdi className="truncate text-xs text-muted-foreground">{option.hint}</bdi>
+          <span className="truncate text-xs text-muted-foreground">
+            <bdi>{option.hint}</bdi>
+          </span>
         ) : null}
       </span>
     </CommandItem>

@@ -127,6 +127,9 @@ export const SPEC3: Spec3Entry[] = [
     tests: [
       "a plus wins over the country, and 00 is a plus",
       "a phone already on the company is refused by name, not as 'something went wrong'",
+      // And the other half of the sentence since P12-8: the match on the
+      // normalized number is what raises the manager's flag (D158).
+      "a rep is stopped by nothing, and the pair is on the manager's screen a moment later",
     ],
   },
   {

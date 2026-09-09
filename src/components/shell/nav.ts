@@ -4,6 +4,7 @@ import {
   Building2,
   CalendarCheck,
   CalendarDays,
+  Copy,
   Download,
   FileText,
   FolderKanban,
@@ -85,6 +86,23 @@ const companies: NavItem = {
   icon: Building2,
 };
 
+/**
+ * The manager's own queue: two records that hold one telephone number (P12-8).
+ *
+ * Two sheets of paper, because that is what the screen is about. Late in the
+ * list on purpose — it is empty most days, and what actually brings him here is
+ * the band at the top of his own screen, which names the pairs and links here.
+ * A rail entry that is usually empty does not earn a place on the phone's
+ * bottom bar, which holds four.
+ */
+const duplicates: NavItem = {
+  href: "/duplicates",
+  labelKey: "duplicates.title",
+  // No short label: it never reaches the bottom bar, which holds four, and a
+  // key nothing renders is a key nothing checks (rules/words.md).
+  icon: Copy,
+};
+
 const projects: NavItem = {
   href: "/projects",
   labelKey: "common.projects",
@@ -159,10 +177,14 @@ export function navFor(role: Role): NavGroup[] {
     // already a band on his own screen. Last also keeps his phone bar the four
     // it was.
     case "manager":
-      return [{ items: [team, reports, companies, projects, quotations, dispatches, leads] }];
+      return [
+        { items: [team, reports, companies, projects, quotations, dispatches, duplicates, leads] },
+      ];
     case "admin":
       return [
-        { items: [team, reports, companies, projects, quotations, dispatches, leads] },
+        {
+          items: [team, reports, companies, projects, quotations, dispatches, duplicates, leads],
+        },
         { labelKey: "shell.adminSection", items: adminItems },
       ];
     default:

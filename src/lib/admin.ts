@@ -243,6 +243,15 @@ export type ArchivedRow = {
   reason: string | null;
   /** Its company is archived too, so it cannot come back before the company does (D92). */
   companyArchived: boolean;
+  /**
+   * The record this one turned out to be, when the manager ruled two records
+   * one customer (P12-8). Null for everything else, which is every other row.
+   *
+   * It is the one archived thing that never comes back: its people, its jobs
+   * and its papers are on the survivor, and putting an empty name back on a
+   * floor beside the customer it IS would be the duplicate all over again.
+   */
+  mergedIntoName: string | null;
 };
 
 /**
@@ -263,12 +272,14 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     archived_on: string;
     reason: string | null;
     company_archived: boolean;
+    merged_into_name: string | null;
   }>(sql`
     select companies.id::text as id, 'company' as kind, companies.name as name,
            companies.name as company_name, ${personNameOf("u", locale)} as rep_name,
            to_char((companies.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
            companies.archive_reason as reason,
-           false as company_archived
+           false as company_archived,
+           (select m.name from companies m where m.id = companies.merged_into_id) as merged_into_name
       from companies
       join users u on u.id = companies.rep_id
      where companies.archived_at is not null
@@ -277,7 +288,8 @@ export async function listArchived(): Promise<ArchivedRow[]> {
            c.name as company_name, ${personNameOf("u", locale)} as rep_name,
            to_char((contacts.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
            null::text as reason,
-           (c.archived_at is not null) as company_archived
+           (c.archived_at is not null) as company_archived,
+           null::text as merged_into_name
       from contacts
       join companies c on c.id = contacts.company_id
       join users u on u.id = c.rep_id
@@ -287,7 +299,8 @@ export async function listArchived(): Promise<ArchivedRow[]> {
            c.name as company_name, ${personNameOf("u", locale)} as rep_name,
            to_char((projects.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
            null::text as reason,
-           (c.archived_at is not null) as company_archived
+           (c.archived_at is not null) as company_archived,
+           null::text as merged_into_name
       from projects
       join companies c on c.id = projects.company_id
       join users u on u.id = c.rep_id
@@ -304,5 +317,6 @@ export async function listArchived(): Promise<ArchivedRow[]> {
     archivedOn: row.archived_on,
     reason: row.reason,
     companyArchived: row.company_archived,
+    mergedIntoName: row.merged_into_name,
   }));
 }

@@ -36,6 +36,8 @@ import {
   users,
 } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
+import { moveContacts } from "@/lib/contacts";
+import { flagDuplicates } from "@/lib/duplicates";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { ADD_COMPANY_ROLES, holdsFloor, LEAD_ROLES, mayHandOver, mayWrite } from "@/lib/floor";
@@ -329,6 +331,11 @@ export async function createCompanyAction(
         isMain: true,
       });
 
+      // Nothing here blocks and nothing here asks him anything (S15). The row
+      // is written, and then the manager is told that a number on it is a
+      // number somebody else already holds (P12-8, D158).
+      await flagDuplicates(tx, company.id);
+
       await tx.insert(auditLog).values({
         userId: actor.id,
         action: "company.create",
@@ -556,6 +563,12 @@ export async function createLeadAction(
         notes: input.contactNotes ?? null,
         isMain: true,
       });
+
+      // A lead is a company, so it meets the detector exactly as one (P12-8).
+      // Marketing takes a call and types the number the customer gave; that
+      // number is very often already on somebody's floor, which is the whole
+      // reason the manager needs to be told about it.
+      await flagDuplicates(tx, company.id);
 
       await tx.insert(auditLog).values({
         userId: actor.id,
@@ -883,52 +896,14 @@ export async function handOverCompanyAction(
       // company. It reached the manager as "something went wrong" and the
       // hand-over quietly did not happen (#159).
       //
-      // The row that stands is the one the new owner wrote himself. The
-      // arriving duplicate is archived rather than deleted (S16) and stays
-      // with the rep who wrote it, because an archived row is history and
-      // history keeps its author (D153).
-      const alreadyHis = await tx
-        .select({ phoneNormalized: contacts.phoneNormalized, isMain: contacts.isMain })
-        .from(contacts)
-        // Archived ones too: the unique index does not exempt them, so a
-        // number he once held here is still a number that cannot arrive.
-        .where(and(eq(contacts.companyId, company.id), eq(contacts.repId, target.id)));
-
-      const taken = alreadyHis
-        .map((row) => row.phoneNormalized)
-        .filter((phone): phone is string => Boolean(phone));
-      if (taken.length > 0) {
-        await tx
-          .update(contacts)
-          .set({ archivedAt: new Date() })
-          .where(
-            and(
-              eq(contacts.companyId, company.id),
-              eq(contacts.repId, from),
-              isNull(contacts.archivedAt),
-              inArray(contacts.phoneNormalized, taken),
-            ),
-          );
-      }
-
-      await tx
-        .update(contacts)
-        .set({
-          repId: target.id,
-          // He already has a main contact here, and a company has one per rep:
-          // the arriving people are his now, and none of them displaces the
-          // person he had already picked (D18).
-          ...(alreadyHis.some((row) => row.isMain) ? { isMain: false } : {}),
-        })
-        // Live rows only. An archived contact is a record of who the rep was
-        // talking to, and it reads with his name on it wherever it still reads.
-        .where(
-          and(
-            eq(contacts.companyId, company.id),
-            eq(contacts.repId, from),
-            isNull(contacts.archivedAt),
-          ),
-        );
+      // The rule is D153's and it is written once, in `moveContacts`: a fold
+      // (P12-8) lands rows on somebody's list the same way and would otherwise
+      // have needed the same forty lines a second time.
+      await moveContacts(
+        tx,
+        { companyId: company.id, repId: from },
+        { companyId: company.id, repId: target.id },
+      );
 
       // And he is not left sharing what he now owns — the company, and every
       // job under it that has just become his.

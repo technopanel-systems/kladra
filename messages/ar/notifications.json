@@ -13,5 +13,7 @@
   "leadAcknowledged": "أكّد {rep} استلام العميل المحتمل {company}.",
   "unreadMark": "غير مقروء",
   "companyShared": "شاركك {rep} {label}.",
-  "projectShared": "أضافك {rep} إلى {label}."
+  "projectShared": "أضافك {rep} إلى {label}.",
+  "companyFolded": "دُمج {company} في سجل {rep} للعميل نفسه.",
+  "companyAbsorbed": "دمج {rep} سجلًا ثانيًا لـ{company} في سجلك."
 }
