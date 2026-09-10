@@ -34,6 +34,7 @@ export function ReportBox({
   canWrite,
   closed,
   optional = false,
+  hasLog = false,
 }: {
   day: Day;
   /** What is already saved for this day, or null. */
@@ -46,6 +47,15 @@ export function ReportBox({
   closed: boolean;
   /** An off day the person may still write for — offered, not owed (S47, D97). */
   optional?: boolean;
+  /**
+   * Whether his own entries are printed above this box (P12-13). The prompt
+   * ends by pointing at them — "what happened is written above" — and on a day
+   * with nothing logged there is nothing above to point at, so it says the
+   * shorter half instead. A sentence that is false on some days is a screen
+   * people learn to stop reading, which is the same rule the card applies to
+   * "nothing was recorded on this day".
+   */
+  hasLog?: boolean;
 }) {
   const t = useTranslations("reports");
   const tc = useTranslations("common");
@@ -83,7 +93,9 @@ export function ReportBox({
         maxLength={2000}
         disabled={pending}
         onChange={(event) => setText(event.target.value)}
-        placeholder={t("placeholder")}
+        // Both keys written out, not `t(hasLog ? … : …)`: a key a screen
+        // COMPUTES is invisible to `unused-messages` (rules/words.md).
+        placeholder={hasLog ? t("placeholder") : t("placeholderQuiet")}
         aria-label={t("yourDay")}
         className="break-words"
       />

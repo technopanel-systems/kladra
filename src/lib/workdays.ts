@@ -55,11 +55,32 @@ export function workingDaysBetween(
   return countWorkingDays(addDays(from, 1), to, nonWorking, userId);
 }
 
-/** The next working day on or after `day`. */
-export function nextWorkingDay(day: Day, nonWorking: NonWorking[] = [], userId?: string): Day {
-  let d = day;
-  while (!isWorkingDay(d, nonWorking, userId)) d = addDays(d, 1);
+/**
+ * The next working day in one direction, strictly past `day`.
+ *
+ * ONE walker, because two of them are two answers to "when is the next working
+ * day" — and there were two: this one, and a private one in `reports.ts` that
+ * the report's own arrows and its write window shared. They differed in the two
+ * ways a near-copy always differs. That one was capped at three weeks, which is
+ * longer than any run of holidays this business has had and stops a bad row in
+ * the table turning a page into a hang; this one was a `while` with nothing to
+ * stop it. And that one asked about the company while this one could ask about
+ * a person. Both halves are kept here.
+ */
+export function stepWorkingDay(
+  day: Day,
+  by: -1 | 1,
+  nonWorking: NonWorking[] = [],
+  userId?: string,
+): Day {
+  let d = addDays(day, by);
+  for (let i = 0; i < 21 && !isWorkingDay(d, nonWorking, userId); i += 1) d = addDays(d, by);
   return d;
+}
+
+/** The next working day on or after `day` — today itself, when today is one. */
+export function nextWorkingDay(day: Day, nonWorking: NonWorking[] = [], userId?: string): Day {
+  return isWorkingDay(day, nonWorking, userId) ? day : stepWorkingDay(day, 1, nonWorking, userId);
 }
 
 /** One person who is not at work while the office is (D75). */

@@ -1,7 +1,7 @@
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
 import { isWeekend } from "@/lib/workdays";
 import { login } from "./helpers/auth";
-import { one, query, userId } from "./helpers/db";
+import { one, personName, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -189,6 +189,136 @@ test("a rep's day is assembled for him, and he adds the one line it cannot know"
   await test.step("6 · and the nudge is gone, because there is nothing left to do", async () => {
     await page.goto(`/${locale}/day`);
     await expect(page.getByRole("link", { name: t("reports.closeTheDay") })).toHaveCount(0, COLD);
+  });
+});
+
+type Entry = { day: Day; text: string; companyId: string; companyName: string };
+
+/** The newest entry this person logged, and the customer it was about. */
+async function newestEntry(email: string): Promise<Entry> {
+  return one(
+    `select to_char(a.happened_on, 'YYYY-MM-DD') as day, a.text,
+            c.id as "companyId", c.name as "companyName"
+       from activities a
+       join companies c on c.id = a.company_id
+       join users u on u.id = a.user_id
+      where u.email = $1::text and a.archived_at is null
+      order by a.happened_on desc, a.created_at desc
+      limit 1`,
+    [email],
+  );
+}
+
+/**
+ * The newest entry of this person's BUSIEST day — the day the cap has something
+ * to say about. The demo carries one on purpose: until P12-13 the busiest day
+ * anybody had was three entries, so the line that says a card is not showing
+ * the whole day had never once been drawn (§5 #197).
+ */
+async function busiestEntry(email: string): Promise<Entry> {
+  return one(
+    `select to_char(a.happened_on, 'YYYY-MM-DD') as day, a.text,
+            c.id as "companyId", c.name as "companyName"
+       from activities a
+       join companies c on c.id = a.company_id
+       join users u on u.id = a.user_id
+      where u.email = $1::text and a.archived_at is null
+        and a.happened_on = (
+          select b.happened_on from activities b
+            join users bu on bu.id = b.user_id
+           where bu.email = $1::text and b.archived_at is null
+           group by b.happened_on
+           order by count(*) desc, b.happened_on desc
+           limit 1)
+      order by a.created_at desc
+      limit 1`,
+    [email],
+  );
+}
+
+test("the manager reads the day and not a count of it", async ({ page, locale, t }) => {
+  // S27: the history of a company IS the manager's daily report. It had been a
+  // figure — "4 log entries" — and the four were on four customer drawers he
+  // would have had to know to open (P12-13).
+  const entry = await busiestEntry("faisal@technopanel.com.sa");
+  const faisal = await userId("faisal@technopanel.com.sa");
+
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/reports?day=${entry.day}`);
+  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
+
+  const card = page.locator(`[data-slot="report-card"]`).filter({ hasText: entry.text });
+  await expect(card).toHaveCount(1);
+
+  await test.step("the entry names its customer, and the name is a door to him", async () => {
+    const named = card.locator('[data-slot="trail-company"]');
+    await expect(named.first()).toHaveText(entry.companyName);
+    await expect(named.first()).toHaveAttribute(
+      "href",
+      new RegExp(`open=${entry.companyId}`),
+    );
+  });
+
+  await test.step("and it does not repeat what the card already says", async () => {
+    // The day and the writer are the card's own heading. An entry that printed
+    // them would say the same date and the same name on every line of it.
+    const trail = card.locator('[data-slot="day-trail"]');
+    await expect(trail).toBeVisible();
+    await expect(trail.getByText(t("common.by", { name: await personName(
+      "faisal@technopanel.com.sa",
+      locale,
+    ) }))).toHaveCount(0);
+  });
+
+  await test.step("the figure counts the day; the list shows the first of it", async () => {
+    // D144: a figure is not the length of a capped list. Whatever the day held,
+    // these two agree or the tail line says why.
+    const logged = Number(
+      await card.locator('[data-figure="logged"] .num').first().innerText(),
+    );
+    const drawn = await card.locator('[data-slot="day-trail"] > ol > li').count();
+    expect(drawn).toBeLessThanOrEqual(logged);
+    // The busiest day is busier than a colleague's card draws, which is the
+    // whole point of asking for that day: the tail line is on a screen.
+    expect(logged, "the demo has no day the cap has anything to say about").toBeGreaterThan(
+      drawn,
+    );
+    await expect(card.locator('[data-slot="list-tail"]')).toHaveCount(1);
+  });
+
+  expect(faisal).toBeTruthy();
+});
+
+test("a rep reads his colleague's day, not his colleague's customers", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // D56 says the report is the whole team's and everybody reads the same page;
+  // S8 and D42 say a rep sees his own floor and nobody else's. Both hold: the
+  // figures and the sentence are on every card, the customer names are on the
+  // cards the reader may open (P12-13).
+  const his = await newestEntry("faisal@technopanel.com.sa");
+  const theirs = await newestEntry("saad@technopanel.com.sa");
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/reports?day=${his.day}`);
+  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
+
+  await test.step("his own day is on his own card", async () => {
+    const own = page.locator('[data-slot="report-own"]');
+    await expect(own).toHaveCount(1);
+    await expect(own.locator('[data-slot="day-trail"]')).toBeVisible();
+  });
+
+  await test.step("and somebody else's card carries no customer of his", async () => {
+    const saad = await personName("saad@technopanel.com.sa", locale);
+    const card = page.locator('[data-slot="report-card"]').filter({ hasText: saad });
+    await expect(card).toHaveCount(1);
+    // The card is there and readable — this is not a hidden row (DESIGN §5).
+    await expect(card.getByText(saad)).toBeVisible();
+    await expect(card.locator('[data-slot="day-trail"]')).toHaveCount(0);
+    await expect(page.getByText(theirs.text)).toHaveCount(0);
   });
 });
 

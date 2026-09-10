@@ -15,8 +15,8 @@ import { cache } from "react";
 import { and, gte, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { nonWorkingDays } from "@/db/schema";
-import type { Day } from "@/lib/dates";
-import type { NonWorking } from "@/lib/workdays";
+import { addDays, todayRiyadh, type Day } from "@/lib/dates";
+import { stepWorkingDay, type NonWorking } from "@/lib/workdays";
 
 /**
  * Every holiday and every person's leave between two Riyadh days, inclusive.
@@ -37,3 +37,22 @@ export const listNonWorkingDays = cache(async function listNonWorkingDays(
     .where(and(gte(nonWorkingDays.day, from), lte(nonWorkingDays.day, to)));
   return rows.map((row) => ({ day: row.day, userId: row.userId ?? null }));
 });
+
+/**
+ * The last WORKING day before today (D58, D70).
+ *
+ * The report's write window reaches back to it, and the log's correction
+ * controls ask it once for a whole list rather than per row. It read the
+ * `non_working_days` table with a query of its own until P12-13 — a seventh
+ * read of the small table this module was written to read once (#71, D131) —
+ * and the walk it did was a second copy of `nextWorkingDay`. Both are the one
+ * thing now: this module loads the days, `workdays.ts` walks them.
+ *
+ * Three weeks back is the window loaded, which is the same distance the walker
+ * is capped at: a run of holidays longer than that has never happened here, and
+ * if it ever does the answer is a holiday table nobody filled in rather than a
+ * page that hangs.
+ */
+export async function lastWorkingDay(today: Day = todayRiyadh()): Promise<Day> {
+  return stepWorkingDay(today, -1, await listNonWorkingDays(addDays(today, -21), today));
+}

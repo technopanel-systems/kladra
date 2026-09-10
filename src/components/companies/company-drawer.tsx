@@ -354,8 +354,8 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             // branch that vanishes the moment it works, the copy that loses its
             // own confirmation (see the note on EmptyPanel).
             empty={<EmptyPanel sentence={t("drawer.emptyActivity")} />}
-            // What a correction needs, on the reader's own entries (D70).
-            correct={{ companyId: company.id }}
+            // Corrections, on the reader's own entries (D70).
+            correct
           />
         </TabsContent>
 

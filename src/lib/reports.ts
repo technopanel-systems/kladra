@@ -29,9 +29,11 @@ import { db } from "@/db";
 import { CREDITED_METRES } from "@/lib/sqm";
 import { personNameOf } from "@/lib/people";
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
-import { sells, writesReports } from "@/lib/floor";
-import type { Role } from "@/lib/types";
-import { isWorkingDay, type NonWorking } from "@/lib/workdays";
+import { mayOpen, sells, writesReports } from "@/lib/floor";
+import { listActivitiesForDay, type ActivityRow } from "@/lib/activities";
+import type { Role, SessionUser } from "@/lib/types";
+import { isWorkingDay, stepWorkingDay, type NonWorking } from "@/lib/workdays";
+import { lastWorkingDay, listNonWorkingDays } from "@/lib/calendar";
 
 /** What a person on a floor did with customers on one day. */
 export type FloorDay = {
@@ -88,6 +90,17 @@ export type PersonDay = {
   /** What they wrote, or null. */
   note: string | null;
   /**
+   * The log this person wrote that day, and how many there were (S27).
+   *
+   * `null` where the reader may not read this person's floor, which on this
+   * screen means a rep looking at a colleague's card: he still reads the
+   * figures and the sentence — D56 says the report is the whole team's — and
+   * not the customer names behind them, which are that colleague's floor and
+   * nobody else's business (S8, D42). His own card and the manager's view of
+   * every card carry it in full.
+   */
+  trail: DayTrail | null;
+  /**
    * Why there is no note. `open` is a day that has not finished — nobody has
    * missed anything yet — and `off` is a day this person was not working, which
    * is the whole of D57: being away is not being silent, and neither is a
@@ -97,6 +110,27 @@ export type PersonDay = {
   /** Why the day was off, when it was. */
   off: "weekend" | "holiday" | "leave" | null;
 };
+
+/** A day's log entries, capped, with the true count beside them (D80, D144). */
+export type DayTrail = { rows: ActivityRow[]; total: number };
+
+/**
+ * How many entries a card draws before the tail line takes over — two numbers,
+ * for the same reason `DayBoard` and `MovedLine` are two densities of one day.
+ *
+ * On somebody else's card FOUR, because that card is read for its sentence: a
+ * manager goes down eleven of them in the evening and the log is what he drops
+ * into when one sentence makes him curious, not what he wades through to reach
+ * the next one. Where a day held more, the line under the list says so.
+ *
+ * On the reader's OWN card twelve, because he is checking the day against his
+ * memory before he writes about it and a day cut off at four is a day he cannot
+ * check. Twelve is past any day this floor has had, so that cap is a bound
+ * against a pathological row rather than a reading decision — it is meant never
+ * to be reached, and says so when it is.
+ */
+export const TEAM_DAY_TRAIL_CAP = 4;
+export const OWN_DAY_TRAIL_CAP = 12;
 
 export type TeamDay = {
   day: Day;
@@ -292,21 +326,6 @@ async function reportNote(userId: string, day: Day): Promise<string | null> {
 }
 
 /**
- * The next working day in one direction, strictly past `day`.
- *
- * One walker for both questions that ask it — what the arrows point at, and how
- * far back the write window reaches — because two of them would be two answers
- * to "when was the last working day". Capped at three weeks, which is longer
- * than any run of holidays this business has had and stops a bad row in the
- * table becoming an endless loop.
- */
-function stepWorking(day: Day, by: -1 | 1, nonWorking: NonWorking[]): Day {
-  let d = addDays(day, by);
-  for (let i = 0; i < 21 && !isWorkingDay(d, nonWorking); i += 1) d = addDays(d, by);
-  return d;
-}
-
-/**
  * A report can be written for today and for the last WORKING day before today,
  * and then it closes (D58).
  *
@@ -325,32 +344,17 @@ export async function mayWriteFor(day: Day, today: Day = todayRiyadh()): Promise
 }
 
 /**
- * The other half of the same window, for a caller with a LIST of days to judge
- * (D70): the log's correction controls ask it once and compare, rather than
- * running the holiday query per row.
- */
-export async function lastWorkingDay(today: Day = todayRiyadh()): Promise<Day> {
-  const offDays = await db.execute<{ day: Day; user_id: string | null }>(sql`
-    select to_char(n.day, 'YYYY-MM-DD') as day, n.user_id
-      from non_working_days n
-     where n.day between ${today}::date - 21 and ${today}::date
-  `);
-  const nonWorking: NonWorking[] = offDays.rows.map((row) => ({
-    day: row.day,
-    userId: row.user_id,
-  }));
-
-  return stepWorking(today, -1, nonWorking);
-}
-
-/**
  * The whole team's day, in one read (D56).
  *
  * Alphabetical by name and never by how much anybody did: a screen that sorts
  * people by output is a leaderboard, and fourteen people on long cladding cycles
  * all know who is second without being shown.
  */
-export async function teamDay(day: Day, today: Day = todayRiyadh()): Promise<TeamDay> {
+export async function teamDay(
+  user: SessionUser,
+  day: Day,
+  today: Day = todayRiyadh(),
+): Promise<TeamDay> {
   const open = day >= today;
   const locale = await getLocale();
 
@@ -381,6 +385,18 @@ export async function teamDay(day: Day, today: Day = todayRiyadh()): Promise<Tea
     people.rows.map(async (person) => {
       const work = await dayWork(person.id, person.role, day);
       const note = notes.get(person.id) ?? null;
+      // Per person, like `dayWork` above it and for the same reason: the
+      // question "may this reader read this floor" has a different answer down
+      // the page, and one query for everybody would have to ask it afterwards
+      // — which is a filter over rows already read rather than a gate.
+      const trail = mayOpen(user, person.id)
+        ? await listActivitiesForDay(
+            user,
+            person.id,
+            day,
+            person.id === user.id ? OWN_DAY_TRAIL_CAP : TEAM_DAY_TRAIL_CAP,
+          )
+        : null;
 
       // The same working-day rule the pace line and the stuck list already use
       // (src/lib/workdays.ts), asked for this person: a Friday is not a missed
@@ -401,7 +417,16 @@ export async function teamDay(day: Day, today: Day = todayRiyadh()): Promise<Tea
           : open
             ? "open"
             : "silent";
-      return { userId: person.id, name: person.name, role: person.role, work, note, state, off };
+      return {
+        userId: person.id,
+        name: person.name,
+        role: person.role,
+        work,
+        note,
+        trail,
+        state,
+        off,
+      };
     }),
   );
 
@@ -424,24 +449,12 @@ export async function teamDay(day: Day, today: Day = todayRiyadh()): Promise<Tea
  * opening.
  */
 export async function latestReportDay(today: Day = todayRiyadh()): Promise<Day> {
-  const offDays = await db.execute<{ day: Day; user_id: string | null }>(sql`
-    select to_char(n.day, 'YYYY-MM-DD') as day, n.user_id
-      from non_working_days n
-     where n.day <= ${today}::date and n.day > ${today}::date - 14
-  `);
-  const nonWorking: NonWorking[] = offDays.rows.map((row) => ({
-    day: row.day,
-    userId: row.user_id,
-  }));
-
-  let day = today;
-  // Two weeks is longer than any run of holidays this business has ever had, and
-  // it stops a bad row in the holiday table becoming an endless loop.
-  for (let i = 0; i < 14; i += 1) {
-    if (isWorkingDay(day, nonWorking)) return day;
-    day = addDays(day, -1);
-  }
-  return today;
+  // Today when today is one, and otherwise the last there was — which is the
+  // mirror of `nextWorkingDay` and the same walk, capped in the same place
+  // (src/lib/workdays.ts). It had a third copy of that loop and a third read of
+  // the holiday table, which is what §5 #196 was about.
+  const nonWorking = await listNonWorkingDays(addDays(today, -21), today);
+  return isWorkingDay(today, nonWorking) ? today : stepWorkingDay(today, -1, nonWorking);
 }
 
 /**
@@ -461,19 +474,10 @@ export async function reportNeighbours(
   day: Day,
   today: Day = todayRiyadh(),
 ): Promise<{ previous: Day; next: Day | null }> {
-  const offDays = await db.execute<{ day: Day; user_id: string | null }>(sql`
-    select to_char(n.day, 'YYYY-MM-DD') as day, n.user_id
-      from non_working_days n
-     where n.day between ${day}::date - 21 and ${day}::date + 21
-  `);
-  const nonWorking: NonWorking[] = offDays.rows.map((row) => ({
-    day: row.day,
-    userId: row.user_id,
-  }));
-
-  const next = stepWorking(day, 1, nonWorking);
+  const nonWorking = await listNonWorkingDays(addDays(day, -21), addDays(day, 21));
+  const next = stepWorkingDay(day, 1, nonWorking);
   return {
-    previous: stepWorking(day, -1, nonWorking),
+    previous: stepWorkingDay(day, -1, nonWorking),
     next: next > today ? null : next,
   };
 }

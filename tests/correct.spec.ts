@@ -92,6 +92,104 @@ test("an entry written against the wrong customer stops counting", async ({ page
   });
 });
 
+/**
+ * A day is finished on one screen (S24-S27, D70, P12-13).
+ *
+ * The rep who notices that an entry went against the wrong customer is the one
+ * reading his own day at six o'clock, and until P12-13 the report card told him
+ * only how MANY entries there were. The words are on it now, and so is the
+ * correction — the same one the customer's drawer offers, on the same entry,
+ * filed against the customer the ENTRY names rather than the one the screen
+ * happens to be about.
+ */
+test("he fixes the wrong word where he reads it, and the customer's history has it too", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const company = await one<{ id: string; name: string }>(
+    `select companies.id, companies.name
+       from companies
+      where companies.rep_id = $1::uuid and companies.archived_at is null
+      order by companies.name
+      limit 1`,
+    [faisal],
+  );
+
+  const written = `Report correction ${Date.now()}`;
+  let entryId: string | null = null;
+
+  try {
+    await login(page, locale, "faisal");
+
+    await test.step("he logs it against a customer, from that customer", async () => {
+      await page.goto(`/${locale}/companies?open=${company.id}`);
+      const drawer = page.getByRole("dialog").first();
+      await expect(drawer).toBeVisible(COLD);
+      await drawer.getByRole("button", { name: t("common.log") }).first().click();
+      const dialog = page.getByRole("dialog", { name: t("drawer.logTitle") });
+      await expect(dialog).toBeVisible(COLD);
+      await dialog.getByLabel(t("drawer.whatHappened")).fill(written);
+      await dialog.getByRole("button", { name: t("common.save") }).click();
+      await expect(dialog).toBeHidden(COLD);
+      await expect(drawer.getByText(written)).toBeVisible(COLD);
+    });
+
+    const row = await one<{ id: string }>(
+      `select id from activities where text = $1::text`,
+      [written],
+    );
+    entryId = row.id;
+
+    await test.step("it is on his own report card, naming its customer", async () => {
+      await page.goto(`/${locale}/reports`);
+      await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
+      const own = page.locator('[data-slot="report-own"]');
+      const entry = own.locator("li").filter({ hasText: written }).first();
+      await expect(entry).toBeVisible(COLD);
+      await expect(entry.locator('[data-slot="trail-company"]')).toHaveText(company.name);
+    });
+
+    await test.step("he corrects the words without leaving the screen", async () => {
+      const entry = page
+        .locator('[data-slot="report-own"] li')
+        .filter({ hasText: written })
+        .first();
+      await entry.getByRole("button", { name: t("drawer.correct") }).click();
+      const dialog = page.getByRole("dialog", { name: t("drawer.correctTitle") });
+      await expect(dialog).toBeVisible(COLD);
+      await dialog.getByLabel(t("drawer.whatHappened")).fill(`${written} — fixed`);
+      await dialog.getByRole("button", { name: t("common.save") }).click();
+      await expect(dialog).toBeHidden(COLD);
+      await expect(page.getByText(`${written} — fixed`)).toBeVisible(COLD);
+      await expect(page).toHaveURL(new RegExp(`/${locale}/reports`));
+    });
+
+    await test.step("and the customer's own history says the same thing", async () => {
+      // One record, two screens. The correction was filed against the customer
+      // the ENTRY names, which is the whole reason the entry carries its own id.
+      const stored = await one<{ text: string; company_id: string }>(
+        `select text, company_id from activities where id = $1::uuid`,
+        [entryId!],
+      );
+      expect(stored.text).toBe(`${written} — fixed`);
+      expect(stored.company_id).toBe(company.id);
+
+      await page.goto(`/${locale}/companies?open=${company.id}`);
+      const drawer = page.getByRole("dialog").first();
+      await expect(drawer.getByText(`${written} — fixed`)).toBeVisible(COLD);
+    });
+  } finally {
+    // Both locale projects read one seeded database, and every figure this
+    // entry touches is somebody else's assertion (playwright.config.ts).
+    if (entryId) await query(`delete from activities where id = $1::uuid`, [entryId]);
+    else await query(`delete from activities where text like $1::text`, [`${written}%`]);
+  }
+});
+
 /** The three figures the log feeds that this company can be asked for. */
 async function counts(companyId: string, userId: string) {
   const row = await one<{ entries: number; last_activity: string | null; logged: number }>(

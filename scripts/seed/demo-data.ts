@@ -920,7 +920,7 @@ export type ActivitySeed = {
 };
 
 export const ACTIVITIES: ActivitySeed[] = [
-  // Faisal — 22
+  // Faisal — 29
   { company: "f1", project: "p1", contact: 0, channel: "visit", back: 5, text: "زيارة المصنع، شفنا الواجهة الحالية وأخذنا المقاسات" },
   { company: "f1", contact: 0, channel: "whatsapp", back: 2, text: "أرسلت له كتالوج الألوان، اختار 168 فضي" },
   { company: "f1", project: "p1", contact: 0, channel: "visit", back: 0, followUpDays: 0, text: "زيارة الموقع، طلب عينات 4 مم لون 168" },
@@ -951,6 +951,21 @@ export const ACTIVITIES: ActivitySeed[] = [
 
   { company: "f9", project: "p6", contact: 0, channel: "visit", back: 11, text: "اجتماع مع إدارة المحطات، عندهم ست محطات على طريق الخرج" },
   { company: "f9", project: "p6", contact: 2, channel: "call", back: 5, text: "طلبوا جدول تنفيذ لكل محطة على حدة" },
+
+  // One day of telephone work, three working days back — nine entries on it
+  // once f3's visit and f5's call are counted (P12-13). Until this the busiest
+  // day anybody in the demo had ever had was three, so the line that says a
+  // card is not showing the whole day had never been on a screen, and neither
+  // had the report card of a rep who actually worked the phone. A day like this
+  // is ordinary here: the fabricator rings back, the consultant wants a
+  // specification, and half of it is five minutes each.
+  { company: "f1", contact: 0, channel: "call", back: 3, text: "اتصل يسأل عن مدة التوريد، قلت له أسبوعين من تاريخ الطلب" },
+  { company: "f1", project: "p1", channel: "whatsapp", back: 3, text: "أرسلت له صور تركيب مشابه في مشروع سابق" },
+  { company: "f5", contact: 0, channel: "whatsapp", back: 3, text: "Sent the fire rating certificate, they forwarded it to the consultant" },
+  { company: "f7", contact: 0, channel: "call", back: 3, text: "المقاول يسأل عن الفرق بين 4 و 5 مم للواجهات العالية" },
+  { company: "f7", channel: "other", back: 3, text: "أرسلت له جدول المقاسات المتوفرة بالإيميل" },
+  { company: "f8", contact: 0, channel: "call", back: 3, text: "صاحب الورشة رجع، يبي كمية أقل من المتوفرة" },
+  { company: "f8", contact: 0, channel: "whatsapp", back: 3, text: "أرسلت له الأسعار للكمية الصغيرة" },
 
   { company: "f10", contact: 0, channel: "call", back: 13, text: "اتصال أول، عندهم مشروع سكني بعد شهرين" },
 

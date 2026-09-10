@@ -524,6 +524,11 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   direction, so a block-level one — anything given `block`, or simply a child of a flex column
   — leaves the side of the page everything else is on. Turn the RUN around and let the box keep
   the page's direction. It is why `Ref` is two elements and why `<bdi>` is never the block.
+- **A record says what its screen does not already know.** Phase 12-13 (D162). The same log
+  entry on a customer's drawer and on a person's day is two different lines: the drawer knows
+  the customer, so the entry adds the day and the writer; the day's card knows the day and the
+  writer, so the entry adds the customer. Printing all of it in both places is how a list stops
+  being read — three of the four would be identical on every line of it.
 - **A count is a door.** Phase 11E (D117). A number that counts rows opens those rows, with
   the filter the list itself uses, and is underlined so the reader knows it is a door; a zero
   is plain text, because a door onto an empty room is a dead end. A bare count a person has to

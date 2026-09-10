@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 import { CallsLine, DayBoard, MovedLine } from "@/components/reports/day-figures";
+import { DayTrail } from "@/components/reports/day-trail";
 import { Prose } from "@/components/ui-ext/prose";
 import { movedNothing } from "@/lib/report-figures";
 import type { PersonDay } from "@/lib/reports";
@@ -63,6 +64,12 @@ export async function PersonCard({ person, open }: { person: PersonDay; open: bo
       )}
 
       <Note person={person} />
+
+      {/* Under the sentence, not over it. A manager scrolling eleven of these
+          in the evening is reading the sentences (D56); the log is what he
+          drops into when one of them makes him want the detail, and putting it
+          above would push every sentence a screen further down. */}
+      <DayTrail trail={person.trail} />
     </article>
   );
 }
@@ -110,10 +117,17 @@ async function Note({ person }: { person: PersonDay }) {
 export async function OwnCard({
   person,
   open,
+  correct = false,
   children,
 }: {
   person: PersonDay;
   open: boolean;
+  /**
+   * Whether his own entries may still be corrected from here — the same window
+   * the report box has, because the two are one act (D58, D70). A day that has
+   * closed is read on this card and changed on neither half of it.
+   */
+  correct?: boolean;
   /** The write box. */
   children: ReactNode;
 }) {
@@ -129,7 +143,18 @@ export async function OwnCard({
       <h2 className="text-sm font-medium text-muted-foreground">{t("yourDay")}</h2>
       <DayBoard work={person.work} />
       <CallsLine work={person.work} open={open} />
+      {/* Both cards read the same way: what moved, then the person's own words
+          — the sentence on everybody else's card, the box that writes it on
+          this one — and then the log under it.
+
+          The box goes ABOVE the log and not under it, which is the one place
+          this card's order was argued twice. He came to this screen to write,
+          D55 promises him under a minute on a phone at six in the evening, and
+          on the day he has most to say — nine entries — the box was two screens
+          down past his own afternoon. The log is what he consults, so it sits
+          where a person looks when the sentence will not come. */}
       {children}
+      <DayTrail trail={person.trail} correct={correct} />
     </section>
   );
 }

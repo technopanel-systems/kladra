@@ -1,9 +1,11 @@
 import { getTranslations } from "next-intl/server";
+import { LogDialogHost } from "@/components/activities/log-dialog";
 import { DayNav } from "@/components/reports/day-nav";
 import { OwnCard, PersonCard } from "@/components/reports/person-card";
 import { ReportBox } from "@/components/reports/report-box";
 import { requireUser } from "@/lib/authz";
 import { todayRiyadh, type Day } from "@/lib/dates";
+import { logTargetsFor, NO_TARGETS } from "@/lib/log-targets";
 import { boxOffered } from "@/lib/report-figures";
 import { latestReportDay, mayWriteFor, owesReport, reportNeighbours, teamDay } from "@/lib/reports";
 
@@ -47,7 +49,7 @@ export default async function ReportsPage({
   const day = asked && asked <= today ? asked : await latestReportDay(today);
 
   const [team, neighbours, dayIsOpen] = await Promise.all([
-    teamDay(day, today),
+    teamDay(user, day, today),
     reportNeighbours(day, today),
     mayWriteFor(day, today),
   ]);
@@ -59,6 +61,20 @@ export default async function ReportsPage({
 
   const mine = owesReport(user.role) ? team.people.find((p) => p.userId === user.id) : undefined;
   const others = team.people.filter((person) => person.userId !== mine?.userId);
+
+  // What the reader's OWN entries can be corrected against (D70, D82). One
+  // dialog for the card, built from the customers his own day touched — the
+  // person most likely to notice that an entry went against the wrong customer
+  // is the one reading his day before he writes about it, and until now the
+  // only way to fix it was to remember which drawer he had been in.
+  const own = mine?.trail?.rows ?? [];
+  const targets = await logTargetsFor([...new Set(own.map((row) => row.companyId))]);
+  const logTargets = Object.fromEntries(
+    own.map((row) => [
+      row.companyId,
+      { companyName: row.companyName, ...(targets.get(row.companyId) ?? NO_TARGETS) },
+    ]),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,15 +89,18 @@ export default async function ReportsPage({
           the day is still open to him: a Saturday he worked can be written,
           and the box says it is not owed (S47, D97). */}
       {mine && boxOffered(mine.state, canWrite, mine.note) ? (
-        <OwnCard person={mine} open={team.open}>
-          <ReportBox
-            day={day}
-            note={mine.note}
-            canWrite={canWrite}
-            closed={!dayIsOpen}
-            optional={mine.state === "off"}
-          />
-        </OwnCard>
+        <LogDialogHost targets={logTargets}>
+          <OwnCard person={mine} open={team.open} correct={canWrite}>
+            <ReportBox
+              day={day}
+              note={mine.note}
+              canWrite={canWrite}
+              closed={!dayIsOpen}
+              optional={mine.state === "off"}
+              hasLog={own.length > 0}
+            />
+          </OwnCard>
+        </LogDialogHost>
       ) : null}
 
       {/* How many of the people who owed one wrote. It is a count and not a

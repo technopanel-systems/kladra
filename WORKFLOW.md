@@ -145,7 +145,7 @@
       - [x] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
       - [x] 11 The queue: the whole row opens it, and the SMAC number is the large one
       - [x] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
-      - [ ] 13 Reports and the company log rebuilt as one thing, per person, per day
+      - [x] 13 Reports and the company log rebuilt as one thing, per person, per day
       - [ ] 14 Across: the panel's width, one primary action per list, the board ruling written
 
 P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
@@ -541,127 +541,156 @@ the quantity column's position, the manager's target box, the long-press number 
 per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
 which is what slice 2 is for.
 
-**Where P12 has got to.** Boxes 1, 2, 3, 4, 5, 6, 7 and 12 are done. The freeze was fixed at
-its cause and the same picker shape swept out of the company form; `npm run lint` now fails on a
-§3 sentence with no test behind it and prints what is owed (27 proved, 6 proved another way, 11
-owed); sharing is built end to end — a shared company, a shared project, an owner on every
-contact and every project, and the eleven visibility clauses re-pointed at one predicate — with
-four defects found in the building of it (§5 #155–#157, #159) and a fifth, the half-restored
-floor, found in the gate. The three-tab shell is on the rep's day and the manager's screen, and
-the metrics tab under it now answers the founder's proportion questions: where the metres went by
-kind of customer, how the work narrows, over a window chosen once for everything under it, for
-the whole floor or one person (D152, D154). And credit is built on top of the sharing the schema
-was written for: a quotation and a dispatch each say who they count for, chosen when they are
-raised and never inherited, asked only where a job has more than one rep on it; the metres of a
-shared dispatch divide exactly, with the odd hundredth given to a fixed name so the shares always
-add back; and achieved metres — the rep's card, the manager's table, the metrics tab, the daily
-report — are the sum of what a person was credited rather than of what he raised (D148, D155).
-Three defects came out of building it, none of them about credit: a migration that reported
-success and did nothing, a drawer that hid a button the action would have allowed, and a query
-whose failure made a question stop being asked (§5 #162–#164). Box 5 gave three roles what §3
-asked for: the handover belongs to the sales manager alone, the Marketing lead source is not
-offered to a rep — as a column on the row, so renaming the lookup cannot switch the rule off — and
-the coordinator sells. She has a floor now, and the one thing about it that is hers alone is that
-she asks nobody for paper: the same dialog every rep uses gains a SMAC field for her, the button
-says Issue, and the quotation is raised and issued in one act, flagged so the manager reads who did
-both (D156). Two defects came out of it and neither was about roles: the Dispatches screen's own
-picker allowed only `issued`, so the door closed on a quotation the moment its rep recorded the
-customer's yes, while the drawer one click away still offered it (§5 #166); and a spec that proved
-a refusal stopped being refused, performed the change instead, and left a rep holding another role
-for every file that ran after it in the shared database (§5 #167). Box 7 built the module §3 gave
-marketing, and the shape of it is the decision: a lead IS a company — three columns on the table
-every screen already reads — so filing one is the assignment, and there is nothing to convert
-afterwards. One Save puts the customer on the chosen floor with somebody to ring on him; the
-person it lands on answers it with a press of his own, which is what takes it off his day, off
-marketing's list and off the manager's stuck band, all three from one column; and it is late at
-the two working days everything else on those screens is late at. Marketing loses Add company and
-gains its own home. What the box found on top was a shape rather than a defect: adding a fourth
-kind to a list of three would have quietly grown two figures that count by `else` and by `!==`
-(§5 #170). Box 8 brought FACET's S21–S23 forward as D158 with one split the founder's own
-sentences make: the NAME warns the rep on the form, where he is looking at the customer's card
-and can decide in a second, and the NUMBER tells the MANAGER, who is the person deciding whose
-customer this is. One telephone number is one company; a name lookalike is ordinary in this
-trade, and a queue of pairs that are not duplicates is a queue nobody reads. The name rules are
-one immutable SQL function and `companies.name_folded` is generated from it, so no insert can
-forget it. The three answers reuse what exists — `company_shares` for "and share it", the
-hand-over permission for who may rule, `moveContacts` for the arriving people — so the box added
-one table, two columns and one screen rather than a parallel system. What it found on top was
-worth more than the screen: a migration rewritten after it was applied is applied to nothing in
-silence (#171), a `<bdi>` given a width is a block that changes direction (#172), the rail's own
-keys were checked by nobody (#173), a new namespace is where a second word for an old thing gets
-in (#174), an ellipsis on a label deletes the meaning and leaves the number (#175), a CHECK
-refuses only on FALSE so a fold could be recorded with nothing continuing (#176), and the
-quotation and dispatch pickers asked one rule with a clause missing, withholding work their own
-actions would have taken (#177). Box 9 put four of the founder's sentences on the screen a rep
-uses most. **Quantity is fifth** on a quotation line, where §3 put it and where it had not been
-for four phases — an order is not a value, so nothing in the gate could see it, and the debt was
-registered as "no test has walked this" rather than as "this is wrong" (#178). **The widths are
-written once**, in `src/lib/sheet.ts`: they had been a list in the form and a second list in the
-seed that nothing imported, which is not two copies drifting but one copy that is decoration
-(#179). **The warehouse** is a lookup and a NOT NULL column on the quotation and on the dispatch,
-never on their lines; a dispatch opens on its quotation's store, which is a child reading its
-parent rather than the carrying-forward §3 forbids. And the button asks **company → project →
-contact**, the order a rep has the answers in, instead of one flat list of every job in the
-building; the contact is a new column, optional, because a price for stock is addressed to
-nobody. Two founder decisions came off the owed list and the suite found the class the compiler
-could not: six fixtures that write a quotation or a dispatch in raw SQL (#180). Two more came out
-of the box's own gate rather than out of its screens: a gap between two names is not a separator
-(#181), and a walk that had been passing on warmth since P8 — it left a page on the strength of a
-heading and expected the browser to have written a cookie it had had no chance to write (#182), and
-a walk that hung on a list that had closed under its own retry, in a helper three specs had each
-written out by hand (#183). Box 10 is the dispatch's own five sentences. **Payment terms are a
-choice plus notes** — the founder's decision tree, not one free-text box finance cannot count: an
-enum of four, a second question asked in its own words for the two that have one, a note the two
-finance reviews require, and three CHECKs that hold the shape where the form is not the only way
-in. **A dispatch implies the customer accepted**, inside the transaction that raises it and under
-the same hold, clearing the chase notice with it. **A refused dispatch is corrected and sent
-again**, which is what §2 S53 already called it, and three things that were true of a terminal
-refusal stopped being true with it — its notice is cleared by the work, its colour is the amber
-the rep's own day screen had been painting it for phases, and the desk's "answered today" is
-counted from what she DID rather than from the states the rows are in now (#185). **Nothing is
-carried forward**: the site, the terms and the shipment method are off the form and the read
-behind them is gone. **And every quotation names its job** — `project_id` was nullable with
-eighteen queries and eight screens carrying a state only the seed could produce, and the picker's
-own comment explaining it (#184); the column is NOT NULL, the `set null` is gone, and the one
-seeded row that had no job is the workshop order it always was. The dispatch dialog now asks the
-chain the way box 9's does — the customer, then that customer's papers with the job on the row —
-and moving one shared sentence to `common` found a third copy of it nobody had been looking for
-(#186), and the Arabic review found an order to a man that every check in the gate had passed,
-because a checker matching whole words cannot see the conjunction Arabic glues to the front of a
-verb — the second time that shape has shipped, and the first time the rule rather than the word
-was fixed (#187). Box 11 is the queue's two sentences, and most of what it cost was found by
-reading its own work rather than by writing it. **A row is a door, all of it**: the coordinator
-reads across to how long a thing has waited and presses there, nine hundred pixels from the only
-cell that opened anything, and the fix is the row's own title link stretched over it rather than a
-handler on the row — one anchor, one tab stop, and Cmd-click still opens a new tab from anywhere
-along it. The checkpoint read then found that customers, projects and the call band had been doing
-exactly that since P8, in three arrangements of the same four classes, and that this box was
-writing a fourth which would not have fitted a card at all (#190); one utility owns the overlay
-and the ring now, six call sites read alike, `one-look` refuses the next spelling, and the escape
-hatch — the phone number that has to stay ON TOP of the overlay — got the test it never had.
-**SMAC's number is the large one**: the number on the paper the customer holds, that finance files
-and that anybody says out loud, was the small grey line under Kladra's own, and they are swapped
-on both lists, on the cards those lists draw on a phone, on the board tiles and on the rep's own
-waiting cards; where there is no SMAC number — a request nobody has issued, a load nobody has
-approved — Kladra's leads alone, because a dash under a heading is a field a reader has to decide
-is empty. A row that points AT another record points the same way (#191): the dispatch list still
-said Q-12 while the quotations list had just started leading with SMAC's, so following the
-reference meant reading one number and searching for another. The guidelines pass then asked why
-the loudest number on the row could be rewritten by a browser's translator, and the answer was
-that two places in the app carried `translate="no"` and about twenty hand-built the same four
-attributes without it (#192) — so a reference number is a component now, `Ref`, beside the two the
-app has had for metres and money since P8. And the Arabic screenshots caught what every gate had
-passed (#193): on the rep's day card the quiet number sat alone against the far left, because **an
-element that carries a direction resolves `text-align: start` against its own**, and the tables
-had been hiding it behind a column width. The rule is `<bdi>`'s rule one attribute over, it is
-written in DESIGN as its own line now, and the component carries it rather than every caller. Two
-more properties came out of the box's own gate and neither is about Kladra: a suite that takes
-thirty-five minutes cannot be started at midnight, because the seed's "today" is fixed when it
-starts and the app reads the Riyadh clock on every request (#188); and stopping a run stops the
-shell in front of it and nothing below it, so a replacement run cleared the database under the
-first one's browser and every symptom pointed at the code — `globalSetup` takes a lock now and
-refuses the second run before a single row is deleted (#189). Boxes 13 and 14 are next, in that
-order.
+**Where P12 has got to.** Boxes 1, 2, 3, 4, 5, 6, 7 and 12 are done. The freeze was fixed at its
+cause and the same picker shape swept out of the company form; `npm run lint` now fails on a §3
+sentence with no test behind it and prints what is owed (27 proved, 6 proved another way, 11
+owed); sharing is built end to end — a shared company, a shared project, an owner on every contact
+and every project, and the eleven visibility clauses re-pointed at one predicate — with four
+defects found in the building of it (§5 #155–#157, #159) and a fifth, the half-restored floor,
+found in the gate. The three-tab shell is on the rep's day and the manager's screen, and the
+metrics tab under it now answers the founder's proportion questions: where the metres went by kind
+of customer, how the work narrows, over a window chosen once for everything under it, for the
+whole floor or one person (D152, D154). And credit is built on top of the sharing the schema was
+written for: a quotation and a dispatch each say who they count for, chosen when they are raised
+and never inherited, asked only where a job has more than one rep on it; the metres of a shared
+dispatch divide exactly, with the odd hundredth given to a fixed name so the shares always add
+back; and achieved metres — the rep's card, the manager's table, the metrics tab, the daily report
+— are the sum of what a person was credited rather than of what he raised (D148, D155). Three
+defects came out of building it, none of them about credit: a migration that reported success and
+did nothing, a drawer that hid a button the action would have allowed, and a query whose failure
+made a question stop being asked (§5 #162–#164). Box 5 gave three roles what §3 asked for: the
+handover belongs to the sales manager alone, the Marketing lead source is not offered to a rep —
+as a column on the row, so renaming the lookup cannot switch the rule off — and the coordinator
+sells. She has a floor now, and the one thing about it that is hers alone is that she asks nobody
+for paper: the same dialog every rep uses gains a SMAC field for her, the button says Issue, and
+the quotation is raised and issued in one act, flagged so the manager reads who did both (D156).
+Two defects came out of it and neither was about roles: the Dispatches screen's own picker allowed
+only `issued`, so the door closed on a quotation the moment its rep recorded the customer's yes,
+while the drawer one click away still offered it (§5 #166); and a spec that proved a refusal
+stopped being refused, performed the change instead, and left a rep holding another role for every
+file that ran after it in the shared database (§5 #167). Box 7 built the module §3 gave marketing,
+and the shape of it is the decision: a lead IS a company — three columns on the table every screen
+already reads — so filing one is the assignment, and there is nothing to convert afterwards. One
+Save puts the customer on the chosen floor with somebody to ring on him; the person it lands on
+answers it with a press of his own, which is what takes it off his day, off marketing's list and
+off the manager's stuck band, all three from one column; and it is late at the two working days
+everything else on those screens is late at. Marketing loses Add company and gains its own home.
+What the box found on top was a shape rather than a defect: adding a fourth kind to a list of
+three would have quietly grown two figures that count by `else` and by `!==` (§5 #170). Box 8
+brought FACET's S21–S23 forward as D158 with one split the founder's own sentences make: the NAME
+warns the rep on the form, where he is looking at the customer's card and can decide in a second,
+and the NUMBER tells the MANAGER, who is the person deciding whose customer this is. One telephone
+number is one company; a name lookalike is ordinary in this trade, and a queue of pairs that are
+not duplicates is a queue nobody reads. The name rules are one immutable SQL function and
+`companies.name_folded` is generated from it, so no insert can forget it. The three answers reuse
+what exists — `company_shares` for "and share it", the hand-over permission for who may rule,
+`moveContacts` for the arriving people — so the box added one table, two columns and one screen
+rather than a parallel system. What it found on top was worth more than the screen: a migration
+rewritten after it was applied is applied to nothing in silence (#171), a `<bdi>` given a width is
+a block that changes direction (#172), the rail's own keys were checked by nobody (#173), a new
+namespace is where a second word for an old thing gets in (#174), an ellipsis on a label deletes
+the meaning and leaves the number (#175), a CHECK refuses only on FALSE so a fold could be
+recorded with nothing continuing (#176), and the quotation and dispatch pickers asked one rule
+with a clause missing, withholding work their own actions would have taken (#177). Box 9 put four
+of the founder's sentences on the screen a rep uses most. **Quantity is fifth** on a quotation
+line, where §3 put it and where it had not been for four phases — an order is not a value, so
+nothing in the gate could see it, and the debt was registered as "no test has walked this" rather
+than as "this is wrong" (#178). **The widths are written once**, in `src/lib/sheet.ts`: they had
+been a list in the form and a second list in the seed that nothing imported, which is not two
+copies drifting but one copy that is decoration (#179). **The warehouse** is a lookup and a NOT
+NULL column on the quotation and on the dispatch, never on their lines; a dispatch opens on its
+quotation's store, which is a child reading its parent rather than the carrying-forward §3
+forbids. And the button asks **company → project → contact**, the order a rep has the answers in,
+instead of one flat list of every job in the building; the contact is a new column, optional,
+because a price for stock is addressed to nobody. Two founder decisions came off the owed list and
+the suite found the class the compiler could not: six fixtures that write a quotation or a
+dispatch in raw SQL (#180). Two more came out of the box's own gate rather than out of its
+screens: a gap between two names is not a separator (#181), and a walk that had been passing on
+warmth since P8 — it left a page on the strength of a heading and expected the browser to have
+written a cookie it had had no chance to write (#182), and a walk that hung on a list that had
+closed under its own retry, in a helper three specs had each written out by hand (#183). Box 10 is
+the dispatch's own five sentences. **Payment terms are a choice plus notes** — the founder's
+decision tree, not one free-text box finance cannot count: an enum of four, a second question
+asked in its own words for the two that have one, a note the two finance reviews require, and
+three CHECKs that hold the shape where the form is not the only way in. **A dispatch implies the
+customer accepted**, inside the transaction that raises it and under the same hold, clearing the
+chase notice with it. **A refused dispatch is corrected and sent again**, which is what §2 S53
+already called it, and three things that were true of a terminal refusal stopped being true with
+it — its notice is cleared by the work, its colour is the amber the rep's own day screen had been
+painting it for phases, and the desk's "answered today" is counted from what she DID rather than
+from the states the rows are in now (#185). **Nothing is carried forward**: the site, the terms
+and the shipment method are off the form and the read behind them is gone. **And every quotation
+names its job** — `project_id` was nullable with eighteen queries and eight screens carrying a
+state only the seed could produce, and the picker's own comment explaining it (#184); the column
+is NOT NULL, the `set null` is gone, and the one seeded row that had no job is the workshop order
+it always was. The dispatch dialog now asks the chain the way box 9's does — the customer, then
+that customer's papers with the job on the row — and moving one shared sentence to `common` found
+a third copy of it nobody had been looking for (#186), and the Arabic review found an order to a
+man that every check in the gate had passed, because a checker matching whole words cannot see the
+conjunction Arabic glues to the front of a verb — the second time that shape has shipped, and the
+first time the rule rather than the word was fixed (#187). Box 11 is the queue's two sentences,
+and most of what it cost was found by reading its own work rather than by writing it. **A row is a
+door, all of it**: the coordinator reads across to how long a thing has waited and presses there,
+nine hundred pixels from the only cell that opened anything, and the fix is the row's own title
+link stretched over it rather than a handler on the row — one anchor, one tab stop, and Cmd-click
+still opens a new tab from anywhere along it. The checkpoint read then found that customers,
+projects and the call band had been doing exactly that since P8, in three arrangements of the same
+four classes, and that this box was writing a fourth which would not have fitted a card at all
+(#190); one utility owns the overlay and the ring now, six call sites read alike, `one-look`
+refuses the next spelling, and the escape hatch — the phone number that has to stay ON TOP of the
+overlay — got the test it never had. **SMAC's number is the large one**: the number on the paper
+the customer holds, that finance files and that anybody says out loud, was the small grey line
+under Kladra's own, and they are swapped on both lists, on the cards those lists draw on a phone,
+on the board tiles and on the rep's own waiting cards; where there is no SMAC number — a request
+nobody has issued, a load nobody has approved — Kladra's leads alone, because a dash under a
+heading is a field a reader has to decide is empty. A row that points AT another record points the
+same way (#191): the dispatch list still said Q-12 while the quotations list had just started
+leading with SMAC's, so following the reference meant reading one number and searching for
+another. The guidelines pass then asked why the loudest number on the row could be rewritten by a
+browser's translator, and the answer was that two places in the app carried `translate="no"` and
+about twenty hand-built the same four attributes without it (#192) — so a reference number is a
+component now, `Ref`, beside the two the app has had for metres and money since P8. And the Arabic
+screenshots caught what every gate had passed (#193): on the rep's day card the quiet number sat
+alone against the far left, because **an element that carries a direction resolves `text-align:
+start` against its own**, and the tables had been hiding it behind a column width. The rule is
+`<bdi>`'s rule one attribute over, it is written in DESIGN as its own line now, and the component
+carries it rather than every caller. Two more properties came out of the box's own gate and
+neither is about Kladra: a suite that takes thirty-five minutes cannot be started at midnight,
+because the seed's "today" is fixed when it starts and the app reads the Riyadh clock on every
+request (#188); and stopping a run stops the shell in front of it and nothing below it, so a
+replacement run cleared the database under the first one's browser and every symptom pointed at
+the code — `globalSetup` takes a lock now and refuses the second run before a single row is
+deleted (#189). Box 13 is two founder sentences that had been built ten phases apart and never
+read next to each other. S26 says a rep is asked to write only what the system cannot see; S27
+says the history of a company IS the manager's daily report. Kladra had the log since P3 and the
+report since P9, and on the report card the log was a NUMBER — "4 log entries", with the four on
+four customers' drawers a manager would have had to know to open. So he read a count, and at six
+o'clock the rep typed his day out a second time into the report box, which is the copy S26 forbids
+by name (#194). **The entries are on the card now**, under the sentence on everybody else's and
+above the box on the reader's own — under, because a manager going down eleven cards in the
+evening is reading the sentences and the log is what he drops into when one of them makes him
+curious; above, because the person about to write is writing ABOUT it. **An entry says what its
+screen does not already know**: a customer's drawer knows the customer, so the entry adds the day
+and the writer; a person's day knows both of those, so it adds the CUSTOMER, as a door to him.
+**And the day is finished where it is read** — his own entries carry the same Correct and Unfile
+the drawer offers, in the same window the report box has, which works because the ENTRY carries
+the customer it names rather than the screen handing one down. Who reads whose is the line worth
+the founder's eye: figures and sentence for everybody (D56), customer names only on the cards the
+reader may open (S8, D42). **Three defects came out of building it and none was in the new code.**
+The compressed figure line had read "2 companies added" since P9B over a query that counts the
+customers somebody DEALT with, in both languages, because a plural label reads as a caption rather
+than as a claim (#195). `lastWorkingDay` ran its own select on the holiday table, and so did two
+of its neighbours — three more reads of the table `calendar.ts` exists to read once — and the walk
+over it existed twice, capped in one copy and unbounded in the other; it surfaced as a module
+CYCLE, because the report could not read the log while the log imported the report for a calendar
+function that had been in the wrong file since P9 (#196). And the busiest day anybody in the demo
+had ever had was three entries, so the line saying a card is not showing the whole day could never
+once have been on a screen — the same fault as #185, and the same answer: Faisal now has one day
+of telephone work with nine entries on it, and the cap is two numbers because a colleague's card
+is read for its sentence and your own is read against your memory (#197). The Arabic review of two
+changed strings found four more, two of them on the English side (#198). Box 14 is next: across —
+the panel's width, one primary action per list, the board ruling written, and the three §3
+decisions still owed.
 
 ## §4 Five days, walked (P9.1)
 
@@ -935,6 +964,14 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 4. Dispatches reads the same way, and the load names the quotation it is against by SMAC's number too — the number she would type into SMAC — with Kladra's under it.
 5. On his phone the same records are cards and lead with the same number; on the board a tile carries the leading number alone, because a tile has room for one.
 6. His own day lists what is waiting on him. The quotation with the customer leads with SMAC's number; the lead, the sent-back request and the refused load have no SMAC paper and lead with Kladra's.
+
+**The report and the log are one thing (P12-13)** — `tests/reports.spec.ts`, `tests/correct.spec.ts`
+1. Abdulrahman opens the daily report. A rep's card carries what moved, then the sentence he wrote, then the entries themselves — each naming the customer it is about, and the name opens that customer.
+2. An entry on that card does not repeat the day or the writer: both are the card's own heading, and every line would have said the same date and the same name.
+3. The figure above counts the whole day and the list shows the first of it; where they differ the line under the list says how many there are.
+4. Faisal opens the same screen. His own card carries his own entries; his colleague's card carries the figures and the sentence and not his colleague's customers.
+5. He logs a visit from a customer's drawer, opens the report, and finds it on his own card under that customer's name.
+6. He corrects the words there, without leaving the report, and the customer's own history says the same thing — one record, two screens.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -2997,3 +3034,82 @@ actually needed.
   where the defect lives. **The lesson about looking**: every gate in the repo was green over
   this, in both locales, for the whole box; the defect was visible in the first Arabic
   screenshot, and nothing but a screenshot was ever going to say so.
+- [x] 194 **Two halves of one sentence, built ten phases apart and never joined.** S26 says a rep
+  is asked to write only what the system cannot see, and S27 that a company's history IS the
+  manager's daily report. Kladra had both: the log since P3, the report since P9. What it did not
+  have was them on one screen — the card said "4 log entries" and named none of the four, which
+  lived on four customers' drawers a manager would have had to know to open. So he read a number,
+  and at six o'clock the rep typed his day out a second time into the report box, which is the
+  copy S26 forbids by name. **The defect was invisible because both halves were right.** Nothing
+  was broken, no test could fail, and the only way to see it was to read the two founder
+  sentences next to each other and ask what a person does at six o'clock. The entries are on the
+  card now, with the customer as the heading of each — and the correction with them, so the day
+  is finished on the screen where it is read rather than on the drawer he would have to remember.
+- [x] 195 **A figure whose words said something its query did not.** The report's compressed line
+  read "2 companies added" beside "4 log entries", in both languages. The figure is
+  `count(distinct company_id)` over that day's entries — how many customers he DEALT with, which
+  on an ordinary day includes none that were added at all. It had been wrong since P9B and read
+  by everybody, because a plural label reads as a caption rather than as a claim. D59 is the rule
+  it breaks: a figure carries the words that say what it means. Found by reading the query and
+  the message file side by side while building the trail above them — which is the only way this
+  class is ever found, since the app cannot know that a noun is the wrong noun.
+- [x] 196 **A third read of the small table, and a second walker over it.** `lastWorkingDay` ran
+  its own `select` on `non_working_days`, and so did `latestReportDay` and `reportNeighbours` —
+  three more reads of the one table `src/lib/calendar.ts` was written to read once with `cache`
+  after §5 #71 counted six of them on a single screen. And the walk itself existed twice: a
+  private `stepWorking` in reports.ts and `nextWorkingDay` in workdays.ts, differing in the two
+  ways a near-copy always differs — one was capped at three weeks against a bad row in the
+  holiday table and one was a `while` with nothing to stop it; one could ask about a person and
+  one only about the company. Both halves are one function now, in the pure module that owns the
+  arithmetic, and the loading is in the module that owns the loading. **It surfaced as a
+  layering problem, not as a bug**: `activities.ts` imported `lastWorkingDay` from `reports.ts`,
+  so the report could not read the log without a cycle — and the cycle was the sign that a
+  calendar function had been living in the wrong file since P9.
+- [x] 197 **The busiest day anybody in the demo had ever had was three entries.** Box 13 put a
+  cap on the log a report card draws and a line under it saying what is not shown, and the line
+  was unreachable: the seeded floor's fullest day held three, so nobody — not a reviewer, not a
+  screenshot, not the founder — could ever have seen that state. It is the same fault as #185,
+  where the coordinator's "answered today" had never once been anything but zero, and the same
+  answer: **a demo that cannot show a state is a demo that has not been checked.** Faisal now has
+  one day of telephone work, nine entries on it, which is an ordinary day for this trade and was
+  simply missing from a floor whose entries were all site visits spread thin. The cap is two
+  numbers rather than one, for the reason `DayBoard` and `MovedLine` are two densities: four on
+  somebody else's card, because that card is read for its sentence, and twelve on the reader's
+  own, because he is checking the day against his memory and a day cut off at four is a day he
+  cannot check. The acceptance test asks the database for the busiest day rather than naming one,
+  so the day the seed's story changes the test follows it.
+- [x] 198 **Three things the Arabic reviewer found that the English side owned.** The review of
+  two changed strings turned up four defects, and only one of them was in the two strings. The
+  demonstrative «ذلك» opened the write box pointing at nothing — it is Arabic's FAR demonstrative
+  and resolves backwards, so in an empty box it is a pronoun the reader holds until the third
+  sentence tells him where to look. «هذا اليوم» is concrete and is already the file's own way of
+  naming the day. The counted noun lost its tanween in the 11–99 branch, which its neighbours in
+  the same file had right. And on a Saturday the Arabic said "not a working day" twice within one
+  scroll — the box and the heading 150 pixels under it, verbatim — where the English says it two
+  different ways. **The two it could not fix itself were on the English side.** The board heading
+  read "m² approved" over a figure that prints its own unit, so an English screen said m² twice
+  and an Arabic one did not, because «المساحة المعتمدة» has been right since P9B — the heading is
+  "Area approved" now and both locales read the same shape. And the new prompt ends by pointing at
+  the entries above the box, which on a day with nothing logged points at nothing: there are two
+  prompts now, chosen by whether there is anything above, because **a sentence that is false on
+  some days is a screen people learn to stop reading** — the same rule the card already applies to
+  "nothing was recorded on this day". One the reviewer raised and this box declined: the board
+  heading "Companies" could be read as companies ADDED, most plausibly on marketing's card, and
+  every unambiguous alternative is either a four-word relative clause in an 11px grid cell or a
+  word that means something else. The lie was in the compressed label and it is fixed; the
+  heading is terse and the founder can settle it.
+- [x] 199 **Two things only a screenshot could say, on states nothing had ever drawn.** The demo's
+  new nine-entry day put both of the log's capped states on a screen for the first time, and both
+  were wrong in ways every gate had passed. **The line under a shortened list told the reader to
+  search**, because `ListTail` carries one sentence for every list in the app — "search by name or
+  number to find the rest" — and a report card has no search box. A screen offering work it cannot
+  do is DESIGN §5's own rule, and the fix is that the SENTENCE belongs to the screen while the
+  markup stays written once: the report's says the rest of that day is under Activity on each
+  customer, which is where it has always been. **And the write box had moved two screens down.**
+  The log went above it on the reader's own card, argued from "a person about to write is writing
+  ABOUT it" — which is true and was still wrong: he opened the screen to write, D55 promises him
+  under a minute on a phone at six in the evening, and on the day he has most to say the box was
+  past his whole afternoon. Both cards now read the same way — what moved, the person's own words,
+  then the log — which is also simpler to explain than the asymmetry it replaces. **Neither was
+  findable any other way**: the tally was green, the seed could not produce either state until
+  this box changed it, and a person had to look at the pixels of a nine-entry day.

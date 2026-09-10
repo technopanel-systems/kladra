@@ -21,7 +21,7 @@ import { activities, companies, contacts, countries, projects, users } from "@/d
 import { NotAllowed } from "@/lib/authz";
 import { personName } from "@/lib/people";
 import { mayOpen, mayWrite } from "@/lib/floor";
-import { lastWorkingDay } from "@/lib/reports";
+import { lastWorkingDay } from "@/lib/calendar";
 import { todayRiyadh, type Day } from "@/lib/dates";
 import type { SessionUser } from "@/lib/types";
 import {
@@ -42,6 +42,14 @@ export type ActivityRow = {
   channel: ActivityChannel;
   happenedOn: Day;
   userName: string;
+  /**
+   * Which customer it is about. Every entry names one (S24), and on a company's
+   * own drawer that is the context rather than news — but on a person's DAY it
+   * is the whole point of the line, so the query carries it either way and the
+   * reader decides which half is worth printing.
+   */
+  companyId: string;
+  companyName: string;
   contactId: string | null;
   contactName: string | null;
   projectId: string | null;
@@ -262,6 +270,8 @@ function activityQuery(locale: string, where: SQL) {
       happenedOn: activities.happenedOn,
       userId: activities.userId,
       userName: personName(locale),
+      companyId: activities.companyId,
+      companyName: companies.name,
       contactId: activities.contactId,
       contactName: contacts.name,
       projectId: activities.projectId,
@@ -269,6 +279,7 @@ function activityQuery(locale: string, where: SQL) {
     })
     .from(activities)
     .innerJoin(users, eq(users.id, activities.userId))
+    .innerJoin(companies, eq(companies.id, activities.companyId))
     .leftJoin(contacts, eq(contacts.id, activities.contactId))
     .leftJoin(projects, eq(projects.id, activities.projectId))
     // The caller's own filter AND the one every caller needs: an unfiled entry
@@ -285,6 +296,8 @@ type ActivityQueryRow = {
   happenedOn: Day;
   userId: string;
   userName: string;
+  companyId: string;
+  companyName: string;
   contactId: string | null;
   contactName: string | null;
   projectId: string | null;
@@ -306,6 +319,8 @@ async function toRows(rows: ActivityQueryRow[], user: SessionUser): Promise<Acti
     happenedOn: row.happenedOn,
     userId: row.userId,
     userName: row.userName,
+    companyId: row.companyId,
+    companyName: row.companyName,
     contactId: row.contactId ?? null,
     contactName: row.contactName ?? null,
     projectId: row.projectId ?? null,
@@ -342,4 +357,50 @@ export async function listActivitiesForProject(
     and(eq(activities.projectId, projectId), eq(activities.companyId, owner.companyId))!,
   ).orderBy(desc(activities.happenedOn), desc(activities.createdAt));
   return toRows(rows, user);
+}
+
+/**
+ * One person's log for one day, newest first, with how many there are (S27).
+ *
+ * S24 to S27 read together are one sentence: a rep writes what happened with a
+ * customer in his own words, he is asked for nothing a record already holds,
+ * and the history that comes out of it IS what the manager reads at the end of
+ * the day. Kladra had both halves and had never joined them — the entries lived
+ * on each customer's drawer, the report card said "3 log entries" and named
+ * none of them, and at six o'clock a rep summarised in the report box what he
+ * had already typed three times. That is the second copy S26 forbids.
+ *
+ * Capped, and the total comes back with it: the figure above the list counts
+ * the DAY and the list shows the first few of it, which are two different
+ * numbers whenever somebody has a busy afternoon (D144, D80).
+ *
+ * Who may read it is `mayOpen` — the same question every other screen asks
+ * about a floor. It is asked by the caller, per person, because the report
+ * screen shows everybody and the answer differs down the page.
+ */
+export async function listActivitiesForDay(
+  user: SessionUser,
+  personId: string,
+  day: Day,
+  limit: number,
+): Promise<{ rows: ActivityRow[]; total: number }> {
+  if (!mayOpen(user, personId)) throw new NotAllowed();
+
+  const where = and(eq(activities.userId, personId), eq(activities.happenedOn, day))!;
+  // One row past the cap, which answers both questions at once in the ordinary
+  // case: a day that fits under the cap needs no count, because the rows ARE
+  // the count. The second read happens only on a day somebody was busy, which
+  // is also the only day the tail line has anything to say.
+  const found = await activityQuery(await getLocale(), where)
+    .orderBy(desc(activities.createdAt))
+    .limit(limit + 1);
+
+  const rows = await toRows(found.slice(0, limit), user);
+  if (found.length <= limit) return { rows, total: found.length };
+
+  const counted = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(activities)
+    .where(and(isNull(activities.archivedAt), where));
+  return { rows, total: counted[0]?.n ?? rows.length };
 }
