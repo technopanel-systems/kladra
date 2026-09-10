@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { test, expect } from "@playwright/test";
-import { AUDIT_RECORD_TYPES, NOTIFICATION_KINDS } from "@/db/schema";
+import { AUDIT_RECORD_TYPES, CHOICE_KINDS, NOTIFICATION_KINDS } from "@/db/schema";
 import { one, query, userId } from "./helpers/db";
 
 /**
@@ -887,6 +887,54 @@ test("a tombstone is off the floor by construction, and is never its own survivo
   expect(itself).toContain("companies_merged_check");
 });
 
+test("a person has one answer per question, and the question is one of three (0024, D164)", async () => {
+  const user = await one<{ id: string }>("select id from users limit 1");
+  // A screen no page reads, so nothing this walk writes can decide what a later
+  // one opens on.
+  const screen = "spec-14";
+
+  // The same trap every free-text column with a union over it has (D106): a
+  // fourth kind would be a preference nothing ever reads back.
+  const bad = await refused(
+    `insert into screen_choices (user_id, kind, screen, choice)
+     values ($1::uuid, 'colour', $2, 'blue')`,
+    [user.id, screen],
+  );
+  expect(bad).toContain("violates check constraint");
+  expect(bad).toContain("screen_choices_kind_check");
+
+  try {
+    // Every kind the app writes, from the list the check itself reads.
+    for (const kind of CHOICE_KINDS) {
+      await query(
+        `insert into screen_choices (user_id, kind, screen, choice)
+         values ($1::uuid, $2, $3, 'board')`,
+        [user.id, kind, screen],
+      );
+    }
+    const written = await query(
+      "select kind from screen_choices where user_id = $1::uuid and screen = $2",
+      [user.id, screen],
+    );
+    expect(written, "not every listed kind was accepted").toHaveLength(CHOICE_KINDS.length);
+
+    // And one answer each. A second row for the same person, kind and screen
+    // would be two memories of one choice, and nothing decides between them —
+    // which is why the write is an upsert and the key is all three columns.
+    const twice = await refused(
+      `insert into screen_choices (user_id, kind, screen, choice)
+       values ($1::uuid, 'view', $2, 'list')`,
+      [user.id, screen],
+    );
+    expect(twice).toContain("duplicate key value");
+  } finally {
+    await query("delete from screen_choices where user_id = $1::uuid and screen = $2", [
+      user.id,
+      screen,
+    ]);
+  }
+});
+
 test("the schema file and the catalogue agree, both ways (D106)", async () => {
   // Asked of pg_constraint/pg_indexes, not the ORM's opinion (rules/migrations.md):
   // a name typed once in schema.ts and never migrated, or dropped by hand and
@@ -912,11 +960,17 @@ test("the schema file and the catalogue agree, both ways (D106)", async () => {
   const catalogueCheckNames = new Set(catalogueChecks.map((row) => row.conname));
   // The auto-named indexes from `.unique()` columns and primary keys were
   // never typed in schema.ts by name — Postgres named them — so they are not
-  // strangers, they are just not this test's business.
+  // strangers, they are just not this test's business. `_pk` is the third of
+  // those and arrived with the first COMPOSITE primary key in this schema
+  // (`screen_choices`, 0024): Postgres names a single-column one `<table>_pkey`,
+  // and Drizzle names a composite one after its columns.
   const catalogueIndexNames = new Set(
     catalogueIndexes
       .map((row) => row.indexname)
-      .filter((name) => !name.endsWith("_pkey") && !name.endsWith("_unique")),
+      .filter(
+        (name) =>
+          !name.endsWith("_pkey") && !name.endsWith("_unique") && !name.endsWith("_pk"),
+      ),
   );
 
   const checksNotInCatalogue = [...checkNames].filter((name) => !catalogueCheckNames.has(name));

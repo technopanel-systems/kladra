@@ -42,10 +42,9 @@ import {
   listThicknesses,
   listWarehouses,
 } from "@/lib/lookups";
-import type { LastQuotation } from "@/lib/quotation-draft";
 import { STANDARD_THICKNESS_MM } from "@/lib/sheet";
 import { getProject } from "@/lib/projects";
-import { getQuotation, lastQuotationForCompany } from "@/lib/quotations";
+import { getQuotation } from "@/lib/quotations";
 import type { ActionResult } from "@/lib/types";
 
 /**
@@ -277,47 +276,6 @@ export async function dispatchLookupsAction(): Promise<ActionResult<DispatchLook
       },
     };
   } catch {
-    return { ok: false, error: t("somethingWrong") };
-  }
-}
-
-/**
- * The last quotation raised at a company, for a new one to start from
- * (D74, 9A item 7).
- *
- * Asked per open and never cached: he raises one, comes back an hour later, and
- * the one he means is the one he just raised. Asked here rather than handed down
- * as a prop because the company is not always known when the dialog is built —
- * on the Quotations screen he picks the project inside the form, and the offer
- * has to follow what he picked.
- *
- * No quotation is not an error: a new customer has nothing to copy, and the
- * answer is simply that there is nothing to offer.
- */
-export async function lastQuotationAction(
-  companyId: unknown,
-): Promise<ActionResult<LastQuotation>> {
-  const t = await getTranslations("common");
-  let actor;
-  try {
-    actor = await requireActor();
-  } catch (error) {
-    // A session that has ended says so, and a failure that is not a refusal at
-    // all does not claim to be one (D135).
-    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    return { ok: false, error: t("somethingWrong") };
-  }
-
-  const parsed = z.uuid().safeParse(companyId);
-  if (!parsed.success) return { ok: false, error: t("invalid") };
-
-  try {
-    const last = await lastQuotationForCompany(actor, parsed.data);
-    return last ? { ok: true, data: last } : { ok: true };
-  } catch (error) {
-    // A session that has ended says so, and a failure that is not a refusal at
-    // all does not claim to be one (D135).
-    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     return { ok: false, error: t("somethingWrong") };
   }
 }

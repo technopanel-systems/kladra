@@ -1,16 +1,24 @@
 import { test, expect } from "@playwright/test";
-import { DEFAULT_RANGE, RANGES, rangeFor, rangeStart, parseRange } from "@/lib/ranges";
-import { TABS, DEFAULT_TAB, tabCookie, tabFor, parseTab, type Tab } from "@/lib/tabs";
+import {
+  DEFAULT_RANGE,
+  RANGES,
+  RANGE_SCREEN,
+  rangeFor,
+  rangeStart,
+  parseRange,
+} from "@/lib/ranges";
+import { TABS, DEFAULT_TAB, tabFor, parseTab, type Tab } from "@/lib/tabs";
 
 /**
  * The two choices a home screen carries in its URL: which tab, and over what
  * window (D151, D152, D154).
  *
- * Both modules are pure — no database, no cookies API, no request — which is
- * the whole reason they are their own files: a rule about precedence should be
- * askable in one line rather than walked through a browser. The screens that
- * use them are walked in tests/metrics.spec.ts; what is here is the arithmetic
- * and the order of precedence underneath.
+ * Both modules are pure — no database, no request — which is the whole reason
+ * they are their own files: a rule about precedence should be askable in one
+ * line rather than walked through a browser. The screens that use them are
+ * walked in tests/metrics.spec.ts, and the memory behind them in
+ * tests/board.spec.ts; what is here is the arithmetic and the order of
+ * precedence underneath.
  *
  * The one that needs a test more than the others is the quarter across a New
  * Year: "the last three months including this one" read on 3 January is
@@ -18,10 +26,16 @@ import { TABS, DEFAULT_TAB, tabCookie, tabFor, parseTab, type Tab } from "@/lib/
  * that has not happened yet.
  */
 
-test("the URL wins, then the cookie, then the default", () => {
+test("the URL wins, then what he chose last, then the default", () => {
   expect(rangeFor("month", "year")).toBe("month");
   expect(rangeFor(undefined, "year")).toBe("year");
   expect(rangeFor(undefined, undefined)).toBe(DEFAULT_RANGE);
+
+  // One key for the window, not one per screen: the day and the team ask for
+  // `chosen(remembered, "range", RANGE_SCREEN)` and cannot drift apart, because
+  // a rep who set the year on his own figures means the year when he reads the
+  // floor's (D152, D164).
+  expect(RANGE_SCREEN).toBe("metrics");
 
   // The quarter, and the reason is in D152: a month is too short a window to
   // ask what converts, and it would print a collapse on the first of every one.
@@ -72,7 +86,3 @@ test("a tab this screen does not have falls back rather than drawing nothing", (
   expect(DEFAULT_TAB).toBe("work");
 });
 
-test("each screen remembers its own tab, and the window is remembered once", () => {
-  expect(tabCookie("day")).not.toBe(tabCookie("team"));
-  expect(tabCookie("day")).toBe("kladra-tab-day");
-});

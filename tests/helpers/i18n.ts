@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { test as base, type Page } from "@playwright/test";
 import { createTranslator } from "use-intl/core";
 import { isolateMessages } from "@/i18n/isolate";
+import { query } from "./db";
 
 /**
  * The two locales this app ships (src/i18n/routing.ts). Playwright's project
@@ -156,6 +157,33 @@ function waitForHydrationAfterEveryLoad(page: Page): void {
   };
 }
 
+
+/**
+ * Forgets every remembered screen choice (D164).
+ *
+ * The three choosers — list or board, which tab, which window — wrote a cookie
+ * until P12-14, and `login` clears cookies, so every spec started from the
+ * defaults whatever the one before it had pressed. They write a row now, on
+ * purpose, because a choice belongs to the person and has to survive a fresh
+ * sign-in on his phone. Which means it also survives the spec that made it: a
+ * walk that opens `?view=board` would leave the next spec's bare `/quotations`
+ * on the board — and "the next spec" includes the whole of the other locale
+ * project, half an hour later, looking for a table that is not there.
+ *
+ * BEFORE the test, not after it, and that is the whole of the lesson. The write
+ * is fire and forget — an effect the browser sends after the screen has already
+ * changed, which nothing on the page waits for — so a delete in the teardown
+ * races it and loses: the manager's last `?tab=metrics` landed a moment after
+ * the row was deleted, and the next spec's bare `/team` opened on his metrics
+ * with no stuck list on it. By the time this runs the context that sent it has
+ * been closed for a fixture's worth of time, and nothing else can be in the air.
+ * It is also why a walk that PROVES the memory keeps it for the whole of its own
+ * test (tests/board.spec.ts).
+ */
+async function forgetRememberedChoices(): Promise<void> {
+  await query("delete from screen_choices");
+}
+
 /**
  * Extends Playwright's `test` with `locale` (the app's URL-prefix locale,
  * read from the project name) and `t` (the translator above). Every spec
@@ -183,6 +211,7 @@ export const test = base.extend<Fixtures>({
     await provide(getTranslator(locale));
   },
   page: async ({ page }, provide) => {
+    await forgetRememberedChoices();
     const assertNone = watchForRuntimeErrors(page);
     waitForHydrationAfterEveryLoad(page);
     await provide(page);

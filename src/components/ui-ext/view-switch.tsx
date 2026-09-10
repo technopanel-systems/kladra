@@ -1,12 +1,12 @@
 "use client";
 
 import { LayoutGrid, List as ListIcon } from "lucide-react";
-import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
-import { viewCookie, type ListView } from "@/lib/view";
+import { useRemembered } from "@/hooks/use-remembered";
+import { DEFAULT_VIEW, parseView, type ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,30 +16,33 @@ import { cn } from "@/lib/utils";
  * links: the view is in the URL, so it is a place, and a coordinator can send
  * somebody "the board" as an address.
  *
- * The memory is a cookie written here in the browser, not a server action. It
- * is a preference, not data: nothing else reads it, losing it costs a click,
- * and a round trip to store it would make pressing the switch slower than
- * pressing it does anything. The server reads it only when the URL says
- * nothing.
+ * The memory belongs to the PERSON (SPEC §3, D164). It was a cookie, on the
+ * argument that a preference is not worth a table and a round trip would make
+ * pressing the switch slower than pressing it does anything — and the second
+ * half of that was about the wrong moment: the press navigates, the new screen
+ * renders, and only then does `useRemembered` mention what he is looking at.
+ * The first half was answered by the founder: a cookie is per browser, so the
+ * rep who chose the board at his desk got the list back on his phone. The
+ * server reads the row only when the URL says nothing.
  */
 export function ViewSwitch({
   screen,
   view,
+  remembered,
   listHref,
   boardHref,
 }: {
-  /** Names the cookie: quotations and dispatches remember separately. */
+  /** Names the row: quotations and dispatches remember separately. */
   screen: string;
   view: ListView;
+  /** What was remembered when this page was drawn — nothing, on a first visit. */
+  remembered?: string;
   listHref: string;
   boardHref: string;
 }) {
   const t = useTranslations();
 
-  useEffect(() => {
-    // A year, and `lax` so it survives following a link in from an email.
-    document.cookie = `${viewCookie(screen)}=${view}; path=/; max-age=31536000; samesite=lax`;
-  }, [screen, view]);
+  useRemembered("view", screen, view, parseView(remembered) ?? DEFAULT_VIEW);
 
   return (
     <div

@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { MonthCard } from "@/components/team/month-card";
 import { ChainCard } from "@/components/team/chain-card";
@@ -26,8 +25,9 @@ import { chainCohort } from "@/lib/chain";
 import { lossCohort } from "@/lib/losses";
 import { chainRatios, metresBySegment } from "@/lib/metrics";
 import { monthsBack } from "@/lib/months";
-import { RANGES, RANGE_COOKIE, rangeFor, rangeStart } from "@/lib/ranges";
-import { tabCookie, tabFor, type Tab } from "@/lib/tabs";
+import { RANGES, RANGE_SCREEN, rangeFor, rangeStart } from "@/lib/ranges";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
+import { tabFor, type Tab } from "@/lib/tabs";
 
 /**
  * The manager's home (SPEC §3, D15): the company's month, everybody's month
@@ -48,12 +48,7 @@ export default async function TeamPage({
 }: {
   searchParams: Promise<{ tab?: string; range?: string; rep?: string }>;
 }) {
-  const [user, locale, params, jar] = await Promise.all([
-    requireUser(),
-    getLocale(),
-    searchParams,
-    cookies(),
-  ]);
+  const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
   // Managers and admins only. A rep who follows a link here goes to his own
   // home rather than to an error page: it is not his screen, and there is
   // nothing here for him to be told off about (S8).
@@ -63,17 +58,23 @@ export default async function TeamPage({
   // (D151): what has stopped and needs him today; what the month and the
   // quarter measure; and the people, which is the manager's own question and
   // nobody else's. Each asks only for what it draws.
-  const tab = tabFor(params.tab, jar.get(tabCookie("team"))?.value, TABS);
+  // Both of his choices in one read, after the redirect above: a rep who is not
+  // allowed on this screen is not asked what he last looked at (D164).
+  const remembered = await rememberedChoices(user.id);
+  const storedTab = chosen(remembered, "tab", "team");
+  const tab = tabFor(params.tab, storedTab, TABS);
 
   /*
    * The window, and whose figures — both belong to the metrics tab and both
-   * scope ALL of it (D152, D154). The window is remembered per browser like the
-   * tab it sits on; the person is not, because "whose floor am I reading" is a
-   * question asked once and answered by going back, and a manager who opened
-   * his own screen to find last week's rep still selected would be reading
-   * somebody else's month as if it were the company's.
+   * scope ALL of it (D152, D154). The window is remembered against that tab,
+   * like the tab itself and for the same person; the rep in the picker is not,
+   * because "whose floor am I reading" is a question asked once and answered by
+   * going back, and a manager who opened his own screen to find last week's rep
+   * still selected would be reading somebody else's month as if it were the
+   * company's.
    */
-  const range = rangeFor(params.range, jar.get(RANGE_COOKIE)?.value);
+  const storedRange = chosen(remembered, "range", RANGE_SCREEN);
+  const range = rangeFor(params.range, storedRange);
   const from = rangeStart(range);
   const repId = params.rep?.trim() || null;
 
@@ -108,6 +109,7 @@ export default async function TeamPage({
         <PageTabs
           screen="team"
           tab={tab}
+          remembered={storedTab}
           tabs={TABS.map((value) => ({ value, href: `/team?tab=${value}` }))}
         />
       </header>
@@ -225,6 +227,7 @@ export default async function TeamPage({
 
           <RangeChips
             range={range}
+            remembered={storedRange}
             chips={RANGES.map((value) => ({ value, href: metricsHref({ range: value }) }))}
           />
 

@@ -464,14 +464,18 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
 });
 
 /**
- * The second line, and the second quotation, both start from the last one.
+ * The line above is offered; the quotation before is not (SPEC §3, D163).
  *
- * Nine fields, four of them dropdowns with no default, and this floor sells the
- * same specification to the same customers over and over — item 7 on the
- * five-day list, and the plainest sentence in it: "nothing offers him the last
- * one" (D74). Two offers now do, and this walks both of them.
+ * D74 answered item 7 of the five-day list — nine fields a line, four of them
+ * dropdowns with no default, and nothing offering the rep the last one — with
+ * two offers. §3 kept one and took the other away, and the line between them is
+ * what this walks. A new LINE opens on the sheet above it, because that is the
+ * paper he is writing now. A new QUOTATION opens on nothing, however many this
+ * customer has had, because "nothing is ever carried forward from a previous
+ * record into a new one" is the founder's sentence and a copied PRICE is the
+ * clearest case of the harm in it: it arrives looking checked.
  */
-test("a repeat request opens on the last quotation, and a second line on the first one's sheet", async ({
+test("a repeat request opens on nothing, and a second line on the first one's sheet", async ({
   page,
   locale,
   t,
@@ -533,20 +537,25 @@ test("a repeat request opens on the last quotation, and a second line on the fir
   });
   await expect(form.getByLabel(t("common.colourCode"))).toBeVisible(COLD);
 
-  const copy = form.getByRole("button", { name: t("quotations.copyItemsFrom", { label }) });
-  await expect(copy, "the offer names the last quotation at this customer").toBeVisible(COLD);
-  await copy.click();
-
-  // Every line of it, as it was typed, ready to be changed.
+  // This customer HAS been quoted before — `previous` is that quotation — and
+  // the form still opens on one blank line with nothing on it. Not a control
+  // that offers the last one and not a field filled in from it: no price, no
+  // colour, no count of lines that came from somewhere else.
   const colours = form.getByLabel(t("common.colourCode"));
-  await expect(colours).toHaveCount(previous.lines);
-  await expect(colours.first()).toHaveValue(previous.colourCode);
+  await expect(colours).toHaveCount(1);
+  await expect(colours.first()).toHaveValue("");
+  await expect(form.getByLabel(t("common.pricePerSqm")).first()).toHaveValue("");
+  // The label of that quotation appears nowhere on the form. It is the name a
+  // carried-forward offer would have had to say (§3, D163).
+  await expect(form.getByText(label, { exact: true })).toHaveCount(0);
+  expect(previous.lines, "the fixture quotation has no lines to have been copied").toBeGreaterThan(
+    0,
+  );
+  expect(previous.colourCode, "the fixture quotation has no colour to have been copied").toBeTruthy();
 
-  // And the offer is gone, because there is now something to lose.
-  await expect(copy).toHaveCount(0);
-
-  // A new line opens on the sheet above it: same supplier, rating, class and
-  // thickness, and nothing that identifies the line or prices it.
+  // A new line still opens on the sheet above it: same supplier, rating, class
+  // and thickness, and nothing that identifies the line or prices it. That is
+  // the same record, not a previous one.
   const suppliers = form.getByRole("combobox", { name: t("common.supplier") });
   const before = await suppliers.count();
   const sheet = await suppliers.nth(before - 1).innerText();

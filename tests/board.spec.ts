@@ -1,6 +1,6 @@
 import { login } from "./helpers/auth";
 import { test, expect } from "./helpers/i18n";
-import { DEFAULT_VIEW, parseView, viewCookie, viewFor, type ListView } from "@/lib/view";
+import { DEFAULT_VIEW, parseView, viewFor, type ListView } from "@/lib/view";
 
 /**
  * The second view, on the two screens that earn one (DESIGN §6).
@@ -19,25 +19,36 @@ import { DEFAULT_VIEW, parseView, viewCookie, viewFor, type ListView } from "@/l
 const COLD = { timeout: 30_000 };
 
 /**
- * Waits until the BROWSER has stored the remembered view, not until the page
- * looks right.
+ * Waits until the SERVER has stored the remembered view, by asking it: the
+ * quotations screen with no `?view=` on it answers with whatever the memory
+ * says (SPEC §3, D164).
  *
- * The memory is a cookie `ViewSwitch` writes in an effect, so it exists only
- * after the page hydrates — and the server's HTML, heading and all, is on
- * screen well before that. A step that navigates away on the strength of a
- * visible heading is racing the hydration of the page it is leaving, which is
- * how this walk failed once on a cold compile and never on a warm one.
+ * There is nothing in the browser to look at any more. The choice used to be a
+ * cookie, which a spec could read out of the jar; it is a row of
+ * `screen_choices` now, written by an effect after hydration and read back only
+ * by the server. Two things make polling the screen safe rather than
+ * deadlocked: the `page` fixture's `goto` already waits for `html[data-hydrated]`,
+ * so the write has been SENT before this is called, and a visit with no view on
+ * it writes nothing itself — it agrees with what it was given — so this cannot
+ * overwrite the answer it is waiting for.
  */
-async function remembered(page: import("@playwright/test").Page, view: ListView): Promise<void> {
+async function remembered(
+  page: import("@playwright/test").Page,
+  locale: string,
+  name: string,
+  view: ListView,
+): Promise<void> {
   await expect
     .poll(
       async () => {
-        const jar = await page.context().cookies();
-        return jar.find((one) => one.name === viewCookie("quotations"))?.value;
+        await page.goto(`/${locale}/quotations`);
+        return await page
+          .getByRole("link", { name })
+          .getAttribute("aria-current", { timeout: 10_000 });
       },
-      { timeout: COLD.timeout, message: `the browser never stored "${view}" as the view` },
+      { timeout: COLD.timeout, message: `"${view}" was never remembered for this person` },
     )
-    .toBe(view);
+    .toBe("true");
 }
 
 /** The columns on screen, as the accessible name reports them: "Issued (3)". */
@@ -58,7 +69,7 @@ async function columns(page: import("@playwright/test").Page) {
   });
 }
 
-test("the URL wins, the cookie remembers, and the list is the default", () => {
+test("the URL wins, the person remembers, and the list is the default", () => {
   expect(parseView("board")).toBe("board");
   expect(parseView("list")).toBe("list");
   expect(parseView("kanban")).toBeNull();
@@ -138,35 +149,67 @@ test("every card is in the column its status names, and the counts agree", async
   }
 });
 
-test("the view a person chose is the view they get back", async ({ page, locale, t }) => {
+/**
+ * The founder's sentence, which the cookie could not keep: "remembered per
+ * person and carried in the URL" (SPEC §3, D164).
+ *
+ * The signing-in between the steps is the point. `login` clears every cookie
+ * first, so each of these is a different browser as far as this app can tell —
+ * her desk in the morning and her phone in the car. A memory that survives that
+ * is hers; a memory that does not was the machine's all along.
+ */
+test("the view a person chose comes back on another browser, and is only theirs", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const board = t("common.viewBoard");
+  const list = t("common.viewList");
   await login(page, locale, "rawan");
 
   await page.goto(`/${locale}/quotations?view=board`);
   await expect(page.getByRole("heading").first()).toBeVisible(COLD);
-  await remembered(page, "board");
+  await remembered(page, locale, board, "board");
 
-  // No query at all: the cookie written in the browser decides.
-  await page.goto(`/${locale}/quotations`);
-  await expect(page.getByRole("link", { name: t("common.viewBoard") })).toHaveAttribute(
+  // Her choice, on this screen. The dispatches list is a different question and
+  // has not been asked, so it opens on the list it always did.
+  await page.goto(`/${locale}/dispatches`);
+  await expect(page.getByRole("link", { name: list })).toHaveAttribute(
     "aria-current",
     "true",
     COLD,
   );
 
-  // And choosing the list puts it back.
-  await page.getByRole("link", { name: t("common.viewList") }).click();
-  await expect(page.getByRole("link", { name: t("common.viewList") })).toHaveAttribute(
-    "aria-current",
-    "true",
-    COLD,
-  );
-  await remembered(page, "list");
+  // A clean session — no cookie of hers survives it — and the board is still
+  // what quotations opens on.
+  await login(page, locale, "rawan");
   await page.goto(`/${locale}/quotations`);
-  await expect(page.getByRole("link", { name: t("common.viewList") })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: board })).toHaveAttribute(
     "aria-current",
     "true",
     COLD,
   );
+
+  // And it is hers alone: the next man to sign in at this machine gets the list
+  // he never left.
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/quotations`);
+  await expect(page.getByRole("link", { name: list })).toHaveAttribute(
+    "aria-current",
+    "true",
+    COLD,
+  );
+
+  // Choosing the list puts it back — the row is overwritten, not only written.
+  await login(page, locale, "rawan");
+  await page.goto(`/${locale}/quotations?view=board`);
+  await page.getByRole("link", { name: list }).click();
+  await expect(page.getByRole("link", { name: list })).toHaveAttribute(
+    "aria-current",
+    "true",
+    COLD,
+  );
+  await remembered(page, locale, list, "list");
 });
 
 test("in Arabic the first column is the one on the right", async ({ page, locale }) => {

@@ -95,25 +95,6 @@ export function nextLine(lookups: QuotationLookups, previous?: LineDraft): LineD
 }
 
 /**
- * Nothing has been typed into this line yet.
- *
- * Asked by the one offer that would otherwise throw work away — "copy the lines
- * from Q-12" replaces what is in the form, so it is only offered while there is
- * nothing in the form to lose. The four fields it asks about are the four a
- * blank line leaves empty; the rest open on the standard sheet and say nothing
- * about whether anybody has been here.
- */
-export function isBlankLine(line: LineDraft): boolean {
-  return (
-    line.colourCode.trim() === "" &&
-    line.supplierId === "" &&
-    line.fireRatingId === "" &&
-    line.classId === "" &&
-    line.pricePerSqm.trim() === ""
-  );
-}
-
-/**
  * What the hidden `items` field carries to the action.
  *
  * The key goes; everything else travels as typed and is validated on the far

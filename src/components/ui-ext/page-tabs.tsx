@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
-import { tabCookie, type Tab } from "@/lib/tabs";
+import { useRemembered } from "@/hooks/use-remembered";
+import { DEFAULT_TAB, parseTab, type Tab } from "@/lib/tabs";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,27 +21,31 @@ import { cn } from "@/lib/utils";
  * that reads as "you are here" without a second colour or a filled shape, and
  * the label is bolder as well, so the state is never colour alone.
  *
- * The memory is a cookie written in the browser rather than a server action,
- * for the reason `ViewSwitch` gives: it is a preference, nothing else reads it,
- * and a round trip would make pressing it slower than it is to act on.
+ * The memory belongs to the person and is written by the same hook the view
+ * switch uses, for the reason `ViewSwitch` gives at length: one rule, one
+ * mechanism (SPEC §3, D164).
  */
 export function PageTabs({
   screen,
   tab,
+  remembered,
   tabs,
 }: {
-  /** Names the cookie: the day and the team remember separately. */
+  /** Names the row: the day and the team remember separately. */
   screen: string;
   tab: Tab;
+  /** What was remembered when this page was drawn — nothing, on a first visit. */
+  remembered?: string;
   /** In the order they are read, each with the address it lives at. */
   tabs: { value: Tab; href: string }[];
 }) {
   const t = useTranslations();
 
-  useEffect(() => {
-    // A year, and `lax` so it survives following a link in from an email.
-    document.cookie = `${tabCookie(screen)}=${tab}; path=/; max-age=31536000; samesite=lax`;
-  }, [screen, tab]);
+  // Before the early return, because a hook is not conditional — and against
+  // this screen's OWN first tab, so a screen that has lost a tab since the last
+  // visit records the one it actually opened on rather than the missing one.
+  const opensOn = parseTab(remembered, tabs.map((entry) => entry.value));
+  useRemembered("tab", screen, tab, opensOn ?? tabs[0]?.value ?? DEFAULT_TAB);
 
   if (tabs.length < 2) return null;
 

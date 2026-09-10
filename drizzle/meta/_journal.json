@@ -169,6 +169,13 @@
       "when": 1789453079156,
       "tag": "0023_every_price_names_a_job",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789453139156,
+      "tag": "0024_a_choice_belongs_to_a_person",
+      "breakpoints": true
     }
   ]
 }

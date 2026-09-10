@@ -1,13 +1,12 @@
 "use client";
 
-import { Copy, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   contactChoicesAction,
   creditChoicesAction,
-  lastQuotationAction,
   type ContactChoices,
   type CreditChoices,
   type QuotationLookups,
@@ -20,7 +19,6 @@ import {
 import {
   QuotationLines,
   blankLine,
-  isBlankLine,
   linesPayload,
   type LineDraft,
 } from "@/components/quotations/quotation-lines";
@@ -39,7 +37,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { quotationTotals } from "@/lib/money";
-import type { LastQuotation } from "@/lib/quotation-draft";
 import { splitOption, type QuotationTargets } from "@/lib/picker-option";
 
 /**
@@ -393,40 +390,14 @@ function RequestForm({
   );
 
   /*
-   * The last thing this customer was quoted, and one button to start from it
-   * (D74). Only on a first ask: Edit already opens on its own lines and Revise
-   * on its parent's, and an offer to overwrite those is an offer to lose work.
-   *
-   * It follows the company rather than being fetched once, because on the
-   * Quotations screen the company is not known until he picks the project.
+   * There was an offer here — "Copy the items from Q-12", which filled this
+   * form with that quotation's lines and its prices for the rep to change
+   * (D74). SPEC §3 took it away: nothing is ever carried forward from a
+   * previous record into a new one, and a price is exactly the thing that
+   * arrives looking checked. What stays is the offer inside THIS record — a new
+   * line opens on the sheet above it — because that is the paper he is writing
+   * now, not one he wrote in the spring (D163).
    */
-  const [answer, setAnswer] = useState<{ companyId: string; last: LastQuotation } | null>(null);
-  useEffect(() => {
-    if (mode !== "request" || !company) return;
-    let cancelled = false;
-    guarded(lastQuotationAction)(company).then((outcome) => {
-      if (!cancelled && outcome.ok && outcome.data) {
-        setAnswer({ companyId: company, last: outcome.data });
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [mode, company, guarded]);
-
-  // The answer says which company it is about, so changing the project in the
-  // picker takes the offer away with it rather than leaving the last customer's
-  // quotation on screen under a new one's name.
-  const last = answer?.companyId === company ? answer.last : null;
-
-  /*
-   * Offered only while there is nothing to lose. Copying REPLACES the lines, and
-   * a control that throws away what somebody has typed either asks first or is
-   * not there — this one is not there. It leaves as soon as he starts, which is
-   * also when it stops being what he wants.
-   */
-  const copyable = last !== null && lines.length === 1 && isBlankLine(lines[0]);
-
   const totals = useMemo(() => quotationTotals(lines), [lines]);
 
   return (
@@ -546,34 +517,7 @@ function RequestForm({
           </div>
         </div>
 
-        {/* The offer belongs to the items, so it sits in their block and not in
-            the form's own rhythm: eight pixels above the first card and the
-            form's sixteen below the heading, which is the difference between a
-            button about the items and a button floating between two things. */}
-        <div className="flex flex-col gap-2">
-          {copyable && last ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={pending}
-              onClick={() =>
-                setLines(last.lines.map((line, index) => ({ ...line, key: `copied-${index}` })))
-              }
-              className="self-start"
-            >
-              <Copy aria-hidden="true" />
-              {t("quotations.copyItemsFrom", { label: last.label })}
-            </Button>
-          ) : null}
-
-          <QuotationLines
-            lookups={lookups}
-            lines={lines}
-            onChange={setLines}
-            disabled={pending}
-          />
-        </div>
+        <QuotationLines lookups={lookups} lines={lines} onChange={setLines} disabled={pending} />
 
         <QuotationTotals
           sqm={totals.sqm}

@@ -13,7 +13,7 @@ import type { QuotationDraft } from "@/components/quotations/request-quotation-d
 import type { Waited } from "@/lib/waiting";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -26,7 +26,7 @@ import {
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
-import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
+import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Ref, Money, Sqm } from "@/components/ui-ext/figures";
@@ -118,6 +118,7 @@ export function QuotationsTable({
   status,
   openId,
   view = "list",
+  remembered,
   showFilters = true,
   showSearch = true,
   waiting,
@@ -130,6 +131,12 @@ export function QuotationsTable({
   openId: string | null;
   /** List or board (DESIGN §6). The queue has one state and shows neither. */
   view?: ListView;
+  /**
+   * The view this person had remembered when the page was drawn, passed
+   * through to the switch so it writes only when he changes it (D164). The
+   * queue shows no switch and passes none.
+   */
+  remembered?: string;
   /** The coordinator's queue is one status by definition; it needs no chips. */
   showFilters?: boolean;
   /** The queue draws ONE box over both its lists, so its tables draw none. */
@@ -204,6 +211,7 @@ export function QuotationsTable({
             <ViewSwitch
               screen="quotations"
               view={view}
+              remembered={remembered}
               listHref={listHref(base, q, status, null, "list")}
               boardHref={listHref(base, q, null, null, "board")}
             />
@@ -554,13 +562,7 @@ export function QuotationSheet({
         if (!next) close();
       }}
     >
-      <SheetContent
-        onOpenAutoFocus={focusTheDrawerItself}
-        // Radix's sides are physical; in Arabic the drawer comes from the other
-        // edge so it still slides in from the end of the line.
-        side={locale === "ar" ? "left" : "right"}
-        className="w-full gap-0 scroller p-0 data-[side=left]:sm:max-w-2xl data-[side=right]:sm:max-w-2xl"
-      >
+      <RecordPanel className="scroller">
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
@@ -762,7 +764,7 @@ export function QuotationSheet({
 
           {history}
         </div>
-      </SheetContent>
+      </RecordPanel>
     </Sheet>
   );
 }
@@ -781,7 +783,7 @@ export function QuotationSheetSkeleton() {
   const t = useTranslations();
   return (
     <Sheet open>
-      <SheetContent onOpenAutoFocus={focusTheDrawerItself} side="right" className="w-full gap-0 scroller p-0 sm:max-w-2xl">
+      <RecordPanel className="scroller">
         <div aria-busy="true" className="flex flex-col gap-4 p-4">
           <SheetTitle className="sr-only">{t("quotations.loading")}</SheetTitle>
           <SheetDescription className="sr-only">{t("quotations.requestHint")}</SheetDescription>
@@ -791,7 +793,7 @@ export function QuotationSheetSkeleton() {
           <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
           <Skeleton className="h-32 w-full rounded-[calc(var(--radius)+4px)]" />
         </div>
-      </SheetContent>
+      </RecordPanel>
     </Sheet>
   );
 }

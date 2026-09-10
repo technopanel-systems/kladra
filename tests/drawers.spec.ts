@@ -220,3 +220,67 @@ test("opening a drawer focuses the drawer, not the first thing inside it", async
     expect(focused.outlined, `/${locale}/${screen} drew a ring round the whole panel`).toBe(false);
   }
 });
+/**
+ * A record opens in one panel, whichever record it is (DESIGN §6, D166).
+ *
+ * Four screens drew the drawer themselves and agreed about none of it: a
+ * company came in at 32rem, a project at 36rem and a quotation at 42rem, so the
+ * surface changed size as a rep walked one job from the customer to the paper.
+ * Two of the loading skeletons were pinned to the right, which is the wrong
+ * edge in Arabic — the panel arrived from one side and the record replacing it
+ * from the other. And three of the four bordered the edge that faces away from
+ * the page, where in Arabic nothing can see it.
+ *
+ * What is measured is what a reader would notice: the same width every time,
+ * the same edge, and the line on the edge facing the list. The widths are
+ * compared with each other rather than against a number, because the rule is
+ * that they agree — not that they are 672 pixels.
+ */
+test("every record opens in the same panel, on the edge the language reads from", async ({
+  page,
+  locale,
+}) => {
+  const panel = () => page.locator("[data-slot='sheet-content']").first();
+
+  async function open(screen: string): Promise<{ width: number; side: string; borders: string[] }> {
+    await page.goto(`/${locale}/${screen}`);
+    await page.getByRole("table").first().getByRole("link").first().click();
+    await expect(page.getByRole("dialog").first()).toBeVisible({ timeout: 30_000 });
+
+    const box = await panel().boundingBox();
+    expect(box, `no panel on /${locale}/${screen}`).not.toBeNull();
+    const side = (await panel().getAttribute("data-side")) ?? "";
+    const borders = await panel().evaluate((node) => {
+      const style = getComputedStyle(node);
+      return [style.borderInlineStartWidth, style.borderInlineEndWidth];
+    });
+    return { width: Math.round(box?.width ?? 0), side, borders };
+  }
+
+  await login(page, locale, "faisal");
+  const company = await open("companies");
+  const project = await open("projects");
+  const quotation = await open("quotations");
+
+  await login(page, locale, "rawan");
+  const dispatch = await open("dispatches");
+
+  const seen = [company, project, quotation, dispatch];
+
+  // One width. It is a panel over the list, not the whole screen.
+  const widths = seen.map((one) => one.width);
+  expect(new Set(widths).size, `four panels, ${widths.join(" / ")} wide`).toBe(1);
+  expect(widths[0]).toBeGreaterThan(0);
+  const viewport = page.viewportSize();
+  expect(widths[0]).toBeLessThan(viewport?.width ?? 0);
+
+  // One edge, and it is the end of the line: the right in English, the left in
+  // Arabic. Radix's own sides are physical, so this is the mirror image.
+  for (const one of seen) {
+    expect(one.side, "a panel came from the wrong edge").toBe(locale === "ar" ? "left" : "right");
+    // The line is drawn on the edge facing the page, which is the inline-start
+    // one in both languages, because the panel comes from the inline-end edge.
+    expect(one.borders[0], "no line on the edge facing the list").not.toBe("0px");
+    expect(one.borders[1], "a line on the edge nothing can see").toBe("0px");
+  }
+});

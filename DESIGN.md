@@ -74,7 +74,7 @@ back to, so the one string on the screen that mixes two scripts would also mix t
 ## §2 Principles
 
 - Work happens in dialogs and drawers over a list; a full page is the exception — users called FACET record-first and slow because every step was a page.
-- One primary action per screen, at the top, never the bottom — the eye lands there first, and on a phone the bottom is the bar.
+- One primary action per screen, at the top, never the bottom — the eye lands there first, and on a phone the bottom is the bar. **Its empty state does not draw it a second time**: §3 asks an empty list for one sentence and its primary action, and the action is already on the screen, so the sentence says to use it (D31, D35, P12-14).
 - Humans read words; internal codes and IDs never appear — a rep does not know what `uuid` or `N-CA-FR` mean and should not have to.
 - Dropdowns over ~8 entries are searchable, common values pinned, likeliest preselected — Riyadh, Saudi Arabia, 1.24 m, 4 mm are what is typed nine times in ten.
 - Dates are picked, shown 04/Aug/2026 — unambiguous in both languages; no 08/04 confusion.
@@ -103,7 +103,10 @@ list-and-board switch wears — that one is a control inside a screen and this o
 structure of it; `ShareBars`, the one way a share of a whole is drawn — ranked longest first,
 the figure written on every row, the bar hidden from a reader because there is nothing in it
 that is not in the text (D150, D65); and `RangeChips`, the window a measured screen is read
-over, which is `FilterChip` in a row rather than a fourth kind of chip. Logical utilities only (`ms-`, `pe-`,
+over, which is `FilterChip` in a row rather than a fourth kind of chip; and `RecordPanel`, the
+drawer a record opens in — one width, one edge and one border for a company, a project, a
+quotation or a dispatch, and for the skeleton that stands in while each of them loads (D166).
+Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.
 
@@ -839,6 +842,32 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   when the rows actually belong to more than one person: on a company one rep keeps people on,
   a caption that never varies is a word to read past on every row.
 
+- **A choice belongs to a person, not to a browser.** Phase 12 (D164). Three controls remembered
+  what somebody had picked — list or board, which tab, which window — and all three did it in a
+  cookie, each with the same paragraph explaining why a preference was not worth a table. A cookie
+  is per browser: the rep who chose the board at his desk got the list back on his phone, which is
+  the founder's own sentence read back at the code. They are rows of `screen_choices` now, keyed by
+  the person, the kind and the screen. Two things follow. The URL still wins, because a link
+  somebody sends opens what they were looking at, and the memory only decides when the address says
+  nothing. And the write says so only when it is news — the page hands the remembered word back
+  down to the control, so opening a screen you have not changed writes nothing at all.
+
+- **A record's panel is one panel.** Phase 12 (D166). Work happens in a drawer over the list, and
+  four screens drew that drawer themselves: a company at 32rem, a project at 36rem, a quotation at
+  42rem, so the surface changed size as a rep walked one job from the customer to the paper. Two of
+  the loading skeletons were pinned to the right, which is the wrong edge in Arabic, and three of
+  the four drew their line on the edge that faces away from the page. None of it was visible in an
+  English screenshot or in any tally. The panel is one component now, and the general form is the
+  reason: **a surface that means the same thing every time looks the same every time**, and the
+  place to put that is a component rather than four class lists that agree today.
+
+- **The number is on the screen, and holding it takes it.** Phase 12 (D165). A phone number here is
+  its own link, so it is legible without being pressed (D98) — which made the founder's
+  "long-press shows the number" look already answered. It was not: a tap opens WhatsApp before a
+  finger can select anything, so the number could be read and never taken. A hold, or a secondary
+  press, opens it as text with one thing to do — copy — and what is copied is what is shown. The
+  general form: **a control that consumes the tap owes the other ways of using the thing it covers.**
+
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,
@@ -883,12 +912,28 @@ carrying meaning on their own.
   review pointed. Nothing here has enough history yet for a summary to beat reading the last
   three log entries, and a wrong suggestion on a customer record costs more than no suggestion.
 
-**Which screens get more than one view.** Quotations and dispatches get a **board of states**
-beside their list: those are the only screens where "what is stuck, and for how long" is the
-daily question, and a column with a count answers it in one look. Everything else is a list.
+**Which screens get more than one view — the board ruling (P12-14).** A screen earns a second
+view only when three things are true at once: its records have **states** worth making columns
+of; the daily question about them is **where work has piled up**, not what comes next; and it is
+opened often enough for the choice to be worth remembering. Quotations and dispatches pass all
+three, so they get a **board of states** beside their list, every column carrying its count and
+every card its age — without those two a board is decoration. Everything else fails one of the
+three, and which one is worth writing down, because each has been asked for at least once:
+
+- **Queue** — one state by definition. A board of it is one column, and one column is a list.
+- **Projects** — no states to make columns of: a project is live until it is lost, and "lost" is
+  a filter, not a lane.
+- **Companies** — read for "who do I call today", which is a date order, not a state. A card grid
+  shows a third as many rows and hides the column being scanned. This is how FACET grew.
+- **Day and Team** — one column on purpose, in the order the work is done; a dashboard answers
+  one question.
+- **Daily report** — one list the whole floor reads (D56), not a manager's inbox.
+- **Admin panels** — opened too rarely for a choice to pay for itself.
+
 Where there are two, the list stays the default because it is the one that answers "mine,
-oldest first"; the choice lives in the URL (`?view=board`) and is remembered per person, so a
-link still opens what the sender saw.
+oldest first". The choice lives in the URL (`?view=board`), so a link still opens what the
+sender saw, and it is remembered **per person and per screen** (D164): the two screens are read
+for different questions, and choosing the board for quotations says nothing about dispatches.
 
 **The question each screen answers, and the view chosen for it (P11F).** Every screen was
 read against its own question; a view is kept because it answers that question in one look,

@@ -688,9 +688,22 @@ had ever had was three entries, so the line saying a card is not showing the who
 once have been on a screen — the same fault as #185, and the same answer: Faisal now has one day
 of telephone work with nine entries on it, and the cap is two numbers because a colleague's card
 is read for its sentence and your own is read against your memory (#197). The Arabic review of two
-changed strings found four more, two of them on the English side (#198). Box 14 is next: across —
-the panel's width, one primary action per list, the board ruling written, and the three §3
-decisions still owed.
+changed strings found four more, two of them on the English side (#198). **Box 14 is built and green but NOT ticked** — it is committed as a save
+point on a weekly usage limit, with three steps of its own checklist still to run. What is done:
+all three §3 decisions that were owed are paid (D163 nothing is carried forward, D164 a choice
+belongs to a person, D165 the number is on the screen and holding it takes it), the panel's width
+is one panel (D166), one primary action per list, and the board ruling is written into DESIGN §6.
+The gate is green — 597 passed, 3 skipped, 0 failed, both locales — and the only changes made
+after that run were comments. What is LEFT, in order: (1) shot-looker on the four drawers at
+1366/375 × en/ar × dark/light — it was killed mid-run having confirmed the width (672px) and the
+border edge on two of them, and what it had not yet reported is whether the company drawer at
+32rem and the project at 36rem leave anything stranded now they are 42rem; (2) the arabic-reviewer
+passed the three new strings unchanged but asked for one thing — `copyNumber` and `numberCopied`
+are phone-only strings sitting in `common`, so move them beside `whatsappContact`, `callContact`
+and `numberOf` in `companies` (six call sites: three in phone-links.tsx, three in calls.spec.ts)
+before somebody reuses the bare word for a SMAC number and breaks both locales at once;
+(3) web-design-guidelines on phone-links.tsx, record-panel.tsx and the four drawers. Then a full
+green gate, tick the box, and P12 is finished.
 
 ## §4 Five days, walked (P9.1)
 
@@ -972,6 +985,15 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 4. Faisal opens the same screen. His own card carries his own entries; his colleague's card carries the figures and the sentence and not his colleague's customers.
 5. He logs a visit from a customer's drawer, opens the report, and finds it on his own card under that customer's name.
 6. He corrects the words there, without leaving the report, and the customer's own history says the same thing — one record, two screens.
+
+**Across: the choice, the number, the panel and the one button (P12-14)** — `tests/board.spec.ts`, `tests/calls.spec.ts`, `tests/drawers.spec.ts`, `tests/controls.spec.ts`, `tests/quotations.spec.ts`, `tests/schema.spec.ts`
+1. Rawan chooses the board on Quotations. She signs in again from a clean session — a different browser as far as the app can tell — and Quotations opens on the board. Dispatches, which she has not been asked about, opens on the list.
+2. Faisal signs in at the same machine and gets the list he never left. The choice was hers, not the browser's.
+3. She chooses the list again and it is the list that comes back: the row is overwritten, not only written. The database refuses a second answer to the same question, and a kind of question the app does not have.
+4. Faisal presses the right button on a customer's number. The number is shown as text with one thing to do — copy — and what lands on the clipboard is what was on the screen, not the wa.me address. A finger held on it for half a second does the same.
+5. He opens a company, a project and a quotation in turn: the same panel every time, the same width, arriving from the end of the line — the right in English, the left in Arabic — with its line on the edge facing the list.
+6. He raises a quotation for a customer who has been quoted before. The form opens on one blank line: no price, no colour, and the last quotation's name nowhere on it. Add item still opens the next line on the sheet above it.
+7. Every screen every role can reach carries at most one button in the brand gradient, empty lists included.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.
@@ -3113,3 +3135,88 @@ actually needed.
   then the log — which is also simpler to explain than the asymmetry it replaces. **Neither was
   findable any other way**: the tally was green, the seed could not produce either state until
   this box changed it, and a person had to look at the pixels of a nine-entry day.
+- [x] 200 **A comment that answered a question the founder had already answered, three times
+  over.** §3 says the chosen view is "remembered per person and carried in the URL". The URL half
+  was built in P8; the memory was a cookie, under a paragraph explaining that a preference was not
+  worth a table because "one person signs into one browser here". That sentence was written before
+  §3 existed and was never read against it — and a cookie is per BROWSER, so the rep who chose the
+  board at his desk got the list back on his phone, which is the founder's own example. Two more
+  controls had copied the paragraph WITH its reasoning: the home screens' tabs and the metrics
+  window, each with its own `document.cookie` effect and its own copy of the justification. So one
+  rule had three mechanisms and three defences of the wrong one. All three are rows of
+  `screen_choices` now, keyed by person, kind and screen, written by one hook that says so only
+  when the choice is news. **The general form is about the comment rather than the cookie**: a
+  paragraph justifying a decision is evidence about the day it was written, not about today, and
+  the same words appearing in three files is the signal that nobody has re-read any of them.
+  Three smaller things fell out of it: the new table's kinds were about to be a TypeScript union
+  beside a literal list inside a CHECK — the pair rules/words.md names — and are one exported list
+  the check, the validator and the spec all read; the write asks `requireActor`, so an admin
+  reading a rep's screens cannot leave a preference behind on that man's account; and the sweep
+  that holds schema.ts and the catalogue to each other failed on the index behind the new table's
+  PRIMARY KEY, because it was the first COMPOSITE one in this schema — Postgres names a
+  single-column key `<table>_pkey` and Drizzle names a composite one after its columns, and the
+  sweep only knew the two suffixes it had met.
+- [x] 201 **Four screens drew the same drawer and agreed about none of it.** Work happens in a
+  drawer over the list (DESIGN §2), and companies, projects, quotations and dispatches each wrote
+  their own `SheetContent`. **Three widths**: a company at 32rem, a project at 36rem, a quotation
+  at 42rem, so the surface changed size as a rep walked one job from the customer to the paper.
+  **Two of the three loading skeletons came from the wrong edge**: pinned to `side="right"`, which
+  is right in English and wrong in Arabic, so the panel that stands in while the query runs slid in
+  from one side and the record replacing it arrived from the other. **And three of the four drew
+  their line on the edge facing away from the page** — the kit's own rule, written for a component
+  that may come from either side, puts the border on the outer edge when the drawer comes from the
+  left, which in this app only ever happens in Arabic. Not one of the three was visible in an
+  English screenshot, and the skeleton is on screen for exactly as long as a dev server takes to
+  answer. `RecordPanel` owns the width, the side and the border; the kit stops asserting a width
+  nothing wanted; `one-look` refuses a fifth screen that draws its own; and the spec measures all
+  four panels and compares them with each other rather than with a number, because the rule is
+  that they agree.
+- [x] 202 **Two screens answered "one sentence and its primary action" by drawing the action
+  twice.** The companies list and the leads list each rendered their Add button in the heading row
+  and AGAIN inside the empty-list card — two brand gradients on one screen, which is the one signal
+  DESIGN §2 keeps for "this is the thing to press". D35 had already ruled on the identical shape
+  inside a drawer ("where the action row already carries the button, the empty state carries its
+  sentence alone") and neither screen had been read against it. **Neither is reachable on the
+  seeded floor**: every rep has customers and marketing has leads, so no screenshot and no walk in
+  fourteen boxes had ever drawn either card. What holds it now is not a walk of the empty state but
+  a count of the gradient on every screen every role can reach, added to the spec that already
+  walks all of them for dead controls — a rule about how many is cheaper to check everywhere than
+  in the one place it broke.
+- [x] 203 **The half of a founder sentence that looked already done.** "Tapping a phone anywhere
+  opens WhatsApp via wa.me; long-press/secondary shows the number." Kladra prints the number as the
+  link's own label rather than hiding it behind an icon (D98), so "shows the number" read as
+  satisfied for eleven phases and the second half was bound to nothing. It was not satisfied: a tap
+  opens WhatsApp before a finger can select anything, so a rep reading a customer's number out to a
+  colleague, or pasting it into another app, could see it and never take it — and the browser's own
+  menu would have offered him the wa.me address instead of the number in it. **A screen can satisfy
+  the words of a decision and not the act behind it**, which is what a §3 gate reading sentences
+  cannot catch on its own: the entry sat in the registry as owed for two boxes with a note saying
+  the tap was walked, and what was missing was the thing the tap makes impossible. It is a hold or
+  a secondary press now, opening the number as text with one thing to do, and `contextmenu` rather
+  than a mouse button, so the keyboard's own menu key reaches it.
+- [x] 204 **Taking a feature out left its supporting cast behind.** §3's "nothing is carried
+  forward" removed the offer that filled a new quotation with the last one's lines, and the removal
+  took the control, the read behind it and its two message keys — and left `isBlankLine`, an
+  exported helper that existed to decide when the offer was safe, called by nothing. ESLint does
+  not flag an unused export and neither does the compiler; `unused-messages` covers strings and
+  `one-figure` covers duplicated formulas, and nothing in the gate asks whether an exported
+  function has a caller. It was found by grepping the removed feature's own vocabulary, which is
+  the answer for now: **after taking something out, search for every name it used**, not only for
+  the name of the thing itself.
+- [x] 205 **A memory that outlives its browser outlives its test.** Moving three choices off
+  cookies and onto the person (#200) quietly took a property the suite had been leaning on for
+  eleven phases: `login` clears cookies, so whatever one spec had pressed, the next one started
+  from the defaults. A row does not clear, and it is not supposed to — that is the founder's
+  sentence. So a walk that opened `?view=board` would have left the NEXT spec's bare
+  `/quotations` on the board, and "the next spec" includes the whole of the other locale project,
+  half an hour later, looking for a table that is not there. Reading the specs for bare `/team`,
+  `/day` and `/quotations` found it before the gate did, and the first fix was still wrong: the
+  fixture forgot the choices in its TEARDOWN, which races the write and loses. The write is fire
+  and forget by design — an effect the browser sends after the screen has already changed, that
+  nothing waits for — so the manager's last `?tab=metrics` landed a moment after the row had been
+  deleted, and the next spec's bare `/team` opened on his metrics with no stuck list on it, thirty
+  seconds of timeout later. It is forgotten at SETUP now, where the context that could still be
+  sending one has been closed for a fixture's worth of time. **Two general forms, and the second
+  is the one worth keeping**: making something outlive a session is also making it outlive a test,
+  and the suite's independence was resting on a property nobody had written down; and a cleanup
+  that races an unobserved write belongs before the next thing, never after the last one.

@@ -59,16 +59,3 @@ export function draftLinesFrom(items: readonly StoredLine[]): DraftLine[] {
     pricePerSqm: item.pricePerSqm,
   }));
 }
-
-/**
- * The last quotation raised at a company, as a new one would open on it (D74).
- *
- * Here rather than in `src/lib/quotations.ts` for the reason at the top of this
- * file: the dialog that renders the offer is a client component, and a type is
- * all it may take from the server side.
- */
-export type LastQuotation = {
-  /** Q-12, or Q-12/2 — what the offer names, so he knows which one he is copying. */
-  label: string;
-  lines: DraftLine[];
-};

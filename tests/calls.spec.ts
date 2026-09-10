@@ -209,6 +209,88 @@ test("a number on the day's calls is a message and a call", async ({ page, local
   }
 });
 
+/**
+ * "Tapping a phone anywhere opens WhatsApp via wa.me; long-press/secondary
+ * shows the number" — the second half of it (SPEC §3, D165).
+ *
+ * The first half has been walked since P11A. The second was never bound to
+ * anything, and what it is FOR is easy to miss here, because Kladra prints the
+ * number as the link's own label rather than hiding it behind an icon: a tap on
+ * a phone opens WhatsApp before a finger can select anything, so a rep reading
+ * a number out to a colleague, or pasting it into another app, had no way to
+ * take it off the screen. The browser's own menu would have offered him the
+ * wa.me address.
+ *
+ * Both ways in are walked. `contextmenu` is the desktop's — the right button,
+ * two fingers on a trackpad, and the keyboard's own menu key, which is why it
+ * is bound to that event and not to a mouse button. The hold is the phone's,
+ * and it is dispatched by hand because this suite runs one desktop browser: a
+ * pointerdown that says it came from a finger, and no pointerup for as long as
+ * the press is meant to last.
+ */
+test("a held number shows itself, and offers to be copied", async ({ page, locale, t }) => {
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const company = await anyWithContact(faisal);
+  const phone = storedE164(company.phone);
+  const readable = formatPhone(phone);
+
+  // Two permissions, not one: writing is what the page does, reading is what
+  // this spec does to check it. Chromium refuses either to a page that was never
+  // granted it, and the app catches its refusal and shows it as a failure —
+  // which is the right behaviour and the wrong thing to be testing here.
+  await page.context().grantPermissions(["clipboard-write", "clipboard-read"]);
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/companies`);
+  await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
+
+  const row = page.getByRole("row").filter({ hasText: company.name });
+  const whatsapp = row.getByRole("link", {
+    name: t("companies.whatsappContact", { name: company.contact_name }),
+  });
+  await expect(whatsapp).toHaveAttribute("href", whatsappHref(phone), COLD);
+
+  await test.step("a secondary press shows the number instead of the browser's menu", async () => {
+    await whatsapp.click({ button: "right" });
+
+    const panel = page.getByRole("dialog", {
+      name: t("companies.numberOf", { name: company.contact_name }),
+    });
+    await expect(panel).toBeVisible(COLD);
+    // The number itself, not the address the link carries.
+    await expect(panel).toContainText(readable);
+
+    await panel.getByRole("button", { name: t("common.copyNumber") }).click();
+    await expect(panel).toBeHidden();
+    await expect(page.getByText(t("common.numberCopied"), { exact: true })).toBeVisible(COLD);
+
+    // What was taken is what was on the screen, not the wa.me address and not
+    // the stored form nobody was shown.
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toBe(readable);
+  });
+
+  await test.step("and a long press does the same on a phone", async () => {
+    await page.keyboard.press("Escape");
+    const box = await whatsapp.boundingBox();
+    expect(box, "the number has no box to be pressed").not.toBeNull();
+
+    await whatsapp.dispatchEvent("pointerdown", {
+      bubbles: true,
+      pointerType: "touch",
+      clientX: Math.round((box?.x ?? 0) + (box?.width ?? 0) / 2),
+      clientY: Math.round((box?.y ?? 0) + (box?.height ?? 0) / 2),
+    });
+
+    // No pointerup: the press is still down, which is what a hold is.
+    await expect(
+      page.getByRole("dialog", {
+        name: t("companies.numberOf", { name: company.contact_name }),
+      }),
+    ).toBeVisible(COLD);
+  });
+});
+
 test("a card with nobody to call says so", async ({ page, locale, t }) => {
   const faisal = await userId("faisal@technopanel.com.sa");
   const today = todayRiyadh();

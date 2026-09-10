@@ -25,7 +25,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
-  SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
@@ -44,7 +43,7 @@ import { DatePicker } from "@/components/ui-ext/date-picker";
 import { useArrived, useLanded } from "@/hooks/use-arrived";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
-import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
+import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { formatDay } from "@/lib/dates";
 import type { FollowUpFilter, FollowUpState } from "@/lib/followups";
 import type { ProjectRow } from "@/lib/projects";
@@ -479,13 +478,7 @@ export function ProjectSheet({
         if (!next) close();
       }}
     >
-      <SheetContent
-        onOpenAutoFocus={focusTheDrawerItself}
-        // Radix's sides are physical; in Arabic the drawer comes from the
-        // other edge so it still slides in from the end of the line.
-        side={locale === "ar" ? "left" : "right"}
-        className="w-full gap-0 scroller p-0 data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl"
-      >
+      <RecordPanel className="scroller">
         <SheetHeader className="gap-3 border-b border-line p-4">
           <SheetTitle className="pe-10 text-base">{name}</SheetTitle>
           <SheetDescription className="sr-only">
@@ -634,24 +627,17 @@ export function ProjectSheet({
             {quotations}
           </TabsContent>
         </Tabs>
-      </SheetContent>
+      </RecordPanel>
     </Sheet>
   );
 }
 
 /** Never a blank while the drawer's data is on its way (DESIGN §2). */
 export function ProjectSheetSkeleton() {
-  const locale = useLocale();
   const t = useTranslations();
   return (
     <Sheet open>
-      <SheetContent
-        onOpenAutoFocus={focusTheDrawerItself}
-        side={locale === "ar" ? "left" : "right"}
-        showCloseButton={false}
-        className="w-full gap-0 p-0 data-[side=left]:sm:max-w-xl data-[side=right]:sm:max-w-xl"
-        aria-busy="true"
-      >
+      <RecordPanel showCloseButton={false} aria-busy="true">
         <SheetHeader className="gap-3 border-b border-line p-4">
           <SheetTitle className="sr-only">{t("common.loading")}</SheetTitle>
           <SheetDescription className="sr-only">{t("common.loading")}</SheetDescription>
@@ -668,7 +654,7 @@ export function ProjectSheetSkeleton() {
             <Skeleton key={row} className="h-16 w-full rounded-[calc(var(--radius)+4px)]" />
           ))}
         </div>
-      </SheetContent>
+      </RecordPanel>
     </Sheet>
   );
 }

@@ -240,14 +240,23 @@ async function EmptyList({
       />
     );
   }
-  // A manager reading an empty floor is told it is empty; he is not handed a
-  // button that would make the company his.
+  /*
+    * The sentence alone, because the button is already on this screen.
+    *
+    * §3 asks an empty list for one sentence and its primary action, and this
+    * panel answered by drawing a SECOND Add company under the one in the
+    * heading row — two brand gradients on one screen, which is the one signal
+    * DESIGN §2 keeps for "this is the thing to press" (D31, D35). The action
+    * exists and is four lines above; the sentence says to use it.
+    *
+    * A manager reading an empty floor is told it is empty and nothing more: he
+    * is not handed a button that would make the company his.
+    */
   return (
     <div className="card-face flex flex-col items-center gap-3 px-4 py-12 text-center">
       <p className="max-w-prose text-sm text-muted-foreground">
         {mayAdd ? t("shell.emptyCompanies") : t("common.nothingYet")}
       </p>
-      {mayAdd ? <AddCompanyDialog /> : null}
     </div>
   );
 }

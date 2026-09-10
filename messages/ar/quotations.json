@@ -66,7 +66,6 @@
   "itemNumber": "البند {number}",
   "addItem": "إضافة بند",
   "removeItem": "حذف",
-  "copyItemsFrom": "نسخ بنود {label}",
   "changedFrom": "ما تغيّر عن {label}",
   "changedNothing": "البنود كما هي تمامًا، والجديد في هذه المراجعة شيء آخر.",
   "changedWas": "سابقًا {from}",

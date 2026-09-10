@@ -16,6 +16,7 @@ import {
   pgEnum,
   pgSequence,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -257,6 +258,60 @@ export const nonWorkingDays = pgTable(
     ...stamps,
   },
   (t) => [index("non_working_days_day_idx").on(t.day)],
+);
+
+/**
+ * What a person chose to look at, remembered for THAT PERSON (SPEC §3, D164).
+ *
+ * Three choices had a memory and all three were a cookie: list or board, which
+ * tab a screen opens on, and which range the metrics cover. §3 asks for the
+ * view to be "remembered per person and carried in the URL", and per browser is
+ * not per person — the rep who chose the board at his desk got the list back on
+ * his phone, which is the whole of the founder's sentence. The other two moved
+ * with it rather than leaving two mechanisms behind one rule.
+ *
+ * `kind` says which of the three, `screen` which screen (quotations and
+ * dispatches remember separately, and so do the day and the team), and `choice`
+ * is a word each reader parses for itself — an unknown one falls back to the
+ * default, which is what `parseView`, `parseTab` and `parseRange` have always
+ * done with a stale cookie. The value is deliberately NOT an enum in the
+ * database: a fourth range or a third view is a screen decision, and a
+ * migration to add a word nobody can be harmed by is a migration for nothing.
+ *
+ * The row is the person's own and cascades with the account, because a
+ * preference belonging to a deleted user is a row nobody will ever read.
+ */
+/**
+ * The three choices a screen remembers. Here rather than in
+ * src/lib/screen-choice.ts because the CHECK below reads it and the schema
+ * cannot import from lib without a cycle — the same arrangement
+ * `NOTIFICATION_KINDS` has, and for the same reason: a union in the editor
+ * beside a list in the database is two copies, and the one nobody runs drifts
+ * (rules/words.md).
+ */
+export const CHOICE_KINDS = ["view", "tab", "range"] as const;
+export type ChoiceKind = (typeof CHOICE_KINDS)[number];
+
+export const screenChoices = pgTable(
+  "screen_choices",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    kind: text("kind").notNull(),
+    screen: text("screen").notNull(),
+    choice: text("choice").notNull(),
+    ...stamps,
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.kind, t.screen] }),
+    // The one read there is: everything this person has chosen, in one go.
+    index("screen_choices_user_idx").on(t.userId),
+    check(
+      "screen_choices_kind_check",
+      sql`${t.kind} in (${sql.raw(CHOICE_KINDS.map((v) => `'${v}'`).join(", "))})`,
+    ),
+  ],
 );
 
 // ---- the rep floor --------------------------------------------------------

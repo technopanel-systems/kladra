@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DispatchDrawer } from "@/components/dispatches/dispatch-drawer";
@@ -10,7 +9,8 @@ import { requireUser } from "@/lib/authz";
 import { countDispatches, listDispatches, type DispatchStatus } from "@/lib/dispatches";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { dispatchTargets } from "@/lib/pickers";
-import { viewCookie, viewFor } from "@/lib/view";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
+import { viewFor } from "@/lib/view";
 
 /**
  * Dispatches — what has actually gone out, and what is waiting to (SPEC S37).
@@ -34,17 +34,15 @@ export default async function DispatchesPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [user, locale, params, jar] = await Promise.all([
-    requireUser(),
-    getLocale(),
-    searchParams,
-    cookies(),
-  ]);
+  const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
 
   const q = (params.q ?? "").trim();
   const status = parseStatus(params.status);
   const open = params.open?.trim() || null;
-  const view = viewFor(params.view, jar.get(viewCookie("dispatches"))?.value);
+  // His own choice, not this browser's, and remembered apart from the
+  // quotations list: the two screens are read for different questions.
+  const stored = chosen(await rememberedChoices(user.id), "view", "dispatches");
+  const view = viewFor(params.view, stored);
 
   const narrowing = {
     user,
@@ -85,6 +83,7 @@ export default async function DispatchesPage({
         status={status}
         openId={open}
         view={view}
+        remembered={stored}
       />
 
       <ListTail shown={rows.length} total={total} />

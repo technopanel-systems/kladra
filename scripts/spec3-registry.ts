@@ -134,7 +134,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "opens WhatsApp via wa.me; long-press/secondary shows the number",
-    owed: "P12-14 across — the tap that opens wa.me is walked at 375 and in the drawer, but nothing in the app binds a long press or a secondary press, so the number itself can never be revealed.",
+    tests: [
+      "a number on the day's calls is a message and a call",
+      "a held number shows itself, and offers to be copied",
+    ],
   },
   {
     says: "Ctrl+K / Cmd+K opens global search from any screen",
@@ -164,7 +167,7 @@ export const SPEC3: Spec3Entry[] = [
     says: "List filters and the open drawer are reflected in the URL",
     tests: [
       "a stale or foreign ?open= leaves the list standing",
-      "the URL wins, the cookie remembers, and the list is the default",
+      "the URL wins, the person remembers, and the list is the default",
     ],
   },
   {
@@ -232,7 +235,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "the choice is remembered per person and carried in the URL",
-    owed: "P12-14 across — the chosen view is kept in a cookie (src/lib/view.ts), so it is remembered per browser: the rep who chose the board at his desk gets the list back on his phone.",
+    tests: [
+      "the view a person chose comes back on another browser, and is only theirs",
+      "the URL wins, the person remembers, and the list is the default",
+    ],
   },
   {
     says: "between reps is the **sales manager's** action",
@@ -292,8 +298,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Nothing is ever carried forward from a previous record into a new one",
-    owed: "P12-14 across — a new quotation line still copies the sheet off the line above it and a repeat ask opens on the customer's last quotation (D74). The dispatch half is paid: P12-10 took the site, the terms and the shipment method off the dispatch before it, and the read behind them with it.",
-  },
+    tests: [
+      "a repeat request opens on nothing, and a second line on the first one's sheet",
+      "the dispatch chain: request part of a quotation, the queue, approval, and what is left",
+    ],  },
   {
     says: "every rep on it sees the company and all items beneath it",
     tests: [

@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { CallList } from "@/components/day/call-list";
 import { CloseTheDay } from "@/components/reports/close-the-day";
@@ -21,9 +20,10 @@ import { logTargetsFor } from "@/lib/log-targets";
 import { waitingCounts, waitingOnRep } from "@/lib/day";
 import { chainRatios, metresBySegment } from "@/lib/metrics";
 import { monthsBack } from "@/lib/months";
-import { RANGES, RANGE_COOKIE, rangeFor, rangeStart } from "@/lib/ranges";
+import { RANGES, RANGE_SCREEN, rangeFor, rangeStart } from "@/lib/ranges";
 import { repMonth } from "@/lib/team";
-import { tabCookie, tabFor, type Tab } from "@/lib/tabs";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
+import { tabFor, type Tab } from "@/lib/tabs";
 
 /**
  * A rep's day — his home from P8 (SPEC §3, DESIGN §6).
@@ -44,12 +44,7 @@ export default async function DayPage({
 }: {
   searchParams: Promise<{ tab?: string; range?: string }>;
 }) {
-  const [user, locale, params, jar] = await Promise.all([
-    requireUser(),
-    getLocale(),
-    searchParams,
-    cookies(),
-  ]);
+  const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
   // The roles that own companies — a rep, marketing, and the coordinator since
   // SPEC §3. The manager reads the team screen for the same question, so he
   // follows a link here to his own home rather than to an empty screen (S8).
@@ -67,13 +62,19 @@ export default async function DayPage({
   // over a window (D151). Marketing carries no month and no chain, so it has
   // nothing to measure and gets no second tab rather than an empty one.
   const TABS: Tab[] = hasMonth ? ["work", "metrics"] : ["work"];
-  const tab = tabFor(params.tab, jar.get(tabCookie("day"))?.value, TABS);
+
+  // Both of his choices in one read, after the redirect above: a rep who is not
+  // allowed on this screen is not asked what he last looked at (D164).
+  const remembered = await rememberedChoices(user.id);
+  const storedTab = chosen(remembered, "tab", "day");
+  const tab = tabFor(params.tab, storedTab, TABS);
   const working = tab === "work";
 
   // The window every figure on the metrics tab is measured over — the same
-  // three the manager's screen offers, remembered in the same cookie, because
+  // three the manager's screen offers, remembered against the same tab, because
   // it is the same question asked by two people (D152).
-  const range = rangeFor(params.range, jar.get(RANGE_COOKIE)?.value);
+  const storedRange = chosen(remembered, "range", RANGE_SCREEN);
+  const range = rangeFor(params.range, storedRange);
   const from = rangeStart(range);
 
   // Each band asks for what it will draw and the counts come from the one
@@ -123,6 +124,7 @@ export default async function DayPage({
         <PageTabs
           screen="day"
           tab={tab}
+          remembered={storedTab}
           tabs={TABS.map((value) => ({ value, href: `/day?tab=${value}` }))}
         />
       </header>
@@ -188,6 +190,7 @@ export default async function DayPage({
 
           <RangeChips
             range={range}
+            remembered={storedRange}
             chips={RANGES.map((value) => ({ value, href: `/day?tab=metrics&range=${value}` }))}
           />
 

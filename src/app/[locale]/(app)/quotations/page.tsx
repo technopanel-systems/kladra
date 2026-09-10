@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
@@ -12,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { issuesOwnQuotations } from "@/lib/floor";
 import { quotationTargets } from "@/lib/pickers";
-import { viewCookie, viewFor } from "@/lib/view";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
+import { viewFor } from "@/lib/view";
 import { countQuotations, listQuotations, type QuotationStatus } from "@/lib/quotations";
 import { LIST_LIMIT } from "@/lib/list-size";
 
@@ -53,18 +53,15 @@ export default async function QuotationsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [user, locale, params, jar] = await Promise.all([
-    requireUser(),
-    getLocale(),
-    searchParams,
-    cookies(),
-  ]);
+  const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
 
   const q = (params.q ?? "").trim();
   const status = parseStatus(params.status);
   const open = params.open?.trim() || null;
-  // The URL wins, the cookie remembers, the list is the default (src/lib/view.ts).
-  const view = viewFor(params.view, jar.get(viewCookie("quotations"))?.value);
+  // The URL wins, the person remembers, the list is the default (src/lib/view.ts).
+  // `stored` goes back down to the switch so it writes only when he changes it.
+  const stored = chosen(await rememberedChoices(user.id), "view", "quotations");
+  const view = viewFor(params.view, stored);
 
   // A board of states shows every state: narrowing to one would leave one
   // column standing, which is why the chips are hidden in that view too.
@@ -112,6 +109,7 @@ export default async function QuotationsPage({
         status={status}
         openId={open}
         view={view}
+        remembered={stored}
       />
 
       <ListTail shown={rows.length} total={total} />

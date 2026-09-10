@@ -47,11 +47,46 @@ async function deadControls(page: Page): Promise<string[]> {
     );
 }
 
+/**
+ * Everything wearing the brand gradient — the one signal DESIGN §2 keeps for
+ * "this is the thing to press". It is a class rather than a role because that
+ * is exactly what the rule is about: the gradient, and only `variant="brand"`
+ * may draw it (`scripts/one-look.mts`).
+ */
+async function primaryActions(page: Page): Promise<string[]> {
+  return page
+    .locator('[class*="brand-grad"]')
+    .filter({ visible: true })
+    .evaluateAll((nodes) =>
+      nodes.map((node) => (node.textContent ?? "").replace(/\s+/g, " ").trim() || "(no label)"),
+    );
+}
+
 async function walk(page: Page, locale: Locale, screens: readonly string[]): Promise<void> {
   for (const screen of screens) {
     await page.goto(`/${locale}/${screen}`);
     await expect(page.getByRole("heading").first()).toBeVisible();
     expect(await deadControls(page), `disabled control on /${locale}/${screen}`).toEqual([]);
+
+    /*
+     * And never two of them (DESIGN §2, P12-14).
+     *
+     * §3 asks an empty list for "one sentence and its primary action", and two
+     * screens answered by drawing the action a SECOND time inside the empty
+     * panel, under the one already in the heading row: two brand gradients on
+     * one screen, which is one more than the number of things to press. It is
+     * checked on every screen rather than on those two, because the next copy
+     * will be somebody being helpful on a third.
+     *
+     * The screens are the three lists above. A review queue, where every card
+     * carries the one decision it is there for, is a different shape and is not
+     * among them — /duplicates is the only one, and adding it here would be
+     * asking this rule a question it was not written to answer.
+     */
+    const primaries = await primaryActions(page);
+    expect(primaries.length, `${primaries.join(" / ")} on /${locale}/${screen}`).toBeLessThanOrEqual(
+      1,
+    );
   }
 }
 

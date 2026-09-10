@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
-import { RANGE_COOKIE, type Range } from "@/lib/ranges";
+import { useRemembered } from "@/hooks/use-remembered";
+import { DEFAULT_RANGE, RANGE_SCREEN, parseRange, type Range } from "@/lib/ranges";
 
 /**
  * The window every figure below it is measured over (D152, D154).
@@ -19,25 +19,26 @@ import { RANGE_COOKIE, type Range } from "@/lib/ranges";
  * with `aria-current` rather than with colour alone (D145 — that chip was
  * written four times before it was written once).
  *
- * The memory is a cookie written here in the browser rather than a server
- * action, for the reason `ViewSwitch` and `PageTabs` both give: it is a
- * preference, nothing else reads it, and a round trip would make pressing it
- * slower than acting on it.
+ * The memory belongs to the person and is written by the same hook the view
+ * switch and the tabs use, for the reason `ViewSwitch` gives at length (SPEC
+ * §3, D164). It is remembered against the metrics tab rather than against the
+ * screen: a rep who set the window to the year on his own figures means the
+ * year when he reads the floor's.
  */
 export function RangeChips({
   range,
+  remembered,
   chips,
 }: {
   range: Range;
+  /** What was remembered when this page was drawn — nothing, on a first visit. */
+  remembered?: string;
   /** In the order they are read, each with the address it lives at. */
   chips: { value: Range; href: string }[];
 }) {
   const t = useTranslations();
 
-  useEffect(() => {
-    // A year, and `lax` so it survives following a link in from an email.
-    document.cookie = `${RANGE_COOKIE}=${range}; path=/; max-age=31536000; samesite=lax`;
-  }, [range]);
+  useRemembered("range", RANGE_SCREEN, range, parseRange(remembered) ?? DEFAULT_RANGE);
 
   return (
     <div

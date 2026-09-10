@@ -20,7 +20,6 @@ import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
-  SheetContent,
   SheetDescription,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -30,8 +29,7 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { Sqm } from "@/components/ui-ext/figures";
 import { NoteBlock } from "@/components/ui-ext/note-block";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
-import { focusTheDrawerItself } from "@/components/ui-ext/drawer-focus";
-import { useIsPhone } from "@/hooks/use-is-phone";
+import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import type { PickerOption } from "@/lib/picker-option";
 import type { Sharer } from "@/lib/shares";
@@ -64,18 +62,11 @@ import { cn } from "@/lib/utils";
  * before the parent stops rendering it.
  */
 export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
-  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [open, setOpen] = useState(true);
   const [, startTransition] = useTransition();
-  const phone = useIsPhone();
-
-  // A drawer belongs on the inline-end edge; `side` is physical, so Arabic
-  // takes the mirror image. On a phone it is a bottom sheet instead — on the
-  // same line the shell and every form change on (src/lib/breakpoint.ts).
-  const side = phone ? "bottom" : locale === "ar" ? "left" : "right";
 
   function onOpenChange(next: boolean) {
     if (next) return;
@@ -88,23 +79,11 @@ export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        onOpenAutoFocus={focusTheDrawerItself}
-        side={side}
-        className={cn(
-          "gap-0 p-0",
-          side === "bottom"
-            ? "max-h-[88svh] rounded-t-xl pb-[env(safe-area-inset-bottom)]"
-            : "sm:max-w-lg!",
-          // side="left" borders its outer edge; in Arabic the content-facing
-          // edge is the inline-start one.
-          side === "left" && "border-s",
-        )}
-      >
-        <div className="flex min-h-0 flex-1 flex-col scroller">
-          {children}
-        </div>
-      </SheetContent>
+      {/* The one drawer that becomes a bottom sheet on a phone: it opens
+          over a list of cards a rep keeps his place in (D128). */}
+      <RecordPanel phoneSheet>
+        <div className="flex min-h-0 flex-1 flex-col scroller">{children}</div>
+      </RecordPanel>
     </Sheet>
   );
 }

@@ -9,6 +9,7 @@
   "openCompany": "Open {name}",
   "whatsappContact": "WhatsApp {name}",
   "callContact": "Call {name}",
+  "numberOf": "{name}\u2019s number",
   "overdueCount": "{count} overdue",
   "todayCount": "{count} today",
   "neverCount": "{count, plural, one {# company never contacted} other {# companies never contacted}}",

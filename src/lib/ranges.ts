@@ -8,9 +8,9 @@ import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
  * about arbitrary spans: they are asked about the month, the quarter and the
  * year, which is how this business already talks about its own work.
  *
- * Pure — no database, no cookies — so `tests/ranges.spec.ts` asks it directly
- * with a fixed today (including one in January, where a quarter crosses a year)
- * and a client component can import the type.
+ * Pure — no database — so `tests/ranges.spec.ts` asks it directly with a fixed
+ * today (including one in January, where a quarter crosses a year) and a client
+ * component can import the type.
  */
 export const RANGES = ["month", "quarter", "year"] as const;
 
@@ -31,12 +31,18 @@ export function parseRange(value: unknown): Range | null {
   return RANGES.includes(value as Range) ? (value as Range) : null;
 }
 
-/** One cookie for the whole tab: the window is not a per-screen preference. */
-export const RANGE_COOKIE = "kladra-range";
+/**
+ * The window is remembered against the metrics TAB, not against the day or the
+ * team screen, because it is not a per-screen preference: it is the same
+ * question — over what window — asked by two people on two screens, and a rep
+ * who set it to the year on his own metrics means the year when he reads the
+ * floor's (D152).
+ */
+export const RANGE_SCREEN = "metrics";
 
-/** The URL wins; the cookie is consulted only when the URL says nothing. */
-export function rangeFor(fromUrl: unknown, fromCookie: unknown): Range {
-  return parseRange(fromUrl) ?? parseRange(fromCookie) ?? DEFAULT_RANGE;
+/** The URL wins; the memory is consulted only when the URL says nothing. */
+export function rangeFor(fromUrl: unknown, remembered: unknown): Range {
+  return parseRange(fromUrl) ?? parseRange(remembered) ?? DEFAULT_RANGE;
 }
 
 /**

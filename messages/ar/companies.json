@@ -9,6 +9,7 @@
   "openCompany": "فتح {name}",
   "whatsappContact": "مراسلة {name} على واتساب",
   "callContact": "الاتصال برقم {name}",
+  "numberOf": "رقم {name}",
   "overdueCount": "{count, plural, zero {لا متابعات متأخرة} one {متابعة متأخرة} two {متابعتان متأخرتان} few {# متابعات متأخرة} many {# متابعة متأخرة} other {# متابعة متأخرة}}",
   "todayCount": "{count, plural, zero {لا متابعات اليوم} one {متابعة اليوم} two {متابعتان اليوم} few {# متابعات اليوم} many {# متابعة اليوم} other {# متابعة اليوم}}",
   "neverCount": "{count, plural, zero {لا شركات دون تواصل} one {شركة دون تواصل} two {شركتان دون تواصل} few {# شركات دون تواصل} many {# شركة دون تواصل} other {# شركة دون تواصل}}",

@@ -84,6 +84,24 @@ const RULES: Rule[] = [
     fix: "use <Ref>…</Ref> from @/components/ui-ext/figures",
   },
   {
+    // 8. The panel a record opens in (P12-14, DESIGN §6). Four screens drew
+    //    their own drawer and agreed about none of it: a company came in at
+    //    32rem, a project at 36rem and a quotation at 42rem, so the surface
+    //    resized as a rep walked one job from the customer to the paper; two
+    //    of the three loading skeletons were pinned to `side="right"`, so in
+    //    Arabic the panel arrived from one edge and the record replacing it
+    //    from the other; and three of the four bordered the edge Arabic cannot
+    //    see. `RecordPanel` owns the width, the side and the border.
+    name: "a record's panel is written once",
+    pattern: /<SheetContent/,
+    allow: [
+      "src/components/ui-ext/record-panel.tsx",
+      // The phone's menu, which is a bottom sheet and not a record.
+      "src/components/shell/bottom-bar.tsx",
+    ],
+    fix: "use <RecordPanel> from @/components/ui-ext/record-panel",
+  },
+  {
     // 5. A `<bdi>` that is the BLOCK is a block that changes direction
     //    (P12-8, §5 #172). `<bdi>` carries `dir=auto`, so as a flex item, a
     //    grid item or anything given `block`, `truncate`, `flex-1` or
@@ -139,5 +157,5 @@ if (problems.length > 0) {
 }
 console.log(
   "one-look — the primary button, the surface edge, typed text, the phone line, the direction " +
-    "of a name, the row door and a reference number are each written once",
+    "of a name, the row door, a reference number and a record's panel are each written once",
 );
