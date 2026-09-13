@@ -376,6 +376,14 @@ export const SPEC3: Spec3Entry[] = [
     owed: "P13-S8",
   },
   {
+    says: "Targets are the current month only",
+    tests: [
+      "the admin's targets are this month's: no month to move to, and a box saves to this month",
+      "the earlier months are read, not set: newest first, a dash where a person had none, nothing to press",
+      "a target for a month that is not this one is refused, however the form got there",
+    ],
+  },
+  {
     says: "is the first and default view",
     owed: "P13-S7",
   },

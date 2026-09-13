@@ -38,7 +38,7 @@ import { holdsFloor } from "@/lib/floor";
 import { isLookupKind, LOOKUP_FIELDS, tableName } from "@/lib/lookup-kinds";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
-import { addDays, diffDays, firstOfMonth, type Day } from "@/lib/dates";
+import { addDays, diffDays, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import type { ActionResult, SessionUser } from "@/lib/types";
 
 /** bcrypt cost. The same one the seed uses, so a reset and a seed match. */
@@ -343,7 +343,7 @@ const sqmSchema = z
   .refine((v) => v === "" || (Number.isFinite(Number(v)) && Number(v) >= 0), "invalid");
 
 /**
- * One person's target for one month, or the company's (S43, S44).
+ * One person's target for this month, or the company's (S43, S44).
  *
  * `userId` absent means the company figure. They are separate rows in separate
  * tables on purpose: neither derives from the other, and adding the reps' up
@@ -373,6 +373,16 @@ export async function setTargetAction(
     }
 
     const { month, userId, sqm } = parsed.data;
+
+    // This month and only this month (SPEC §3 P13). The screen offers no other,
+    // and this is what holds when a month turns over under an open tab, or a
+    // bookmarked link or a hand-made form names a month that has closed: the
+    // figure somebody was measured against stays the figure it was.
+    if (month !== firstOfMonth(todayRiyadh())) {
+      const ta = await getTranslations("admin");
+      return { ok: false, error: ta("targetMonthClosed") };
+    }
+
     const value = sqm === "" ? null : Number(sqm).toFixed(2);
 
     await db.transaction(async (tx) => {

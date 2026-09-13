@@ -1865,6 +1865,39 @@ export const DESK_TARGET_LAST_MONTH = "320.00";
 export const COMPANY_TARGET_THIS_MONTH = "3200.00";
 export const COMPANY_TARGET_LAST_MONTH = "2600.00";
 
+/*
+ * The earlier months are read on the admin's targets screen, a month to a row
+ * and a person to a column (SPEC §3 P13), and a history in which everybody had
+ * the same figure every month is a table nobody has seen do its two jobs: a
+ * dash where somebody had no target, and a column for somebody who no longer
+ * carries metres (rules/data.md: every band gets a row on the wrong side of it).
+ */
+
+/** Months ago of each person's FIRST target, where it is not the oldest month seeded. */
+export const FIRST_TARGET_MONTHS_AGO: Partial<Record<RepKey, number>> = {
+  // Turki was added in a hurry (no Arabic name) and had no number in the month
+  // he started, so the oldest month shows his dash.
+  turki: 4,
+};
+
+/**
+ * A rep who has left. His account is deactivated, never deleted (S7), so the
+ * months he was measured against keep his name in the history — while the
+ * boxes for this month, which list only people who carry metres now, have none
+ * for him. Not one of README's seven: nobody signs in as him.
+ */
+export const FORMER_REP: UserSeed = {
+  key: "hamad",
+  name: "Hamad Al-Enezi",
+  nameAr: "حمد العنزي",
+  email: "hamad@technopanel.com.sa",
+  role: "rep",
+  locale: "en",
+  lastSeenDaysAgo: 68,
+};
+/** The months ago he carried a target: the three before he left. */
+export const FORMER_REP_TARGET_MONTHS_AGO = [3, 4, 5];
+
 // ---- notifications ------------------------------------------------------------
 
 export type NotificationSeed = {

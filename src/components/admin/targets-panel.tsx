@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
-import { addMonths, formatMonth } from "@/lib/dates";
-import type { TargetsForMonth } from "@/lib/admin";
-import { useLocale } from "next-intl";
+import type { TargetsThisMonth } from "@/lib/admin";
 
 /**
- * The month's targets: the company's, then one box per person (SPEC S43, S44).
+ * This month's targets: the company's, then one box per person (SPEC S43, S44).
+ *
+ * There is no other month to go to (SPEC §3 P13). The Back and Next that sat
+ * above these boxes are gone: a month that has closed is the figure people were
+ * measured against, and it is read in the table under this panel, not reopened.
  *
  * Each box saves on its own. A single Save for the whole screen would mean an
  * admin who fixed one number and left the page had changed nothing, and a
@@ -28,40 +30,11 @@ import { useLocale } from "next-intl";
  * them (S44): the admin sets it, the reps' add up to whatever they add up to,
  * and the difference between the two is a fact the manager may want to see.
  */
-export function TargetsPanel({ targets }: { targets: TargetsForMonth }) {
+export function TargetsPanel({ targets }: { targets: TargetsThisMonth }) {
   const t = useTranslations();
-  const locale = useLocale();
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-
-  function go(month: string) {
-    startTransition(() => {
-      router.replace(`/admin/targets?month=${month}`, { scroll: false });
-    });
-  }
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => go(addMonths(targets.month, -1))}
-        >
-          {t("common.back")}
-        </Button>
-        <span className="text-sm font-medium">{formatMonth(targets.month, locale)}</span>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={pending}
-          onClick={() => go(addMonths(targets.month, 1))}
-        >
-          {t("common.next")}
-        </Button>
-      </div>
-
       <p className="max-w-prose text-sm text-muted-foreground">{t("admin.targetsHint")}</p>
 
       <div className="flex flex-col gap-2">

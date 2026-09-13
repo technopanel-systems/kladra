@@ -78,6 +78,9 @@ import {
   REP_TARGET_LAST_MONTH,
   DESK_TARGET_LAST_MONTH,
   DESK_TARGET_THIS_MONTH,
+  FIRST_TARGET_MONTHS_AGO,
+  FORMER_REP,
+  FORMER_REP_TARGET_MONTHS_AGO,
   REP_TARGET_THIS_MONTH,
   USERS,
   type DispatchSeed,
@@ -1684,24 +1687,59 @@ async function seedTargets(userIds: Map<string, string>): Promise<void> {
   // metres on it and no target is a bar with nothing to be measured against,
   // which is the thing the months card exists to fix (D61).
   const months = Array.from({ length: MONTHS_SHOWN }, (_, i) => addMonths(TODAY, -i));
+  // A person whose first target came later has none in the months before it,
+  // so the earlier months on the targets screen carry a real dash (P13-S10).
+  const hadTarget = (key: string, monthsAgo: number) =>
+    monthsAgo <= (FIRST_TARGET_MONTHS_AGO[key as keyof typeof FIRST_TARGET_MONTHS_AGO] ?? Infinity);
+
+  // The rep who has left: deactivated, never deleted (S7), so his months keep
+  // his name. Made here rather than with the seven because nothing but his
+  // targets needs him, and nobody signs in as him.
+  const formerPassword = await hash(PASSWORD, 10);
 
   await db.transaction(async (tx) => {
     await tx.insert(targets).values(
       carrying.flatMap((u) =>
-        months.map((month) => ({
-          userId: must(userIds, u.key, "user"),
-          month,
-          sqm:
-            u.role === "coordinator"
-              ? month === thisMonth
-                ? DESK_TARGET_THIS_MONTH
-                : DESK_TARGET_LAST_MONTH
-              : month === thisMonth
-                ? REP_TARGET_THIS_MONTH
-                : REP_TARGET_LAST_MONTH,
-        })),
+        months
+          .map((month, monthsAgo) => ({ month, monthsAgo }))
+          .filter(({ monthsAgo }) => hadTarget(u.key, monthsAgo))
+          .map(({ month }) => ({
+            userId: must(userIds, u.key, "user"),
+            month,
+            sqm:
+              u.role === "coordinator"
+                ? month === thisMonth
+                  ? DESK_TARGET_THIS_MONTH
+                  : DESK_TARGET_LAST_MONTH
+                : month === thisMonth
+                  ? REP_TARGET_THIS_MONTH
+                  : REP_TARGET_LAST_MONTH,
+          })),
       ),
     );
+
+    const [former] = await tx
+      .insert(users)
+      .values({
+        name: FORMER_REP.name,
+        nameAr: FORMER_REP.nameAr ?? null,
+        email: FORMER_REP.email,
+        passwordHash: formerPassword,
+        role: FORMER_REP.role,
+        active: false,
+        locale: FORMER_REP.locale,
+        lastSeenOn:
+          FORMER_REP.lastSeenDaysAgo == null ? null : addDays(TODAY, -FORMER_REP.lastSeenDaysAgo),
+      })
+      .returning({ id: users.id });
+    await tx.insert(targets).values(
+      FORMER_REP_TARGET_MONTHS_AGO.map((monthsAgo) => ({
+        userId: former.id,
+        month: addMonths(TODAY, -monthsAgo),
+        sqm: REP_TARGET_LAST_MONTH,
+      })),
+    );
+
     await tx.insert(companyTargets).values(
       months.map((month) => ({
         month,

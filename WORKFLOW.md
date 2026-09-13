@@ -103,8 +103,9 @@ below by number.
             - [ ] G3 · S7 **Lists and boards** (13.3): "All" first and default on companies, quotations and dispatches;
                   the projects board, Open · Quoted · Dispatching · Won · Lost (D170); `StickyScroll` on every board
                   and wide table; the archive rebuilt from its question — who opens it and what they do there.
-            - [ ] G3 · S10 **Targets** (13.2): the current month only, editable where the admin sets it, history
-                  read-only beneath.
+            - [x] G3 · S10 **Targets** (13.2): the current month only, editable where the admin sets it, history
+                  read-only beneath. **Done**: no month to move to; the action refuses another month; earlier months
+                  in a read-only table in `StickyScroll` (D180). Nothing else navigated months.
             - [ ] G4 · S6 **The coordinator** (13.6): pending quotations and dispatches side by side from `lg` up; a
                   rep picker at the top of both request dialogs for her, counting toward him, hers under Internal
                   Sales when no rep is named; reliance per rep on the manager's team tab.
@@ -1122,3 +1123,5 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 214 A file a screenshot agent wrote for itself was swept into a commit by `git add -A`. (P13 Stage 2)
 - [x] 215 A primary action hidden from the one person its new half was for: no paper, no button, no Direct. (P13-S3)
 - [x] 216 A retry that retried everything except the press that failed. (P13-S3)
+- [x] 217 A row found by the text "Q-1" is also the row for Q-11, the day the seed grows past ten. (P13-S10)
+- [x] 218 A worktree made for a builder can start at an old commit, not at the branch it was made from. (P13 Stage 2)

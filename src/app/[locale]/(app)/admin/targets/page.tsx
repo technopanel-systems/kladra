@@ -1,40 +1,52 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { EarlierTargetsTable } from "@/components/admin/earlier-targets";
 import { TargetsPanel } from "@/components/admin/targets-panel";
 import { requireAdmin } from "@/lib/authz";
-import { targetsForMonth } from "@/lib/admin";
-import { firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
+import { earlierTargets, targetsThisMonth } from "@/lib/admin";
+import { formatMonth, todayRiyadh } from "@/lib/dates";
 
 /**
  * Targets: one figure per person per month, and the company's beside them
  * (SPEC S43, S44).
  *
- * The month lives in the URL, so "next month's targets" is a link somebody can
- * send.
+ * This month and only this month is set here (SPEC §3 P13: "Targets are the
+ * current month only: no navigation across months, editable only where the
+ * admin sets it"). The month is Riyadh's today and nothing in the address can
+ * move it — a `?month=` in an old link is ignored, and the action refuses any
+ * other month for the forged form. The months before it are underneath, read
+ * and never set.
  */
-type Search = { month?: string };
+export default async function AdminTargetsPage() {
+  await requireAdmin();
 
-function parseMonth(value: string | undefined): Day {
-  return value && /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? firstOfMonth(value)
-    : firstOfMonth(todayRiyadh());
-}
-
-export default async function AdminTargetsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Search>;
-}) {
-  const [, params] = await Promise.all([requireAdmin(), searchParams]);
-
-  const [t, targets] = await Promise.all([
+  // One today for both halves, so a page drawn across midnight on the last of
+  // the month cannot list this month among the earlier ones.
+  const today = todayRiyadh();
+  const [t, locale, targets, earlier] = await Promise.all([
     getTranslations(),
-    targetsForMonth(parseMonth(params.month)),
+    getLocale(),
+    targetsThisMonth(today),
+    earlierTargets(today),
   ]);
 
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">{t("common.targets")}</h1>
-      <TargetsPanel targets={targets} />
+
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-base font-semibold">{t("admin.thisMonth")}</h2>
+          <span data-slot="targets-month" className="text-sm text-muted-foreground">
+            {formatMonth(targets.month, locale)}
+          </span>
+        </div>
+        <TargetsPanel targets={targets} />
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-base font-semibold">{t("admin.earlierMonths")}</h2>
+        <EarlierTargetsTable earlier={earlier} />
+      </section>
     </div>
   );
 }

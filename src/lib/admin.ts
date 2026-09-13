@@ -18,7 +18,7 @@ import {
   targets,
   users,
 } from "@/db/schema";
-import { addMonths, type Day } from "@/lib/dates";
+import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { LOOKUP_FIELDS, tableName, type LookupKind, type LookupRow } from "@/lib/lookup-kinds";
 import { CARRIES_METRES } from "@/lib/team";
 import type { Role } from "@/lib/types";
@@ -88,7 +88,7 @@ export type TargetRow = {
   previous: string | null;
 };
 
-export type TargetsForMonth = {
+export type TargetsThisMonth = {
   month: Day;
   company: string | null;
   companyPrevious: string | null;
@@ -96,13 +96,20 @@ export type TargetsForMonth = {
 };
 
 /**
- * The month's targets, one row per person who can carry metres.
+ * This month's targets, one row per person who can carry metres.
+ *
+ * The current Riyadh month and no other (SPEC §3 P13: "Targets are the current
+ * month only"). The month used to come from the URL, with Back and Next beside
+ * it, so a closed month could be reopened from a link and rewritten — and the
+ * figure a rep was measured against in June would quietly be another figure by
+ * August. Earlier months are read, never set: `earlierTargets` below.
  *
  * The company figure is beside them and is not their sum: the admin sets it on
  * its own, and neither derives from the other (S44).
  */
-export async function targetsForMonth(month: Day): Promise<TargetsForMonth> {
+export async function targetsThisMonth(today: Day = todayRiyadh()): Promise<TargetsThisMonth> {
   const locale = await getLocale();
+  const month = firstOfMonth(today);
   // This month's figures and last month's in the same two reads: a new month
   // opens on empty boxes, and what each was last month is what the admin is
   // about to retype (D115).
@@ -143,6 +150,101 @@ export async function targetsForMonth(month: Day): Promise<TargetsForMonth> {
       sqm: byUser.get(person.id) ?? null,
       previous: byUserBefore.get(person.id) ?? null,
     })),
+  };
+}
+
+/** How many earlier months the targets screen lists; past it, a line says so (D80). */
+export const EARLIER_MONTHS_SHOWN = 12;
+
+export type EarlierMonth = {
+  month: Day;
+  /** The company's figure that month, or null where none was set (S44). */
+  company: string | null;
+  /** numeric(12,2) as text by user id; somebody absent had no target that month. */
+  people: Record<string, string>;
+};
+
+export type EarlierTargets = {
+  /**
+   * Everybody with a target in any month shown, named in the reader's script
+   * (D68) — somebody who has since left or stopped carrying metres included,
+   * because the figure he was measured against is still what it was.
+   */
+  people: { userId: string; name: string }[];
+  /** Newest first. */
+  months: EarlierMonth[];
+  /** Every earlier month with any target, however many are shown. */
+  total: number;
+};
+
+/**
+ * The months before this one that carry any target, to be read and never set
+ * (SPEC §3 P13: "history read-only elsewhere").
+ *
+ * A month is listed when the company or anybody had a figure for it, not merely
+ * because it went by: a month nobody set is not history. The cap and the true
+ * total come out of one statement — the window counts before the LIMIT cuts —
+ * so the line under the table cannot disagree with the table (D80,
+ * rules/data.md).
+ *
+ * A column is a person with a target in at least one of the months shown, not
+ * everybody who carries metres today: a column of nothing but dashes for
+ * somebody who never had a figure is a column to read past (D44's reason).
+ */
+export async function earlierTargets(today: Day = todayRiyadh()): Promise<EarlierTargets> {
+  const locale = await getLocale();
+  const current = firstOfMonth(today);
+
+  const listed = await db.execute<{ month: Day; total: number }>(sql`
+    with set_months as (
+      select targets.month from targets where targets.month < ${current}::date
+      union
+      select company_targets.month from company_targets
+       where company_targets.month < ${current}::date
+    )
+    select to_char(set_months.month, 'YYYY-MM-DD') as month,
+           count(*) over ()::int as total
+      from set_months
+     order by set_months.month desc
+     limit ${EARLIER_MONTHS_SHOWN}::int
+  `);
+
+  const months = listed.rows.map((row) => row.month);
+  if (months.length === 0) return { people: [], months: [], total: 0 };
+
+  const [rows, companyRows] = await Promise.all([
+    db
+      .select({
+        userId: targets.userId,
+        name: personName(locale),
+        month: targets.month,
+        sqm: targets.sqm,
+      })
+      .from(targets)
+      .innerJoin(users, eq(users.id, targets.userId))
+      .where(inArray(targets.month, months))
+      // The columns' order is the boxes' order above them: by name, as read.
+      .orderBy(asc(personName(locale)), asc(users.id)),
+    db
+      .select({ month: companyTargets.month, sqm: companyTargets.sqm })
+      .from(companyTargets)
+      .where(inArray(companyTargets.month, months)),
+  ]);
+
+  const people = new Map<string, string>();
+  for (const row of rows) if (!people.has(row.userId)) people.set(row.userId, row.name);
+  const company = new Map(companyRows.map((row) => [row.month, String(row.sqm)]));
+
+  return {
+    people: [...people].map(([userId, name]) => ({ userId, name })),
+    months: months.map((month) => ({
+      month,
+      company: company.get(month) ?? null,
+      people: Object.fromEntries(
+        rows.filter((row) => row.month === month).map((row) => [row.userId, String(row.sqm)]),
+      ),
+    })),
+    total: Number(listed.rows[0]?.total ?? 0),
   };
 }
 

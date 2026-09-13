@@ -131,20 +131,30 @@ test("a new month's target box says what last month was, keeps it, and saves on 
   t,
 }) => {
   const faisal = await userId(FAISAL);
+  // Targets are this month's and no other's (SPEC §3 P13), so "a new month" is
+  // this one with his box not yet filled in — what the admin opens on the first.
   const thisMonth = firstOfMonth(todayRiyadh());
-  const nextMonth = addMonths(thisMonth, 1);
-  const current = await one<{ sqm: string }>(
-    "select sqm::text as sqm from targets where user_id = $1::uuid and month = $2::date",
-    [faisal, thisMonth],
-  );
+  const lastMonth = addMonths(thisMonth, -1);
+  const read = (month: string) =>
+    query<{ sqm: string }>(
+      "select sqm::text as sqm from targets where user_id = $1::uuid and month = $2::date",
+      [faisal, month],
+    );
+  const [current] = await read(thisMonth);
+  const [previous] = await read(lastMonth);
+  expect(previous, "the seed gives Faisal no target last month").toBeTruthy();
   const name = await personName(FAISAL, locale);
   try {
+    await query("delete from targets where user_id = $1::uuid and month = $2::date", [
+      faisal,
+      thisMonth,
+    ]);
     await login(page, locale, "jerom");
-    await page.goto(`/${locale}/admin/targets?month=${nextMonth}`);
+    await page.goto(`/${locale}/admin/targets`);
     await expect(page.getByRole("heading", { name: t("common.targets") })).toBeVisible(COLD);
     const box = page.getByLabel(name, { exact: true });
     await expect(box).toHaveValue("");
-    const whole = String(Number(current.sqm));
+    const whole = String(Number(previous.sqm));
     const form = page.locator("form").filter({ has: box });
     await expect(form.locator('[data-slot="target-previous"]')).toHaveText(
       t("admin.lastMonthWas", { sqm: whole }),
@@ -153,16 +163,21 @@ test("a new month's target box says what last month was, keeps it, and saves on 
     await expect(box).toHaveValue(whole);
     await box.press("Enter");
     await expect(page.getByText(t("admin.targetSaved"))).toBeVisible(COLD);
-    const saved = await one<{ sqm: string }>(
-      "select sqm::text as sqm from targets where user_id = $1::uuid and month = $2::date",
-      [faisal, nextMonth],
-    );
-    expect(Number(saved.sqm)).toBe(Number(current.sqm));
+    const [saved] = await read(thisMonth);
+    expect(Number(saved?.sqm)).toBe(Number(previous.sqm));
   } finally {
-    await query("delete from targets where user_id = $1::uuid and month = $2::date", [
-      faisal,
-      nextMonth,
-    ]);
+    if (current) {
+      await query(
+        `insert into targets (user_id, month, sqm) values ($1::uuid, $2::date, $3::numeric)
+         on conflict (user_id, month) do update set sqm = excluded.sqm`,
+        [faisal, thisMonth, current.sqm],
+      );
+    } else {
+      await query("delete from targets where user_id = $1::uuid and month = $2::date", [
+        faisal,
+        thisMonth,
+      ]);
+    }
   }
 });
 
@@ -230,7 +245,7 @@ test("the whole row opens the record, not only the number at the start of it", a
 
   await test.step("a quotation opens from the far end of its row", async () => {
     const label = quotationLabel(quotation.number, quotation.revision);
-    await pressTheFarEndOf(page, page.getByRole("row").filter({ hasText: label }));
+    await pressTheFarEndOf(page, page.getByRole("row").filter({ has: page.getByText(label, { exact: true }) }));
     await expect(page.getByRole("dialog", { name: label })).toBeVisible(COLD);
     await expect(page).toHaveURL(/[?&]open=/);
   });
@@ -241,7 +256,7 @@ test("the whole row opens the record, not only the number at the start of it", a
     await page.goto(`/${locale}/queue`);
     await expect(page.getByRole("heading", { name: t("common.queue") })).toBeVisible(COLD);
     const label = dispatchLabel(dispatch.number);
-    await pressTheFarEndOf(page, page.getByRole("row").filter({ hasText: label }));
+    await pressTheFarEndOf(page, page.getByRole("row").filter({ has: page.getByText(label, { exact: true }) }));
     await expect(page.getByRole("dialog", { name: label })).toBeVisible(COLD);
     // Two lists, two words for what is open, so one press cannot open two
     // drawers on one id (the queue page's own rule).
@@ -306,7 +321,7 @@ test("a queue row says whose request it is", async ({ page, locale, t }) => {
   await login(page, locale, "rawan");
   await page.goto(`/${locale}/queue`);
   await expect(page.getByRole("heading", { name: t("common.queue") })).toBeVisible(COLD);
-  const row = page.getByRole("row").filter({ hasText: waiting.label });
+  const row = page.getByRole("row").filter({ has: page.getByText(waiting.label, { exact: true }) });
   await expect(row.locator('[data-slot="row-rep"]')).toHaveText(rep);
   // And on his own list the same row does not repeat his own name to him.
   await login(page, locale, "faisal");
