@@ -5,6 +5,7 @@ import { DispatchSheetSkeleton, DispatchesTable } from "@/components/dispatches/
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { Button } from "@/components/ui/button";
 import { ListTail } from "@/components/ui-ext/list-tail";
+import { mayWrite, sells } from "@/lib/floor";
 import { requireUser } from "@/lib/authz";
 import { countDispatches, listDispatches, type DispatchStatus } from "@/lib/dispatches";
 import { LIST_LIMIT } from "@/lib/list-size";
@@ -17,10 +18,11 @@ import { viewFor } from "@/lib/view";
  *
  * The rep's own, the coordinator's all of them.
  *
- * The primary action raises one, and asks which quotation first (SPEC §3, P8).
- * The list it offers is issued quotations on the live revision with something
- * still left to send, so a rep cannot pick one and find every line at zero.
- * Nobody who has none is shown the button.
+ * The primary action raises one: from an issued quotation on the live revision
+ * with something still left to send, or direct, for a customer of his own with
+ * no paper at all (SPEC §3, P13). So every seller who may write has the button
+ * — a rep whose customers have no quotation yet is exactly the one a direct
+ * load is for — and a reader who sells nothing, or is only viewing, has none.
  */
 
 type Search = { q?: string; status?: string; open?: string; view?: string };
@@ -64,7 +66,7 @@ export default async function DispatchesPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.dispatches")}</h1>
-        {targets.quotations.length > 0 ? (
+        {targets.quotations.length > 0 || (sells(user.role) && mayWrite(user, user.id)) ? (
           <RequestDispatchDialog
             targets={targets}
             trigger={

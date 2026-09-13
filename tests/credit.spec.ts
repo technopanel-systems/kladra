@@ -29,12 +29,11 @@ const COLD = { timeout: 30_000 };
 async function credited() {
   return query<{ id: string; number: number; sqm: string; users: string[] }>(
     `select d.id, d.number,
-            round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm,
+            round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2)::text as sqm,
             (select array_agg(dc.user_id order by dc.user_id)
                from dispatch_credits dc where dc.dispatch_id = d.id) as users
        from dispatches d
        join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
       where d.status = 'approved'
       group by d.id, d.number
       order by d.number`,
@@ -44,10 +43,9 @@ async function credited() {
 /** What one person was credited in the current Riyadh month, the other way round. */
 const CREDITED_THIS_MONTH = `
   with d as (
-    select dd.id, round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2) as sqm
+    select dd.id, round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2) as sqm
       from dispatches dd
       join dispatch_items di on di.dispatch_id = dd.id
-      join quotation_items qi on qi.id = di.quotation_item_id
      where dd.status = 'approved'
        and date_trunc('month', (dd.approved_at at time zone 'Asia/Riyadh')::date)
              = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)
@@ -134,12 +132,11 @@ test("a shared job's metres are split, and the drawer says who took what", async
 }) => {
   const split = await one<{ id: string; number: number; sqm: string; users: string[] }>(
     `select d.id, d.number,
-            round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm,
+            round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2)::text as sqm,
             (select array_agg(dc.user_id order by dc.user_id)
                from dispatch_credits dc where dc.dispatch_id = d.id) as users
        from dispatches d
        join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
       where d.status = 'approved'
         and (select count(*) from dispatch_credits dc where dc.dispatch_id = d.id) > 1
       group by d.id, d.number
@@ -191,10 +188,9 @@ test("the month a rep is shown is the month he was credited", async ({ page, loc
   // rule, and the thing that would have silently not moved if the reads had
   // been left pointing at `dispatches.rep_id`.
   const raised = await one<{ sqm: string }>(
-    `select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm
+    `select round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2)::text as sqm
        from dispatches d
        join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
       where d.status = 'approved' and d.rep_id = $1::uuid
         and date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)
               = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)`,
@@ -284,7 +280,9 @@ test("credit is chosen per record, and a job one rep works is asked nothing", as
   // is a tap he pays for every day and never uses.
   await page.goto(`/${locale}/quotations?open=${alone.id}`);
   await page.getByRole("button", { name: t("dispatches.request") }).click();
-  await expect(page.locator('[data-slot="figure-sending"]').first()).toBeVisible(COLD);
+  // The request dialog's own m² (the quotation drawer behind it has one too).
+  const request = page.getByRole("dialog", { name: t("dispatches.request") });
+  await expect(request.locator('[data-slot="figure-sqm"]')).toBeVisible(COLD);
   await expect(page.locator("#dispatch-credit")).toHaveCount(0);
   await page.keyboard.press("Escape");
 
@@ -312,7 +310,12 @@ test("credit is chosen per record, and a job one rep works is asked nothing", as
   await expect(preview).toBeVisible();
 
   const sending = Number(
-    (await page.locator('[data-slot="figure-sending"]').first().innerText()).replace(/[^\d.]/g, ""),
+    (
+      await page
+        .getByRole("dialog", { name: t("dispatches.request") })
+        .locator('[data-slot="figure-sqm"]')
+        .innerText()
+    ).replace(/[^\d.]/g, ""),
   );
   expect(sending).toBeGreaterThan(0);
   const shown = (await preview.innerText())

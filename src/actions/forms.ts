@@ -21,10 +21,6 @@ import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { findPossibleDuplicates, getCompany } from "@/lib/companies";
 import { creditPoolNamed } from "@/lib/credit-rows";
 import {
-  remainingOnQuotation,
-  type RemainingItem,
-} from "@/lib/dispatches";
-import {
   type CityOption,
   type CountryOption,
   type LookupOption,
@@ -236,8 +232,8 @@ export async function quotationLookupsAction(): Promise<ActionResult<QuotationLo
  * panels may travel (S40, D12).
  *
  * The quantities are NOT here. What is left on a quotation line changes every
- * time anybody raises a dispatch anywhere, so it is fetched per quotation, per
- * open — `remainingItemsAction` below — and never cached.
+ * time anybody raises a dispatch anywhere, so the dialog reads it with the
+ * quotation it prefills from, per open, and never caches it (P13-S3).
  */
 export type DispatchLookups = {
   shipmentMethods: Option[];
@@ -276,66 +272,6 @@ export async function dispatchLookupsAction(): Promise<ActionResult<DispatchLook
       },
     };
   } catch {
-    return { ok: false, error: t("somethingWrong") };
-  }
-}
-
-/**
- * What is left to send on each line of one quotation (D12), and which store it
- * was priced out of (P12-9).
- *
- * Read fresh every time the dialog opens, because the first of the two moves:
- * another dispatch raised a minute ago has already spent some of it. The action
- * re-checks the same rule inside its transaction, so this is the courtesy and
- * that is the law.
- *
- * The store rides along rather than taking a round trip of its own. This read
- * already loads the quotation — that is how it authorizes itself — and the
- * dialog needs both answers before it can draw a field, so a second call would
- * be a second wait for something already in hand.
- */
-export type QuotationToSendAgainst = {
-  items: RemainingItem[];
-  /** The quotation's own store, which the dispatch dialog opens on. */
-  warehouseId: string;
-};
-
-export async function remainingItemsAction(
-  quotationId: unknown,
-  dispatchId?: unknown,
-): Promise<ActionResult<QuotationToSendAgainst>> {
-  const t = await getTranslations("common");
-  let actor;
-  try {
-    actor = await requireActor();
-  } catch (error) {
-    // A session that has ended says so, and a failure that is not a refusal at
-    // all does not claim to be one (D135).
-    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    return { ok: false, error: t("somethingWrong") };
-  }
-
-  const parsed = z
-    .object({ quotationId: z.uuid(), dispatchId: z.uuid().optional() })
-    .safeParse({ quotationId, dispatchId: dispatchId ?? undefined });
-  if (!parsed.success) return { ok: false, error: t("invalid") };
-
-  try {
-    // Asked through getQuotation so the same authorization decides it: a rep
-    // who may not read the quotation may not read what is left on it either.
-    const quotation = await getQuotation(actor, parsed.data.quotationId);
-    if (!quotation) return { ok: false, error: t("somethingWrong") };
-    return {
-      ok: true,
-      data: {
-        items: await remainingOnQuotation(parsed.data.quotationId, parsed.data.dispatchId),
-        warehouseId: String(quotation.warehouseId),
-      },
-    };
-  } catch (error) {
-    // A session that has ended says so, and a failure that is not a refusal at
-    // all does not claim to be one (D135).
-    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     return { ok: false, error: t("somethingWrong") };
   }
 }

@@ -22,10 +22,9 @@ const COLD = { timeout: 30_000 };
 /** The company's achieved m² this Riyadh month — the one definition (S43). */
 async function companyAchieved(): Promise<number> {
   const row = await one<{ sqm: string }>(
-    `select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm
+    `select round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2)::text as sqm
        from dispatches d
        join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
       where d.status = 'approved'
         and date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)
             = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)`,

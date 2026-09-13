@@ -50,9 +50,6 @@ export function DispatchActions({
     status: DispatchStatus;
     /** Under the SMAC prompts' titles: whose number is being typed (D98). */
     companyName: string;
-    /** Null on a direct dispatch (SPEC §3, P13). */
-    quotationId: string | null;
-    quotationLabel: string | null;
     /** SMAC's dispatch number, once approved — the thing she may correct (D88). */
     smacDispatchNumber: string | null;
     /** The quotation was revised after this was raised: approval would refuse it (D85). */
@@ -142,11 +139,10 @@ export function DispatchActions({
         </>
       ) : null}
 
-      {/* The edit form is a quotation's until P13-S3 builds the direct one. */}
-      {scope.owner && his && dispatch.quotationId && dispatch.quotationLabel ? (
+      {/* His to correct and send again, from a quotation or direct alike: the
+          dialog opens on the load as it stands (SPEC §3, P13). */}
+      {scope.owner && his ? (
         <RequestDispatchDialog
-          quotationId={dispatch.quotationId}
-          quotationLabel={dispatch.quotationLabel}
           mode="edit"
           existing={dispatch.draft}
           trigger={

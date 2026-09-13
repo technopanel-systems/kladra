@@ -6,6 +6,8 @@ import { QuotationHistory } from "@/components/quotations/quotation-history";
 import { RevisionChanges } from "@/components/quotations/revision-changes";
 import { CREDIT_SPLIT } from "@/lib/credit";
 import { QuotationSheet } from "@/components/quotations/quotations-table";
+import { ReportButton } from "@/components/reports/report-dialog";
+import { mayReportOn } from "@/lib/activities";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { issuesOwnQuotations, mayWrite } from "@/lib/floor";
@@ -111,6 +113,23 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       }
       history={<QuotationHistory history={history} />}
       changes={changes ? <RevisionChanges changes={changes} /> : null}
+      // A report about this paper, from the paper (SPEC §3, P13): his own
+      // customer or one shared with him — the same sentence the popup's action
+      // asks, so the button is here exactly when the report would be accepted.
+      report={
+        mayReportOn(user, quotation.companyRepId, quotation.shared) ? (
+          <ReportButton
+            companyId={quotation.companyId}
+            companyName={quotation.companyName}
+            projectId={quotation.projectId}
+            quotationId={quotation.id}
+            variant="outline"
+            icon
+          >
+            {t("common.addReport")}
+          </ReportButton>
+        ) : null
+      }
       quotation={quotation}
       credit={quotation.credit}
       standing={standing}

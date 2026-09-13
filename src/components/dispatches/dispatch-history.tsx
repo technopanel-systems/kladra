@@ -2,6 +2,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Prose } from "@/components/ui-ext/prose";
 import type { DispatchEvent } from "@/lib/dispatches";
+import { TONE_TEXT } from "@/lib/state-tone";
+import { cn } from "@/lib/utils";
 
 /**
  * What happened to this dispatch, oldest first (D143).
@@ -20,7 +22,14 @@ import type { DispatchEvent } from "@/lib/dispatches";
  * that must not drift is a job for two tests, and a component parameterised by
  * message prefix is the kind of cleverness that hides which sentences exist.
  */
-export async function DispatchHistory({ history }: { history: readonly DispatchEvent[] }) {
+export async function DispatchHistory({
+  history,
+  paper,
+}: {
+  history: readonly DispatchEvent[];
+  /** The quotation as the drawer's own facts name it — SMAC's number where there is one. */
+  paper: string | null;
+}) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
   if (history.length === 0) return null;
 
@@ -44,6 +53,17 @@ export async function DispatchHistory({ history }: { history: readonly DispatchE
                 <span className="text-xs text-faint">{t("common.by", { name: event.who })}</span>
               ) : null}
             </span>
+            {/* The load was not what its paper said, from this moment (SPEC §3,
+                P13). The paper's name, not the list: what differs is the
+                section at the top of the drawer, and it is the load as it is now.
+                Named the way the facts above name it, because a load never
+                moves to another paper; the label written at the time is the
+                fallback, not the rule. */}
+            {event.differsFrom ? (
+              <span data-slot="trail-differs" className={cn("text-xs", TONE_TEXT.wait)}>
+                {t("dispatches.differsFrom", { label: paper ?? event.differsFrom })}
+              </span>
+            ) : null}
             {event.note && event.what === "correctNumber" ? (
               // The old number, not a sentence (D88). One key for both chains,
               // because it is one sentence: the loader isolates the run of

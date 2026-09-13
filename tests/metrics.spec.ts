@@ -38,12 +38,10 @@ async function segments(from: string, repId: string | null) {
   return query<{ name_en: string; name_ar: string; sqm: string }>(
     `with d as (
        select dd.id, c.category_id,
-              round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2) as sqm
+              round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2) as sqm
          from dispatches dd
          join dispatch_items di on di.dispatch_id = dd.id
-         join quotation_items qi on qi.id = di.quotation_item_id
-         join quotations q on q.id = dd.quotation_id
-         join companies c on c.id = q.company_id
+         join companies c on c.id = dd.company_id
         where dd.status = 'approved'
           and (dd.approved_at at time zone 'Asia/Riyadh')::date >= $1::date
         group by dd.id, c.category_id
@@ -113,8 +111,7 @@ async function ratios(from: string, repId: string | null) {
                             where qc.quotation_id = q.id and qc.user_id = $2::uuid))
            and exists (select 1 from dispatches d where d.quotation_id = q.id)) as dispatched,
        (select count(*)::int from dispatches d
-          join quotations q on q.id = d.quotation_id
-          join companies c on c.id = q.company_id
+          join companies c on c.id = d.company_id
          where (d.created_at at time zone 'Asia/Riyadh')::date >= $1::date
            and c.archived_at is null
            and ($2::uuid is null

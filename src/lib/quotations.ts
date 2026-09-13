@@ -532,6 +532,8 @@ export function dispatchable(status: QuotationStatus): boolean {
 }
 
 export type QuotationDetail = QuotationRow & {
+  /** Whether the company is shared with this reader (D147) — what may he write on it. */
+  shared: boolean;
   notes: string | null;
   /**
    * The quotation this one was raised on, where it is a revision. The column
@@ -692,6 +694,7 @@ export async function getQuotation(
     .orderBy(desc(quotations.revision));
 
   return {
+    shared: row.shared,
     ...base,
     notes: row.notes ?? null,
     revisionOf: row.revisionOf ?? null,

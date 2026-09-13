@@ -324,8 +324,8 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
 
   // What is left on each line, read the same way the app reads it (D12), so
   // the box filled in is one that is actually still open to fill in.
-  const lines = await query<{ id: string; remaining: string }>(
-    `select qi.id,
+  const lines = await query<{ id: string; position: number; remaining: string }>(
+    `select qi.id, qi.position,
             (qi.qty - coalesce((
                select sum(di.qty)
                  from dispatch_items di
@@ -353,9 +353,9 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
     await expect(form.getByText(t("dispatches.pickQuotationFirst"))).toBeVisible();
 
     // The chain, in the order a rep has it (P12-10): until a customer is named
-    // the papers field says so and opens nothing at all. It was one flat list
-    // of every dispatchable quotation in the building.
-    const picker = form.getByRole("combobox", { name: t("common.quotation") });
+    // the field that says where the load comes from says so and opens nothing
+    // at all. It was one flat list of every dispatchable quotation in the building.
+    const picker = form.getByRole("combobox", { name: t("dispatches.source") });
     await expect(picker).toContainText(t("common.pickCompanyFirst"));
     await expect(picker).toBeDisabled();
 
@@ -363,19 +363,31 @@ test("a dispatch is requested from the dispatches screen", async ({ page, locale
     await expect(customer).toContainText(t("common.pickCompany"));
     await choose(page, customer, quotation.company_name);
 
-    await expect(picker).toContainText(t("dispatches.pickQuotation"));
+    // Named, the customer's latest paper is already chosen (SPEC §3, P13); this
+    // walk asks for the one the query above found room on, whichever that is.
+    await expect(picker).toBeEnabled();
     await choose(page, picker, label);
+    await expect(picker).toContainText(label);
 
     await expect(form.getByText(t("dispatches.pickQuotationFirst"))).toHaveCount(0);
   });
 
   await test.step("the quantity typed on the line that still has room is what gets saved", async () => {
     const form = dialogNamed(page, t("dispatches.request"));
-    // Every line of the quotation is listed (dispatch-items.tsx); the one at
-    // `index` is the one the database query above found room on.
-    const box = form.getByLabel(t("dispatches.sending")).nth(index);
-    await expect(box).toBeVisible(COLD);
-    await box.fill(String(sending));
+    // Every line with something left on it is on the load, numbered as on the
+    // quotation (dispatch-lines.tsx). This one goes alone, at one sheet: the
+    // others are taken off, which is a partial load and not a difference.
+    const lineOf = (position: number) =>
+      form.locator(`[data-slot="dispatch-line"][data-position="${position}"]`);
+    await expect(lineOf(line.position)).toBeVisible(COLD);
+    const others = form.locator(
+      `[data-slot="dispatch-line"]:not([data-position="${line.position}"])`,
+    );
+    for (let count = await others.count(); count > 0; count -= 1) {
+      await others.first().getByRole("button", { name: t("quotations.removeItem") }).click();
+      await expect(others).toHaveCount(count - 1);
+    }
+    await lineOf(line.position).getByLabel(t("dispatches.sending")).fill(String(sending));
 
     // The store the load leaves from opens on the QUOTATION's own, which is
     // where the price was worked out and the answer nine times in ten (SPEC §3,

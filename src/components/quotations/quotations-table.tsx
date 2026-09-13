@@ -525,6 +525,11 @@ export type QuotationSheetProps = {
   /** The figures under the title (P8.5). */
   standing: QuotationStanding;
   /**
+   * "Add report", opening on this customer, its job and this paper (SPEC §3,
+   * P13) — built on the server, which knows whether the reader may write one.
+   */
+  report?: ReactNode;
+  /**
    * What has gone out against this quotation, and the button that sends more —
    * built on the server, because both need the reader's own scope (S38).
    */
@@ -554,6 +559,7 @@ export function QuotationSheet({
   dispatches,
   history,
   changes,
+  report,
 }: QuotationSheetProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -687,6 +693,7 @@ export function QuotationSheet({
             }}
             scope={scope}
           />
+          {report ? <div className="flex flex-wrap gap-2">{report}</div> : null}
 
           {/* Above the lines, because it is what she reads before them: on a
               revision the only question she has is which line is not what she

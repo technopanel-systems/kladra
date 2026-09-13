@@ -329,7 +329,12 @@ export const SPEC3: Spec3Entry[] = [
   // ---- Phase 13: the founder's second round, owed to the slice that builds each (WORKFLOW §0) ----
   {
     says: "Any difference from the quotation is flagged on the dispatch for Rawan",
-    owed: "P13-S3",
+    tests: [
+      "a load opens on its quotation's lines and services, and the two things the rep changed are what the desk reads",
+      "a direct dispatch: no quotation, one priced line, approved, and the metres are the rep's",
+      "a refused dispatch is corrected and sent again, back on the desk, its difference worked out again",
+      "a partial quantity is nothing: the quantity is not one of the things compared",
+    ],
   },
   {
     says: "chooses what happened from buttons",
@@ -353,7 +358,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Credit and tasaheel are one payment option",
-    owed: "P13-S3",
+    tests: [
+      "payment is three choices with nothing written in the boxes, and credit without the terms is refused at the field",
+      "credit is refused until the rep says what was agreed, and the desk reads it",
+    ],
   },
   {
     says: "plus a Leads module",
@@ -387,7 +395,9 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "carry no hidden placeholder text",
-    owed: "P13-S3",
+    tests: [
+      "payment is three choices with nothing written in the boxes, and credit without the terms is refused at the field",
+    ],
   },
   {
     says: "pending quotations and pending dispatches side by side",

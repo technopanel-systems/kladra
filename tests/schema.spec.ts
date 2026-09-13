@@ -207,7 +207,7 @@ test("a dispatch cannot be approved before it was raised", async () => {
 
 test("one line of a quotation goes on a dispatch once", async () => {
   const item = await one<{ dispatch_id: string; quotation_item_id: string }>(
-    "select dispatch_id, quotation_item_id from dispatch_items limit 1",
+    "select dispatch_id, quotation_item_id from dispatch_items where quotation_item_id is not null limit 1",
   );
 
   // The same line again on the same dispatch: the m² it moved would count twice.

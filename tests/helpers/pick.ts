@@ -29,8 +29,13 @@ async function takeFrom(trigger: Locator, option: () => Locator): Promise<void> 
   const page = trigger.page();
   for (let attempt = 0; ; attempt += 1) {
     await trigger.click();
-    await expect(trigger).toHaveAttribute("aria-expanded", "true");
     try {
+      // Inside the retry, not before it: the press that opens this list can be
+      // the one that lands while the previous list is still leaving, which
+      // dismisses rather than opens (P13-S3 gate, the dispatch source picker
+      // straight after the customer picker). Unopened is a reason to press
+      // again, the same as a list that closed under the pick.
+      await expect(trigger).toHaveAttribute("aria-expanded", "true", { timeout: 3_000 });
       // Short, because the list is already open: what this is waiting for is
       // one click, and anything longer is waiting for a list that has closed.
       await option().click({ timeout: 5_000 });

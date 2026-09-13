@@ -6,33 +6,45 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   creditChoicesAction,
-  remainingItemsAction,
   type CreditChoices,
   type DispatchLookups,
+  type QuotationLookups,
 } from "@/actions/forms";
-import { requestDispatchAction, updateDispatchAction } from "@/actions/dispatches";
 import {
-  DispatchItems,
-  itemsPayload,
-  sendingSqm,
-  type SendDraft,
-} from "@/components/dispatches/dispatch-items";
+  directCompaniesAction,
+  dispatchPrefillAction,
+  requestDispatchAction,
+  updateDispatchAction,
+  type DispatchPrefill,
+} from "@/actions/dispatches";
+import { quotationServiceChoicesAction } from "@/actions/quotations";
+import {
+  DispatchLines,
+  lineNumbers,
+  type CarriedFacts,
+  type LoadDraft,
+} from "@/components/dispatches/dispatch-lines";
+import { blankLine } from "@/components/quotations/quotation-lines";
+import { QuotationServices, type ServiceDraft } from "@/components/quotations/quotation-services";
+import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import { ChoiceChips } from "@/components/ui-ext/choice-chips";
 import { CreditField } from "@/components/ui-ext/credit-field";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
-import { useDispatchLookups } from "@/components/ui-ext/form-lookups";
+import { useDispatchLookups, useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
-import { SearchableSelect } from "@/components/ui-ext/searchable-select";
+import { SearchableSelect, type SelectOption } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
-import type { RemainingItem } from "@/lib/dispatches";
+import { differenceFrom, type SheetValues } from "@/lib/dispatch-difference";
+import { quotationTotals } from "@/lib/money";
 import { splitOption, type DispatchTargets } from "@/lib/picker-option";
-import { formatSqm } from "@/lib/money";
+import type { DraftLine, DraftService } from "@/lib/quotation-draft";
 import {
   detailLegendKey,
   detailsFor,
@@ -43,32 +55,53 @@ import {
   type PaymentDetail,
   type PaymentTerms,
 } from "@/lib/payment";
+import { TONE_TEXT } from "@/lib/state-tone";
+import { cn } from "@/lib/utils";
 
 /**
- * Raise a dispatch against an issued quotation, or change one still waiting
- * (SPEC §3, S37–S40).
+ * Raise a dispatch, or correct one the desk has not approved (SPEC §3, S37–S40,
+ * P13).
  *
- * The same dialog does both, for the reason the quotation's does: a rep asked
- * to retype the whole thing to change one quantity sends it on WhatsApp instead
- * (S54).
+ * The chain in the order a rep has the answers: the customer, then **where the
+ * load comes from** — that customer's latest issued quotation already chosen,
+ * any other of his papers to choose instead, or **Direct**, for a load with no
+ * quotation and no job behind it. Choosing a paper opens the load on the whole of
+ * it: every line with its sheet, its price and the quantity still left to send,
+ * and every service with its m² and price. All of it is editable — a line or a
+ * service can go, another can be added — and the moment the load stops being
+ * what the paper says, the form says so; the action works out exactly what
+ * differs, from the rows, and records it for the desk. A direct load opens on one
+ * empty line with a price to type (D169) and no services.
  *
- * What is left on each line is fetched every time this opens, never cached —
- * another dispatch raised a minute ago has already spent some of it (D12).
+ * Opening on the paper is a child reading its own parent (D159), which is not the
+ * carrying forward §3 forbids: nothing here comes from the dispatch before this
+ * one — not the site, not how it was paid for — and those are typed for this
+ * load (D163).
  *
- * From P8 the quotation can be the first FIELD instead of the context, so the
- * Dispatches screen has a primary action of its own (SPEC §3, P8). The list it
- * offers is only quotations with something still on them, so a rep cannot pick
- * one and then find every line at zero.
- *
- * And from P12-10 it asks the chain in the order he has it: the customer, then
- * that customer's papers with the job on the row. It was one flat list of every
- * dispatchable quotation in the building — a number over a job name — which is
- * the middle of the chain, and the same finding the Quotations screen answered
- * one phase earlier (P12-9). The customer is what a rep arranging a load knows.
+ * The same dialog corrects a request still waiting or one the desk refused, on
+ * what it already says, because retyping a load to change one quantity is how a
+ * form ends up on WhatsApp instead (S54). What is left is read fresh every time,
+ * never cached — another dispatch raised a minute ago has spent some of it (D12).
  */
+
+/** A service on the form, with the quotation service it was carried from in its key. */
+const CARRIED = "from-";
+
+/** The quotation service a service row was carried from, or null for one the rep added. */
+function carriedFrom(key: string): string | null {
+  return key.startsWith(CARRIED) ? key.slice(CARRIED.length) : null;
+}
+
+/** The "no paper" answer to Where it comes from, as a value rather than as emptiness. */
+const DIRECT = "direct";
 
 export type DispatchDraft = {
   dispatchId: string;
+  companyId: string;
+  companyName: string;
+  /** The paper it was prefilled from, or null for a direct load. */
+  quotationId: string | null;
+  quotationLabel: string | null;
   shipmentMethodId: string;
   /** Which store it leaves from (SPEC §3, P12-9). */
   warehouseId: string;
@@ -76,8 +109,9 @@ export type DispatchDraft = {
   paymentTerms: PaymentTerms;
   paymentDetail: PaymentDetail | null;
   paymentNote: string | null;
-  /** Quantities already on this request, by quotation line. */
-  sending: { quotationItemId: string; qty: number }[];
+  /** The load as it stands, each line and service with the quotation row it came from. */
+  lines: (DraftLine & { quotationItemId: string | null })[];
+  services: (DraftService & { quotationServiceId: string | null })[];
   /**
    * What it says it counts for: one person's id, or `split` (D148). A dispatch
    * still waiting has earned nobody anything yet, so the answer is editable for
@@ -96,18 +130,24 @@ const ACTIONS = {
 export function RequestDispatchDialog({
   quotationId,
   quotationLabel,
+  companyId,
+  companyName,
   targets,
   mode = "request",
   existing,
   trigger,
 }: {
-  /** Known when the dialog is opened from a quotation's drawer. */
+  /** Known when the dialog is opened from a quotation's drawer: customer and paper are fixed. */
   quotationId?: string;
-  /** Q-12 — named in the title, because a dispatch is always against one. */
+  /** Q-12 — named in the title, because the load is against it. */
   quotationLabel?: string;
+  /** Known when it is opened from a customer (or a job): the customer is fixed. */
+  companyId?: string;
+  companyName?: string;
   /**
-   * The customers and their papers, offered as the first two fields when the
-   * quotation is NOT known (P12-10).
+   * The customers and the papers each may send against (P12-10). The customers a
+   * rep may load a truck for with nothing behind it are asked for when the
+   * dialog opens (`directCompaniesAction`) and added to them.
    */
   targets?: DispatchTargets;
   mode?: DispatchMode;
@@ -116,106 +156,31 @@ export function RequestDispatchDialog({
 }) {
   const t = useTranslations();
   const router = useRouter();
-  const guarded = useWireGuard();
   const [open, setOpen] = useState(false);
-  const { lookups, failed } = useDispatchLookups(open);
-  const [items, setItems] = useState<RemainingItem[] | null>(null);
-  /**
-   * The store the quotation was priced out of (SPEC §3, P12-9), which is what
-   * the store field opens on. `undefined` is "not answered yet": the form reads
-   * it once, on mount, so mounting it while the answer is in flight would leave
-   * the field on the first store in the list and never correct itself.
-   */
-  const [quoted, setQuoted] = useState<string | undefined>(undefined);
-  const [itemsFailed, setItemsFailed] = useState(false);
-  /*
-   * Customer → quotation, the order a rep has the answers in (P12-10, and the
-   * quotation dialog's own company → project → contact one phase earlier).
-   *
-   * Choosing a customer clears the paper, because a paper belongs to a customer
-   * and a stale one would be a load raised against the wrong record. Done in
-   * the SETTER rather than in an effect: clearing state as a consequence of
-   * other state is the cascading render the lint refuses, and the value is
-   * already in hand at the moment of the choice.
-   */
-  const [pickedCompany, setPickedCompany] = useState("");
-  const [chosen, setChosen] = useState("");
-  /**
-   * Who this one may count for (D148), read when the dialog opens for the same
-   * reason what-is-left is: a rep can be put on the job or taken off it while
-   * the screen sits there. `undefined` is "not answered yet" and the form waits
-   * for it, because a field that appears after the form has mounted is a field
-   * a rep has already scrolled past.
-   */
-  const [credit, setCredit] = useState<CreditChoices | null | undefined>(undefined);
-
-  // The quotation the form is being built for: the caller's, or the one picked
-  // in the field above it. A picked option carries its customer with it, so the
-  // id has to be taken out of it before anything asks the server about it.
-  const active = quotationId ?? splitOption(chosen)?.id ?? null;
-
-  // This customer's papers. Filtered here rather than fetched again: the whole
-  // list came down with the screen, and a rep with a driver waiting should not
-  // wait for a round trip between two fields.
-  const papers = useMemo(
-    () =>
-      (targets?.quotations ?? []).filter(
-        (option) => splitOption(option.value)?.companyId === pickedCompany,
-      ),
-    [targets, pickedCompany],
-  );
-
-  // Closing clears what was fetched; opening fetches it again. Done in the
-  // handler rather than in the effect, because "reset on close" as an effect is
-  // a setState the moment a render happens for any other reason.
-  const change = useCallback((next: boolean) => {
-    setOpen(next);
-    if (!next) {
-      setItems(null);
-      setQuoted(undefined);
-      setItemsFailed(false);
-      setPickedCompany("");
-      setChosen("");
-      setCredit(undefined);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!open || !active) return;
-    let cancelled = false;
-    guarded(remainingItemsAction)(active, existing?.dispatchId).then((outcome) => {
-      if (cancelled) return;
-      if (outcome.ok && outcome.data) {
-        setItems(outcome.data.items);
-        setQuoted(outcome.data.warehouseId);
-      } else setItemsFailed(true);
-    });
-    // A failure here is not an error the rep should see: the question simply is
-    // not asked, and the metres go to the man raising it, which is what they
-    // did before this existed.
-    guarded(creditChoicesAction)({ quotationId: active }).then((outcome) => {
-      if (cancelled) return;
-      setCredit(outcome.ok ? (outcome.data ?? null) : null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, active, existing?.dispatchId, mode, guarded]);
+  const { lookups: dispatchLists, failed: dispatchFailed } = useDispatchLookups(open);
+  const { lookups: lineLists, failed: linesFailed } = useQuotationLookups(open);
+  const serviceChoices = useServiceChoices(open);
+  // Only where the customer is a choice or Direct might be: never on a load
+  // already against a paper, never on an edit, which cannot change either.
+  const own = useDirectCompanies(open && !quotationId && !existing);
 
   const onSaved = useCallback(
     (dispatchId: string | undefined) => {
       toast.success(t(mode === "edit" ? "dispatches.updated" : "dispatches.requested"));
-      change(false);
+      setOpen(false);
       if (dispatchId) router.push(`/dispatches?open=${dispatchId}`);
       else router.refresh();
     },
-    [change, mode, router, t],
+    [mode, router, t],
   );
+
+  const ready =
+    dispatchLists && lineLists && Array.isArray(serviceChoices) && (quotationId || existing || own);
 
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={change}
+      onOpenChange={setOpen}
       title={
         mode === "edit"
           ? t("dispatches.editRequest")
@@ -224,6 +189,9 @@ export function RequestDispatchDialog({
             : t("dispatches.request")
       }
       description={t("dispatches.requestHint")}
+      // Lines are a table and services a second one under them, as on the
+      // quotation this load comes from (SPEC §3, P13).
+      size="wide"
       trigger={
         trigger ?? (
           <Button variant="outline">
@@ -233,182 +201,396 @@ export function RequestDispatchDialog({
         )
       }
     >
-      {targets ? (
-        <div className="flex flex-col gap-3 px-4 pt-1 pb-3">
-          <div className="flex flex-col gap-1.5">
-            <Label id="dispatch-company-label">{t("common.company")}</Label>
-            <SearchableSelect
-              aria-labelledby="dispatch-company-label"
-              options={targets.companies}
-              value={pickedCompany}
-              // The paper goes with the customer, and so does everything the
-              // form has fetched about the one before it.
-              onChange={(next) => {
-                setItems(null);
-                setItemsFailed(false);
-                setCredit(undefined);
-                setChosen("");
-                setPickedCompany(next);
-              }}
-              placeholder={t("common.pickCompany")}
-              searchPlaceholder={t("forms.searchList")}
-              emptyText={t("forms.noMatch")}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label id="dispatch-quotation-label">{t("common.quotation")}</Label>
-            <SearchableSelect
-              aria-labelledby="dispatch-quotation-label"
-              options={papers}
-              value={chosen}
-              // What is left belongs to the quotation, so the previous answer is
-              // about a different one. Cleared here rather than in the effect:
-              // "reset when the input changes" as an effect is a setState that
-              // runs on every other render too (DESIGN §5).
-              onChange={(next) => {
-                setItems(null);
-                setItemsFailed(false);
-                setCredit(undefined);
-                setChosen(next);
-              }}
-              // Nothing to choose from until a customer is named: a list of
-              // every open paper in the building is what this field used to be.
-              disabled={!pickedCompany}
-              placeholder={
-                pickedCompany ? t("dispatches.pickQuotation") : t("common.pickCompanyFirst")
-              }
-              searchPlaceholder={t("forms.searchList")}
-              emptyText={t("dispatches.noQuotations")}
-            />
-          </div>
-        </div>
-      ) : null}
-
-      {failed || itemsFailed ? (
+      {dispatchFailed || linesFailed || serviceChoices === "failed" ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
-      ) : active === null ? (
-        /* Both steps in one sentence (P12-10). It said "choose the quotation"
-           over a field that will not open until a customer is named, which is
-           the screen telling a rep to do the one thing it is refusing. */
-        <p className="px-4 pb-4 text-sm text-muted-foreground">
-          {t("dispatches.pickQuotationFirst")}
-        </p>
-      ) : lookups && items && credit !== undefined ? (
-        <DispatchForm
-          quotationId={active}
+      ) : ready ? (
+        <LoadForm
           mode={mode}
           existing={existing}
-          credit={credit}
-          lookups={lookups}
-          items={items}
-          quotedWarehouse={quoted ?? null}
+          fixedQuotation={quotationId ? { id: quotationId, label: quotationLabel ?? "" } : null}
+          fixedCompany={companyId ? { id: companyId, name: companyName ?? "" } : null}
+          targets={targets}
+          own={own ?? []}
+          dispatchLists={dispatchLists}
+          lineLists={lineLists}
+          serviceChoices={serviceChoices}
           onSaved={onSaved}
-          onCancel={() => change(false)}
+          onCancel={() => setOpen(false)}
         />
       ) : (
-        <DialogFormSkeleton rows={5} />
+        <DialogFormSkeleton rows={6} />
       )}
     </ResponsiveDialog>
   );
 }
 
-function DispatchForm({
-  quotationId,
+/**
+ * The services the admin offers, asked each time the dialog opens: a service
+ * turned off an hour ago should stop being offered. Not a courtesy read — the
+ * services section is part of the load — so a list that could not be fetched is
+ * "the lists did not load" like the others (rules/data.md).
+ */
+function useServiceChoices(open: boolean): SelectOption[] | "failed" | null {
+  const guarded = useWireGuard();
+  const [choices, setChoices] = useState<SelectOption[] | "failed" | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    guarded(quotationServiceChoicesAction)().then((outcome) => {
+      if (cancelled) return;
+      const fresh = outcome.ok ? outcome.data : undefined;
+      setChoices((had) => fresh ?? (Array.isArray(had) ? had : "failed"));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, guarded]);
+  return choices;
+}
+
+/**
+ * The customers this person may raise a direct load for. A failure is an empty
+ * list rather than an error: the papers he may send against still come with the
+ * screen, and Direct is simply not offered until the next open.
+ */
+function useDirectCompanies(enabled: boolean): SelectOption[] | null {
+  const guarded = useWireGuard();
+  const [companies, setCompanies] = useState<SelectOption[] | null>(null);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    guarded(directCompaniesAction)().then((outcome) => {
+      if (!cancelled) setCompanies(outcome.ok ? (outcome.data ?? []) : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, guarded]);
+  return companies;
+}
+
+/** A line's sheet as the live comparison reads it: the lookups by id, the figures as typed. */
+function sheetOf(line: DraftLine): SheetValues {
+  return {
+    colourCode: line.colourCode,
+    supplier: line.supplierId,
+    fireRating: line.fireRatingId,
+    class: line.classId,
+    thickness: line.thicknessId,
+    width: line.width,
+    length: line.length,
+    pricePerSqm: line.pricePerSqm,
+  };
+}
+
+/** What the hidden `items` field carries: each line's origin and its nine inputs as typed. */
+function linesPayload(lines: readonly LoadDraft[]): string {
+  return JSON.stringify(
+    lines.map((line) => ({
+      quotationItemId: line.quotationItemId,
+      colourCode: line.colourCode,
+      supplierId: line.supplierId,
+      fireRatingId: line.fireRatingId,
+      classId: line.classId,
+      thicknessId: line.thicknessId,
+      qty: line.qty,
+      width: line.width,
+      length: line.length,
+      pricePerSqm: line.pricePerSqm,
+    })),
+  );
+}
+
+/** And the `services` field: each service's origin and its three inputs. */
+function servicesPayload(services: readonly ServiceDraft[]): string {
+  return JSON.stringify(
+    services.map((service) => ({
+      quotationServiceId: carriedFrom(service.key),
+      serviceId: service.serviceId,
+      sqm: service.sqm,
+      pricePerSqm: service.pricePerSqm,
+    })),
+  );
+}
+
+function LoadForm({
   mode,
   existing,
-  quotedWarehouse,
-  credit,
-  lookups,
-  items,
+  fixedQuotation,
+  fixedCompany,
+  targets,
+  own,
+  dispatchLists,
+  lineLists,
+  serviceChoices,
   onSaved,
   onCancel,
 }: {
-  quotationId: string;
   mode: DispatchMode;
   existing?: DispatchDraft;
-  /** Who it may count for, or null where the job has one rep and nothing is asked. */
-  credit: CreditChoices | null;
-  /** The store the quotation was priced out of, which this opens on (P12-9). */
-  quotedWarehouse: string | null;
-  lookups: DispatchLookups;
-  items: RemainingItem[];
+  fixedQuotation: { id: string; label: string } | null;
+  fixedCompany: { id: string; name: string } | null;
+  targets?: DispatchTargets;
+  /** The customers Direct may be chosen for. */
+  own: SelectOption[];
+  dispatchLists: DispatchLookups;
+  lineLists: QuotationLookups;
+  serviceChoices: SelectOption[];
   onSaved: (dispatchId: string | undefined) => void;
   onCancel: () => void;
 }) {
   const t = useTranslations();
+  const guarded = useWireGuard();
   const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
     ACTIONS[mode],
     (data) => onSaved(data?.dispatchId),
   );
 
-  // Three required boxes sit below a scrolling list of lines, so a message only
-  // beside one of them is a message a rep on a phone never reaches.
+  // A long form — lines, services, totals, and the terms under them — so a
+  // sentence beside one field is a sentence a rep on a phone may never reach.
   const form = useRef<HTMLFormElement>(null);
   useFocusFirstError(form, answer);
 
-  const [lines, setLines] = useState<SendDraft[]>(() => {
-    const already = new Map(existing?.sending.map((row) => [row.quotationItemId, row.qty]) ?? []);
-    return items.map((item) => ({
-      quotationItemId: item.quotationItemId,
-      qty: already.has(item.quotationItemId) ? String(already.get(item.quotationItemId)) : "",
+  /* ---- who, and where it comes from ------------------------------------ */
+
+  /*
+   * Each answer carries the question it answered, and is compared rather than
+   * reset: choosing another customer leaves the earlier choice of paper behind
+   * without a setState in an effect, which is the cascading render the lint
+   * refuses (the quotation dialog's credit and contact fields do the same).
+   */
+  const [pickedCompany, setPickedCompany] = useState("");
+  const [sourcePick, setSourcePick] = useState<{ companyId: string; value: string } | null>(null);
+
+  const [prefill, setPrefill] = useState<{ quotationId: string; data: DispatchPrefill | null } | null>(
+    null,
+  );
+
+  const lockedSource = existing ? (existing.quotationId ?? DIRECT) : (fixedQuotation?.id ?? null);
+  const loadedPaper = lockedSource && lockedSource !== DIRECT && prefill?.quotationId === lockedSource
+    ? prefill.data
+    : null;
+  const company =
+    existing?.companyId ?? fixedCompany?.id ?? (fixedQuotation ? (loadedPaper?.companyId ?? "") : pickedCompany);
+
+  const companyOptions = useMemo(() => {
+    const byId = new Map<string, SelectOption>();
+    for (const option of [...(targets?.companies ?? []), ...own]) byId.set(option.value, { value: option.value, label: option.label });
+    return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [targets, own]);
+
+  // This customer's papers, newest first, as the screen sent them — the latest
+  // is the one a rep means nine times in ten, so it is the one chosen for him.
+  const papers = useMemo(
+    () =>
+      (targets?.quotations ?? []).flatMap((option) => {
+        const split = splitOption(option.value);
+        return split && split.companyId === company
+          ? [{ value: split.id, label: option.label, hint: option.hint }]
+          : [];
+      }),
+    [targets, company],
+  );
+  const mayDirect = own.some((option) => option.value === company);
+  const sourceOptions: SelectOption[] = [
+    ...papers,
+    ...(mayDirect
+      ? // Its meaning is the sentence under the field once chosen, not a hint
+        // repeated beside the word in the field itself.
+        [{ value: DIRECT, label: t("dispatches.direct") }]
+      : []),
+  ];
+
+  const source =
+    lockedSource ??
+    (company
+      ? sourcePick?.companyId === company
+        ? sourcePick.value
+        : (sourceOptions[0]?.value ?? "")
+      : "");
+  const quotation = source && source !== DIRECT ? source : null;
+
+  useEffect(() => {
+    if (!quotation) return;
+    let cancelled = false;
+    guarded(dispatchPrefillAction)({ quotationId: quotation, dispatchId: existing?.dispatchId }).then(
+      (outcome) => {
+        if (!cancelled) setPrefill({ quotationId: quotation, data: outcome.ok ? (outcome.data ?? null) : null });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [quotation, existing?.dispatchId, guarded]);
+
+  /** Undefined while it is on its way, null if it could not be read. */
+  const paper: DispatchPrefill | null | undefined = quotation
+    ? prefill?.quotationId === quotation
+      ? prefill.data
+      : undefined
+    : null;
+
+  /*
+   * Who this one may count for (D148), read for the paper's job the way the
+   * paper is. A direct load has no job and asks nothing: it counts for the man
+   * raising it. A failure here is not an error a rep should see — the question
+   * is simply not asked.
+   */
+  const [credit, setCredit] = useState<{ quotationId: string; choices: CreditChoices | null } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!quotation) return;
+    let cancelled = false;
+    guarded(creditChoicesAction)({ quotationId: quotation }).then((outcome) => {
+      if (!cancelled) setCredit({ quotationId: quotation, choices: outcome.ok ? (outcome.data ?? null) : null });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [quotation, guarded]);
+  const creditChoices = quotation && credit?.quotationId === quotation ? credit.choices : null;
+  const [creditPick, setCreditPick] = useState<{ source: string; value: string } | null>(
+    existing?.creditTo ? { source: existing.quotationId ?? DIRECT, value: existing.creditTo } : null,
+  );
+  const countsFor =
+    (creditPick?.source === source ? creditPick.value : "") || creditChoices?.mine || "";
+
+  /* ---- the load --------------------------------------------------------- */
+
+  const carried = useMemo(
+    () =>
+      new Map<string, CarriedFacts>(
+        (paper?.lines ?? []).map((line) => [line.quotationItemId, { position: line.position, left: line.left }]),
+      ),
+    [paper],
+  );
+  const base = Math.max(0, ...(paper?.lines ?? []).map((line) => line.position));
+
+  /*
+   * What the load opens on, for the source in hand: an edit on what it already
+   * says; a paper on every line with something left on it, the quantity at what
+   * is left, and on every service; Direct on one empty line. Derived until the
+   * rep touches it, and his version is kept against the source it was typed for.
+   */
+  const sourceKey = `${company}:${source}`;
+  const openingLines = useMemo((): LoadDraft[] => {
+    if (existing) {
+      return existing.lines.map((line, index) => ({
+        ...line,
+        key: line.quotationItemId ? `${CARRIED}${line.quotationItemId}` : `own-${index}`,
+      }));
+    }
+    if (paper) {
+      const carriedLines = paper.lines
+        .filter((line) => line.left > 0)
+        .map((line) => ({
+          ...line.draft,
+          qty: String(line.left),
+          key: `${CARRIED}${line.quotationItemId}`,
+          quotationItemId: line.quotationItemId,
+        }));
+      if (carriedLines.length > 0) return carriedLines;
+    }
+    return [{ ...blankLine(lineLists), quotationItemId: null }];
+  }, [existing, paper, lineLists]);
+  const openingServices = useMemo((): ServiceDraft[] => {
+    if (existing) {
+      return existing.services.map((service, index) => ({
+        serviceId: service.serviceId,
+        sqm: service.sqm,
+        pricePerSqm: service.pricePerSqm,
+        key: service.quotationServiceId ? `${CARRIED}${service.quotationServiceId}` : `own-${index}`,
+      }));
+    }
+    return (paper?.services ?? []).map((service) => ({
+      ...service.draft,
+      key: `${CARRIED}${service.quotationServiceId}`,
     }));
-  });
-  /*
-   * Every answer on this form is typed for THIS load (SPEC §3, overruling D81).
-   *
-   * It used to open on the last dispatch raised against the same quotation —
-   * its site, its terms, its shipment method — on the argument that those
-   * belong to the job rather than to the load. The founder's rule is flatter
-   * than the argument: nothing is ever carried forward from a previous record
-   * into a new one, and a note typed on one dispatch must not appear prefilled
-   * on the next. So the read behind it is gone rather than merely unused.
-   *
-   * `existing` wins, because an EDIT is not a new record: it opens on what it
-   * already says. The rest opens on the lookups' own defaults, and the store on
-   * its quotation's, which is a child reading its own parent (D159).
-   */
-  const [method, setMethod] = useState(
-    existing?.shipmentMethodId ?? lookups.defaultMethod ?? "",
+  }, [existing, paper]);
+
+  const [linesPick, setLinesPick] = useState<{ key: string; lines: LoadDraft[] } | null>(null);
+  const [servicesPick, setServicesPick] = useState<{ key: string; services: ServiceDraft[] } | null>(
+    null,
   );
+  const lines = linesPick?.key === sourceKey ? linesPick.lines : openingLines;
+  const services = servicesPick?.key === sourceKey ? servicesPick.services : openingServices;
+
+  const totals = useMemo(() => quotationTotals(lines, services), [lines, services]);
+
   /*
-   * Which store this load leaves from (SPEC §3). It opens on the QUOTATION's,
-   * which is the store the price was worked out of and the answer nine times
-   * in ten — and the tenth is why it is a field: a store that is short sends
-   * the panels from the next one along.
-   *
-   * The parent's own value, which is the one thing on this form that does come
-   * from somewhere else: a dispatch reading its quotation is a child reading the
-   * record it hangs off, the way its lines do, and not one record prefilling the
-   * next one like it.
+   * Whether this load is still what its paper says, asked of the same function
+   * the action records the difference with — on ids and typed figures here,
+   * where the action compares the words it reads from the rows. The form only
+   * needs yes or no; what exactly differs is the drawer's to say.
    */
-  const [warehouse, setWarehouse] = useState(
-    existing?.warehouseId ?? quotedWarehouse ?? lookups.defaultWarehouse ?? "",
-  );
+  const differs = useMemo(() => {
+    if (!paper) return false;
+    const numbers = lineNumbers(lines, carried, base);
+    return (
+      differenceFrom(
+        {
+          lines: paper.lines.map((line) => ({
+            id: line.quotationItemId,
+            position: line.position,
+            ...sheetOf(line.draft),
+          })),
+          services: paper.services.map((service) => ({
+            id: service.quotationServiceId,
+            position: service.position,
+            service: service.draft.serviceId,
+            sqm: service.draft.sqm,
+            pricePerSqm: service.draft.pricePerSqm,
+          })),
+        },
+        {
+          lines: lines.map((line, index) => ({
+            quotationItemId: line.quotationItemId,
+            position: numbers[index],
+            ...sheetOf(line),
+          })),
+          services: services.map((service, index) => ({
+            quotationServiceId: carriedFrom(service.key),
+            position: index + 1,
+            service: service.serviceId,
+            sqm: service.sqm,
+            pricePerSqm: service.pricePerSqm,
+          })),
+        },
+      ).length > 0
+    );
+  }, [paper, lines, services, carried, base]);
+
+  // The paper's lines with nothing left on them, which the load does not open
+  // on — named, so a rep who counts the lines is not left wondering where one went.
+  const sentInFull = (paper?.lines ?? [])
+    .filter((line) => line.left === 0 && !lines.some((row) => row.quotationItemId === line.quotationItemId))
+    .map((line) => t("quotations.itemNumber", { number: line.position }))
+    .join(" · ");
+
+  /* ---- how, where and on what terms ------------------------------------- */
+
+  const [method, setMethod] = useState(existing?.shipmentMethodId ?? dispatchLists.defaultMethod ?? "");
+  // The store opens on the paper's, which the price was worked out of — a child
+  // reading its own parent (D159) — and a rep changes it when the panels come out
+  // of another.
+  const [warehousePick, setWarehousePick] = useState<string | null>(existing?.warehouseId ?? null);
+  const warehouse = warehousePick ?? paper?.warehouseId ?? dispatchLists.defaultWarehouse ?? "";
   const [destination, setDestination] = useState(existing?.destination ?? "");
   /*
-   * How it is being paid for (SPEC §3): the choice, the second answer where
-   * there is one, and the note the two finance reviews require. A new load
-   * starts on nothing — "which of these four" is a question with no sensible
-   * default, and a form that answers it for him is a form that gets the wrong
-   * answer saved.
+   * How it is being paid for (SPEC §3, P13): three answers, the second question
+   * two of them ask, and the note credit needs. A new load starts on nothing —
+   * "which of these" has no sensible default, and nothing on these fields is
+   * written for him: no placeholder, no example terms (SPEC §3).
    */
   const [terms, setTerms] = useState<PaymentTerms | "">(existing?.paymentTerms ?? "");
   const [detail, setDetail] = useState<PaymentDetail | "">(existing?.paymentDetail ?? "");
   const [paymentNote, setPaymentNote] = useState(existing?.paymentNote ?? "");
   const seconds = terms ? detailsFor(terms) : [];
 
-  /*
-   * Whose metres these are (D148). It starts on the man filling the form in,
-   * which is the answer for every job one rep works and the answer he wants
-   * most of the time on the one he shares — a helper chooses otherwise, and
-   * choosing is the whole point of the field.
-   */
-  const [countsFor, setCountsFor] = useState(existing?.creditTo ?? credit?.mine ?? "");
-
-  const sqm = useMemo(() => sendingSqm(items, lines), [items, lines]);
+  const label = paper?.label ?? existing?.quotationLabel ?? fixedQuotation?.label ?? "";
 
   return (
     <form
@@ -420,78 +602,202 @@ function DispatchForm({
       className="flex min-h-0 flex-1 flex-col"
     >
       {mode === "request" ? (
-        <input type="hidden" name="quotationId" value={quotationId} />
+        <>
+          <input type="hidden" name="companyId" value={company} />
+          {quotation ? <input type="hidden" name="quotationId" value={quotation} /> : null}
+        </>
       ) : (
         <input type="hidden" name="dispatchId" value={existing?.dispatchId ?? ""} />
       )}
-      <input type="hidden" name="items" value={itemsPayload(lines)} />
+      <input type="hidden" name="items" value={linesPayload(lines)} />
+      <input type="hidden" name="services" value={servicesPayload(services)} />
       <input type="hidden" name="shipmentMethodId" value={method} />
       <input type="hidden" name="warehouseId" value={warehouse} />
       <input type="hidden" name="credit" value={countsFor} />
 
       <FormBody>
-        <DispatchItems items={items} lines={lines} onChange={setLines} disabled={pending} />
+        {/* Who, where from, and how it leaves: one-line answers about the whole
+            load, four across on the desk dialog (as on the quotation's). */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label id="dispatch-company-label">{t("common.company")}</Label>
+            {existing || fixedCompany || fixedQuotation ? (
+              // Fixed where it was opened from: a load from a customer's drawer,
+              // a paper's, or one being corrected cannot move to another customer.
+              <SearchableSelect
+                aria-labelledby="dispatch-company-label"
+                options={
+                  company
+                    ? [{ value: company, label: existing?.companyName ?? fixedCompany?.name ?? loadedPaper?.companyName ?? "" }]
+                    : []
+                }
+                value={company}
+                onChange={() => undefined}
+                disabled
+                placeholder={t("common.company")}
+                searchPlaceholder={t("forms.searchList")}
+                emptyText={t("forms.noMatch")}
+              />
+            ) : (
+              <SearchableSelect
+                aria-labelledby="dispatch-company-label"
+                options={companyOptions}
+                value={pickedCompany}
+                onChange={setPickedCompany}
+                disabled={pending}
+                placeholder={t("common.pickCompany")}
+                searchPlaceholder={t("forms.searchList")}
+                emptyText={t("forms.noMatch")}
+              />
+            )}
+          </div>
 
-        <div className="card-face flex items-baseline justify-between gap-4 p-3 text-sm">
-          <span className="font-medium">{t("common.sqm")}</span>
-          <span dir="ltr" className="num font-semibold" data-slot="figure-sending">
-            {formatSqm(sqm)}
-          </span>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label id="dispatch-source-label">{t("dispatches.source")}</Label>
+            <SearchableSelect
+              aria-labelledby="dispatch-source-label"
+              options={
+                lockedSource
+                  ? [
+                      lockedSource === DIRECT
+                        ? { value: DIRECT, label: t("dispatches.direct") }
+                        : { value: lockedSource, label, hint: paper?.projectName },
+                    ]
+                  : sourceOptions
+              }
+              value={source}
+              onChange={(value) => setSourcePick({ companyId: company, value })}
+              // A paper already fixed is not a choice; nor is anything before a
+              // customer is named.
+              disabled={pending || Boolean(lockedSource) || !company}
+              placeholder={company ? t("dispatches.pickSource") : t("common.pickCompanyFirst")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("forms.noMatch")}
+            />
+            {/* A paper names its job in the choice itself; Direct says what it means. */}
+            {source === DIRECT ? (
+              <p className="text-xs text-muted-foreground">{t("dispatches.directHint")}</p>
+            ) : null}
+          </div>
+
+          {/* Where it leaves from, before how it travels: the store is decided
+              before the truck is (SPEC §3, P12-9). */}
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label id="dispatch-warehouse-label">{t("common.warehouse")}</Label>
+            <SearchableSelect
+              aria-labelledby="dispatch-warehouse-label"
+              options={dispatchLists.warehouses}
+              value={warehouse}
+              onChange={setWarehousePick}
+              disabled={pending}
+              invalid={fieldErrors.warehouseId ? true : undefined}
+              aria-describedby={fieldErrors.warehouseId ? "dispatch-warehouse-error" : undefined}
+              placeholder={t("forms.choose")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("forms.noMatch")}
+            />
+            {fieldErrors.warehouseId ? (
+              <p id="dispatch-warehouse-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.warehouseId}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <Label id="shipment-label">{t("common.shipment")}</Label>
+            <SearchableSelect
+              aria-labelledby="shipment-label"
+              options={dispatchLists.shipmentMethods}
+              value={method}
+              onChange={setMethod}
+              disabled={pending}
+              invalid={fieldErrors.shipmentMethodId ? true : undefined}
+              aria-describedby={fieldErrors.shipmentMethodId ? "shipment-error" : undefined}
+              placeholder={t("forms.choose")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("forms.noMatch")}
+            />
+            {fieldErrors.shipmentMethodId ? (
+              <p id="shipment-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.shipmentMethodId}
+              </p>
+            ) : null}
+          </div>
         </div>
 
-        {/* Directly under the figure it decides, because that is the sentence:
-            this many metres, and they count for him (D148). */}
-        <CreditField
-          people={credit?.people ?? []}
-          value={countsFor}
-          onChange={setCountsFor}
-          sqm={sqm}
-          id="dispatch-credit"
-        />
+        {!source ? (
+          /* Both steps in one sentence: the load has nothing to open on until
+             the customer and its source are named. */
+          <p className="text-sm text-muted-foreground">{t("dispatches.pickQuotationFirst")}</p>
+        ) : paper === undefined ? (
+          // The lines' own shape while the paper is read: a table head, three
+          // rows, and the services and totals beside each other under them.
+          <div aria-busy="true" className="flex flex-col gap-3">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-32 w-full rounded-[calc(var(--radius)+4px)]" />
+          </div>
+        ) : quotation && paper === null ? (
+          <p role="alert" className="text-sm text-destructive">
+            {t("forms.listsUnavailable")}
+          </p>
+        ) : (
+          <>
+            <DispatchLines
+              lookups={lineLists}
+              lines={lines}
+              carried={carried}
+              base={base}
+              paper={Boolean(paper)}
+              onChange={(next) => setLinesPick({ key: sourceKey, lines: next })}
+              disabled={pending}
+            />
+            {sentInFull ? (
+              <p data-slot="sent-in-full" className="text-xs text-muted-foreground">
+                {t("dispatches.sentInFull", { items: sentInFull })}
+              </p>
+            ) : null}
 
-        {/* Where it leaves from, above how it travels: the store is decided
-            before the truck is (SPEC §3, P12-9). */}
-        <div className="flex flex-col gap-1.5">
-          <Label id="dispatch-warehouse-label">{t("common.warehouse")}</Label>
-          <SearchableSelect
-            aria-labelledby="dispatch-warehouse-label"
-            options={lookups.warehouses}
-            value={warehouse}
-            onChange={setWarehouse}
-            disabled={pending}
-            invalid={fieldErrors.warehouseId ? true : undefined}
-            aria-describedby={fieldErrors.warehouseId ? "dispatch-warehouse-error" : undefined}
-            placeholder={t("forms.choose")}
-            searchPlaceholder={t("forms.searchList")}
-            emptyText={t("forms.noMatch")}
-          />
-          {fieldErrors.warehouseId ? (
-            <p id="dispatch-warehouse-error" role="alert" className="text-xs text-destructive">
-              {fieldErrors.warehouseId}
-            </p>
-          ) : null}
-        </div>
+            {/* The services under the panels, and what the whole load comes to
+                beside them on a desk or under them on a phone — the totals are
+                money.ts's, the same five figures the quotation's are (SPEC §3). */}
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
+              <QuotationServices
+                choices={serviceChoices}
+                services={services}
+                subtotal={totals.services}
+                onChange={(next) => setServicesPick({ key: sourceKey, services: next })}
+                disabled={pending}
+              />
+              <QuotationTotals
+                sqm={totals.sqm}
+                split={{ panels: totals.panels, services: totals.services }}
+                subtotal={totals.subtotal}
+                vat={totals.vat}
+                total={totals.total}
+              />
+            </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label id="shipment-label">{t("common.shipment")}</Label>
-          <SearchableSelect
-            aria-labelledby="shipment-label"
-            options={lookups.shipmentMethods}
-            value={method}
-            onChange={setMethod}
-            disabled={pending}
-            invalid={fieldErrors.shipmentMethodId ? true : undefined}
-            aria-describedby={fieldErrors.shipmentMethodId ? "shipment-error" : undefined}
-            placeholder={t("forms.choose")}
-            searchPlaceholder={t("forms.searchList")}
-            emptyText={t("forms.noMatch")}
-          />
-          {fieldErrors.shipmentMethodId ? (
-            <p id="shipment-error" role="alert" className="text-xs text-destructive">
-              {fieldErrors.shipmentMethodId}
-            </p>
-          ) : null}
-        </div>
+            {/* Said the moment it is true, in the amber of "somebody will look
+                at this", and in words: the colour is never the only carrier. */}
+            {differs ? (
+              <p role="status" data-slot="form-differs" className={cn("text-sm", TONE_TEXT.wait)}>
+                {t("dispatches.formDiffers", { label })}
+              </p>
+            ) : null}
+
+            {/* Under the figure it decides: this many metres, and they count
+                for him (D148). */}
+            <CreditField
+              people={creditChoices?.people ?? []}
+              value={countsFor}
+              onChange={(next) => setCreditPick({ source, value: next })}
+              sqm={totals.sqm}
+              id="dispatch-credit"
+            />
+          </>
+        )}
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="dispatch-destination">{t("common.destination")}</Label>
@@ -513,9 +819,9 @@ function DispatchForm({
         </div>
 
         {/* How it is being paid for (SPEC §3): the choice, then the question
-            that choice asks, then the note finance reads. Chips rather than a
-            dropdown, because four short answers a rep knows by heart are a row
-            he presses, not a list he opens. */}
+            that choice asks, then the note finance reads on credit. Chips,
+            because three short answers a rep knows by heart are a row he
+            presses, not a list he opens. */}
         <div className="flex flex-col gap-3">
           <ChoiceChips
             legend={t("common.paymentTerms")}
@@ -558,7 +864,6 @@ function DispatchForm({
               value={paymentNote}
               onChange={(event) => setPaymentNote(event.target.value)}
               disabled={pending}
-              placeholder={t("dispatches.payment.notePlaceholder")}
               aria-invalid={fieldErrors.paymentNote ? true : undefined}
               aria-describedby={
                 fieldErrors.paymentNote
@@ -568,20 +873,16 @@ function DispatchForm({
                     : undefined
               }
             />
-            {/* Why it is not optional on these two, in the founder's own
-                reason: finance reviews them. */}
-            {terms && needsNote(terms) ? (
+            {/* Why it is not optional on credit, in the founder's own reason:
+                finance reviews it. Said once — as the hint before a save, as
+                the refusal after one. */}
+            {fieldErrors.paymentNote ? (
+              <p id="dispatch-payment-note-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.paymentNote}
+              </p>
+            ) : terms && needsNote(terms) ? (
               <p id="dispatch-payment-note-hint" className="text-xs text-muted-foreground">
                 {t("dispatches.payment.noteRequired")}
-              </p>
-            ) : null}
-            {fieldErrors.paymentNote ? (
-              <p
-                id="dispatch-payment-note-error"
-                role="alert"
-                className="text-xs text-destructive"
-              >
-                {fieldErrors.paymentNote}
               </p>
             ) : null}
           </div>

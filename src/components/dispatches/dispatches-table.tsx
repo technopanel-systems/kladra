@@ -31,9 +31,14 @@ import { Ref, Sqm } from "@/components/ui-ext/figures";
 import { paymentDetailLabel, paymentTermsLabel } from "@/lib/payment";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
-import { formatSqm } from "@/lib/money";
+import { formatMoney, formatSqm } from "@/lib/money";
 import type { CreditLine } from "@/lib/credit-rows";
-import type { DispatchItemRow, DispatchRow, DispatchStatus } from "@/lib/dispatches";
+import type {
+  DispatchItemRow,
+  DispatchRow,
+  DispatchServiceRow,
+  DispatchStatus,
+} from "@/lib/dispatches";
 import { dispatchTone, TONE_TEXT } from "@/lib/state-tone";
 import { formatDay } from "@/lib/dates";
 import { lossReasonLabel } from "@/lib/loss-reason";
@@ -96,6 +101,20 @@ function listHref(
 function StatusBadge({ status }: { status: DispatchStatus }) {
   const t = useTranslations();
   return <StateBadge tone={dispatchTone(status)}>{t(STATUS_KEYS[status])}</StateBadge>;
+}
+
+/**
+ * The load is not what its quotation said (SPEC §3, P13) — a word in the amber
+ * of "somebody will look at this", never the tone alone. What differs is the
+ * drawer's to say; the row only has to be found.
+ */
+function DiffersChip() {
+  const t = useTranslations();
+  return (
+    <span data-slot="differs-chip">
+      <StateBadge tone="wait">{t("dispatches.differsChip")}</StateBadge>
+    </span>
+  );
 }
 
 export function DispatchesTable({
@@ -178,7 +197,8 @@ export function DispatchesTable({
         // list beside it carries both, and the drawer carries both.
         label: row.smacDispatchNumber ?? row.label,
         title: row.companyName,
-        subtitle: row.projectName,
+        // A direct load has no job: the card says what it is instead (SPEC §3, P13).
+        subtitle: row.projectName ?? (row.quotationId ? null : t("dispatches.direct")),
         sqm: row.totalSqm,
         day: row.approvedOn ?? row.createdOn,
         current: openId === row.id,
@@ -284,8 +304,11 @@ export function DispatchesTable({
                     </span>
                   ) : null}
                   <span className="truncate text-xs text-muted-foreground">
-                    {row.projectName}
+                    {row.projectName ?? (row.quotationId ? null : t("dispatches.direct"))}
                   </span>
+                  {/* The load is not what its paper said (SPEC §3, P13): a word
+                      and a tone, on the row the desk scans. */}
+                  {row.differs ? <DiffersChip /> : null}
                   {/* The project was marked lost after this was raised (D138). A dead
                       project is not work to price, and nothing on her desk said so. */}
                   {row.projectLostOn ? (
@@ -366,7 +389,9 @@ export function DispatchesTable({
                         ) : null}
                       </TableCell>
                       <TableCell className="p-3 text-muted-foreground">
-                        {row.projectName}
+                        {/* A direct load has no job, and the cell says so rather
+                            than standing empty (SPEC §3, P13). */}
+                        {row.projectName ?? t("dispatches.noProject")}
                         {/* The project was marked lost after this was raised (D138). A dead
                             project is not work to price, and nothing on her desk said so. */}
                         {row.projectLostOn ? (
@@ -380,9 +405,17 @@ export function DispatchesTable({
                             quotations list now leads (P12-11): SMAC's number, with
                             Kladra's under it where there are two. A cross-reference
                             is looked up, so it says the number she will search for. */}
-                        <Ref slot="row-quotation" className="text-sm">
-                          {row.smacNumber ?? row.quotationLabel}
-                        </Ref>
+                        {row.quotationLabel ? (
+                          <Ref slot="row-quotation" className="text-sm">
+                            {row.smacNumber ?? row.quotationLabel}
+                          </Ref>
+                        ) : (
+                          // Where a quotation number would be, the word for a
+                          // load with none — never an empty cell (SPEC §3, P13).
+                          <span data-slot="row-direct" className="text-sm">
+                            {t("dispatches.direct")}
+                          </span>
+                        )}
                         {row.smacNumber ? (
                           <Ref
                             slot="row-quotation-second"
@@ -397,6 +430,11 @@ export function DispatchesTable({
                             className={cn("block text-xs", TONE_TEXT.wait)}
                           >
                             {t("dispatches.revisedSince")}
+                          </span>
+                        ) : null}
+                        {row.differs ? (
+                          <span className="mt-1 block">
+                            <DiffersChip />
                           </span>
                         ) : null}
                       </TableCell>
@@ -508,6 +546,8 @@ export type DispatchSheetProps = {
   dispatch: DispatchRow & {
     /** Which store the load leaves from (SPEC §3, P12-9). */
     warehouseName: string;
+    /** Its services, in their own section as on the quotation (SPEC §3, P13). */
+    services: DispatchServiceRow[];
   };
   /**
    * Who its metres count for (D148). Drawn only when it is worth saying —
@@ -520,6 +560,13 @@ export type DispatchSheetProps = {
    * reason `QuotationSheetProps.history` gives.
    */
   history: ReactNode;
+  /**
+   * "Differs from Q-12", in words (SPEC §3, P13) — null where it matches its
+   * paper or has none. A node for the same reason the trail is one.
+   */
+  difference: ReactNode;
+  /** "Add report", opening on this customer and this load (SPEC §3, P13). */
+  report?: ReactNode;
   items: DispatchItemRow[];
   draft: DispatchDraft;
   scope: DispatchScope;
@@ -531,6 +578,8 @@ export function DispatchSheet({
   dispatch,
   credit,
   history,
+  difference,
+  report,
   items,
   draft,
   scope,
@@ -557,7 +606,12 @@ export function DispatchSheet({
               <StatusBadge status={dispatch.status} />
             </div>
             <SheetDescription>
-              <bdi>{dispatch.companyName}</bdi> · <bdi>{dispatch.projectName}</bdi>
+              <bdi>{dispatch.companyName}</bdi> ·{" "}
+              {dispatch.projectName ? (
+                <bdi>{dispatch.projectName}</bdi>
+              ) : (
+                t("dispatches.direct")
+              )}
             </SheetDescription>
 
             {/* The project is lost and this material is still going out to it
@@ -578,14 +632,19 @@ export function DispatchSheet({
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
               <Fact label={t("common.quotation")}>
-                <Link
-                  href={`/quotations?open=${dispatch.quotationId}`}
-                  className="hover:underline"
-                >
-                  {/* A fact has room for one number, and it is the one she
-                      would search SMAC for (P12-11). */}
-                  <Ref>{dispatch.smacNumber ?? dispatch.quotationLabel}</Ref>
-                </Link>
+                {dispatch.quotationId ? (
+                  <Link
+                    href={`/quotations?open=${dispatch.quotationId}`}
+                    className="hover:underline"
+                  >
+                    {/* A fact has room for one number, and it is the one she
+                        would search SMAC for (P12-11). */}
+                    <Ref>{dispatch.smacNumber ?? dispatch.quotationLabel}</Ref>
+                  </Link>
+                ) : (
+                  // No paper behind it: the word, never a dead link (SPEC §3, P13).
+                  <span data-slot="fact-direct">{t("dispatches.direct")}</span>
+                )}
               </Fact>
               <Fact label={t("common.raisedBy")}>{dispatch.repName}</Fact>
               <Fact label={t("common.date")}>
@@ -603,20 +662,23 @@ export function DispatchSheet({
             <Reason title={t("dispatches.refusedReason")} text={dispatch.refuseReason} />
           ) : null}
 
+          {/* Above the buttons, so the desk reads what differs before she
+              approves it and the rep reads it before he corrects it. */}
+          {difference}
+
           <DispatchActions
             dispatch={{
               id: dispatch.id,
               label: dispatch.label,
               status: dispatch.status,
               companyName: dispatch.companyName,
-              quotationId: dispatch.quotationId,
-              quotationLabel: dispatch.quotationLabel,
               smacDispatchNumber: dispatch.smacDispatchNumber,
               superseded: dispatch.superseded,
               draft,
             }}
             scope={scope}
           />
+          {report ? <div className="flex flex-wrap gap-2">{report}</div> : null}
 
           <ul className="flex flex-col gap-2">
             {items.map((item) => (
@@ -635,36 +697,89 @@ export function DispatchSheet({
                     what the quotation asked for, what other dispatches already
                     hold, and what is left once this one is counted — one
                     definition, the dialog's (D112, D12). */}
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-5">
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3 md:grid-cols-6">
                   <Fact label={t("dispatches.sending")}>
                     <span dir="ltr" className="num">
                       {item.qty}
                     </span>
                   </Fact>
-                  <Fact label={t("dispatches.quoted")}>
-                    <span dir="ltr" className="num">
-                      {item.quotedQty}
-                    </span>
-                  </Fact>
-                  <Fact label={t("dispatches.elsewhere")}>
-                    <span dir="ltr" className="num" data-slot="figure-elsewhere">
-                      {item.elsewhereQty}
-                    </span>
-                  </Fact>
-                  <Fact label={t("dispatches.remaining")}>
-                    <span dir="ltr" className="num" data-slot="figure-left-after">
-                      {item.leftAfter}
-                    </span>
-                  </Fact>
+                  {/* What the paper asked for, what other loads hold and what is
+                      left — only where there is a quotation line behind it. A
+                      line the rep added, or a direct load's, has none of the
+                      three, and three empty facts are three questions. */}
+                  {item.quotedQty !== null ? (
+                    <>
+                      <Fact label={t("dispatches.quoted")}>
+                        <span dir="ltr" className="num">
+                          {item.quotedQty}
+                        </span>
+                      </Fact>
+                      <Fact label={t("dispatches.elsewhere")}>
+                        <span dir="ltr" className="num" data-slot="figure-elsewhere">
+                          {item.elsewhereQty}
+                        </span>
+                      </Fact>
+                      <Fact label={t("dispatches.remaining")}>
+                        <span dir="ltr" className="num" data-slot="figure-left-after">
+                          {item.leftAfter}
+                        </span>
+                      </Fact>
+                    </>
+                  ) : dispatch.quotationId ? (
+                    <Fact label={t("common.quotation")}>{t("dispatches.notOnPaper")}</Fact>
+                  ) : null}
                   <Fact label={t("quotations.sheet")}>
                     <span dir="ltr" className="num">
                       {item.width} × {item.length}
+                    </span>
+                  </Fact>
+                  <Fact label={t("common.pricePerSqm")}>
+                    <span dir="ltr" className="num" data-slot="figure-line-price">
+                      {formatMoney(item.pricePerSqm)}
                     </span>
                   </Fact>
                 </dl>
               </li>
             ))}
           </ul>
+
+          {/* The services on this load, as on its quotation: which one, the m²
+              it is done over and the price per m² (SPEC §3, P13). Its m² is
+              money and never metres, so it is not in the figure below (D173). */}
+          {dispatch.services.length > 0 ? (
+            <section aria-labelledby="dispatch-services-heading" className="flex flex-col gap-2">
+              <h3 id="dispatch-services-heading" className="text-sm font-medium">
+                {t("quotations.services")}
+              </h3>
+              <ul className="flex flex-col gap-2">
+                {dispatch.services.map((service) => (
+                  <li
+                    key={service.id}
+                    data-slot="dispatch-service"
+                    className="card-face flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3 text-sm"
+                  >
+                    <span className="min-w-0 font-medium">
+                      <bdi>{service.name}</bdi>
+                    </span>
+                    <span className="flex flex-wrap items-baseline gap-x-4 text-xs text-muted-foreground">
+                      <span>
+                        {t("common.sqm")}{" "}
+                        <span dir="ltr" className="num text-foreground">
+                          {formatSqm(service.sqm)}
+                        </span>
+                      </span>
+                      <span>
+                        {t("common.pricePerSqm")}{" "}
+                        <span dir="ltr" className="num text-foreground">
+                          {formatMoney(service.pricePerSqm)}
+                        </span>
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           <dl className="card-face flex flex-col gap-2 p-3 text-sm">
             {/* The one figure this request is about: what it puts on the

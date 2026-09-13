@@ -42,17 +42,25 @@ import type { Day } from "@/lib/dates";
 import { isDispatchEvent, type DispatchEventName } from "@/lib/dispatch-events";
 import { personName, personNameOf } from "@/lib/people";
 import {
+  classes,
   companies,
   dispatchItems,
+  dispatchServices,
   dispatches,
+  fireRatings,
   projects,
   quotationItems,
   quotations,
+  services,
   shipmentMethods,
+  suppliers,
+  thicknesses,
   warehouses,
   users,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
+import type { Difference } from "@/lib/dispatch-difference";
+import { holdsFloor, sells } from "@/lib/floor";
 import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
 import type { PaymentDetail, PaymentTerms } from "@/lib/payment";
 import { warehouseName } from "@/lib/lookups";
@@ -124,6 +132,13 @@ export type DispatchRow = {
   creditNames: string[];
   /** The quotation has a later revision: approval would refuse this (D85, P11E). */
   superseded: boolean;
+  /**
+   * The load is not what its quotation said (SPEC §3, P13): a line or a service
+   * added, or a sheet, a price or an m² changed. Asked of the recorded list in
+   * SQL, so a row carries its chip without the list reading every difference.
+   * Never true of a direct dispatch, which has nothing to differ from.
+   */
+  differs: boolean;
 };
 
 export type ListDispatchesInput = {
@@ -265,6 +280,9 @@ function selection(locale: string) {
        where later.number = quotations.number
          and later.revision > quotations.revision
     )`,
+    // Null on a direct dispatch and an empty list on one that matched its paper;
+    // both are "does not differ" (SPEC §3, P13).
+    differs: sql<boolean>`coalesce(jsonb_array_length(dispatches.quotation_difference), 0) > 0`,
   };
 }
 
@@ -298,6 +316,7 @@ type Selected = {
   itemCount: number;
   creditNames: string[] | null;
   superseded: boolean;
+  differs: boolean;
 };
 
 function toRow(row: Selected, shipmentMethod: string): DispatchRow {
@@ -312,6 +331,7 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
         ? null
         : quotationLabel(row.quotationNumber, row.quotationRevision),
     superseded: row.superseded === true,
+    differs: row.differs === true,
     smacNumber: row.smacNumber ?? null,
     companyId: row.companyId,
     companyName: row.companyName,
@@ -435,7 +455,11 @@ export type DispatchItemRow = {
   id: string;
   /** The quotation line it was prefilled from; null on a line the rep added or a direct dispatch. */
   quotationItemId: string | null;
-  /** The line's number on the quotation, so the two papers read the same way. */
+  /**
+   * The line's number. A line carried from the quotation keeps the quotation's
+   * number, so the two papers read the same way; a line the rep added is numbered
+   * after the quotation's last (P13-S3).
+   */
   position: number;
   colourCode: string;
   qty: number;
@@ -445,17 +469,55 @@ export type DispatchItemRow = {
    * What OTHER dispatches — waiting or approved — already hold of that line,
    * and what is left once this one is counted (D112). The coordinator checking
    * the third partial dispatch reads them here rather than counting the
-   * quotation's mini list; the definition is `committedQtySql`'s (D12).
+   * quotation's mini list; the definition is `committedQtySql`'s (D12). Null
+   * where there is no quotation line to hold anything of.
    */
-  elsewhereQty: number;
+  elsewhereQty: number | null;
   leftAfter: number | null;
+  /** The sheet as it reads — the supplier's letter, the rating, the class, the millimetres. */
+  supplier: string;
+  fireRating: string;
+  className: string;
+  thickness: string;
   width: string;
   length: string;
+  pricePerSqm: string;
   sqm: string;
+  /** The rows behind those words, never rendered: what Edit opens the dropdowns on. */
+  supplierId: number;
+  fireRatingId: number;
+  classId: number;
+  thicknessId: number;
+};
+
+/**
+ * A service on a dispatch (SPEC §3, P13), read the way a quotation's is: which
+ * one in the reader's language, the m² it is done over and its price per m². Its
+ * m² is money and never metres (D173).
+ */
+export type DispatchServiceRow = {
+  id: string;
+  quotationServiceId: string | null;
+  position: number;
+  serviceId: number;
+  name: string;
+  sqm: string;
+  pricePerSqm: string;
 };
 
 export type DispatchDetail = DispatchRow & {
+  /** Whether the company is shared with this reader (D147) — what may he write on it. */
+  shared: boolean;
   items: DispatchItemRow[];
+  services: DispatchServiceRow[];
+  /**
+   * What the load changed from its quotation, as recorded when it was raised or
+   * last corrected (SPEC §3, P13) — null on a direct dispatch, empty on one that
+   * matched. `serviceNames` names, in the reader's language, every service a
+   * recorded change mentions by id, including one no longer on the load.
+   */
+  difference: Difference[] | null;
+  serviceNames: Record<string, string>;
   /**
    * Which store the load leaves from (SPEC §3, P12-9), and the row behind that
    * word for the edit dialog to open its list on.
@@ -486,12 +548,14 @@ export async function getDispatch(
   id: string,
   locale?: string,
 ): Promise<DispatchDetail | null> {
+  const reader = locale ?? (await getLocale());
   const [row] = await db
     .select({
-      ...selection(locale ?? (await getLocale())),
-      shipmentMethod: shipmentName(locale),
+      ...selection(reader),
+      shipmentMethod: shipmentName(reader),
       warehouseId: dispatches.warehouseId,
-      warehouseName: warehouseName(locale),
+      warehouseName: warehouseName(reader),
+      difference: dispatches.quotationDifference,
       // Whether this reader is on the company's share list, asked in the same
       // statement as its owner (D147).
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
@@ -529,27 +593,81 @@ export async function getDispatch(
            and d.status in ('submitted', 'approved')
            and d.id <> dispatch_items.dispatch_id
       )`,
+      supplier: suppliers.code,
+      fireRating: fireRatings.name,
+      className: classes.name,
+      thickness: thicknesses.mm,
       width: dispatchItems.width,
       length: dispatchItems.length,
+      pricePerSqm: dispatchItems.pricePerSqm,
       sqm: lineSqm,
+      supplierId: dispatchItems.supplierId,
+      fireRatingId: dispatchItems.fireRatingId,
+      classId: dispatchItems.classId,
+      thicknessId: dispatchItems.thicknessId,
     })
     .from(dispatchItems)
+    .innerJoin(suppliers, eq(suppliers.id, dispatchItems.supplierId))
+    .innerJoin(fireRatings, eq(fireRatings.id, dispatchItems.fireRatingId))
+    .innerJoin(classes, eq(classes.id, dispatchItems.classId))
+    .innerJoin(thicknesses, eq(thicknesses.id, dispatchItems.thicknessId))
     .leftJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
     .where(eq(dispatchItems.dispatchId, id))
     .orderBy(asc(dispatchItems.position));
+
+  const serviceName = reader.startsWith("ar") ? services.nameAr : services.nameEn;
+  const serviceRows = await db
+    .select({
+      id: dispatchServices.id,
+      quotationServiceId: dispatchServices.quotationServiceId,
+      position: dispatchServices.position,
+      serviceId: dispatchServices.serviceId,
+      name: serviceName,
+      sqm: dispatchServices.sqm,
+      pricePerSqm: dispatchServices.pricePerSqm,
+    })
+    .from(dispatchServices)
+    .innerJoin(services, eq(services.id, dispatchServices.serviceId))
+    .where(eq(dispatchServices.dispatchId, id))
+    .orderBy(asc(dispatchServices.position));
+
+  // A change of service names two services, and the one it was may be on no row
+  // of this load any more — so the names come from the list, by id.
+  const difference = row.difference ?? null;
+  const mentioned = [
+    ...new Set(
+      (difference ?? []).flatMap((change) =>
+        change.change === "changed" && change.field === "service"
+          ? [Number(change.from), Number(change.to)].filter(Number.isInteger)
+          : [],
+      ),
+    ),
+  ];
+  const named =
+    mentioned.length === 0
+      ? []
+      : await db
+          .select({ id: services.id, name: serviceName })
+          .from(services)
+          .where(inArray(services.id, mentioned));
+
   // This dispatch holds its own share only while it is waiting or approved; a
   // refused or cancelled one gave its quantities back (D12).
   const holds = row.status === "submitted" || row.status === "approved";
   const detail = toRow(row, row.shipmentMethod);
   return {
+    shared: row.shared,
     ...detail,
     warehouseId: row.warehouseId,
     warehouseName: row.warehouseName,
+    difference,
+    serviceNames: Object.fromEntries(named.map((service) => [String(service.id), service.name])),
     credit: await creditOnDispatch(id, detail.totalSqm),
+    services: serviceRows,
     items: items.map((item) => ({
       ...item,
       sqm: String(item.sqm ?? "0"),
-      elsewhereQty: Number(item.elsewhereQty ?? 0),
+      elsewhereQty: item.quotedQty === null ? null : Number(item.elsewhereQty ?? 0),
       leftAfter:
         item.quotedQty === null
           ? null
@@ -650,6 +768,28 @@ export async function remainingOnQuotation(
 }
 
 /**
+ * The customers a person may raise a DIRECT dispatch for (SPEC §3, P13): his
+ * own, and not archived.
+ *
+ * Narrower than the customers he may send against a quotation for. A job he was
+ * put on lets him send its paper (D147), but a direct dispatch has no job under
+ * it, so the customer alone decides — `mayRaiseFor` with no project — and a
+ * customer that is only shared with him is not one he may load a truck for with
+ * nothing behind it. The same three refusals the dispatchable list makes: a role
+ * that does not sell, one that holds no floor, and anybody viewing as somebody.
+ */
+export async function directDispatchCompanies(
+  user: SessionUser,
+): Promise<{ id: string; name: string }[]> {
+  if (!sells(user.role) || !holdsFloor(user.role) || user.viewedBy) return [];
+  return db
+    .select({ id: companies.id, name: companies.name })
+    .from(companies)
+    .where(and(eq(companies.repId, user.id), isNull(companies.archivedAt)))
+    .orderBy(asc(companies.name));
+}
+
+/**
  * The m² an approved dispatch moved. THE definition of achieved (S43).
  *
  * Rounded per line before summing, and computed from the quantity SENT — not
@@ -725,6 +865,11 @@ export type DispatchEvent = {
   who: string | null;
   /** Her reason, where the event carried one — or, on a number correction, the old number (D88). */
   note: string | null;
+  /**
+   * The quotation this load differed from when it was raised or corrected —
+   * "Q-12" — and null where it matched its paper or had none (SPEC §3, P13).
+   */
+  differsFrom: string | null;
 };
 
 /**
@@ -737,12 +882,24 @@ export type DispatchEvent = {
  */
 export async function dispatchHistory(id: string): Promise<DispatchEvent[]> {
   const locale = await getLocale();
-  const rows = await db.execute<{ what: string; day: Day; who: string | null; note: string | null }>(
+  const rows = await db.execute<{
+    what: string;
+    day: Day;
+    who: string | null;
+    note: string | null;
+    differs_from: string | null;
+  }>(
     sql`
       select replace(a.action, 'dispatch.', '') as what,
              to_char((a.at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day,
              ${personNameOf("u", locale)} as who,
-             nullif(btrim(coalesce(a.details ->> 'reason', a.details ->> 'from', '')), '') as note
+             -- The old number only on a number correction: an edit records the
+             -- status it came FROM under the same key, and that is not a note.
+             nullif(btrim(coalesce(
+               case when a.action = 'dispatch.correctNumber'
+                    then a.details ->> 'from'
+                    else a.details ->> 'reason' end, '')), '') as note,
+             nullif(a.details ->> 'differsFrom', '') as differs_from
         from audit_log a
         left join users u on u.id = a.user_id
        where a.record_type = 'dispatch'
@@ -754,7 +911,15 @@ export async function dispatchHistory(id: string): Promise<DispatchEvent[]> {
   // the trail prints a sentence per event.
   return rows.rows.flatMap((row) =>
     isDispatchEvent(row.what)
-      ? [{ what: row.what, day: row.day, who: row.who, note: row.note }]
+      ? [
+          {
+            what: row.what,
+            day: row.day,
+            who: row.who,
+            note: row.note,
+            differsFrom: row.differs_from ?? null,
+          },
+        ]
       : [],
   );
 }

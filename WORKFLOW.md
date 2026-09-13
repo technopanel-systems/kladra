@@ -75,11 +75,16 @@ below by number.
                   a withdrawn service is refused (D175). Left for others: the services list belongs with the
                   lookups (S3 imports it where it is); the searchable select's popup is only as wide as its
                   button inside the table (G6).
-            - [ ] G2 · S3 **Dispatches** (13.5): the request rebuilt per §3 — prefilled from the chosen or latest
+            - [x] G2 · S3 **Dispatches** (13.5): the request rebuilt per §3 — prefilled from the chosen or latest
                   issued quotation with its panels AND its services, editable, linked, flagged where either differs
                   (computed from the two sets by `quotation-diff`, recorded in the trail at the raise), or direct
                   for the company with its own prices (D169); refused is edited and resubmitted; payment
-                  placeholders gone, the three-way choice.
+                  placeholders gone, the three-way choice. **Done**: the request rebuilt on the wide dialog — company, then where it comes from
+                  (the latest issued paper chosen, another, or Direct), every line and service prefilled and
+                  editable; `differenceFrom` on the server, recorded and named in the drawer, a chip on the list
+                  and the queue (D178, D179); direct loads for the rep's own customers, credited through the
+                  dispatch's company; refused loads corrected and sent again; payment three ways, no placeholder.
+                  Request dispatch is offered to every seller who may write, and both drawers carry Add report.
             - [x] G2 · S4 **Reports** (13.8): one popup from anywhere — the top bar's `+`, and every drawer, prefilled
                   with what it was opened from — company, contact, what happened as buttons, outcome, text, next
                   follow-up, twenty seconds on a phone; the rep's view (his days, a calendar, filters by company,
@@ -144,8 +149,8 @@ below by number.
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
-everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). S2 and S4 are merged. S3 (built
-on S2's branch) is with a builder in `.claude/worktrees/`. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
+everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). G2's three slices are merged (S2, S3,
+S4); its review passes and the group's full suite are next. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
 session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
@@ -1115,3 +1120,5 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 212 A heading found by a word the page also uses in its own counts found eight headings in English and one in Arabic. (P13-S4)
 - [x] 213 Two drawers called the same tab by two names, and a test that knew only one of them. (P13-S4)
 - [x] 214 A file a screenshot agent wrote for itself was swept into a commit by `git add -A`. (P13 Stage 2)
+- [x] 215 A primary action hidden from the one person its new half was for: no paper, no button, no Direct. (P13-S3)
+- [x] 216 A retry that retried everything except the press that failed. (P13-S3)

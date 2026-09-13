@@ -52,10 +52,9 @@ const COLD = { timeout: 30_000 };
 async function achievedByCredit(repId: string): Promise<number> {
   const row = await one<{ sqm: string }>(
     `with d as (
-       select dd.id, round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2) as sqm
+       select dd.id, round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2) as sqm
          from dispatches dd
          join dispatch_items di on di.dispatch_id = dd.id
-         join quotation_items qi on qi.id = di.quotation_item_id
         where dd.status = 'approved'
           and date_trunc('month', (dd.approved_at at time zone 'Asia/Riyadh')::date)
               = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)
@@ -85,12 +84,10 @@ async function achievedByCredit(repId: string): Promise<number> {
  */
 async function achievedByCurrentOwner(repId: string): Promise<number> {
   const row = await one<{ sqm: string }>(
-    `select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm
+    `select round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2)::text as sqm
        from dispatches d
        join dispatch_items di on di.dispatch_id = d.id
-       join quotation_items qi on qi.id = di.quotation_item_id
-       join quotations q on q.id = d.quotation_id
-       join companies c on c.id = q.company_id
+       join companies c on c.id = d.company_id
       where d.status = 'approved'
         and c.rep_id = $1::uuid
         and date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)
@@ -177,8 +174,7 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
     `select count(*)::int as n
        from dispatches d
        join dispatch_credits dc on dc.dispatch_id = d.id
-       join quotations q on q.id = d.quotation_id
-      where q.company_id = $1::uuid and d.status = 'approved' and dc.user_id <> $2::uuid`,
+      where d.company_id = $1::uuid and d.status = 'approved' and dc.user_id <> $2::uuid`,
     [target.company_id, faisal.id],
   );
   expect(

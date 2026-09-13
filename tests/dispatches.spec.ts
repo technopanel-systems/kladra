@@ -80,6 +80,32 @@ async function nameOfTheOpenDispatch(page: Page): Promise<string> {
   return (await heading.innerText()).trim();
 }
 
+/** A line of the load, by the number it carries — the quotation's own (dispatch-lines.tsx). */
+function loadLine(form: Locator, position: number): Locator {
+  return form.locator(`[data-slot="dispatch-line"][data-position="${position}"]`);
+}
+
+/**
+ * The load cut down to one line of the paper, at this quantity.
+ *
+ * The dialog opens on every line with something left on it, each at what is
+ * left (SPEC §3, P13): the load a rep means nine times in ten is "the rest of
+ * it". A walk that wants a part of one line says so the way a rep does — the
+ * other lines taken off, which is a partial load and not a difference — so what
+ * it sends is what it asserts, and the Arabic run behind it still finds panels
+ * on the paper. One line off at a time, each removal seen, because a second
+ * press on a button React has not yet taken away would act on the old list.
+ */
+async function sendOnly(form: Locator, t: Translate, position: number, qty: number) {
+  await expect(loadLine(form, position)).toBeVisible(COLD);
+  const others = form.locator(`[data-slot="dispatch-line"]:not([data-position="${position}"])`);
+  for (let count = await others.count(); count > 0; count -= 1) {
+    await others.first().getByRole("button", { name: t("quotations.removeItem") }).click();
+    await expect(others).toHaveCount(count - 1);
+  }
+  await loadLine(form, position).getByLabel(t("dispatches.sending")).fill(String(qty));
+}
+
 /** Where it is going and how it is paid for — answered for THIS load (§3). */
 const DESTINATION = "Riyadh — King Fahd Road, site gate";
 
@@ -239,15 +265,15 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     });
 
     // Every line says what is left on it, which is the one figure a rep cannot
-    // work out for himself.
-    const remaining = form.getByText(t("dispatches.remaining")).first();
-    await expect(remaining).toBeVisible(COLD);
+    // work out for himself — and opens on it.
+    const line = loadLine(form, first.position);
+    await expect(line.locator('[data-slot="figure-left"]')).toHaveText(String(first.remaining), COLD);
+    await expect(line.getByLabel(t("dispatches.sending"))).toHaveValue(String(first.remaining));
 
-    const box = form.getByLabel(t("dispatches.sending")).nth(index);
-    await box.fill(String(sending));
+    await sendOnly(form, t, first.position, sending);
 
     // The m² appears as he types, on the same arithmetic the database will use.
-    expect(await figure(form, "figure-sending")).toBe(expectedSqm);
+    await expect.poll(() => figure(form, "figure-sqm")).toBe(expectedSqm);
 
     await fillTheDetails(form, t);
     await form.getByRole("button", { name: t("common.save") }).click();
@@ -353,10 +379,9 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     // month, and the m² is width × length × the quantity SENT — never the
     // quotation line's own, which is the whole quoted amount.
     const row = await one<{ sqm: string }>(
-      `select round(coalesce(sum(round(qi.width * qi.length * di.qty, 2)), 0), 2)::text as sqm
+      `select round(coalesce(sum(round(di.width * di.length * di.qty, 2)), 0), 2)::text as sqm
          from dispatches d
          join dispatch_items di on di.dispatch_id = d.id
-         join quotation_items qi on qi.id = di.quotation_item_id
         where d.id = $1::uuid and d.status = 'approved'
           and date_trunc('month', (d.approved_at at time zone 'Asia/Riyadh')::date)
               = date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)`,
@@ -373,28 +398,27 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
     const form = page.getByRole("dialog", {
       name: t("dispatches.requestFor", { label: `Q-${quotation.number}` }),
     });
-    await expect(form.getByText(t("dispatches.remaining")).first()).toBeVisible(COLD);
-
-    // That line's remaining count sits under "Left to send" on its own card.
-    const left = form
-      .getByText(t("dispatches.remaining"))
-      .nth(index)
-      .locator("xpath=..")
-      .getByText(String(first.remaining - sending), { exact: true });
-    await expect(left).toBeVisible();
+    // That line's remaining count, on the line it belongs to.
+    const line = loadLine(form, first.position);
+    await expect(line.locator('[data-slot="figure-left"]')).toHaveText(
+      String(first.remaining - sending),
+      COLD,
+    );
 
     // And NOTHING is carried forward from the one before it (SPEC §3, which
-    // overrules D81): not the site, not how it is paid for, not the quantity.
-    // The form used to open on the last dispatch's answers on the argument that
-    // they belong to the job; the founder's rule is flatter than the argument.
+    // overrules D81): not the site, not how it is paid for. The form used to
+    // open on the last dispatch's answers on the argument that they belong to
+    // the job; the founder's rule is flatter than the argument.
     await expect(form.getByLabel(t("common.destination"))).toHaveValue("");
     await expect(form.getByLabel(t("common.paymentNote"))).toHaveValue("");
     for (const chip of await form.getByRole("radio").all()) {
       await expect(chip).not.toBeChecked();
     }
-    for (const box of await form.getByLabel(t("dispatches.sending")).all()) {
-      await expect(box).toHaveValue("");
-    }
+    // The quantity opens on what the PAPER still has (SPEC §3, P13) — the
+    // quotation's figure after the last load, never the last load's own.
+    await expect(line.getByLabel(t("dispatches.sending"))).toHaveValue(
+      String(first.remaining - sending),
+    );
 
     // The one answer that does come from somewhere is the store, and it comes
     // from the QUOTATION rather than from the dispatch before it: a child
@@ -412,10 +436,10 @@ test("the dispatch chain: request part of a quotation, the queue, approval, and 
  * sentence (SPEC §3, P12-10).
  *
  * The founder's rule has three halves and this walks all of them: the choice is
- * four chips rather than a box to type in; the second question is asked only
- * where it exists, in the words of the choice it belongs to; and credit and
- * tasaheel are refused until the rep says what was agreed, because finance
- * reviews those and cannot review a blank.
+ * three chips rather than a box to type in — credit and tasaheel are one of them
+ * since P13; the second question is asked only where it exists, in the words of
+ * the choice it belongs to; and credit is refused until the rep says what was
+ * agreed, because finance reviews it and cannot review a blank.
  */
 test("credit is refused until the rep says what was agreed, and the desk reads it", async ({
   page,
@@ -437,8 +461,7 @@ test("credit is refused until the rep says what was agreed, and the desk reads i
   const form = page.getByRole("dialog", {
     name: t("dispatches.requestFor", { label: `Q-${quotation.number}` }),
   });
-  await expect(form.getByLabel(t("dispatches.sending")).first()).toBeVisible(COLD);
-  await form.getByLabel(t("dispatches.sending")).nth(index).fill("1");
+  await sendOnly(form, t, lines[index].position, 1);
   await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
   await form.getByLabel(t("common.destination")).fill(DESTINATION);
 
@@ -512,9 +535,9 @@ test("a request for more than the quotation has left is refused, in the app's wo
 
   const quotation = await issuedQuotation();
   const lines = await linesOf(quotation.id);
-  // The first line with room on it, not the first line: a quotation that has
-  // been partly sent already has boxes the form disables, and a walk that types
-  // into a disabled box proves nothing about the rule it was written for.
+  // The first line with room on it, not the first line: a line with nothing
+  // left is not on the load at all, and a walk that looks for it proves nothing
+  // about the rule it was written for.
   const index = lines.findIndex((line) => line.remaining >= 1);
   expect(index, "nothing is left to send on this quotation").toBeGreaterThanOrEqual(0);
   const tooMany = lines[index].remaining + 1;
@@ -530,9 +553,8 @@ test("a request for more than the quotation has left is refused, in the app's wo
   const form = page.getByRole("dialog", {
     name: t("dispatches.requestFor", { label: quotationLabel }),
   });
-  const box = form.getByLabel(t("dispatches.sending")).nth(index);
-  await expect(box).toBeVisible(COLD);
-  await box.fill(String(tooMany));
+  await sendOnly(form, t, lines[index].position, tooMany);
+  const box = loadLine(form, lines[index].position).getByLabel(t("dispatches.sending"));
 
   // Said at the field, straight away, in the reader's language (DESIGN §5).
   await expect(form.getByText(t("dispatches.tooMuch")).first()).toBeVisible();

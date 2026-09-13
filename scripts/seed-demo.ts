@@ -30,6 +30,8 @@ import {
   todayRiyadh,
 } from "../src/lib/dates";
 import { creditOrder } from "../src/lib/credit";
+import { differenceFrom, type Difference } from "../src/lib/dispatch-difference";
+import { quotationLabel } from "../src/lib/labels";
 import { normalizePhone } from "../src/lib/phone";
 import { type QuotationEventName, quotationEvent } from "../src/lib/quotation-events";
 import { isWeekend, nextWorkingDay } from "../src/lib/workdays";
@@ -78,6 +80,9 @@ import {
   DESK_TARGET_THIS_MONTH,
   REP_TARGET_THIS_MONTH,
   USERS,
+  type DispatchSeed,
+  type QuotationItemSeed,
+  type QuotationServiceSeed,
 } from "./seed/demo-data";
 
 loadEnv();
@@ -109,6 +114,7 @@ const {
   countries,
   dispatchCredits,
   dispatchItems,
+  dispatchServices,
   dispatches,
   fireRatings,
   leadSources,
@@ -1079,18 +1085,117 @@ function warehouseOfQuotation(quotationKey: string, lk: Lookups): number {
  */
 async function copyLine(
   tx: Pick<typeof db, "execute">,
-  line: { dispatchId: string; quotationItemId: string; qty: number; createdAt?: Date; updatedAt?: Date },
+  line: {
+    dispatchId: string;
+    quotationItemId: string;
+    qty: number;
+    /** A price agreed away from the paper, which the dispatch records as a difference. */
+    pricePerSqm?: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+  },
 ): Promise<void> {
   await tx.execute(sql`
     insert into dispatch_items
       (dispatch_id, quotation_item_id, qty, position, colour_code, supplier_id, fire_rating_id,
        class_id, thickness_id, width, length, price_per_sqm, created_at, updated_at)
     select ${line.dispatchId}::uuid, qi.id, ${line.qty}::int, qi.position, qi.colour_code, qi.supplier_id,
-           qi.fire_rating_id, qi.class_id, qi.thickness_id, qi.width, qi.length, qi.price_per_sqm,
+           qi.fire_rating_id, qi.class_id, qi.thickness_id, qi.width, qi.length,
+           coalesce(${line.pricePerSqm ?? null}::numeric, qi.price_per_sqm),
            ${line.createdAt ?? new Date()}, ${line.updatedAt ?? line.createdAt ?? new Date()}
       from quotation_items qi
      where qi.id = ${line.quotationItemId}::uuid
   `);
+}
+
+/**
+ * Every service of the paper onto the load, as the dialog opens it (SPEC §3,
+ * P13): its own row, linked to the quotation service it came from, at the
+ * paper's number. `changes` then sets a figure on one of them by the paper's
+ * number, which is how a load comes to differ from its quotation.
+ */
+async function copyServices(
+  tx: Pick<typeof db, "execute">,
+  load: {
+    dispatchId: string;
+    quotationId: string;
+    changes?: { service: number; sqm?: string; pricePerSqm?: string }[];
+    createdAt: Date;
+    updatedAt?: Date;
+  },
+): Promise<void> {
+  await tx.execute(sql`
+    insert into dispatch_services
+      (dispatch_id, quotation_service_id, position, service_id, sqm, price_per_sqm, created_at, updated_at)
+    select ${load.dispatchId}::uuid, qs.id, qs.position, qs.service_id, qs.sqm, qs.price_per_sqm,
+           ${load.createdAt}, ${load.updatedAt ?? load.createdAt}
+      from quotation_services qs
+     where qs.quotation_id = ${load.quotationId}::uuid
+  `);
+  for (const change of load.changes ?? []) {
+    await tx.execute(sql`
+      update dispatch_services
+         set sqm = coalesce(${change.sqm ?? null}::numeric, sqm),
+             price_per_sqm = coalesce(${change.pricePerSqm ?? null}::numeric, price_per_sqm)
+       where dispatch_id = ${load.dispatchId}::uuid
+         and position = ${change.service + 1}::int
+    `);
+  }
+}
+
+/**
+ * What a seeded load differs from its paper by, worked out by the app's own
+ * function from the seed's own words (SPEC §3, P13) — the same words the action
+ * reads from the rows: the supplier's letter, the rating, the class, the
+ * millimetres, and a service by its id. Null for a direct load, which has no
+ * paper; the column's check holds the two together.
+ */
+function seededDifference(d: DispatchSeed, lk: Lookups): Difference[] | null {
+  if (!d.quotation) return null;
+  const parent = QUOTATIONS.find((q) => q.key === d.quotation);
+  if (!parent) throw new Error(`dispatch ${d.key} names quotation "${d.quotation}", which is not seeded`);
+  const words = (item: QuotationItemSeed) => ({
+    colourCode: item.colourCode,
+    supplier: item.supplier,
+    fireRating: item.fireRating,
+    class: item.className,
+    thickness: item.thickness,
+    width: item.width,
+    length: item.length,
+    pricePerSqm: item.pricePerSqm,
+  });
+  const serviceOf = (service: QuotationServiceSeed) =>
+    String(must(lk.serviceByName, service.service, "service"));
+  return differenceFrom(
+    {
+      lines: parent.items.map((item, i) => ({ id: `line-${i}`, position: i + 1, ...words(item) })),
+      services: (parent.services ?? []).map((service, i) => ({
+        id: `service-${i}`,
+        position: i + 1,
+        service: serviceOf(service),
+        sqm: service.sqm,
+        pricePerSqm: service.pricePerSqm,
+      })),
+    },
+    {
+      lines: (d.items ?? []).map((it) => ({
+        quotationItemId: `line-${it.item}`,
+        position: it.item + 1,
+        ...words(parent.items[it.item]),
+        pricePerSqm: it.pricePerSqm ?? parent.items[it.item].pricePerSqm,
+      })),
+      services: (parent.services ?? []).map((service, i) => {
+        const change = d.serviceChanges?.find((c) => c.service === i);
+        return {
+          quotationServiceId: `service-${i}`,
+          position: i + 1,
+          service: serviceOf(service),
+          sqm: change?.sqm ?? service.sqm,
+          pricePerSqm: change?.pricePerSqm ?? service.pricePerSqm,
+        };
+      }),
+    },
+  );
 }
 
 /** The company and the job a dispatch prefilled from this quotation is for. */
@@ -1102,6 +1207,8 @@ const paperProject = (quotationId: string) =>
 async function seedDispatches(
   quotationIds: Map<string, string>,
   itemIds: Map<string, string[]>,
+  numbers: Map<string, number>,
+  companyIds: Map<string, string>,
   userIds: Map<string, string>,
   lk: Lookups,
 ): Promise<{ itemCount: number; dispatchIds: Map<string, string> }> {
@@ -1109,6 +1216,23 @@ async function seedDispatches(
   const dispatchIds = new Map<string, string>();
   await db.transaction(async (tx) => {
     for (const d of DISPATCHES) {
+      // Against a paper, or direct (SPEC §3, P13) — one or the other, never both.
+      const quotationId = d.quotation ? must(quotationIds, d.quotation, "quotation") : null;
+      if (!quotationId && !d.company) throw new Error(`dispatch ${d.key} names neither a quotation nor a company`);
+      if (quotationId && (d.lines || d.services)) {
+        throw new Error(`dispatch ${d.key} is against a quotation and types its own lines or services`);
+      }
+      const difference = seededDifference(d, lk);
+      const differsFrom =
+        d.quotation && difference && difference.length > 0
+          ? {
+              differsFrom: quotationLabel(
+                must(numbers, d.quotation, "quotation"),
+                QUOTATIONS.find((q) => q.key === d.quotation)?.revision ?? 1,
+              ),
+              differences: difference.length,
+            }
+          : {};
       const res = await tx.execute(sql.raw(`select nextval('dispatch_numbers')::int as n`));
       const number = Number((res.rows[0] as { n: number }).n);
       /*
@@ -1145,19 +1269,25 @@ async function seedDispatches(
         .insert(dispatches)
         .values({
           number,
-          quotationId: must(quotationIds, d.quotation, "quotation"),
-          companyId: paperCompany(must(quotationIds, d.quotation, "quotation")),
-          projectId: paperProject(must(quotationIds, d.quotation, "quotation")),
+          quotationId,
+          companyId: quotationId
+            ? paperCompany(quotationId)
+            : must(companyIds, d.company ?? "", "company"),
+          projectId: quotationId ? paperProject(quotationId) : null,
           repId: must(userIds, d.rep, "user"),
           raisedById: must(userIds, d.rep, "user"),
-          quotationDifference: [],
+          // What the load changed from its paper, recorded; null on a direct one.
+          quotationDifference: difference,
           status: d.status,
           shipmentMethodId: must(lk.shipmentByCode, d.shipmentMethod, "shipment method"),
           // The store the load leaves from. Absent means the quotation's own,
-          // which is what the dialog opens on (P12-9).
+          // which is what the dialog opens on (P12-9) — or the first store for a
+          // direct load, which has no paper to read one off.
           warehouseId: d.warehouse
             ? must(lk.warehouseByName, d.warehouse, "warehouse")
-            : warehouseOfQuotation(d.quotation, lk),
+            : d.quotation
+              ? warehouseOfQuotation(d.quotation, lk)
+              : must(lk.warehouseByName, "Riyadh", "warehouse"),
           destination: d.destination,
           paymentTerms: d.paymentTerms,
           paymentDetail: d.paymentDetail ?? null,
@@ -1184,7 +1314,8 @@ async function seedDispatches(
           action: "dispatch.request",
           recordType: "dispatch" as const,
           recordId: row.id,
-          details: {},
+          // "Differs from Q-n" on the trail from the raise, as the action writes it.
+          details: { quotationId, ...differsFrom },
           at: created,
           createdAt: created,
           updatedAt: created,
@@ -1215,12 +1346,64 @@ async function seedDispatches(
           : []),
       ]);
 
-      const parentItems = must(itemIds, d.quotation, "quotation");
-      for (const it of d.items) {
-        const quotationItemId = parentItems[it.item];
-        if (!quotationItemId) throw new Error(`dispatch ${d.key} names item ${it.item}, which does not exist`);
-        await copyLine(tx, { dispatchId: row.id, quotationItemId, qty: it.qty, createdAt: created });
-        itemCount += 1;
+      if (d.quotation && quotationId) {
+        const parentItems = must(itemIds, d.quotation, "quotation");
+        for (const it of d.items ?? []) {
+          const quotationItemId = parentItems[it.item];
+          if (!quotationItemId) throw new Error(`dispatch ${d.key} names item ${it.item}, which does not exist`);
+          await copyLine(tx, {
+            dispatchId: row.id,
+            quotationItemId,
+            qty: it.qty,
+            pricePerSqm: it.pricePerSqm,
+            createdAt: created,
+          });
+          itemCount += 1;
+        }
+        // Every service of the paper rides with the load (SPEC §3, P13).
+        await copyServices(tx, {
+          dispatchId: row.id,
+          quotationId,
+          changes: d.serviceChanges,
+          createdAt: created,
+        });
+      } else {
+        // A direct load's own lines and services, numbered in the order given.
+        const lines = d.lines ?? [];
+        if (lines.length === 0) throw new Error(`direct dispatch ${d.key} has no lines`);
+        await tx.insert(dispatchItems).values(
+          lines.map((it, i) => ({
+            dispatchId: row.id,
+            quotationItemId: null,
+            position: i + 1,
+            colourCode: it.colourCode,
+            supplierId: must(lk.supplierByCode, it.supplier, "supplier"),
+            fireRatingId: must(lk.fireRatingByName, it.fireRating, "fire rating"),
+            classId: must(lk.classByName, it.className, "class"),
+            qty: it.qty,
+            thicknessId: must(lk.thicknessByMm, it.thickness, "thickness"),
+            width: it.width,
+            length: it.length,
+            pricePerSqm: it.pricePerSqm,
+            createdAt: created,
+            updatedAt: created,
+          })),
+        );
+        itemCount += lines.length;
+        if (d.services && d.services.length > 0) {
+          await tx.insert(dispatchServices).values(
+            d.services.map((s, i) => ({
+              dispatchId: row.id,
+              quotationServiceId: null,
+              position: i + 1,
+              serviceId: must(lk.serviceByName, s.service, "service"),
+              sqm: s.sqm,
+              pricePerSqm: s.pricePerSqm,
+              createdAt: created,
+              updatedAt: created,
+            })),
+          );
+        }
       }
     }
   });
@@ -1357,6 +1540,14 @@ async function seedHistory(
         dispatchId: dispatch.id,
         quotationItemId: item.id,
         qty: h.sheets,
+        createdAt: instant(on(24), 12, 15),
+        updatedAt: approved,
+      });
+      // And its paper's services, as every load prefilled from a quotation carries
+      // them (SPEC §3, P13) — none on the months behind us, so nothing is written.
+      await copyServices(tx, {
+        dispatchId: dispatch.id,
+        quotationId: quotation.id,
         createdAt: instant(on(24), 12, 15),
         updatedAt: approved,
       });
@@ -1804,12 +1995,14 @@ try {
   await seedFollowUps(companyIds, projectIds);
   console.log(`  follow-ups       ${FOLLOW_UPS.length}`);
 
-  const { quotationIds, itemIds, items } = await seedQuotations(companyIds, projectIds, contactIds, userIds, lk);
+  const { quotationIds, itemIds, numbers, items } = await seedQuotations(companyIds, projectIds, contactIds, userIds, lk);
   console.log(`  quotations       ${quotationIds.size} (${items} items)`);
 
   const { itemCount: dispatchItemCount, dispatchIds } = await seedDispatches(
     quotationIds,
     itemIds,
+    numbers,
+    companyIds,
     userIds,
     lk,
   );

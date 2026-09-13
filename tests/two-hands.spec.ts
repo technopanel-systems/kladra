@@ -85,6 +85,24 @@ async function gotoAndHydrate(page: Page, url: string): Promise<void> {
 const DESTINATION = "Riyadh — Al Olaya, warehouse gate";
 const TERMS = "Net 30, per the framework agreement";
 
+/**
+ * The load cut down to one line of the paper, at this quantity (dispatch-lines.tsx).
+ *
+ * The dialog opens on every line with something left, each at what is left, and
+ * numbers them as the quotation does — so the line is found by its number and
+ * the others are taken off, one removal seen at a time.
+ */
+async function sendOnly(form: Locator, t: Translate, position: number, qty: number): Promise<void> {
+  const line = form.locator(`[data-slot="dispatch-line"][data-position="${position}"]`);
+  await expect(line).toBeVisible(COLD);
+  const others = form.locator(`[data-slot="dispatch-line"]:not([data-position="${position}"])`);
+  for (let count = await others.count(); count > 0; count -= 1) {
+    await others.first().getByRole("button", { name: t("quotations.removeItem") }).click();
+    await expect(others).toHaveCount(count - 1);
+  }
+  await line.getByLabel(t("dispatches.sending")).fill(String(qty));
+}
+
 /** Fills the shipment, destination and terms every dispatch request needs. */
 async function fillTheDetails(form: Locator, t: Translate): Promise<void> {
   await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
@@ -500,13 +518,10 @@ test("two hands on the last panels: only one dispatch is written", async ({
 
     formA = page.getByRole("dialog", { name: t("dispatches.requestFor", { label }) });
     formB = pageB.getByRole("dialog", { name: t("dispatches.requestFor", { label }) });
-    await expect(formA.getByText(t("dispatches.remaining")).first()).toBeVisible(COLD);
-    await expect(formB.getByText(t("dispatches.remaining")).first()).toBeVisible(COLD);
-
-    // The chosen line, and only it: everything else is left at zero, which is
-    // how a rep says "not this one this time" (dispatch-items.tsx).
-    await formA.getByLabel(t("dispatches.sending")).nth(line.position - 1).fill(String(line.remaining));
-    await formB.getByLabel(t("dispatches.sending")).nth(line.position - 1).fill(String(line.remaining));
+    // The chosen line, and only it: everything else is taken off the load,
+    // which is how a rep says "not this one this time" (dispatch-lines.tsx).
+    await sendOnly(formA, t, line.position, line.remaining);
+    await sendOnly(formB, t, line.position, line.remaining);
     await fillTheDetails(formA, t);
     await fillTheDetails(formB, t);
   });
@@ -614,10 +629,8 @@ test("approved against the price the customer holds: a dispatch on a superseded 
 
     await drawer.getByRole("button", { name: t("dispatches.request") }).click();
     const form = page.getByRole("dialog", { name: t("dispatches.requestFor", { label }) });
-    await expect(form.getByText(t("dispatches.remaining")).first()).toBeVisible(COLD);
-
     // Any quantity at least 1 and within what is left, per D85 — one is both.
-    await form.getByLabel(t("dispatches.sending")).nth(line.position - 1).fill("1");
+    await sendOnly(form, t, line.position, 1);
     await fillTheDetails(form, t);
     await form.getByRole("button", { name: t("common.save") }).click();
 

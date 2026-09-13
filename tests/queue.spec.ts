@@ -64,8 +64,7 @@ async function oldestRaised(excludeCompanyId?: string): Promise<RaisedRow | null
               d.created_at as created_at,
               to_char((d.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day
          from dispatches d
-         join quotations q on q.id = d.quotation_id
-         join companies c on c.id = q.company_id
+         join companies c on c.id = d.company_id
         where d.status = 'submitted' and c.archived_at is null
           and ($1::uuid is null or c.id <> $1::uuid)
      ) raised
@@ -339,8 +338,7 @@ test("her figures are the whole desk's, not the first two hundred rows'", async 
     const [{ dispatches: waitingDispatches }] = await query<{ dispatches: number }>(
       `select count(*)::int as dispatches
          from dispatches d
-         join quotations q on q.id = d.quotation_id
-         join companies c on c.id = q.company_id
+         join companies c on c.id = d.company_id
         where d.status = 'submitted' and c.archived_at is null`,
     );
     expect(waitingQuotations).toBeGreaterThan(LIST_LIMIT);

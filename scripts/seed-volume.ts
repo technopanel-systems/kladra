@@ -466,6 +466,17 @@ async function main(): Promise<void> {
         from quotation_items qi
        where qi.id = ${source.itemId}::uuid
     `);
+
+    // And every service of its paper, as the dialog opens a load on them (SPEC
+    // §3, P13). The volume floor's quotations carry none today; the statement is
+    // here so a service added to them later rides along instead of vanishing.
+    await db.execute(sql`
+      insert into dispatch_services
+        (dispatch_id, quotation_service_id, position, service_id, sqm, price_per_sqm)
+      select ${row.id}::uuid, qs.id, qs.position, qs.service_id, qs.sqm, qs.price_per_sqm
+        from quotation_services qs
+       where qs.quotation_id = ${source.id}::uuid
+    `);
   }
 
   // A seed that lies about its own output is the finding (D104): every

@@ -1448,13 +1448,47 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "RAL 9007", supplier: "C", fireRating: "B1", className: "A", thickness: "4.0", qty: 60, width: "1.24", length: "5.8", pricePerSqm: "115.00" },
     ],
   },
+  /*
+   * A showroom's facades, accepted, with services on it — and a load against it
+   * waiting on the desk that is not what the paper says (SPEC §3, P13). The
+   * price on the first line was agreed down on the phone and the CNC cutting
+   * came out at half the area, so the queue row carries its "differs" chip and
+   * the drawer names both changes. Plenty left on both lines, so a rep raising
+   * another load against it is prefilled with something.
+   */
+  {
+    key: "q11",
+    company: "f7",
+    project: "p7",
+    rep: "faisal",
+    status: "accepted",
+    contact: 0,
+    createdBack: 8,
+    issuedBack: 7,
+    decidedBack: 3,
+    smacNumber: "4541",
+    items: [
+      { colourCode: "RAL 7016", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 160, width: "1.24", length: "5.8", pricePerSqm: "118.00" },
+      { colourCode: "RAL 9006", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 90, width: "1.5", length: "5.8", pricePerSqm: "124.00" },
+    ],
+    services: [
+      { service: "CNC cutting", sqm: "120.00", pricePerSqm: "20.00" },
+      { service: "Fabrication", sqm: "30.00", pricePerSqm: "60.00" },
+    ],
+  },
 ];
 
 // ---- dispatches ---------------------------------------------------------------
 
 export type DispatchSeed = {
   key: string;
-  quotation: string;
+  /**
+   * The quotation it was prefilled from. Absent is a DIRECT dispatch (SPEC §3,
+   * P13): a customer, its own lines with a price on each (D169), and no paper.
+   */
+  quotation?: string;
+  /** A direct dispatch's customer; one against a quotation takes the paper's. */
+  company?: string;
   rep: RepKey;
   /**
    * Who it counts for (D148). Absent means the rep who raised it, which is the
@@ -1477,7 +1511,7 @@ export type DispatchSeed = {
    * How it is being paid for (SPEC §3, P12-10): the choice, the second answer
    * where the choice asks for one, and the note the two finance reviews need.
    *
-   * All four ways to pay are on this floor, and both answers to each of the two
+   * All three ways to pay are on this floor, and both answers to each of the two
    * questions, because a choice the demo never shows is a choice nobody has
    * seen work (rules/data.md).
    */
@@ -1488,8 +1522,21 @@ export type DispatchSeed = {
   /** Day of THIS month for `approved_at`, clamped to today. */
   approvedOnDayOfMonth?: number;
   createdBack: number;
-  /** Item index into the quotation's `items`, and how many of them go now. */
-  items: { item: number; qty: number }[];
+  /**
+   * Item index into the quotation's `items`, how many of them go now, and a
+   * price agreed away from the paper where there was one — which the dispatch
+   * then records as a difference, the way the app does (SPEC §3, P13).
+   */
+  items?: { item: number; qty: number; pricePerSqm?: string }[];
+  /** A direct dispatch's lines, numbered 1, 2 … in this order. */
+  lines?: QuotationItemSeed[];
+  /**
+   * A load against a quotation carries every one of its services, as the dialog
+   * opens it; this changes one of them, by index into the paper's `services`.
+   */
+  serviceChanges?: { service: number; sqm?: string; pricePerSqm?: string }[];
+  /** A direct dispatch's services, which it types for itself. */
+  services?: QuotationServiceSeed[];
 };
 
 export const DISPATCHES: DispatchSeed[] = [
@@ -1601,6 +1648,67 @@ export const DISPATCHES: DispatchSeed[] = [
     approvedOnDayOfMonth: 5,
     createdBack: 2,
     items: [{ item: 0, qty: 30 }],
+  },
+  /*
+   * The load that is not what its paper said (SPEC §3, P13), waiting on the desk:
+   * the first line at 112 where q11 says 118, and the CNC cutting over 60 m²
+   * where it says 120. Two differences, recorded; the second line and the
+   * fabrication are simply not in this load, which is a partial load and not a
+   * difference at all.
+   */
+  {
+    key: "d7",
+    quotation: "q11",
+    rep: "faisal",
+    status: "submitted",
+    shipmentMethod: "tt",
+    destination: "الرياض — طريق الملك عبدالله، موقع المعرض",
+    paymentTerms: "bankTransfer",
+    paymentDetail: "partAmount",
+    createdBack: 1,
+    items: [{ item: 0, qty: 40, pricePerSqm: "112.00" }],
+    serviceChanges: [{ service: 0, sqm: "60.00" }],
+  },
+  /*
+   * Direct, and approved: a sign-maker buying ten sheets to cut up, with no
+   * quotation and no job behind it (SPEC §3, P13). Its metres count for Faisal
+   * through the dispatch's own customer, and every list says "Direct" where a
+   * quotation number would be.
+   */
+  {
+    key: "d8",
+    company: "f4",
+    rep: "faisal",
+    status: "approved",
+    shipmentMethod: "cargo",
+    destination: "الرياض — حي السلي، ورشة المؤسسة",
+    paymentTerms: "cash",
+    paymentDetail: "atOffice",
+    smacDispatchNumber: "8883",
+    approvedOnDayOfMonth: 6,
+    createdBack: 4,
+    lines: [
+      { colourCode: "RAL 9010", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 10, width: "1.24", length: "5.8", pricePerSqm: "125.00" },
+    ],
+  },
+  /*
+   * Direct, and waiting on the desk — with a service of its own, typed for this
+   * load, so a direct dispatch's services section is on a screen too.
+   */
+  {
+    key: "d9",
+    company: "f12",
+    rep: "faisal",
+    status: "submitted",
+    shipmentMethod: "ct",
+    destination: "الدرعية — موقع مؤسسة ركائز البناء",
+    paymentTerms: "credit",
+    paymentNote: "تساهيل — ثلاث دفعات شهرية بعد التسليم",
+    createdBack: 0,
+    lines: [
+      { colourCode: "7016", supplier: "K", fireRating: "Normal", className: "B", thickness: "4.0", qty: 6, width: "1.5", length: "3.2", pricePerSqm: "99.00" },
+    ],
+    services: [{ service: "CNC cutting", sqm: "12.00", pricePerSqm: "25.00" }],
   },
 ];
 

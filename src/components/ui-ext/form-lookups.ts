@@ -98,8 +98,8 @@ export function useQuotationLookups(enabled: boolean): {
  * How the panels travel — the one list a dispatch dialog can cache.
  *
  * What is left on each quotation line is deliberately not here: it moves every
- * time anybody raises a dispatch, so the dialog asks for it per open
- * (`remainingItemsAction`).
+ * time anybody raises a dispatch, so the dialog reads it with the quotation it
+ * prefills from, per open.
  */
 export function useDispatchLookups(enabled: boolean): {
   lookups: DispatchLookups | null;
