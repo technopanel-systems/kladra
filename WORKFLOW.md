@@ -68,8 +68,13 @@ below by number.
                   the boards; one-look rules 9–13; axe clean on every screen in both locales and themes after two
                   contrast fixes. The chart kit arrives with the first chart (S7), because a kit file nothing
                   imports fails `check:dead`.
-            - [ ] G2 · S2 **Quotations** (13.4): the request dialog wide enough for the lines and the services — a
-                  stated minimum on a desk, asserted by a test — and the services section with its own subtotal.
+            - [x] G2 · S2 **Quotations** (13.4): the request dialog wide enough for the lines and the services — a
+                  stated minimum on a desk, asserted by a test — and the services section with its own subtotal. **Done**: `ResponsiveDialog size="wide"` at `WIDE_DIALOG_PX` 1152 (the table's
+                  thirteen columns at a readable width; lines are cards below 1280); the services section with
+                  its subtotal in the form, the drawer, "what changed" and the CSV (a row per service, D173);
+                  a withdrawn service is refused (D175). Left for others: the services list belongs with the
+                  lookups (S3 imports it where it is); the searchable select's popup is only as wide as its
+                  button inside the table (G6).
             - [ ] G2 · S3 **Dispatches** (13.5): the request rebuilt per §3 — prefilled from the chosen or latest
                   issued quotation with its panels AND its services, editable, linked, flagged where either differs
                   (computed from the two sets by `quotation-diff`, recorded in the trail at the raise), or direct
@@ -134,8 +139,8 @@ below by number.
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
-everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). S2 and S4 are with
-builders in `.claude/worktrees/`; S3 starts when S2 is merged, because a dispatch copies services. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
+everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). S2 is merged. S3 (built on
+S2's branch) and S4 are with builders in `.claude/worktrees/`. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
 session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
@@ -1100,3 +1105,5 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 207 A contrast failure that only one theme and one surface could show. (P13-S1)
 - [x] 208 A screenshot cannot prove a scrollbar: the headless browser hides them. (P13-S1)
 - [x] 209 A worktree inside the repo is inside every watcher, type check and lint the repo runs. (P13 Stage 2)
+- [x] 210 The dialog reported narrow twice was one class on the shared shell, not the form. (P13-S2)
+- [x] 211 A colour code in a field that follows the page's direction lost its last digits in Arabic. (P13-S2)

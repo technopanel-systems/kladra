@@ -337,7 +337,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "each with m² and a price per m², subtotalled apart from the panels",
-    owed: "P13-S2",
+    tests: [
+      "a rep requests a quotation with two services, and the live totals are the ones SQL reads back",
+      "a revision that changes a service's price names that change",
+    ],
   },
   {
     says: "How often each rep relies on her is tracked",
@@ -373,7 +376,9 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "for the item table plus the services section",
-    owed: "P13-S2",
+    tests: [
+      "the request dialog stands at its stated width on a desk, and lines and services do not move it",
+    ],
   },
   {
     says: "carry no hidden placeholder text",

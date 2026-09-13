@@ -59,3 +59,34 @@ export function draftLinesFrom(items: readonly StoredLine[]): DraftLine[] {
     pricePerSqm: item.pricePerSqm,
   }));
 }
+
+/**
+ * A service on a quotation as a form holds it (SPEC §3, P13): which one, the m²
+ * it is done over, and the price per m². Three strings, for the same reason a
+ * line is nine.
+ */
+export type DraftService = {
+  serviceId: string;
+  sqm: string;
+  pricePerSqm: string;
+};
+
+/** What a stored service carries: the service by its own id, never by its name. */
+export type StoredService = {
+  serviceId: number;
+  sqm: string;
+  pricePerSqm: string;
+};
+
+/**
+ * Stored services, as Edit and Revise open on them — the same paper again, the
+ * way they open on its lines (D10). Nothing here offers a PREVIOUS quotation's
+ * services to a new one (D163).
+ */
+export function draftServicesFrom(services: readonly StoredService[]): DraftService[] {
+  return services.map((service) => ({
+    serviceId: String(service.serviceId),
+    sqm: service.sqm,
+    pricePerSqm: service.pricePerSqm,
+  }));
+}

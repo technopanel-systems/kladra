@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import type { RevisionChanges as Changes } from "@/lib/quotations";
-import type { LineChange } from "@/lib/quotation-diff";
+import type { LineChange, ServiceChange } from "@/lib/quotation-diff";
 
 /**
  * What this revision changed from the one before it (SPEC D76, 9A item 10).
@@ -8,6 +8,9 @@ import type { LineChange } from "@/lib/quotation-diff";
  * It sits directly above the lines, because it is what the coordinator reads
  * before she reads them: on Q-12/2 she already priced Q-12, and the only
  * question she has is which of these nine-field lines is not what she quoted.
+ * Its services are compared too, after the lines and in the same shape — a new
+ * price for the CNC cutting is as much a change she prices as a new price for
+ * a sheet (SPEC §3, P13).
  *
  * Old value beside new, never an arrow: an arrow is a left-to-right glyph and
  * this screen is read both ways. The new value sits where every value on this
@@ -31,7 +34,7 @@ export async function RevisionChanges({ changes }: { changes: Changes }) {
         {t("quotations.changedFrom", { label: changes.label })}
       </h3>
 
-      {changes.changes.length === 0 ? (
+      {changes.changes.length === 0 && changes.services.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t("quotations.changedNothing")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -42,6 +45,16 @@ export async function RevisionChanges({ changes }: { changes: Changes }) {
               className="flex flex-col gap-1 border-s-2 border-line ps-3 text-sm"
             >
               <Line change={change} />
+            </li>
+          ))}
+          {changes.services.map((change) => (
+            <li
+              key={`service-${change.kind}-${change.position}-${change.service}`}
+              data-change={change.kind}
+              data-change-of="service"
+              className="flex flex-col gap-1 border-s-2 border-line ps-3 text-sm"
+            >
+              <Service change={change} />
             </li>
           ))}
         </ul>
@@ -73,6 +86,43 @@ async function Line({ change }: { change: LineChange }) {
           <li key={field.field} className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-muted-foreground">{t(`common.${field.field}`)}</span>
             <span dir="auto">{field.to}</span>
+            <span className="text-faint">{t("quotations.changedWas", { from: field.from })}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * A service's news, named by the service — its name is what it is called on the
+ * paper, the way a removed line is named by its colour. Its two figures are
+ * named with the same words the section and the form use.
+ */
+async function Service({ change }: { change: ServiceChange }) {
+  const t = await getTranslations();
+
+  if (change.kind === "added") {
+    return <span>{t("quotations.serviceAdded", { service: change.service })}</span>;
+  }
+  if (change.kind === "removed") {
+    return <span>{t("quotations.serviceRemoved", { service: change.service })}</span>;
+  }
+
+  return (
+    <>
+      <span className="font-medium">
+        <bdi>{change.service}</bdi>
+      </span>
+      <ul className="flex flex-col gap-0.5 text-xs">
+        {change.fields.map((field) => (
+          <li key={field.field} className="flex flex-wrap items-baseline gap-x-2">
+            <span className="text-muted-foreground">
+              {field.field === "sqm" ? t("common.sqm") : t("common.pricePerSqm")}
+            </span>
+            <span dir="ltr" className="num">
+              {field.to}
+            </span>
             <span className="text-faint">{t("quotations.changedWas", { from: field.from })}</span>
           </li>
         ))}

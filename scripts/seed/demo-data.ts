@@ -1083,6 +1083,17 @@ export type QuotationItemSeed = {
 };
 
 /**
+ * A service on a quotation (SPEC §3, P13): which one by its English name, the m²
+ * it is done over as the rep typed it, and its price per m².
+ */
+export type QuotationServiceSeed = {
+  /** `services.name_en`. */
+  service: string;
+  sqm: string;
+  pricePerSqm: string;
+};
+
+/**
  * One time the coordinator sent it back, and what happened after (D72).
  *
  * The quotation row carries the reason of the LAST return only, so sent back
@@ -1147,6 +1158,14 @@ export type QuotationSeed = {
   revisionOf?: string;
   revision?: number;
   items: QuotationItemSeed[];
+  /**
+   * Its services, in their own section (SPEC §3, P13). Absent on most paper, as
+   * on a real floor; present on three rows — one issued, one waiting, and the
+   * revision of the issued one at a new price — so the section, its subtotal and
+   * the "what changed" line for a service are all on a screen somebody has seen
+   * (rules/data.md).
+   */
+  services?: QuotationServiceSeed[];
 };
 
 export const QUOTATIONS: QuotationSeed[] = [
@@ -1171,6 +1190,9 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "168", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 90, width: "1.24", length: "5.8", pricePerSqm: "112.00" },
       { colourCode: "1020", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 35, width: "1.5", length: "3.2", pricePerSqm: "118.00" },
     ],
+    // Waiting in the queue with a service on it, so the coordinator prices one
+    // before it is issued, not only after.
+    services: [{ service: "Denting", sqm: "64.50", pricePerSqm: "18.00" }],
   },
   {
     key: "q2",
@@ -1213,6 +1235,13 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "168", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 120, width: "1.24", length: "5.8", pricePerSqm: "134.00" },
       { colourCode: "1020", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 60, width: "1.5", length: "5.8", pricePerSqm: "136.00" },
       { colourCode: "RAL 9016", supplier: "C", fireRating: "A2", className: "A2G2", thickness: "5.0", qty: 25, width: "2.0", length: "3.2", pricePerSqm: "140.00" },
+    ],
+    // Issued with two services: the podium's panels cut on the CNC, and the
+    // canopy returns fabricated. The m² is the area each is done over, typed,
+    // and neither counts toward anybody's month (D173).
+    services: [
+      { service: "CNC cutting", sqm: "180.00", pricePerSqm: "22.00" },
+      { service: "Fabrication", sqm: "42.75", pricePerSqm: "65.00" },
     ],
   },
   {
@@ -1263,6 +1292,12 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "168", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "5.0", qty: 120, width: "1.24", length: "5.8", pricePerSqm: "138.00" },
       { colourCode: "1020", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "5.0", qty: 60, width: "1.5", length: "5.8", pricePerSqm: "139.00" },
       { colourCode: "RAL 9016", supplier: "C", fireRating: "A2", className: "A2G2", thickness: "5.0", qty: 25, width: "2.0", length: "3.2", pricePerSqm: "140.00" },
+    ],
+    // Thicker sheet, dearer cutting: the CNC price moves with the 5 mm and the
+    // fabrication stays as it was, so "what changed" names one service.
+    services: [
+      { service: "CNC cutting", sqm: "180.00", pricePerSqm: "26.00" },
+      { service: "Fabrication", sqm: "42.75", pricePerSqm: "65.00" },
     ],
   },
   {

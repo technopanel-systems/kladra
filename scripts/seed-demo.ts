@@ -121,6 +121,7 @@ const {
   projects,
   quotationCredits,
   quotationItems,
+  quotationServices,
   quotations,
   shipmentMethods,
   warehouses,
@@ -308,6 +309,7 @@ type Lookups = {
   thicknessByMm: Map<string, number>;
   shipmentByCode: Map<string, number>;
   warehouseByName: Map<string, number>;
+  serviceByName: Map<string, number>;
 };
 
 async function seedLookups(): Promise<Lookups> {
@@ -400,9 +402,11 @@ async function seedLookups(): Promise<Lookups> {
 
     // What Technopanel does to a panel besides selling it, and what came of a
     // rep's visit or call (SPEC §3, P13) — both lists the admin edits.
-    await tx
+    const insertedServices = await tx
       .insert(services)
-      .values(SERVICES.map((s, i) => ({ nameEn: s.en, nameAr: s.ar, sortOrder: i, active: true })));
+      .values(SERVICES.map((s, i) => ({ nameEn: s.en, nameAr: s.ar, sortOrder: i, active: true })))
+      .returning({ id: services.id, nameEn: services.nameEn });
+    const serviceByName = new Map(insertedServices.map((s) => [s.nameEn, s.id]));
     await tx
       .insert(outcomes)
       .values(OUTCOMES.map((o, i) => ({ nameEn: o.en, nameAr: o.ar, sortOrder: i, active: true })));
@@ -459,6 +463,7 @@ async function seedLookups(): Promise<Lookups> {
       thicknessByMm,
       shipmentByCode,
       warehouseByName,
+      serviceByName,
     };
   });
 }
@@ -1024,6 +1029,22 @@ async function seedQuotations(
         [...items].sort((a, b) => a.position - b.position).map((r) => r.id),
       );
       itemCount += items.length;
+
+      // Its services, numbered in the order they are listed, as the app numbers
+      // them from the form (SPEC §3, P13).
+      if (q.services && q.services.length > 0) {
+        await tx.insert(quotationServices).values(
+          q.services.map((s, i) => ({
+            quotationId: row.id,
+            position: i + 1,
+            serviceId: must(lk.serviceByName, s.service, "service"),
+            sqm: s.sqm,
+            pricePerSqm: s.pricePerSqm,
+            createdAt: created,
+            updatedAt: created,
+          })),
+        );
+      }
     }
   });
 

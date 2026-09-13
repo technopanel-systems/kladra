@@ -51,10 +51,45 @@ export function lineTotal(l: LineInput): number {
   return round2(lineSqm(l) * toNumber(l.pricePerSqm));
 }
 
-export function quotationTotals(lines: LineInput[]) {
+/** A service on a quotation as the arithmetic sees it: the m² typed and its price (SPEC §3, P13). */
+export type ServiceInput = { sqm: string | number; pricePerSqm: string | number };
+
+/**
+ * What one service comes to: its m² times its price, rounded once.
+ *
+ * The two figures are taken as the database will HOLD them — each is
+ * numeric(12,2), and the action rounds what was typed before it writes it — so a
+ * rep who types 12.345 m² sees the total of the 12.35 that is stored, and the
+ * figure under his thumb is the one SQL reads back (`round(sqm * price, 2)` in
+ * src/lib/quotations.ts). A service's m² is typed rather than derived from a
+ * sheet, which is why this is not the line's formula.
+ */
+export function serviceTotal(s: ServiceInput): number {
+  return round2(round2(toNumber(s.sqm)) * round2(toNumber(s.pricePerSqm)));
+}
+
+/**
+ * The figures a quotation comes to, one definition each (rules/data.md).
+ *
+ * - `sqm` — the PANELS' m² and nothing else. A service's m² is the area it is done
+ *   over, not panel sold, and it never counts toward a target or any achieved or
+ *   pipeline figure (D173): it is money, and shows in the money.
+ * - `panels` — the lines, each rounded before it is summed (S31, D6).
+ * - `services` — the services, each rounded before it is summed, apart from the
+ *   panels (SPEC §3, P13).
+ * - `subtotal` — the two together, before VAT: what "Total excl. VAT" has always
+ *   said, and still says with services on the paper.
+ * - `vat`, `total` — 15% of that, and the two added.
+ *
+ * `src/lib/quotations.ts` does the same arithmetic in SQL on the stored rows, and
+ * tests/services.spec.ts compares the two on a real quotation.
+ */
+export function quotationTotals(lines: LineInput[], services: readonly ServiceInput[] = []) {
   const sqm = round2(lines.reduce((s, l) => s + lineSqm(l), 0));
-  const subtotal = round2(lines.reduce((s, l) => s + lineTotal(l), 0));
+  const panels = round2(lines.reduce((s, l) => s + lineTotal(l), 0));
+  const servicesSubtotal = round2(services.reduce((s, service) => s + serviceTotal(service), 0));
+  const subtotal = round2(panels + servicesSubtotal);
   const vat = round2(subtotal * VAT_RATE);
   const total = round2(subtotal + vat);
-  return { sqm, subtotal, vat, total };
+  return { sqm, panels, services: servicesSubtotal, subtotal, vat, total };
 }

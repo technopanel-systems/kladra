@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Slot } from "radix-ui";
 import {
   Dialog,
@@ -19,6 +19,28 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSlotChild } from "@/components/ui/use-slot-child";
 import { useIsPhone } from "@/hooks/use-is-phone";
+import { WIDE_DIALOG_PX } from "@/lib/dialog-width";
+import { cn } from "@/lib/utils";
+
+/**
+ * How much room a form takes on a desk.
+ *
+ * `form` is every form in the app: a name, a phone, a reason — 32rem, centred.
+ * `wide` is a form with a TABLE in it, the quotation's lines and services (SPEC
+ * §3, P13). The founder reported twice that the request dialog was too narrow and
+ * compacted as items were added, and the cause was here: every form was
+ * `sm:max-w-lg`, so nine fields a line were laid into a box made for a company's
+ * name.
+ *
+ * Wide is a STATED width, not a cap the content fills up to — from `lg` it is
+ * `WIDE_DIALOG_PX`, or the screen less a 2rem gutter each side where the screen
+ * is narrower; below `lg` it is the screen less the kit's own gutter. Nothing in
+ * it depends on what is inside, so a fourth line or a second service cannot move
+ * it, and the body keeps its scrollbar's room whether or not it has a scrollbar
+ * yet, so the columns do not narrow by a scrollbar's width at the moment the
+ * form grows past the fold. On a phone both sizes are the same bottom sheet (D129).
+ */
+export type DialogSize = "form" | "wide";
 
 /**
  * One dialog that is a bottom sheet on a phone (DESIGN §2 — "on a phone the
@@ -44,6 +66,7 @@ export function ResponsiveDialog({
   context,
   description,
   guardOutside = false,
+  size = "form",
   children,
 }: {
   open: boolean;
@@ -63,6 +86,8 @@ export function ResponsiveDialog({
    * holds the sheet by itself, below.
    */
   guardOutside?: boolean;
+  /** `wide` for a form with a table in it (DialogSize, above). */
+  size?: DialogSize;
   children: ReactNode;
 }) {
   const phone = useIsPhone();
@@ -165,7 +190,20 @@ export function ResponsiveDialog({
       {opener}
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex max-h-[88dvh] flex-col gap-0 p-0 sm:max-w-lg"
+        data-size={size}
+        className={cn(
+          "flex max-h-[88dvh] flex-col gap-0 p-0",
+          size === "wide"
+            ? // The number is the constant's, carried in as a variable, so the
+              // stylesheet and the spec that measures it cannot disagree.
+              "sm:max-w-[calc(100%-2rem)] lg:w-[min(var(--dialog-wide),calc(100%-4rem))] lg:max-w-none [&_[data-slot=form-body]]:[scrollbar-gutter:stable]"
+            : "sm:max-w-lg",
+        )}
+        style={
+          size === "wide"
+            ? ({ "--dialog-wide": `${WIDE_DIALOG_PX}px` } as CSSProperties)
+            : undefined
+        }
         onInteractOutside={keep}
         onCloseAutoFocus={backToOpener}
       >

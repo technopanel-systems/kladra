@@ -35,8 +35,13 @@ import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
-import { formatMoney } from "@/lib/money";
-import type { QuotationItemRow, QuotationRow, QuotationStatus } from "@/lib/quotations";
+import { formatMoney, formatSqm } from "@/lib/money";
+import type {
+  QuotationItemRow,
+  QuotationRow,
+  QuotationServiceRow,
+  QuotationStatus,
+} from "@/lib/quotations";
 import type { QuotationStanding } from "@/lib/standing";
 import { quotationTone, TONE_TEXT } from "@/lib/state-tone";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
@@ -512,6 +517,8 @@ export type QuotationSheetProps = {
    */
   credit: { userId: string; name: string }[];
   items: QuotationItemRow[];
+  /** Its services, drawn in their own section under the lines when there are any (SPEC §3, P13). */
+  services: QuotationServiceRow[];
   revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
   draft: QuotationDraft;
   scope: ActionScope;
@@ -539,6 +546,7 @@ export function QuotationSheet({
   quotation,
   credit,
   items,
+  services,
   revisions,
   draft,
   scope,
@@ -730,8 +738,71 @@ export function QuotationSheet({
             ))}
           </ul>
 
+          {/* The services, in a section of their own under the panels, and
+              subtotalled apart from them (SPEC §3, P13). Only when there are
+              any: most paper has none, and a heading over nothing is a field a
+              reader has to decide is empty. */}
+          {services.length > 0 ? (
+            <section
+              data-slot="quotation-services"
+              aria-labelledby="quotation-services-heading"
+              className="flex flex-col gap-2"
+            >
+              <h3 id="quotation-services-heading" className="text-sm font-medium">
+                {t("quotations.services")}
+              </h3>
+              <ul className="flex flex-col gap-2">
+                {services.map((service) => (
+                  <li
+                    key={service.id}
+                    data-slot="quotation-service"
+                    className="card-face flex flex-col gap-2 p-3"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="min-w-0 truncate text-sm font-medium">
+                        <bdi>{service.name}</bdi>
+                      </h4>
+                      <span className="text-sm">
+                        <Money value={service.total} currency={false} />
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                      <Fact label={t("common.sqm")}>
+                        <span dir="ltr" className="num">
+                          {formatSqm(service.sqm)}
+                        </span>
+                      </Fact>
+                      <Fact label={t("common.pricePerSqm")}>
+                        <span dir="ltr" className="num">
+                          {formatMoney(service.pricePerSqm)}
+                        </span>
+                      </Fact>
+                    </dl>
+                  </li>
+                ))}
+              </ul>
+              <p
+                data-slot="services-subtotal"
+                className="flex items-baseline justify-between gap-4 text-sm"
+              >
+                <span className="text-muted-foreground">{t("quotations.servicesSubtotal")}</span>
+                <span>
+                  <span dir="ltr" className="num font-medium">
+                    {formatMoney(quotation.servicesSubtotal)}
+                  </span>{" "}
+                  {t("common.sar")}
+                </span>
+              </p>
+            </section>
+          ) : null}
+
           <QuotationTotals
             sqm={quotation.totalSqm}
+            split={
+              services.length > 0
+                ? { panels: quotation.panelsSubtotal, services: quotation.servicesSubtotal }
+                : undefined
+            }
             subtotal={quotation.subtotal}
             vat={quotation.vat}
             total={quotation.total}

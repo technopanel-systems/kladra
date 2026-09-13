@@ -12,6 +12,7 @@ import {
   type QuotationLookups,
 } from "@/actions/forms";
 import {
+  quotationServiceChoicesAction,
   requestQuotationAction,
   reviseQuotationAction,
   updateQuotationAction,
@@ -22,7 +23,13 @@ import {
   linesPayload,
   type LineDraft,
 } from "@/components/quotations/quotation-lines";
+import {
+  QuotationServices,
+  servicesPayload,
+  type ServiceDraft,
+} from "@/components/quotations/quotation-services";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import type { SelectOption } from "@/components/ui-ext/searchable-select";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
@@ -66,6 +73,8 @@ export type QuotationDraft = {
   warehouseId: string;
   contactId: string;
   lines: Omit<LineDraft, "key">[];
+  /** Its services, which Edit and Revise open on the way they open on its lines (SPEC §3, P13). */
+  services: Omit<ServiceDraft, "key">[];
 };
 
 /**
@@ -132,6 +141,7 @@ export function RequestQuotationDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { lookups, failed } = useQuotationLookups(open);
+  const serviceChoices = useServiceChoices(open);
 
   const onSaved = useCallback(
     (quotationId: string | undefined) => {
@@ -172,6 +182,9 @@ export function RequestQuotationDialog({
       onOpenChange={setOpen}
       title={title}
       description={t(issuesDirectly ? "quotations.issueOwnHint" : "quotations.requestHint")}
+      // The lines are a table and the services a second one under them: this is
+      // the one form in the app that needs the room (SPEC §3, P13).
+      size="wide"
       trigger={
         trigger ?? (
           <Button variant="outline">
@@ -181,11 +194,11 @@ export function RequestQuotationDialog({
         )
       }
     >
-      {failed ? (
+      {failed || serviceChoices === "failed" ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
-      ) : lookups ? (
+      ) : lookups && serviceChoices ? (
         <RequestForm
           companyId={companyId ?? null}
           projectId={projectId ?? null}
@@ -194,6 +207,7 @@ export function RequestQuotationDialog({
           existing={existing}
           issuesDirectly={issuesDirectly}
           lookups={lookups}
+          serviceChoices={serviceChoices}
           onSaved={onSaved}
           onCancel={() => setOpen(false)}
         />
@@ -204,6 +218,36 @@ export function RequestQuotationDialog({
   );
 }
 
+/**
+ * The services the form may offer, asked for each time the dialog opens
+ * (`quotationServiceChoicesAction`). Null until the first answer; the last good
+ * answer is kept across a close, so a second open draws at once and quietly
+ * takes whatever the admin has changed since.
+ *
+ * Not a courtesy read: the services section is part of the form, so a list that
+ * could not be fetched is the same "the lists did not load" as the line lists,
+ * rather than a section that silently offers nothing (rules/data.md).
+ */
+function useServiceChoices(open: boolean): SelectOption[] | "failed" | null {
+  const guarded = useWireGuard();
+  const [choices, setChoices] = useState<SelectOption[] | "failed" | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    guarded(quotationServiceChoicesAction)().then((outcome) => {
+      if (cancelled) return;
+      const fresh = outcome.ok ? outcome.data : undefined;
+      // A failed refresh keeps the list it already had: the form may be open
+      // on it, half typed, and "the lists did not load" would take it away.
+      setChoices((had) => fresh ?? (Array.isArray(had) ? had : "failed"));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, guarded]);
+  return choices;
+}
+
 function RequestForm({
   companyId,
   projectId,
@@ -212,6 +256,7 @@ function RequestForm({
   existing,
   issuesDirectly,
   lookups,
+  serviceChoices,
   onSaved,
   onCancel,
 }: {
@@ -222,6 +267,7 @@ function RequestForm({
   existing?: QuotationDraft;
   issuesDirectly: boolean;
   lookups: QuotationLookups;
+  serviceChoices: SelectOption[];
   onSaved: (quotationId: string | undefined) => void;
   onCancel: () => void;
 }) {
@@ -271,6 +317,14 @@ function RequestForm({
     existing
       ? existing.lines.map((line, index) => ({ ...line, key: `existing-${index}` }))
       : [blankLine(lookups)],
+  );
+  // None on a first ask — nothing is offered from a previous quotation (D163) —
+  // and on Edit and Revise the ones this paper already carries, as its lines.
+  const [services, setServices] = useState<ServiceDraft[]>(() =>
+    (existing?.services ?? []).map((service, index) => ({
+      ...service,
+      key: `existing-service-${index}`,
+    })),
   );
   const [notes, setNotes] = useState(existing?.notes ?? "");
   const form = useRef<HTMLFormElement>(null);
@@ -398,7 +452,7 @@ function RequestForm({
    * line opens on the sheet above it — because that is the paper he is writing
    * now, not one he wrote in the spring (D163).
    */
-  const totals = useMemo(() => quotationTotals(lines), [lines]);
+  const totals = useMemo(() => quotationTotals(lines, services), [lines, services]);
 
   return (
     <form
@@ -417,16 +471,23 @@ function RequestForm({
       {/* One field for all the lines: FormData has no shape for a list of
           objects that survives the round trip (src/actions/quotations.ts). */}
       <input type="hidden" name="items" value={linesPayload(lines)} />
+      <input type="hidden" name="services" value={servicesPayload(services)} />
       <input type="hidden" name="credit" value={countsFor} />
       <input type="hidden" name="contactId" value={addressedTo === NOBODY ? "" : addressedTo} />
       <input type="hidden" name="warehouseId" value={warehouse} />
 
       <FormBody>
+        {/* Who and where, in one band: the customer, the job, who at the
+            customer the paper goes to, and which store it comes out of (SPEC
+            §3, P12-9). One-line answers about the whole quotation, so they sit
+            two across from `sm` and four across on the wide desk dialog, where a
+            choice the width of the line table would be a field a mile long. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {/* Three ways in, and each renders only what it does not already know
             (P12-9): from the Quotations screen both, from a customer's drawer
             the job alone, from a job's drawer neither. */}
         {targets && !companyId ? (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label id="quotation-company-label">{t("common.company")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-company-label"
@@ -455,7 +516,7 @@ function RequestForm({
         ) : null}
 
         {targets && !projectId ? (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label id="quotation-project-label">{t("common.project")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-project-label"
@@ -481,12 +542,7 @@ function RequestForm({
           </div>
         ) : null}
 
-        {/* Who at the customer the paper goes to, and which store it comes out
-            of (SPEC §3, P12-9). Side by side from `sm` up: both are one-line
-            answers about the whole quotation, and neither is worth a row of its
-            own on a form this tall. */}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label id="quotation-contact-label">{t("common.contact")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-contact-label"
@@ -502,7 +558,7 @@ function RequestForm({
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-1.5">
             <Label id="quotation-warehouse-label">{t("common.warehouse")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-warehouse-label"
@@ -519,12 +575,26 @@ function RequestForm({
 
         <QuotationLines lookups={lookups} lines={lines} onChange={setLines} disabled={pending} />
 
-        <QuotationTotals
-          sqm={totals.sqm}
-          subtotal={totals.subtotal}
-          vat={totals.vat}
-          total={totals.total}
-        />
+        {/* The services under the panels, as their own section, and what the
+            whole paper comes to beside them on a desk — the way an invoice
+            closes under its table — or under them on a phone (SPEC §3, P13). */}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
+          <QuotationServices
+            choices={serviceChoices}
+            services={services}
+            subtotal={totals.services}
+            onChange={setServices}
+            disabled={pending}
+          />
+
+          <QuotationTotals
+            sqm={totals.sqm}
+            split={{ panels: totals.panels, services: totals.services }}
+            subtotal={totals.subtotal}
+            vat={totals.vat}
+            total={totals.total}
+          />
+        </div>
 
         {/* Under the totals, because that is the sentence it finishes: this
             much paper, and it counts for him (D148). */}

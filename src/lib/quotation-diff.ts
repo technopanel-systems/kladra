@@ -152,3 +152,100 @@ export function compareLines(
 
   return changes;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Services (SPEC §3, P13)                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The two figures a service carries besides which service it is: the m² it is
+ * done over and its price per m². The service itself is not a field here — its
+ * NAME is what a service is called on the paper, the way a colour code is a
+ * line's.
+ */
+export const SERVICE_FIELDS = ["sqm", "pricePerSqm"] as const;
+
+export type ServiceField = (typeof SERVICE_FIELDS)[number];
+
+/** A service as this comparison sees it: the name the screen shows, and its figures. */
+export type ComparableService = Record<ServiceField, string> & {
+  position: number;
+  service: string;
+};
+
+/**
+ * One service's news, shaped like a line's: `changed` carries at least one
+ * figure, `added` and `removed` none, and every one of them carries the service's
+ * name, which is the only name a removed service has on the quotation being read.
+ */
+export type ServiceChange = {
+  kind: "added" | "removed" | "changed";
+  position: number;
+  service: string;
+  fields: { field: ServiceField; from: string; to: string }[];
+};
+
+function sameService(a: ComparableService, b: ComparableService): boolean {
+  return a.service === b.service && SERVICE_FIELDS.every((field) => a[field] === b[field]);
+}
+
+/**
+ * What changed among the services, in the new quotation's order, removed ones
+ * last — the same reading order as the lines.
+ *
+ * Paired in two passes, strongest first: identical services, then the same
+ * service at other figures. Never a third pass by position, which the lines
+ * have: a line whose colour and price both moved is still a sheet on the paper,
+ * but CNC cutting where Denting was is not Denting at a new price — it is one
+ * service gone and another come, and saying so is the true sentence. Pure, like
+ * `compareLines`, so it can be asked about a service quoted twice without a
+ * database.
+ */
+export function compareServices(
+  before: readonly ComparableService[],
+  after: readonly ComparableService[],
+): ServiceChange[] {
+  const oldOnes = [...before];
+  const newOnes = [...after];
+  const pairs: [ComparableService, ComparableService][] = [];
+
+  const take = (match: (a: ComparableService, b: ComparableService) => boolean) => {
+    for (let i = oldOnes.length - 1; i >= 0; i -= 1) {
+      const j = newOnes.findIndex((candidate) => match(oldOnes[i], candidate));
+      if (j === -1) continue;
+      pairs.push([oldOnes[i], newOnes[j]]);
+      oldOnes.splice(i, 1);
+      newOnes.splice(j, 1);
+    }
+  };
+
+  take(sameService);
+  take((a, b) => a.service === b.service);
+
+  const changes: ServiceChange[] = [];
+  for (const [was, is] of pairs) {
+    const fields = SERVICE_FIELDS.filter((field) => was[field] !== is[field]).map((field) => ({
+      field,
+      from: was[field],
+      to: is[field],
+    }));
+    if (fields.length > 0) {
+      changes.push({ kind: "changed", position: is.position, service: is.service, fields });
+    }
+  }
+  for (const service of newOnes) {
+    changes.push({ kind: "added", position: service.position, service: service.service, fields: [] });
+  }
+  changes.sort((a, b) => a.position - b.position);
+
+  for (const service of [...oldOnes].sort((a, b) => a.position - b.position)) {
+    changes.push({
+      kind: "removed",
+      position: service.position,
+      service: service.service,
+      fields: [],
+    });
+  }
+
+  return changes;
+}

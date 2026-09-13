@@ -7,10 +7,13 @@
  * has no idea about: who asked, what they asked for, what came back, and what
  * the customer said in the end.
  *
- * Three figures and one definition each, all of them computed in SQL before any
+ * Its figures have one definition each, all of them computed in SQL before any
  * row is paged (rules/data.md). A line's m² is a generated column the app never
- * writes; a quotation's subtotal is the sum of its lines rounded per line
- * (S31, D6); VAT is 15% of that, fixed, from the one constant in money.ts.
+ * writes; the panels come to the sum of the lines rounded per line (S31, D6); the
+ * services come to the sum of their own m² × price rounded per service, apart
+ * from the panels (SPEC §3, P13); the total before VAT is the two together; VAT
+ * is 15% of that, fixed, from the one constant in money.ts. A service's m² is
+ * never part of the quotation's m², which is panels (D173).
  * `src/lib/money.ts` computes the same figures in the browser while a rep is
  * still typing, on values nothing has saved — the two are checked against each
  * other in tests/quotations.spec.ts rather than trusted to stay equal.
@@ -41,7 +44,9 @@ import {
   fireRatings,
   projects,
   quotationItems,
+  quotationServices,
   quotations,
+  services,
   suppliers,
   thicknesses,
   users,
@@ -54,7 +59,14 @@ import { VAT_RATE } from "@/lib/money";
 import { numberInTerm, quotationLabel } from "@/lib/labels";
 import { warehouseName } from "@/lib/lookups";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
-import { compareLines, type ComparableLine, type LineChange } from "@/lib/quotation-diff";
+import {
+  compareLines,
+  compareServices,
+  type ComparableLine,
+  type ComparableService,
+  type LineChange,
+  type ServiceChange,
+} from "@/lib/quotation-diff";
 
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
@@ -112,8 +124,15 @@ export type QuotationRow = {
   issuedOn: string | null;
   decidedOn: string | null;
   createdOn: string;
-  /** numeric(12,2) all the way to the screen — a float would round it on the way. */
+  /**
+   * numeric(12,2) all the way to the screen — a float would round it on the way.
+   * `totalSqm` is the panels' m² alone: a service's m² never counts (D173).
+   */
   totalSqm: string;
+  /** The lines, and the services, each subtotalled apart (SPEC §3, P13). */
+  panelsSubtotal: string;
+  servicesSubtotal: string;
+  /** The two together, before VAT — "Total excl. VAT". */
   subtotal: string;
   vat: string;
   total: string;
@@ -179,13 +198,35 @@ const lineTotals = qb
   .groupBy(quotationItems.quotationId)
   .as("line_totals");
 
-/** Zero rather than null: a quotation with no lines is worth nothing, not unknown. */
-const subtotalSql = sql<string>`coalesce(${lineTotals.subtotal}, 0)`;
-const vatSql = sql<string>`round(coalesce(${lineTotals.subtotal}, 0) * ${VAT_RATE}::numeric, 2)`;
-const totalSql = sql<string>`round(
-  coalesce(${lineTotals.subtotal}, 0) + round(coalesce(${lineTotals.subtotal}, 0) * ${VAT_RATE}::numeric, 2),
-  2
-)`;
+/**
+ * The services' money, grouped the same way and rounded the same way: each
+ * service's m² × price rounded to the halala, then summed (SPEC §3, P13). Its m²
+ * is not summed at all — a service's m² is the area it is done over, not panel
+ * sold, and no figure anywhere counts it (D173).
+ */
+const serviceTotals = qb
+  .select({
+    quotationId: quotationServices.quotationId,
+    subtotal:
+      sql<string>`round(coalesce(sum(round(${quotationServices.sqm} * ${quotationServices.pricePerSqm}, 2)), 0), 2)`.as(
+        "services_subtotal",
+      ),
+  })
+  .from(quotationServices)
+  .groupBy(quotationServices.quotationId)
+  .as("service_totals");
+
+/**
+ * Zero rather than null: a quotation with no lines is worth nothing, not unknown,
+ * and one with no services has services worth nothing. The same five steps as
+ * `quotationTotals` in money.ts, in the same order, rounded at the same places.
+ */
+const panelsSql = sql<string>`coalesce(${lineTotals.subtotal}, 0)`;
+const servicesSql = sql<string>`coalesce(${serviceTotals.subtotal}, 0)`;
+const beforeVat = sql`round(coalesce(${lineTotals.subtotal}, 0) + coalesce(${serviceTotals.subtotal}, 0), 2)`;
+const subtotalSql = sql<string>`${beforeVat}`;
+const vatSql = sql<string>`round(${beforeVat} * ${VAT_RATE}::numeric, 2)`;
+const totalSql = sql<string>`round(${beforeVat} + round(${beforeVat} * ${VAT_RATE}::numeric, 2), 2)`;
 
 /**
  * True for the newest revision of a number — the only one that is live (S34).
@@ -230,6 +271,8 @@ function selection(locale: string) {
     // `created_at` is NOT NULL, so this one always has a day.
     createdOn: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
     totalSqm: sql<string>`coalesce(${lineTotals.sqm}, 0)`,
+    panelsSubtotal: panelsSql,
+    servicesSubtotal: servicesSql,
     subtotal: subtotalSql,
     vat: vatSql,
     total: totalSql,
@@ -259,6 +302,8 @@ type Selected = {
   decidedOn: string | null;
   createdOn: string;
   totalSqm: string;
+  panelsSubtotal: string;
+  servicesSubtotal: string;
   subtotal: string;
   vat: string;
   total: string;
@@ -288,6 +333,8 @@ function toRow(row: Selected): QuotationRow {
     decidedOn: row.decidedOn ?? null,
     createdOn: row.createdOn,
     totalSqm: String(row.totalSqm ?? "0"),
+    panelsSubtotal: String(row.panelsSubtotal ?? "0"),
+    servicesSubtotal: String(row.servicesSubtotal ?? "0"),
     subtotal: String(row.subtotal ?? "0"),
     vat: String(row.vat ?? "0"),
     total: String(row.total ?? "0"),
@@ -312,6 +359,7 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
     .innerJoin(users, eq(users.id, quotations.repId))
     .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
+    .leftJoin(serviceTotals, eq(serviceTotals.quotationId, quotations.id))
     .where(and(...conditions))
     .orderBy(input.order === "oldest" ? asc(quotations.createdAt) : desc(quotations.createdAt))
     // Capped: this list is years long on a real floor, and what anybody reads
@@ -424,6 +472,47 @@ export type QuotationItemRow = {
 };
 
 /**
+ * A service on a quotation, as the drawer reads it (SPEC §3, P13): which one, in
+ * the reader's language, the m² it is done over, its price per m², and what it
+ * comes to. `serviceId` is never rendered — Edit and Revise open on it, so
+ * renaming a service in Lookups cannot move one onto another.
+ */
+export type QuotationServiceRow = {
+  id: string;
+  position: number;
+  serviceId: number;
+  name: string;
+  sqm: string;
+  pricePerSqm: string;
+  total: string;
+};
+
+/**
+ * The services a quotation may be given, in the admin's order, in the reader's
+ * language (SPEC §3, P13). Only the active ones: a service the admin has turned
+ * off stops being offered, and the rows that already name it keep reading
+ * correctly. `alt` is the other script, which a picker searches on and never
+ * shows (SPEC D7).
+ *
+ * Here rather than in `@/lib/lookups` only because this slice does not write that
+ * file; it is a lookup list like the warehouses, and belongs beside them.
+ */
+export async function activeServices(
+  locale?: string,
+): Promise<{ id: number; name: string; alt: string }[]> {
+  const arabic = (locale ?? (await getLocale())).startsWith("ar");
+  return db
+    .select({
+      id: services.id,
+      name: arabic ? services.nameAr : services.nameEn,
+      alt: arabic ? services.nameEn : services.nameAr,
+    })
+    .from(services)
+    .where(eq(services.active, true))
+    .orderBy(asc(services.sortOrder), asc(services.nameEn));
+}
+
+/**
  * The two states goods may move against (S38, §5 #166).
  *
  * Issued, because the paper exists; and accepted, because the customer has
@@ -451,6 +540,8 @@ export type QuotationDetail = QuotationRow & {
    */
   revisionOf: string | null;
   items: QuotationItemRow[];
+  /** Its services, in their own section and position order (SPEC §3, P13). Often none. */
+  services: QuotationServiceRow[];
   /** Every revision of this number, newest first, this one included (S34). */
   revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
   isLatest: boolean;
@@ -506,9 +597,10 @@ export async function getQuotation(
   user: SessionUser,
   id: string,
 ): Promise<QuotationDetail | null> {
+  const locale = await getLocale();
   const [row] = await db
     .select({
-      ...selection(await getLocale()),
+      ...selection(locale),
       // Whether this reader is on the company's share list, asked in the same
       // statement as its owner (D147).
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
@@ -531,6 +623,7 @@ export async function getQuotation(
     .leftJoin(contacts, eq(contacts.id, quotations.contactId))
     .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
+    .leftJoin(serviceTotals, eq(serviceTotals.quotationId, quotations.id))
     .where(eq(quotations.id, id))
     .limit(1);
 
@@ -570,6 +663,23 @@ export async function getQuotation(
     .innerJoin(thicknesses, eq(thicknesses.id, quotationItems.thicknessId))
     .where(eq(quotationItems.quotationId, id))
     .orderBy(asc(quotationItems.position));
+
+  // Each service's total rounded exactly as `serviceTotals` above rounds it
+  // before summing, so the rows in the drawer add up to the subtotal under them.
+  const serviceRows = await db
+    .select({
+      id: quotationServices.id,
+      position: quotationServices.position,
+      serviceId: quotationServices.serviceId,
+      name: locale.startsWith("ar") ? services.nameAr : services.nameEn,
+      sqm: quotationServices.sqm,
+      pricePerSqm: quotationServices.pricePerSqm,
+      total: sql<string>`round(${quotationServices.sqm} * ${quotationServices.pricePerSqm}, 2)`,
+    })
+    .from(quotationServices)
+    .innerJoin(services, eq(services.id, quotationServices.serviceId))
+    .where(eq(quotationServices.quotationId, id))
+    .orderBy(asc(quotationServices.position));
 
   const siblings = await db
     .select({
@@ -612,6 +722,15 @@ export async function getQuotation(
       classId: item.classId,
       thicknessId: item.thicknessId,
     })),
+    services: serviceRows.map((service) => ({
+      id: service.id,
+      position: service.position,
+      serviceId: service.serviceId,
+      name: service.name,
+      sqm: service.sqm,
+      pricePerSqm: service.pricePerSqm,
+      total: String(service.total),
+    })),
     revisions: siblings.map((sibling) => ({
       id: sibling.id,
       label: quotationLabel(base.number, sibling.revision),
@@ -634,6 +753,7 @@ export async function listQuotationsForProject(
     .innerJoin(users, eq(users.id, quotations.repId))
     .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
+    .leftJoin(serviceTotals, eq(serviceTotals.quotationId, quotations.id))
     .where(
       and(
         eq(quotations.projectId, projectId),
@@ -658,6 +778,7 @@ export async function listQuotationsForCompany(
     .innerJoin(users, eq(users.id, quotations.repId))
     .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
+    .leftJoin(serviceTotals, eq(serviceTotals.quotationId, quotations.id))
     .where(
       and(
         eq(quotations.companyId, companyId),
@@ -675,6 +796,8 @@ export type RevisionChanges = {
   /** The revision it came from — Q-12 under a Q-12/2. */
   label: string;
   changes: LineChange[];
+  /** And among its services, which are compared apart from the lines (SPEC §3, P13). */
+  services: ServiceChange[];
 };
 
 /**
@@ -710,6 +833,20 @@ export async function revisionChanges(
   return {
     label: parent.label,
     changes: compareLines(parent.items.map(comparable), quotation.items.map(comparable)),
+    services: compareServices(
+      parent.services.map(comparableService),
+      quotation.services.map(comparableService),
+    ),
+  };
+}
+
+/** A stored service as the comparison reads it: its name, its number, its two figures. */
+function comparableService(service: QuotationServiceRow): ComparableService {
+  return {
+    position: service.position,
+    service: service.name,
+    sqm: service.sqm,
+    pricePerSqm: service.pricePerSqm,
   };
 }
 

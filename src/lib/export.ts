@@ -74,7 +74,20 @@ async function companiesCsv(): Promise<string> {
   );
 }
 
-/** Quotations with their items — one row per item, the quotation repeated. */
+/**
+ * Quotations with their items and their services — one row per panel line and
+ * one per service, the quotation repeated on each.
+ *
+ * `line` says which a row is, `panel` or `service`, and `item` is its number
+ * within its own kind, as the drawer numbers them. A service row names the
+ * service and leaves the sheet's columns empty; a panel row leaves `service`
+ * empty. Panels come first, then services, as on the paper (SPEC §3, P13).
+ *
+ * A service's m² is in a column of its own, `service_sqm`, never in `sqm`: a
+ * pivot that sums `sqm` is summing panel sold, and a service's m² is the area it
+ * is done over, which no figure counts (D173). `price_per_sqm` and `line_total`
+ * are shared, because services are money and a quotation's money is both.
+ */
 async function quotationsCsv(): Promise<string> {
   const result = await db.execute<Record<string, unknown>>(sql`
     select q.number as q_number,
@@ -86,28 +99,62 @@ async function quotationsCsv(): Promise<string> {
            u.name as rep,
            to_char((q.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as requested,
            to_char((q.issued_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as issued,
-           qi.position as item,
-           qi.colour_code as colour_code,
-           s.code as supplier,
-           fr.name as fire_rating,
-           cl.name as class,
-           th.mm as thickness_mm,
-           qi.width as width_m,
-           qi.length as length_m,
-           qi.qty as qty,
-           qi.sqm as sqm,
-           qi.price_per_sqm as price_per_sqm,
-           round(qi.sqm * qi.price_per_sqm, 2) as line_total
+           l.line,
+           l.item,
+           l.service,
+           l.colour_code,
+           l.supplier,
+           l.fire_rating,
+           l.class,
+           l.thickness_mm,
+           l.width_m,
+           l.length_m,
+           l.qty,
+           l.sqm,
+           l.service_sqm,
+           l.price_per_sqm,
+           l.line_total
       from quotations q
       join companies c on c.id = q.company_id
       join users u on u.id = q.rep_id
-      join quotation_items qi on qi.quotation_id = q.id
-      join suppliers s on s.id = qi.supplier_id
-      join fire_ratings fr on fr.id = qi.fire_rating_id
-      join classes cl on cl.id = qi.class_id
-      join thicknesses th on th.id = qi.thickness_id
       join projects p on p.id = q.project_id
-     order by q.number, q.revision, qi.position
+      join (
+        select qi.quotation_id,
+               1 as kind,
+               'panel' as line,
+               qi.position as item,
+               null::text as service,
+               qi.colour_code,
+               s.code as supplier,
+               fr.name as fire_rating,
+               cl.name as class,
+               th.mm::text as thickness_mm,
+               qi.width::text as width_m,
+               qi.length::text as length_m,
+               qi.qty::text as qty,
+               qi.sqm::text as sqm,
+               null::text as service_sqm,
+               qi.price_per_sqm as price_per_sqm,
+               round(qi.sqm * qi.price_per_sqm, 2) as line_total
+          from quotation_items qi
+          join suppliers s on s.id = qi.supplier_id
+          join fire_ratings fr on fr.id = qi.fire_rating_id
+          join classes cl on cl.id = qi.class_id
+          join thicknesses th on th.id = qi.thickness_id
+        union all
+        select qs.quotation_id,
+               2 as kind,
+               'service' as line,
+               qs.position as item,
+               sv.name_en as service,
+               null, null, null, null, null, null, null, null, null,
+               qs.sqm::text as service_sqm,
+               qs.price_per_sqm as price_per_sqm,
+               round(qs.sqm * qs.price_per_sqm, 2) as line_total
+          from quotation_services qs
+          join services sv on sv.id = qs.service_id
+      ) l on l.quotation_id = q.id
+     order by q.number, q.revision, l.kind, l.item
   `);
 
   // The label is built by the function every screen uses, never spelled out in
@@ -127,7 +174,9 @@ async function quotationsCsv(): Promise<string> {
       "rep",
       "requested",
       "issued",
+      "line",
       "item",
+      "service",
       "colour_code",
       "supplier",
       "fire_rating",
@@ -137,6 +186,7 @@ async function quotationsCsv(): Promise<string> {
       "length_m",
       "qty",
       "sqm",
+      "service_sqm",
       "price_per_sqm",
       "line_total",
     ],

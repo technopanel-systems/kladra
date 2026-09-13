@@ -11,7 +11,7 @@ import { NotAllowed, requireUser } from "@/lib/authz";
 import { issuesOwnQuotations, mayWrite } from "@/lib/floor";
 import { mayRaiseFor } from "@/lib/visibility";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
-import { draftLinesFrom } from "@/lib/quotation-draft";
+import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
 import { dispatchable, getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
 import { quotationStanding } from "@/lib/standing";
 
@@ -115,6 +115,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       credit={quotation.credit}
       standing={standing}
       items={quotation.items}
+      services={quotation.services}
       revisions={quotation.revisions}
       // What Edit and Revise open on: the lines as they are, by id rather than
       // by the words on screen, so renaming a class in Lookups cannot move one.
@@ -122,6 +123,9 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         quotationId: quotation.id,
         notes: quotation.notes ?? "",
         lines: draftLinesFrom(quotation.items),
+        // Its services the same way, by id (SPEC §3, P13). The paper itself
+        // again, never a previous quotation's (D163).
+        services: draftServicesFrom(quotation.services),
         // What the credit field opens on: the name it already says, or the
         // word that means everybody on the job (D148). A REVISION ignores it
         // and asks again, because nothing is carried forward from a previous

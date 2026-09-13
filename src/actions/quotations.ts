@@ -27,7 +27,9 @@ import {
   contacts,
   projects,
   quotationItems,
+  quotationServices,
   quotations,
+  services,
   users,
 } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
@@ -41,7 +43,7 @@ import { quotationLabel } from "@/lib/labels";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
 import { issuesOwnQuotations, SELLING_ROLES } from "@/lib/floor";
-import { seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
+import { activeServices, seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import { withTheRep } from "@/lib/with-the-rep";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 import {
@@ -255,6 +257,116 @@ async function insertItems(
 }
 
 /**
+ * One service on a quotation (SPEC §3, P13): which one, the m² it is done over,
+ * and its price per m².
+ *
+ * The m² is TYPED here, unlike a line's, because the area a cutting or a
+ * fabrication covers is not a sheet's area. It is refused at nought as the
+ * column refuses it — after the rounding the column will apply, so 0.004 m² is
+ * not waved through here to die on the check constraint as "something went
+ * wrong".
+ */
+const serviceSchema = z.object({
+  serviceId: z.coerce.number().int().positive(),
+  sqm: z.coerce
+    .number()
+    .max(1_000_000)
+    .refine((value) => round2(value) > 0),
+  pricePerSqm: z.coerce.number().min(0).max(1_000_000),
+});
+
+type Service = z.infer<typeof serviceSchema>;
+
+/** None is the ordinary quotation; twenty is far past a real one. */
+const servicesSchema = z.array(serviceSchema).max(20);
+
+/**
+ * The services arrive as one JSON field beside the lines, for the same reason
+ * the lines do. A form that sends no field at all has no services — which is
+ * every quotation raised before P13 had a section for them — while a field that
+ * is there and does not parse is refused rather than read as none.
+ *
+ * And each one must be a service the admin still offers. The foreign key only
+ * says the row exists; a service turned off in Lookups is not something a new
+ * price may be written for, including on an edit or a revision of paper that
+ * named it when it was still on.
+ */
+async function readServices(formData: FormData): Promise<Service[] | "invalid" | "unavailable"> {
+  const raw = field(formData, "services");
+  if (!raw) return [];
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return "invalid";
+  }
+  const result = servicesSchema.safeParse(parsed);
+  if (!result.success) return "invalid";
+  if (result.data.length === 0) return [];
+
+  const wanted = [...new Set(result.data.map((service) => service.serviceId))];
+  const offered = await db
+    .select({ id: services.id })
+    .from(services)
+    .where(and(inArray(services.id, wanted), eq(services.active, true)));
+  return offered.length === wanted.length ? result.data : "unavailable";
+}
+
+/**
+ * Written beside the lines, in the same transaction, the same way: positions from
+ * the order the form sent them in, and an edit deletes and inserts rather than
+ * renumbering in place against the unique position index.
+ */
+async function insertServices(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  quotationId: string,
+  rows: Service[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  await tx.insert(quotationServices).values(
+    rows.map((service, index) => ({
+      quotationId,
+      position: index + 1,
+      serviceId: service.serviceId,
+      sqm: money(service.sqm),
+      pricePerSqm: money(service.pricePerSqm),
+    })),
+  );
+}
+
+/**
+ * The services the request dialog offers (SPEC §3, P13), as its searchable
+ * choice takes them: the admin's order, the reader's language, the other script
+ * to search on.
+ *
+ * Asked each time the dialog opens rather than cached with the four line lists:
+ * three rows are nothing to fetch, and a service the admin turned off an hour ago
+ * should stop being offered without anybody reloading. Any signed-in person may
+ * ask — the list is the business's price book headings, not anybody's record.
+ */
+export async function quotationServiceChoicesAction(): Promise<
+  ActionResult<{ value: string; label: string; keywords: string }[]>
+> {
+  const t = await getTranslations("common");
+  try {
+    await requireActor();
+  } catch (error) {
+    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
+    return { ok: false, error: t("somethingWrong") };
+  }
+  try {
+    const rows = await activeServices();
+    return {
+      ok: true,
+      data: rows.map((row) => ({ value: String(row.id), label: row.name, keywords: row.alt })),
+    };
+  } catch (error) {
+    console.error("services list failed", error);
+    return { ok: false, error: t("somethingWrong") };
+  }
+}
+
+/**
  * A rep asks for a quotation, from inside a company or a project (§3).
  *
  * Rep only. A manager or an admin pressing this would become the asker on
@@ -339,6 +451,9 @@ export async function requestQuotationAction(
 
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
+    const servicesIn = await readServices(formData);
+    if (servicesIn === "invalid") return { ok: false, error: tq("needsServices") };
+    if (servicesIn === "unavailable") return { ok: false, error: tq("serviceUnavailable") };
 
     const [company] = await db
       .select({ repId: companies.repId, archivedAt: companies.archivedAt })
@@ -430,6 +545,7 @@ export async function requestQuotationAction(
         .returning({ id: quotations.id, number: quotations.number });
 
       await insertItems(tx, row.id, items);
+      await insertServices(tx, row.id, servicesIn);
 
       // Who this one counts for, frozen at the raise and never inherited
       // (D148). One name on a job one rep works — a project nobody shares has
@@ -441,7 +557,7 @@ export async function requestQuotationAction(
         action: quotationEvent("request"),
         recordType: "quotation",
         recordId: row.id,
-        details: { companyId: input.companyId, lines: items.length },
+        details: { companyId: input.companyId, lines: items.length, services: servicesIn.length },
       });
 
       const label = quotationLabel(row.number, 1);
@@ -525,6 +641,9 @@ export async function updateQuotationAction(
 
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
+    const servicesIn = await readServices(formData);
+    if (servicesIn === "invalid") return { ok: false, error: tq("needsServices") };
+    if (servicesIn === "unavailable") return { ok: false, error: tq("serviceUnavailable") };
     const notes = field(formData, "notes") ?? null;
 
     // Asked again, exactly as long as the lines beside it may be changed
@@ -551,6 +670,10 @@ export async function updateQuotationAction(
 
       await tx.delete(quotationItems).where(eq(quotationItems.quotationId, quotation.id));
       await insertItems(tx, quotation.id, items);
+      // The services the same way as the lines: what the form sends now is the
+      // whole of them, and one it no longer sends is gone (SPEC §3, P13).
+      await tx.delete(quotationServices).where(eq(quotationServices.quotationId, quotation.id));
+      await insertServices(tx, quotation.id, servicesIn);
       await creditQuotation(tx, quotation.id, credit);
       // The reason dies with the state it explained. It was left on the row, so
       // a quotation he had already fixed still carried "the sizes are missing"
@@ -572,7 +695,7 @@ export async function updateQuotationAction(
         action: quotationEvent("update"),
         recordType: "quotation",
         recordId: quotation.id,
-        details: { lines: items.length, from: quotation.status },
+        details: { lines: items.length, services: servicesIn.length, from: quotation.status },
       });
 
       // Only news to her if it had been sent back: an edit to something already
@@ -984,6 +1107,12 @@ export async function reviseQuotationAction(
 
     const items = readItems(formData);
     if (items === "invalid") return { ok: false, error: tq("needsLines") };
+    // What the form sends, and nothing copied off the parent in SQL (D163): the
+    // form opens on the paper it revises, and what he leaves on it is what this
+    // one carries.
+    const servicesIn = await readServices(formData);
+    if (servicesIn === "invalid") return { ok: false, error: tq("needsServices") };
+    if (servicesIn === "unavailable") return { ok: false, error: tq("serviceUnavailable") };
 
     // Asked again, on the new paper. Copying the old one's answer would be the
     // one thing §3 forbids outright — nothing is carried forward from a
@@ -1048,6 +1177,7 @@ export async function reviseQuotationAction(
         .returning({ id: quotations.id, revision: quotations.revision });
 
       await insertItems(tx, row.id, items);
+      await insertServices(tx, row.id, servicesIn);
 
       // A revision is a new quotation, so credit is decided again rather than
       // copied off the one it replaces: §3 says nothing is ever carried forward
@@ -1059,7 +1189,7 @@ export async function reviseQuotationAction(
         action: quotationEvent("revise"),
         recordType: "quotation",
         recordId: row.id,
-        details: { revisionOf: quotation.id, lines: items.length },
+        details: { revisionOf: quotation.id, lines: items.length, services: servicesIn.length },
       });
 
       // The one it replaces is superseded, so "Q-12 issued" is now about a
