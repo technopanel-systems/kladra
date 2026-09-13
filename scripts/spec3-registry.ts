@@ -333,7 +333,12 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "chooses what happened from buttons",
-    owed: "P13-S4",
+    tests: [
+      "a rep adds a report from the top bar on a phone: the company, its main contact, a call that reached him, one line",
+      "opened from a project drawer, the report arrives with the company and the job already chosen",
+      "a rep reads only his own reports; the manager reads everyone's and narrows them by person and outcome",
+      "what Kladra recorded is its own region beside the written reports, never among them",
+    ],
   },
   {
     says: "each with m² and a price per m², subtotalled apart from the panels",

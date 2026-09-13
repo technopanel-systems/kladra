@@ -59,15 +59,15 @@ test("the back gesture does not take the words with it", async ({ page, locale, 
     await expect(dialogNamed(page, company.name)).toBeVisible(COLD);
   });
 
-  await test.step("typing into Log, then swiping back, leaves the sheet exactly as it was", async () => {
+  await test.step("typing a report, then swiping back, leaves the sheet exactly as it was", async () => {
     const drawer = dialogNamed(page, company.name);
     await drawer
       .getByRole("group", { name: t("drawer.companyActions") })
-      .getByRole("button", { name: t("common.log"), exact: true })
+      .getByRole("button", { name: t("common.addReport"), exact: true })
       .click();
 
-    const dialog = dialogNamed(page, t("drawer.logTitle"));
-    const whatHappened = dialog.getByLabel(t("drawer.whatHappened"));
+    const dialog = dialogNamed(page, t("common.addReport"));
+    const whatHappened = dialog.getByLabel(t("reports.dialog.text"));
     await whatHappened.fill("typed before swiping back");
 
     await page.goBack();
@@ -82,7 +82,7 @@ test("the back gesture does not take the words with it", async ({ page, locale, 
   });
 
   await test.step("Cancel closes it for good, and a second back leaves the company", async () => {
-    const dialog = dialogNamed(page, t("drawer.logTitle"));
+    const dialog = dialogNamed(page, t("common.addReport"));
     await dialog.getByRole("button", { name: t("common.cancel") }).click();
     await expect(dialog).toBeHidden();
 
@@ -91,7 +91,7 @@ test("the back gesture does not take the words with it", async ({ page, locale, 
     await expect(page, "a deliberate close should not leave a phantom entry behind it").not.toHaveURL(
       /open=/,
     );
-    await expect(dialogNamed(page, t("drawer.logTitle"))).toHaveCount(0);
+    await expect(dialogNamed(page, t("common.addReport"))).toHaveCount(0);
   });
 });
 

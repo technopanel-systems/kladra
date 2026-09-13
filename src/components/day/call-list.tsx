@@ -1,7 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { LogDialogHost } from "@/components/activities/log-dialog";
 import { CallBand, type CallBandData } from "@/components/day/call-band";
-import { NO_TARGETS, type LogTargets } from "@/lib/log-targets";
 import type { CompanyRow } from "@/lib/companies";
 import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
 
@@ -22,8 +20,9 @@ import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
  * customers, which is why it is here at all rather than in a report.
  *
  * This file decides WHAT the bands are; `CallBand` draws one, on the client,
- * from rows passed as data (D82). The one log dialog for the whole screen is
- * mounted here, above all four.
+ * from rows passed as data (D82). The report a call ends in opens in the one
+ * popup the top bar mounts for the whole app, prefilled with the customer and
+ * the person on the card.
  */
 
 export async function CallList({
@@ -32,7 +31,6 @@ export async function CallList({
   never,
   quiet,
   totals,
-  targets,
 }: {
   overdue: CompanyRow[];
   today: CompanyRow[];
@@ -45,12 +43,6 @@ export async function CallList({
    * (rules/data.md, D80).
    */
   totals: FollowUpCounts;
-  /**
-   * What the log dialog needs, per company (D71). The whole point of this
-   * screen is that the next thing he does is press the phone number; the thing
-   * after that is say what was said, and it used to cost two page loads.
-   */
-  targets: Map<string, LogTargets>;
 }) {
   const t = await getTranslations();
 
@@ -88,30 +80,17 @@ export async function CallList({
     ] satisfies CallBandData[]
   ).filter((band) => band.rows.length > 0);
 
-  // One log dialog for the whole screen (D82): every card carries a button
-  // that names its company, and this is what the one form can be against.
-  const logTargets = Object.fromEntries(
-    bands.flatMap((band) =>
-      band.rows.map((row) => [
-        row.id,
-        { companyName: row.name, ...(targets.get(row.id) ?? NO_TARGETS) },
-      ]),
-    ),
-  );
-
   return (
-    <LogDialogHost targets={logTargets}>
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium">{t("day.whoToCall")}</h2>
+    <section className="flex flex-col gap-3">
+      <h2 className="text-sm font-medium">{t("day.whoToCall")}</h2>
 
-        {bands.length === 0 ? (
-          <p className="card-face px-4 py-6 text-center text-sm text-muted-foreground">
-            {t("day.nobodyToCall")}
-          </p>
-        ) : (
-          bands.map((band) => <CallBand key={band.key} band={band} />)
-        )}
-      </section>
-    </LogDialogHost>
+      {bands.length === 0 ? (
+        <p className="card-face px-4 py-6 text-center text-sm text-muted-foreground">
+          {t("day.nobodyToCall")}
+        </p>
+      ) : (
+        bands.map((band) => <CallBand key={band.key} band={band} />)
+      )}
+    </section>
   );
 }

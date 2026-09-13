@@ -46,7 +46,6 @@
     "quiet": "Company stopped replying",
     "other": "Other"
   },
-  "activity": "Activity",
   "emptyActivity": "Nothing logged on this project yet — log the first visit or call.",
   "editProject": "Edit project",
   "editProjectHint": "The project’s own details, as they stand now."

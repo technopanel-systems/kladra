@@ -497,31 +497,39 @@ test("a revision names a quotation that exists", async () => {
   expect(message).toContain("violates foreign key constraint");
 });
 
-test("one person writes one report per day, and never an empty one", async () => {
-  const report = await one<{ user_id: string; day: string }>(
-    "select user_id, to_char(day, 'YYYY-MM-DD') as day from daily_reports limit 1",
+test("a report says what came of it, and there is no second kind of report beside it (0026, P13-S4)", async () => {
+  // A report is the entries (D167): the end-of-day sentence and its table are
+  // gone, and so is the audit trail's word for them. Asked of information_schema
+  // rather than of the migration's success line (rules/migrations.md).
+  const gone = await query(
+    "select 1 from information_schema.tables where table_schema = 'public' and table_name = 'daily_reports'",
   );
-
-  // A report of spaces is not a report. The action trims and Zod refuses it, and
-  // so does the column, because the seed and a future import are ways in too.
-  for (const note of ["", "   ", "\n\t "]) {
-    const message = await refused(
-      "insert into daily_reports (user_id, day, note) values ($1::uuid, $2::date + 400, $3::text)",
-      [report.user_id, report.day, note],
-    );
-    expect(message, `an empty note was accepted: ${JSON.stringify(note)}`).toContain(
-      "violates check constraint",
-    );
-  }
-
-  // And a second report for the same person on the same day is the same report
-  // rewritten — which is what the action's `on conflict do update` says, and
-  // what the index makes true whoever is writing (D55).
-  const twice = await refused(
-    "insert into daily_reports (user_id, day, note) values ($1::uuid, $2::date, 'again')",
-    [report.user_id, report.day],
+  expect(gone.length, "daily_reports is still there").toBe(0);
+  expect(AUDIT_RECORD_TYPES as readonly string[]).not.toContain("daily_report");
+  const trail = await one<{ n: string }>(
+    "select count(*)::text as n from audit_log where record_type = 'daily_report'",
   );
-  expect(twice).toContain("duplicate key value violates unique constraint");
+  expect(trail.n).toBe("0");
+
+  // What came of it is one answer from the admin's list, and there is no report
+  // without one (SPEC §3 P13) — the popup asks, and so does the column, because
+  // the seed and a future import are ways in too.
+  const column = await one<{ is_nullable: string }>(
+    `select is_nullable from information_schema.columns
+      where table_schema = 'public' and table_name = 'activities' and column_name = 'outcome_id'`,
+  );
+  expect(column.is_nullable).toBe("NO");
+
+  const entry = await one<{ company_id: string; user_id: string }>(
+    "select company_id, user_id from activities limit 1",
+  );
+  const message = await refused(
+    `insert into activities (company_id, user_id, text, channel, happened_on)
+     values ($1::uuid, $2::uuid, 'a call with nothing come of it', 'call', '2026-01-04'::date)`,
+    [entry.company_id, entry.user_id],
+  );
+  expect(message, "an entry without an outcome was accepted").toContain("outcome_id");
+  expect(message).toContain("not-null constraint");
 });
 
 test("archiving a company keeps why (S16, D87)", async () => {

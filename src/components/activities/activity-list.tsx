@@ -1,72 +1,39 @@
-"use client";
-
-import { Ellipsis, HardHat, MapPin, MessageCircle, Phone, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { KIND_ICON } from "@/components/activities/kinds";
 import { Badge } from "@/components/ui/badge";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Link } from "@/i18n/navigation";
 import { Prose } from "@/components/ui-ext/prose";
+import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import type { ActivityChannel, ActivityRow } from "@/lib/activities";
 import { ActivityActions } from "./activity-actions";
 
 /**
- * The log, newest first (SPEC S24/S27 — a company's history is the manager's
- * daily report, so it has to read like a story, not a table).
+ * Reports, newest first (SPEC §3 P13, S24/S27 — a company's history is what the
+ * people who worked it wrote, so it reads like a story, not a table).
  *
  * Ordering belongs to the query, never to the screen: this renders the rows in
- * the order it is handed. The channel is a small NEUTRAL badge — DESIGN §1 says
- * status is a word, not a colour, and §4 rules out a colour-per-status map.
+ * the order it is handed. What happened and what came of it are two quiet
+ * NEUTRAL badges — words, with the kind's picture — because DESIGN §1b keeps
+ * colour for the five states, and "a call" is not a state.
  *
  * Shared, not client-only: rendered from the company drawer it stays on the
- * server; a client parent (the project drawer) gets the same component through
+ * server; a client parent (the project sheet) gets the same component through
  * the client build of next-intl's hooks.
  */
 
-import type { ActivityChannel } from "@/lib/activities";
 export type { ActivityChannel };
 
-export type ActivityEntry = {
-  id: string;
-  text: string;
-  channel: ActivityChannel;
-  /** A Riyadh day, "YYYY-MM-DD". */
-  happenedOn: string;
-  /** Who wrote it, as a name. Never a user id. */
-  userName: string;
-  /**
-   * Which customer it is about. Every entry has one (S24). A screen where the
-   * customer is the context prints neither; a screen showing one person's day
-   * prints the name, and both need the id — a correction is filed against the
-   * customer wherever it is made from.
-   */
-  companyId: string;
-  companyName: string;
-  contactName?: string | null;
-  projectName?: string | null;
-  contactId?: string | null;
-  projectId?: string | null;
-  /** The reader wrote this one, so it is theirs to correct or unfile (D70). */
+/** One report as a list draws it. The row the queries return, handed straight through (D64). */
+export type ActivityEntry = Omit<ActivityRow, "mine" | "dayOpen"> & {
   mine?: boolean;
-  /** …and its day is still open, so the words can still change (D58). */
   dayOpen?: boolean;
 };
 
-const CHANNEL_ICON = {
-  visit: MapPin,
-  siteVisit: HardHat,
-  meeting: Users,
-  call: Phone,
-  whatsapp: MessageCircle,
-  other: Ellipsis,
-} as const;
-
 /**
- * A client list, drawn from plain entries (D82). The history is the one list
- * deliberately left whole (D80), so it is the one most exposed to the cost of
- * a server loop over client leaves: with three hundred entries the drawer
- * weighed 1.7 MB and half of that was each entry's words a second time, as
- * props to the Correct button beside it. As one client component the entries
- * travel once, as data.
+ * Drawn from plain entries (D82): the only client leaf per row is the pair of
+ * corrections, and only on the reader's own reports.
  */
 export function ActivityList({
   activities,
@@ -75,27 +42,20 @@ export function ActivityList({
   context = "company",
 }: {
   activities: readonly ActivityEntry[];
-  /** Shown instead of the list: one sentence and its primary action. */
+  /** Shown instead of the list: one sentence. */
   empty?: ReactNode;
   /**
    * Which screen this list is on, and therefore what each entry has to say for
    * itself (S24, S27). On a customer's drawer the customer is the context and
    * the DAY and the writer are what the entry adds. On one person's day it is
-   * the other way round — the day and the writer are the heading of the card
-   * the list sits in, and the CUSTOMER is the thing a manager is reading for.
-   * Printing all four either way is how a list stops being read: three of them
-   * would be the same on every line.
+   * the other way round — the day and the writer are the heading the list sits
+   * under, and the CUSTOMER is the thing a reader is reading for. Printing all
+   * four either way is how a list stops being read.
    */
   context?: "company" | "day";
   /**
    * Whether to offer a correction on the reader's OWN entries (D70). Off where
-   * a screen only reads the log: every card on the report but the reader's own,
-   * and the manager's view of anybody's.
-   *
-   * It used to carry the customer's id, which each drawer knew and handed down.
-   * The entry carries its own now, which is what let the daily report offer
-   * this at all: one person's day crosses several customers, and a list-wide id
-   * would have filed every correction against the first of them (P12-13).
+   * a screen only reads the reports.
    */
   correct?: boolean;
 }) {
@@ -107,20 +67,26 @@ export function ActivityList({
   return (
     <ol className="flex flex-col gap-2">
       {activities.map((entry) => {
-        const Icon = CHANNEL_ICON[entry.channel];
-        const named = entry.contactName || entry.projectName;
+        const Icon = KIND_ICON[entry.channel];
         const onADay = context === "day";
+        const quotation =
+          entry.quotationNumber !== null && entry.quotationRevision !== null
+            ? quotationLabel(entry.quotationNumber, entry.quotationRevision)
+            : null;
+        const dispatch = entry.dispatchNumber !== null ? dispatchLabel(entry.dispatchNumber) : null;
+        const named = entry.contactName || entry.projectName || quotation || dispatch;
         return (
-          <li key={entry.id} className="card-face flex flex-col gap-1.5 p-3">
+          <li
+            key={entry.id}
+            data-slot="report-entry"
+            className="card-face flex flex-col gap-1.5 p-3"
+          >
             {/* The customer, first, on the screen where the entry is about him
                 rather than filed under him — and a door to him, because a
-                manager reading a day is one press from wanting the whole
-                history. */}
-            {onADay && entry.companyName ? (
-              // Not a heading element: this list is inside a card whose own
-              // heading is an h2 on the reader's card and an h3 on everybody
-              // else's, so a fixed level here would skip one of them. The
-              // entries are a list and a screen reader walks them as one.
+                reader of a day is one press from wanting the whole history. Not
+                a heading element: the list sits under headings of more than one
+                level, and the entries are a list a screen reader walks as one. */}
+            {onADay ? (
               <p className="min-w-0 text-sm font-medium">
                 <Link
                   href={`/companies?open=${entry.companyId}`}
@@ -136,9 +102,13 @@ export function ActivityList({
                 <Icon aria-hidden="true" />
                 {t(`common.${entry.channel}`)}
               </Badge>
-              {/* Both of these are the heading of the card this list is inside
-                  when the list is a person's day: every line would say the same
-                  date and the same name. */}
+              <Badge variant="outline" data-slot="report-outcome">
+                <span className="sr-only">{t("reports.dialog.outcome")}: </span>
+                <bdi>{entry.outcomeName}</bdi>
+              </Badge>
+              {/* Both of these are the heading this list sits under when the
+                  list is a person's day: every line would say the same date and
+                  the same name. */}
               {onADay ? null : (
                 <>
                   <DayText
@@ -157,12 +127,16 @@ export function ActivityList({
                   <ActivityActions
                     entry={{
                       id: entry.id,
+                      companyId: entry.companyId,
+                      companyName: entry.companyName,
                       text: entry.text,
-                      channel: entry.channel,
+                      kind: entry.channel,
+                      outcomeId: entry.outcomeId,
                       contactId: entry.contactId ?? null,
                       projectId: entry.projectId ?? null,
+                      quotationId: entry.quotationId ?? null,
+                      dispatchId: entry.dispatchId ?? null,
                     }}
-                    companyId={entry.companyId}
                     dayOpen={entry.dayOpen === true}
                   />
                 </span>
@@ -170,38 +144,59 @@ export function ActivityList({
             </div>
 
             {/* His words, in his direction, whichever page it is on. */}
-            <Prose text={entry.text} className="text-sm" />
+            <Prose text={entry.text} slot="report-text" className="text-sm" />
 
             {named ? (
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                {/* Each name is a run of its own: a contact and a job are both
-                    typed by people and either can be in either script, and two
-                    unwrapped values with a neutral mark between them settle
-                    against the paragraph rather than against each other
-                    (rules/words.md). */}
-                {entry.contactName ? (
-                  <span>
-                    <span className="sr-only">{t("common.contact")}: </span>
-                    <bdi>{entry.contactName}</bdi>
-                  </span>
-                ) : null}
-                {entry.contactName && entry.projectName ? (
-                  <span aria-hidden="true" className="text-faint">
-                    ·
-                  </span>
-                ) : null}
-                {entry.projectName ? (
-                  <span>
-                    <span className="sr-only">{t("common.project")}: </span>
-                    <bdi>{entry.projectName}</bdi>
-                  </span>
-                ) : null}
-              </div>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                {/* Each name is a run of its own, with a mark between them: two
+                    values side by side in a gap read in the page's order only
+                    when something says they are two (rules/words.md). */}
+                {[
+                  entry.contactName ? (
+                    <span key="contact">
+                      <span className="sr-only">{t("common.contact")}: </span>
+                      <bdi>{entry.contactName}</bdi>
+                    </span>
+                  ) : null,
+                  entry.projectName ? (
+                    <span key="project">
+                      <span className="sr-only">{t("common.project")}: </span>
+                      <bdi>{entry.projectName}</bdi>
+                    </span>
+                  ) : null,
+                  quotation ? (
+                    <span key="quotation">
+                      <span className="sr-only">{t("common.quotation")}: </span>
+                      <span dir="ltr" className="num">
+                        {quotation}
+                      </span>
+                    </span>
+                  ) : null,
+                  dispatch ? (
+                    <span key="dispatch">
+                      <span className="sr-only">{t("common.dispatch")}: </span>
+                      <span dir="ltr" className="num">
+                        {dispatch}
+                      </span>
+                    </span>
+                  ) : null,
+                ]
+                  .filter(Boolean)
+                  .flatMap((part, index) =>
+                    index === 0
+                      ? [part]
+                      : [
+                          <span key={`dot-${index}`} aria-hidden="true" className="text-faint">
+                            ·
+                          </span>,
+                          part,
+                        ],
+                  )}
+              </p>
             ) : null}
           </li>
         );
       })}
     </ol>
   );
-
 }

@@ -4,11 +4,6 @@ import { Suspense } from "react";
 import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList, type ActivityEntry } from "@/components/activities/activity-list";
-import {
-  LogDialogHost,
-  type LogContact,
-  type LogProject,
-} from "@/components/activities/log-dialog";
 import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
 import { AcknowledgeLeadButton } from "@/components/leads/acknowledge-lead-button";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
@@ -29,13 +24,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { Link } from "@/i18n/navigation";
-import { listActivitiesForCompany } from "@/lib/activities";
+import { listActivitiesForCompany, mayReportOn } from "@/lib/activities";
 import { issuesOwnQuotations, mayHandOver, mayQuote, mayShare, mayWrite } from "@/lib/floor";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany, type CompanyDetail } from "@/lib/companies";
 import { floorHolderOptions } from "@/lib/pickers";
 import { companySharers } from "@/lib/shares";
-import { mayKeepContacts, mayRaiseFor, mayWorkProject } from "@/lib/visibility";
+import { mayKeepContacts, mayRaiseFor } from "@/lib/visibility";
 import { listQuotationsForCompany } from "@/lib/quotations";
 import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
@@ -175,15 +170,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   // is the rows in front of him.
   const manyKeepers = new Set(contacts.map((row) => row.repId)).size > 1;
   const projects: readonly CompanyProject[] = company.projects;
-  const logContacts: LogContact[] = contacts.map((row) => ({ id: row.id, name: row.name }));
   const quotations = await listQuotationsForCompany(user, company.id);
-  // A lost project is closed (SPEC S20); nothing new is logged against it. And
-  // an entry that names a project is guarded by the project, not the company
-  // (`assertProjectMine`, D147), so the picker offers only the jobs this reader
-  // actually works — its own rep, or somebody put on it.
-  const logProjects: LogProject[] = projects
-    .filter((row) => !row.lostAt && mayWorkProject(user, row.repId, row.onProject))
-    .map((row) => ({ id: row.id, name: row.name }));
+  // A report on this customer: his own, or one shared with him (D147) — the
+  // same sentence `addReportAction` guards itself with, so the button is here
+  // exactly when the popup behind it would be accepted (DESIGN §5).
+  const reports = !company.archivedAt && mayReportOn(user, company.repId, company.shared);
   /*
    * The open projects this reader may raise a quotation ON: every quotation
    * belongs to one (S18, D94), so the dialog asks which, and there are two ways
@@ -222,14 +213,10 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
     </Button>
   );
 
-  // One log dialog for the whole drawer (D82): the header's Log button and
-  // the Correct button on every history entry press the same form.
+  // The header's Add report and the Correct on every history entry open the
+  // one popup the top bar mounts for the whole app (D82).
   return (
-    <LogDialogHost
-      targets={{
-        [company.id]: { companyName: company.name, contacts: logContacts, projects: logProjects },
-      }}
-    >
+    <>
       <CompanyHeader
         company={{
           id: company.id,
@@ -260,6 +247,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         }}
         standing={company.standing}
         mine={mine}
+        reports={reports}
         handOverTo={handOverTo}
         sharers={sharers}
         shareWith={shareWith}
@@ -349,7 +337,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         <TabsContent value="activity">
           <ActivityList
             activities={entries}
-            // No action in the panel: Log is in the drawer's action row a
+            // No action in the panel: Add report is in the drawer's action row a
             // centimetre above and never moves. A second copy of it inside the
             // empty state would be the same button twice — and, being inside a
             // branch that vanishes the moment it works, the copy that loses its
@@ -588,7 +576,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           )}
         </TabsContent>
       </Tabs>
-    </LogDialogHost>
+    </>
   );
 }
 

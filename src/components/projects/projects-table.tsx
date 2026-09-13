@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { setProjectFollowUpAction } from "@/actions/projects";
 import { Empty } from "@/components/ui-ext/empty";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
-import { LogButton } from "@/components/activities/log-dialog";
+import { ReportButton } from "@/components/reports/report-dialog";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog } from "@/components/projects/mark-lost-dialog";
@@ -377,10 +377,16 @@ export type ProjectSheetProps = {
    * (S8, D42), so he gets the dates and the history and no controls at all —
    * rather than buttons that would answer "Not allowed" (DESIGN §5).
    *
-   * This is what logging against it and setting its date take. Changing the
-   * project ROW is a second question, below.
+   * This is what setting its date takes. Changing the project ROW is a second
+   * question, below.
    */
   mine: boolean;
+  /**
+   * Whether he may write a report about this job: the customer over it is his,
+   * or shared with him (`mayReportOn`, D147). A lost job takes no new report
+   * (S20), which the sheet says by not offering one.
+   */
+  reports: boolean;
   /**
    * Whether he owns the row itself — the person who added the project. Editing
    * it, marking it lost and archiving it are decisions about the record rather
@@ -428,6 +434,7 @@ export function ProjectSheet({
   lostReason,
   notes,
   mine,
+  reports,
   owns,
   sharing,
   activity,
@@ -442,7 +449,7 @@ export function ProjectSheet({
   const guarded = useWireGuard();
   // The picked date shows at once and the server stays the source of truth: the
   // optimistic value falls back to the prop when the transition settles, so a
-  // refused save, a Log entry that moved the date, or somebody else's edit
+  // refused save, a report that moved the date, or somebody else's edit
   // arriving live all win over what was last drawn — with no copy to re-sync.
   const [day, showDay] = useOptimistic(nextFollowUp);
 
@@ -555,13 +562,20 @@ export function ProjectSheet({
           {sharing}
 
           {/* One primary action, at the top (DESIGN §2). */}
-          {mine || owns ? (
+          {(reports && !lost) || owns ? (
           <div className="flex flex-wrap items-center gap-2">
-            {/* Working it: its rep, and anybody put on it (D147). */}
-            {mine ? (
-            <LogButton companyId={companyId} projectId={projectId} variant="brand">
-              {t("common.log")}
-            </LogButton>
+            {/* A report about this job, the popup opening on its customer and
+                on it (SPEC §3 P13). Not on a lost one: finished work (S20). */}
+            {reports && !lost ? (
+            <ReportButton
+              companyId={companyId}
+              companyName={companyName}
+              projectId={projectId}
+              variant="brand"
+              icon
+            >
+              {t("common.addReport")}
+            </ReportButton>
             ) : null}
             {/* The row itself, and only its own rep — a helper on the job does
                 not rename it, close it or take it off the list. */}
@@ -611,7 +625,7 @@ export function ProjectSheet({
 
         <Tabs defaultValue="activity" className="p-4">
           <TabsList>
-            <TabsTrigger value="activity">{t("projects.activity")}</TabsTrigger>
+            <TabsTrigger value="activity">{t("drawer.activity")}</TabsTrigger>
             <TabsTrigger value="quotations">{t("common.quotations")}</TabsTrigger>
           </TabsList>
 

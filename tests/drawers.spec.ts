@@ -130,7 +130,7 @@ test("every button a drawer hands the kit still opens its dialog", async ({ page
     await press(t("common.projects"), t("drawer.newProject"), "New project");
   });
 
-  await test.step("the project drawer, whose Log button comes the same way", async () => {
+  await test.step("the project drawer, whose Add report button comes the same way", async () => {
     await page.goto(`/${locale}/projects`);
     await page.getByRole("table").first().getByRole("link").first().click();
     const drawer = page.getByRole("dialog").first();
@@ -140,8 +140,8 @@ test("every button a drawer hands the kit still opens its dialog", async ({ page
     await tab.click();
     await expect(tab).toHaveAttribute("aria-selected", "true");
 
-    const log = drawer.getByRole("button", { name: t("common.log"), exact: true }).first();
-    await pressAndExpectADialog(page, log, "Log");
+    const report = drawer.getByRole("button", { name: t("common.addReport"), exact: true }).first();
+    await pressAndExpectADialog(page, report, "Add report");
   });
 });
 

@@ -30,7 +30,19 @@ import type { PaymentDetail, PaymentTerms } from "../../src/lib/payment";
  * rep's name has to have read hers once.
  */
 export type RepKey = "faisal" | "saad" | "turki" | "marketing" | "rawan";
-export type Channel = "visit" | "call" | "whatsapp" | "other";
+export type Channel = "visit" | "siteVisit" | "meeting" | "call" | "whatsapp" | "other";
+/**
+ * What came of it, by the English name the admin's list is seeded with
+ * (`OUTCOMES` in ./lookups). The seed looks each one up by that name and stops
+ * on one it cannot find, so a word here the list does not have fails the run.
+ */
+export type OutcomeName =
+  | "Reached"
+  | "No answer"
+  | "Meeting set"
+  | "Wants a quotation"
+  | "Not now"
+  | "Lost to someone else";
 
 // ---- users -------------------------------------------------------------------
 
@@ -890,8 +902,16 @@ export const PROJECTS: ProjectSeed[] = [
   { key: "pd2", company: "d2", name: "واجهة برج مكتبي - طريق الملك عبدالعزيز", expectedSqm: "260.00" },
 ];
 
-// ---- the log ------------------------------------------------------------------
+// ---- reports ------------------------------------------------------------------
 
+/*
+ * A report is one thing that happened with a customer: what kind of thing it
+ * was, what came of it, and the rest in the rep's words (SPEC §3 P13, 13.8).
+ * All six kinds are on this floor and all six outcomes, because a chip the demo
+ * never fills is a filter nobody has seen narrow anything (rules/data.md) — and
+ * a few name the quotation or the load they were about, so the line under an
+ * entry that says so has been drawn.
+ */
 export type ActivitySeed = {
   company: string;
   project?: string;
@@ -899,6 +919,13 @@ export type ActivitySeed = {
   contact?: number;
   text: string;
   channel: Channel;
+  outcome: OutcomeName;
+  /**
+   * The quotation or dispatch it was about, by seed key. Linked once those are
+   * seeded, and the entry takes the job they are on (the popup does the same).
+   */
+  quotation?: string;
+  dispatch?: string;
   /** Working days back from today; 0 is the most recent working day. */
   back: number;
   /** Put it on the weekend day just before that working day instead. */
@@ -921,36 +948,36 @@ export type ActivitySeed = {
 
 export const ACTIVITIES: ActivitySeed[] = [
   // Faisal — 29
-  { company: "f1", project: "p1", contact: 0, channel: "visit", back: 5, text: "زيارة المصنع، شفنا الواجهة الحالية وأخذنا المقاسات" },
-  { company: "f1", contact: 0, channel: "whatsapp", back: 2, text: "أرسلت له كتالوج الألوان، اختار 168 فضي" },
-  { company: "f1", project: "p1", contact: 0, channel: "visit", back: 0, followUpDays: 0, text: "زيارة الموقع، طلب عينات 4 مم لون 168" },
+  { company: "f1", project: "p1", contact: 0, channel: "siteVisit", outcome: "Reached", back: 5, text: "زيارة المصنع، شفنا الواجهة الحالية وأخذنا المقاسات" },
+  { company: "f1", contact: 0, channel: "whatsapp", outcome: "Reached", back: 2, text: "أرسلت له كتالوج الألوان، اختار 168 فضي" },
+  { company: "f1", project: "p1", contact: 0, channel: "siteVisit", outcome: "Wants a quotation", back: 0, followUpDays: 0, text: "زيارة الموقع، طلب عينات 4 مم لون 168" },
 
-  { company: "f2", contact: 0, channel: "call", back: 9, text: "اتصال مع مدير المشاريع، عندهم برج مكاتب على طريق الملك فهد" },
-  { company: "f2", project: "p2", contact: 1, channel: "visit", back: 6, followUpDays: -4, text: "زيارة المكتب، طلبوا عرض سعر للواجهة، 2,400 متر تقريباً" },
+  { company: "f2", contact: 0, channel: "call", outcome: "Meeting set", back: 9, text: "اتصال مع مدير المشاريع، عندهم برج مكاتب على طريق الملك فهد" },
+  { company: "f2", project: "p2", contact: 1, channel: "meeting", outcome: "Wants a quotation", back: 6, followUpDays: -4, text: "زيارة المكتب، طلبوا عرض سعر للواجهة، 2,400 متر تقريباً" },
 
-  { company: "f3", contact: 0, channel: "visit", back: 3, text: "زيارة المكتب الاستشاري، اعتمدوا مواصفة A2 للمشاريع الحكومية" },
+  { company: "f3", contact: 0, channel: "meeting", outcome: "Reached", back: 3, text: "زيارة المكتب الاستشاري، اعتمدوا مواصفة A2 للمشاريع الحكومية" },
   // Faisal wrote this against the wrong customer and unfiled it (D70). It is in
   // the table, on no screen, and in no count.
-  { company: "f3", channel: "call", back: 4, unfiled: true, text: "اتصال بخصوص طلب المصنع — التسجيل على الشركة الخطأ" },
+  { company: "f3", channel: "call", outcome: "Reached", back: 4, unfiled: true, text: "اتصال بخصوص طلب المصنع — التسجيل على الشركة الخطأ" },
 
-  { company: "f4", contact: 0, channel: "whatsapp", back: 12, text: "طلب لوحات إعلانية 3 مم، ما عندنا، عرضت عليه 4 مم" },
-  { company: "f4", contact: 0, channel: "call", back: 6, text: "ما رد، أعيد الاتصال الأسبوع الجاي" },
+  { company: "f4", contact: 0, channel: "whatsapp", outcome: "Not now", back: 12, text: "طلب لوحات إعلانية 3 مم، ما عندنا، عرضت عليه 4 مم" },
+  { company: "f4", contact: 0, channel: "call", outcome: "No answer", back: 6, text: "ما رد، أعيد الاتصال الأسبوع الجاي" },
 
-  { company: "f5", project: "p4", channel: "other", back: 8, text: "Met them at the exhibition stand, they are building their HQ in Riyadh" },
-  { company: "f5", project: "p4", contact: 0, channel: "call", back: 3, text: "Called Ziad, walked him through the HQ quotation" },
-  { company: "f5", contact: 0, channel: "whatsapp", back: 1, followUpDays: 3, text: "Sent catalogue, waiting for the consultant" },
+  { company: "f5", project: "p4", channel: "meeting", outcome: "Meeting set", back: 8, text: "Met them at the exhibition stand, they are building their HQ in Riyadh" },
+  { company: "f5", project: "p4", contact: 0, channel: "call", outcome: "Reached", quotation: "q3", back: 3, text: "Called Ziad, walked him through the HQ quotation" },
+  { company: "f5", contact: 0, channel: "whatsapp", outcome: "Not now", back: 1, followUpDays: 3, text: "Sent catalogue, waiting for the consultant" },
 
-  { company: "f6", project: "p5", contact: 0, channel: "visit", back: 10, text: "زيارة الخرج، مجمع سكني حي الياسمين، 1,850 متر" },
-  { company: "f6", contact: 0, channel: "call", back: 4, text: "العميل قال السعر مرتفع مقارنة بعرض ثاني" },
+  { company: "f6", project: "p5", contact: 0, channel: "siteVisit", outcome: "Wants a quotation", back: 10, text: "زيارة الخرج، مجمع سكني حي الياسمين، 1,850 متر" },
+  { company: "f6", contact: 0, channel: "call", outcome: "Lost to someone else", back: 4, text: "العميل قال السعر مرتفع مقارنة بعرض ثاني" },
 
-  { company: "f7", project: "p7", contact: 0, channel: "visit", back: 9, text: "زيارة المصنع، معرض سيارات جديد على الدائري الشرقي" },
-  { company: "f7", contact: 0, channel: "whatsapp", back: 2, text: "أرسلت له مقاسات الألواح المتوفرة" },
+  { company: "f7", project: "p7", contact: 0, channel: "visit", outcome: "Wants a quotation", back: 9, text: "زيارة المصنع، معرض سيارات جديد على الدائري الشرقي" },
+  { company: "f7", contact: 0, channel: "whatsapp", outcome: "Reached", back: 2, text: "أرسلت له مقاسات الألواح المتوفرة" },
 
-  { company: "f8", contact: 0, channel: "whatsapp", back: 7, text: "طلب أسعار ألواح 4 مم للتشكيل، كمية صغيرة" },
-  { company: "f8", contact: 0, channel: "call", back: 2, followUpDays: 9, text: "رجعت له، قال ينتظر موافقة صاحب الورشة" },
+  { company: "f8", contact: 0, channel: "whatsapp", outcome: "Wants a quotation", back: 7, text: "طلب أسعار ألواح 4 مم للتشكيل، كمية صغيرة" },
+  { company: "f8", contact: 0, channel: "call", outcome: "Not now", back: 2, followUpDays: 9, text: "رجعت له، قال ينتظر موافقة صاحب الورشة" },
 
-  { company: "f9", project: "p6", contact: 0, channel: "visit", back: 11, text: "اجتماع مع إدارة المحطات، عندهم ست محطات على طريق الخرج" },
-  { company: "f9", project: "p6", contact: 2, channel: "call", back: 5, text: "طلبوا جدول تنفيذ لكل محطة على حدة" },
+  { company: "f9", project: "p6", contact: 0, channel: "meeting", outcome: "Reached", back: 11, text: "اجتماع مع إدارة المحطات، عندهم ست محطات على طريق الخرج" },
+  { company: "f9", project: "p6", contact: 2, channel: "call", outcome: "Reached", back: 5, text: "طلبوا جدول تنفيذ لكل محطة على حدة" },
 
   // One day of telephone work, three working days back — nine entries on it
   // once f3's visit and f5's call are counted (P12-13). Until this the busiest
@@ -959,60 +986,60 @@ export const ACTIVITIES: ActivitySeed[] = [
   // had the report card of a rep who actually worked the phone. A day like this
   // is ordinary here: the fabricator rings back, the consultant wants a
   // specification, and half of it is five minutes each.
-  { company: "f1", contact: 0, channel: "call", back: 3, text: "اتصل يسأل عن مدة التوريد، قلت له أسبوعين من تاريخ الطلب" },
-  { company: "f1", project: "p1", channel: "whatsapp", back: 3, text: "أرسلت له صور تركيب مشابه في مشروع سابق" },
-  { company: "f5", contact: 0, channel: "whatsapp", back: 3, text: "Sent the fire rating certificate, they forwarded it to the consultant" },
-  { company: "f7", contact: 0, channel: "call", back: 3, text: "المقاول يسأل عن الفرق بين 4 و 5 مم للواجهات العالية" },
-  { company: "f7", channel: "other", back: 3, text: "أرسلت له جدول المقاسات المتوفرة بالإيميل" },
-  { company: "f8", contact: 0, channel: "call", back: 3, text: "صاحب الورشة رجع، يبي كمية أقل من المتوفرة" },
-  { company: "f8", contact: 0, channel: "whatsapp", back: 3, text: "أرسلت له الأسعار للكمية الصغيرة" },
+  { company: "f1", contact: 0, channel: "call", outcome: "Reached", dispatch: "d3", back: 3, text: "اتصل يسأل عن مدة التوريد، قلت له أسبوعين من تاريخ الطلب" },
+  { company: "f1", project: "p1", channel: "whatsapp", outcome: "Reached", back: 3, text: "أرسلت له صور تركيب مشابه في مشروع سابق" },
+  { company: "f5", contact: 0, channel: "whatsapp", outcome: "Reached", back: 3, text: "Sent the fire rating certificate, they forwarded it to the consultant" },
+  { company: "f7", contact: 0, channel: "call", outcome: "Reached", back: 3, text: "المقاول يسأل عن الفرق بين 4 و 5 مم للواجهات العالية" },
+  { company: "f7", channel: "other", outcome: "Reached", back: 3, text: "أرسلت له جدول المقاسات المتوفرة بالإيميل" },
+  { company: "f8", contact: 0, channel: "call", outcome: "Wants a quotation", back: 3, text: "صاحب الورشة رجع، يبي كمية أقل من المتوفرة" },
+  { company: "f8", contact: 0, channel: "whatsapp", outcome: "Reached", back: 3, text: "أرسلت له الأسعار للكمية الصغيرة" },
 
-  { company: "f10", contact: 0, channel: "call", back: 13, text: "اتصال أول، عندهم مشروع سكني بعد شهرين" },
+  { company: "f10", contact: 0, channel: "call", outcome: "Not now", back: 13, text: "اتصال أول، عندهم مشروع سكني بعد شهرين" },
 
-  { company: "f11", contact: 0, channel: "other", back: 4, text: "Came through the website form, asked for the 4 mm price list" },
+  { company: "f11", contact: 0, channel: "other", outcome: "Wants a quotation", back: 4, text: "Came through the website form, asked for the 4 mm price list" },
 
-  { company: "f12", contact: 0, channel: "call", back: 7, onWeekend: true, text: "اتصل يوم الجمعة، يبي عرض سعر مستعجل للدرعية" },
+  { company: "f12", contact: 0, channel: "call", outcome: "Wants a quotation", back: 7, onWeekend: true, text: "اتصل يوم الجمعة، يبي عرض سعر مستعجل للدرعية" },
 
   // Saad — 11
-  { company: "s1", project: "p8", contact: 0, channel: "visit", back: 10, text: "زيارة جدة، برج الكورنيش التجاري، 4,200 متر" },
-  { company: "s1", contact: 0, channel: "call", back: 6, text: "تم إصدار عرض السعر وأرسلته للعميل" },
-  { company: "s1", project: "p8", contact: 1, channel: "visit", back: 1, followUpDays: 2, text: "العميل وافق على العرض، بديت أرتب التوريد" },
+  { company: "s1", project: "p8", contact: 0, channel: "siteVisit", outcome: "Wants a quotation", back: 10, text: "زيارة جدة، برج الكورنيش التجاري، 4,200 متر" },
+  { company: "s1", contact: 0, channel: "call", outcome: "Reached", quotation: "q6", back: 6, text: "تم إصدار عرض السعر وأرسلته للعميل" },
+  { company: "s1", project: "p8", contact: 1, channel: "meeting", outcome: "Reached", dispatch: "d2", back: 1, followUpDays: 2, text: "العميل وافق على العرض، بديت أرتب التوريد" },
 
-  { company: "s2", contact: 0, channel: "whatsapp", back: 8, text: "طلب أسعار 5 مم كمية 300 متر" },
-  { company: "s2", contact: 0, channel: "call", back: 3, text: "ينتظر موافقة الإدارة على الكمية" },
+  { company: "s2", contact: 0, channel: "whatsapp", outcome: "Wants a quotation", back: 8, text: "طلب أسعار 5 مم كمية 300 متر" },
+  { company: "s2", contact: 0, channel: "call", outcome: "Not now", back: 3, text: "ينتظر موافقة الإدارة على الكمية" },
 
-  { company: "s3", contact: 0, channel: "visit", back: 5, text: "زيارة المكتب، عرضنا المواصفات الفنية والشهادات" },
+  { company: "s3", contact: 0, channel: "visit", outcome: "Reached", back: 5, text: "زيارة المكتب، عرضنا المواصفات الفنية والشهادات" },
 
-  { company: "s4", project: "p9", contact: 0, channel: "other", back: 9, text: "Met at the Jeddah expo, they asked about the retail podium" },
-  { company: "s4", contact: 1, channel: "call", back: 2, followUpDays: 6, text: "Sent the technical datasheet, waiting for their reply" },
+  { company: "s4", project: "p9", contact: 0, channel: "meeting", outcome: "Meeting set", back: 9, text: "Met at the Jeddah expo, they asked about the retail podium" },
+  { company: "s4", contact: 1, channel: "call", outcome: "No answer", back: 2, followUpDays: 6, text: "Sent the technical datasheet, waiting for their reply" },
 
-  { company: "s5", project: "p10", contact: 0, channel: "whatsapp", back: 4, text: "توسعة فندق العزيزية، طلبوا عرض للواجهة الخارجية" },
+  { company: "s5", project: "p10", contact: 0, channel: "whatsapp", outcome: "Wants a quotation", back: 4, text: "توسعة فندق العزيزية، طلبوا عرض للواجهة الخارجية" },
 
-  { company: "s6", contact: 0, channel: "call", back: 12, text: "اتصال تعريفي، ما عندهم مشاريع حالياً" },
+  { company: "s6", contact: 0, channel: "call", outcome: "Not now", back: 12, text: "اتصال تعريفي، ما عندهم مشاريع حالياً" },
 
-  { company: "s7", contact: 0, channel: "whatsapp", back: 3, onWeekend: true, text: "راسلني السبت، يبي كتالوج الألوان" },
+  { company: "s7", contact: 0, channel: "whatsapp", outcome: "Reached", back: 3, onWeekend: true, text: "راسلني السبت، يبي كتالوج الألوان" },
 
   // Turki — 7
-  { company: "t1", project: "p11", contact: 0, channel: "visit", back: 7, text: "زيارة الدمام، مبنى مكاتب 760 متر" },
-  { company: "t1", contact: 0, channel: "call", back: 2, followUpDays: 4, text: "طلب عرض سعر بلونين، 168 و1020" },
+  { company: "t1", project: "p11", contact: 0, channel: "visit", outcome: "Meeting set", back: 7, text: "زيارة الدمام، مبنى مكاتب 760 متر" },
+  { company: "t1", contact: 0, channel: "call", outcome: "Wants a quotation", back: 2, followUpDays: 4, text: "طلب عرض سعر بلونين، 168 و1020" },
   // Overdue on purpose: marketing's day is the call list, and a screen with
   // nothing on it shows nothing about the role (P8.9).
-  { company: "m1", contact: 0, channel: "call", back: 4, followUpDays: -2, text: "اتصلت بهم بعد المعرض، مهتمين بواجهة مشروع في الملقا" },
+  { company: "m1", contact: 0, channel: "call", outcome: "Reached", back: 4, followUpDays: -2, text: "اتصلت بهم بعد المعرض، مهتمين بواجهة مشروع في الملقا" },
 
-  { company: "t2", project: "p12", contact: 0, channel: "visit", back: 11, text: "زيارة الخبر، مركز تجاري كبير، الاستشاري يطلب A2" },
-  { company: "t2", contact: 1, channel: "whatsapp", back: 5, text: "أرسلت شهادات مقاومة الحريق" },
+  { company: "t2", project: "p12", contact: 0, channel: "siteVisit", outcome: "Reached", back: 11, text: "زيارة الخبر، مركز تجاري كبير، الاستشاري يطلب A2" },
+  { company: "t2", contact: 1, channel: "whatsapp", outcome: "Reached", back: 5, text: "أرسلت شهادات مقاومة الحريق" },
 
-  { company: "t3", contact: 0, channel: "call", back: 3, text: "طلب ألواح للوحات محلات، الكمية 40 متر" },
+  { company: "t3", contact: 0, channel: "call", outcome: "Wants a quotation", back: 3, text: "طلب ألواح للوحات محلات، الكمية 40 متر" },
 
-  { company: "t4", contact: 0, channel: "whatsapp", back: 8, text: "عميل شخصي، يبي يكسي واجهة استراحة" },
+  { company: "t4", contact: 0, channel: "whatsapp", outcome: "Not now", back: 8, text: "عميل شخصي، يبي يكسي واجهة استراحة" },
 
-  { company: "t5", contact: 0, channel: "other", back: 6, onWeekend: true, text: "Enquiry from the Cairo office, asked about export pricing" },
+  { company: "t5", contact: 0, channel: "other", outcome: "Not now", back: 6, onWeekend: true, text: "Enquiry from the Cairo office, asked about export pricing" },
 
   // What Turki wrote before anybody knew this was Faisal's customer (P12-8).
   // The fold moves it onto the record that continues, with his name still on
   // it: an entry records who did it, and rewriting that would be rewriting the
   // report (S27).
-  { company: "d2", contact: 0, channel: "call", back: 9, text: "اتصل يسأل عن كلادينج لبرج مكتبي، طلب زيارة" },
+  { company: "d2", contact: 0, channel: "call", outcome: "Meeting set", back: 9, text: "اتصل يسأل عن كلادينج لبرج مكتبي، طلب زيارة" },
 ];
 
 /**
@@ -1729,70 +1756,6 @@ export const DESK_TARGET_LAST_MONTH = "320.00";
 // them — the same defect as a figure that is always zero (D66).
 export const COMPANY_TARGET_THIS_MONTH = "3200.00";
 export const COMPANY_TARGET_LAST_MONTH = "2600.00";
-
-// ---- daily reports ------------------------------------------------------------
-
-/*
- * A report is a person's own sentence about his own day, so the demo writes it
- * in the language that person actually uses — the same reasoning as the note on
- * a day off below. Rawan and marketing read Arabic; the reps read English. The
- * app shows a report exactly as it was typed and never translates it.
- *
- * The shape matters as much as the words. On the latest working day everybody
- * has written except Faisal, so the rep who signs in has an empty box waiting
- * for him and four sentences to read; on the day before, everybody has written
- * except Turki, so a finished day carries exactly one card with a blank in it,
- * which is the thing the design has to get right (D57).
- */
-export type ReportSeed = {
-  user: string;
-  /** Working days back; 0 is the latest working day. */
-  back: number;
-  note: string;
-};
-
-export const REPORTS: ReportSeed[] = [
-  {
-    user: "saad",
-    back: 0,
-    note: "Visited Rowaa Al-Omran and Al-Hisn. Rowaa want a mock-up panel before they commit, so I need one sample sheet in white 4mm. Al-Waha have gone quiet on the revised price — third week now.",
-  },
-  {
-    user: "turki",
-    back: 0,
-    note: "Al-Rowad confirmed they take the shipment next week. Two follow-ups moved to Sunday because their consultant is away.",
-  },
-  {
-    user: "rawan",
-    back: 0,
-    note: "أصدرت ثلاثة عروض أسعار وأعدت واحدًا إلى فيصل لتصحيح المقاسات. اعتمدت التوريد بعد مطابقة الكميات مع سماك.",
-  },
-  {
-    user: "marketing",
-    back: 0,
-    note: "متابعة مع واجهات الرياض ودرع الخليج. واجهات الرياض تحتاج زيارة مندوب، وأرسلت التفاصيل إلى عبدالرحمن.",
-  },
-  {
-    user: "faisal",
-    back: 1,
-    note: "Sidra finally have the drawings, so the request is with Rawan. Delta Rock have not called me back for the third time — I think they went to the other supplier.",
-  },
-  {
-    user: "saad",
-    back: 1,
-    note: "Chased Al-Waha on the revised price all morning. They are comparing us with an imported panel; we lose this one unless we can shorten the lead time.",
-  },
-  {
-    user: "rawan",
-    back: 1,
-    note: "يوم هادئ في الطلبات. راجعت أرقام سماك للعروض المعلقة، ورقمان لم يصلاني بعد.",
-  },
-  {
-    user: "marketing",
-    back: 1,
-    note: "أربعة عملاء محتملين من معرض البناء؛ اثنان منهم جاهزان للتسليم إلى المندوبين.",
-  },
-];
 
 // ---- notifications ------------------------------------------------------------
 

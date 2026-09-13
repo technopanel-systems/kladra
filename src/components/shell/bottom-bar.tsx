@@ -1,8 +1,9 @@
 "use client";
 
-import { Menu } from "lucide-react";
-import { useState } from "react";
+import { Menu, Plus } from "lucide-react";
+import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useReport, useReportWritable } from "@/components/reports/report-dialog";
 import {
   Sheet,
   SheetClose,
@@ -11,6 +12,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Link, usePathname } from "@/i18n/navigation";
+import { writesReports } from "@/lib/floor";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 import { bottomBarFor, isActive, navFor } from "./nav";
@@ -19,6 +21,10 @@ import { bottomBarFor, isActive, navFor } from "./nav";
  * The phone shell (below `md`): the rail becomes a bar under the thumb, four
  * items wide, and everything the role can reach — including the admin group —
  * opens in a bottom sheet. Every target is at least 44px tall.
+ *
+ * For a role that writes reports the middle of the bar is Add report (SPEC §3
+ * P13, 13.8): the one thing written from anywhere, under the thumb that writes
+ * it. Six across 375px is 62px each — still past the 44 a thumb needs (D130).
  */
 export function BottomBar({ role }: { role: Role }) {
   const t = useTranslations();
@@ -26,6 +32,10 @@ export function BottomBar({ role }: { role: Role }) {
   const [open, setOpen] = useState(false);
   const bar = bottomBarFor(role);
   const groups = navFor(role);
+  const openReport = useReport();
+  const writable = useReportWritable();
+  // After the second item, so it sits in the middle of the six.
+  const addAt = writesReports(role) && writable ? 2 : -1;
 
   return (
     <>
@@ -33,24 +43,41 @@ export function BottomBar({ role }: { role: Role }) {
         aria-label={t("shell.mainNav")}
         className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-rail pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        {bar.map((item) => {
+        {bar.map((item, index) => {
           const active = isActive(pathname, item.href);
           const Icon = item.icon;
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 transition-colors",
-                active ? "text-rail-strong" : "text-rail-text",
-              )}
-            >
-              <Icon className="size-5 shrink-0" />
-              <span className="max-w-full truncate text-[10px] font-medium">
-                {t(item.shortKey ?? item.labelKey)}
-              </span>
-            </Link>
+            <Fragment key={item.href}>
+              {index === addAt ? (
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  data-slot="bottom-add-report"
+                  onClick={() => openReport()}
+                  className="flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-1 px-1 text-rail-strong"
+                >
+                  <span className="flex size-6 items-center justify-center rounded-full bg-rail-strong/15">
+                    <Plus aria-hidden="true" className="size-4 shrink-0" />
+                  </span>
+                  <span className="max-w-full truncate text-[10px] font-medium">
+                    {t("common.addReport")}
+                  </span>
+                </button>
+              ) : null}
+              <Link
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 transition-colors",
+                  active ? "text-rail-strong" : "text-rail-text",
+                )}
+              >
+                <Icon className="size-5 shrink-0" />
+                <span className="max-w-full truncate text-[10px] font-medium">
+                  {t(item.shortKey ?? item.labelKey)}
+                </span>
+              </Link>
+            </Fragment>
           );
         })}
         <button

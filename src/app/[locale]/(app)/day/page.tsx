@@ -1,6 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { CallList } from "@/components/day/call-list";
-import { CloseTheDay } from "@/components/reports/close-the-day";
 import { MonthCard } from "@/components/team/month-card";
 import { MonthsCard } from "@/components/team/months-card";
 import { RatiosCard } from "@/components/team/ratios-card";
@@ -16,7 +15,6 @@ import { BAND_LIMIT } from "@/lib/list-size";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import { awayOn } from "@/lib/leave";
 import { followUpCounts } from "@/lib/followups";
-import { logTargetsFor } from "@/lib/log-targets";
 import { waitingCounts, waitingOnRep } from "@/lib/day";
 import { chainRatios, metresBySegment } from "@/lib/metrics";
 import { monthsBack } from "@/lib/months";
@@ -110,11 +108,6 @@ export default async function DayPage({
       awayOn(todayRiyadh()),
     ]);
 
-  // One pair of queries for the whole screen, after the bands are known (D71).
-  const targets = await logTargetsFor(
-    [...overdue, ...today, ...never, ...quiet].map((row) => row.id),
-  );
-
   const onLeave = away.get(user.id);
 
   return (
@@ -131,12 +124,6 @@ export default async function DayPage({
 
       {working ? (
         <>
-          {/* First, not last. It sat at the foot of the screen because a report
-              is the last thing done, which is true and was still wrong: a rep
-              who has finished his day should not scroll past three lists of
-              unfinished work to write it (D151). It disappears once written. */}
-          <CloseTheDay userId={user.id} role={user.role} />
-
           {/* His own leave, said on his own screen (D75). The bands underneath are
               left exactly as they are: a customer who was promised a call on Tuesday
               is still waiting whether or not the rep was at work, and telling him
@@ -178,7 +165,6 @@ export default async function DayPage({
             never={never}
             quiet={quiet}
             totals={counts}
-            targets={targets}
           />
         </>
       ) : (

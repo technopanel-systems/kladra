@@ -1,52 +1,47 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { archiveActivityAction } from "@/actions/activities";
-import { LogButton, type LogEdit } from "./log-dialog";
+import { unfileReportAction } from "@/actions/reports";
+import { ReportButton, type ReportEdit } from "@/components/reports/report-dialog";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "@/i18n/navigation";
 
 /**
- * The two corrections a person may make to their own entry (SPEC D70).
+ * The two corrections a person may make to their own report (SPEC D70).
  *
- * A client island rather than part of `ActivityList`: the list renders on the
- * server inside the company drawer, and `ConfirmDialog` takes a function prop,
- * which cannot cross that boundary. Everything here is plain data.
+ * A client island rather than part of `ActivityList`'s markup: `ConfirmDialog`
+ * takes a function prop, which cannot cross from a server component.
  *
- * Quiet on purpose, and at the end of the row. They appear only on entries the
- * reader wrote — a manager reads every rep's log and may not touch it — so a
- * floor sees them on its own words and nowhere else.
+ * Quiet on purpose, and at the end of the row. They appear only on reports the
+ * reader wrote — a manager reads every rep's reports and may not touch them — so
+ * a floor sees them on its own words and nowhere else.
  */
 export function ActivityActions({
   entry,
-  companyId,
   dayOpen,
 }: {
-  entry: LogEdit;
-  companyId: string;
+  entry: ReportEdit;
   /** Its day is still open, so it can still be corrected or unfiled (D58, D70, D87). */
   dayOpen: boolean;
 }) {
   const t = useTranslations();
   const router = useRouter();
 
-  // Both actions take the same window (D58, D70, D87). Unfile used to be offered
-  // on any day while the server refused only the correction; an entry that
-  // vanishes from a reported day rewrites a figure the same way rewording it does.
+  // Both actions take the same window (D58, D70, D87): an entry that vanishes
+  // from a reported day rewrites a figure the same way rewording it does.
   if (!dayOpen) return null;
 
   return (
     <span className="flex items-center gap-1">
-      <LogButton
-        companyId={companyId}
+      <ReportButton
         entry={entry}
         variant="ghost"
         size="sm"
         className="text-xs text-muted-foreground"
       >
         {t("drawer.correct")}
-      </LogButton>
+      </ReportButton>
 
       <ConfirmDialog
         trigger={
@@ -61,7 +56,7 @@ export function ActivityActions({
         onConfirm={() => {
           const fields = new FormData();
           fields.set("activityId", entry.id);
-          return archiveActivityAction(null, fields);
+          return unfileReportAction(null, fields);
         }}
         onDone={() => router.refresh()}
       />

@@ -3,6 +3,7 @@ import { addDays, todayRiyadh } from "@/lib/dates";
 import { login } from "./helpers/auth";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 import { pickFirst } from "./helpers/pick";
+import { answerReport } from "./helpers/report";
 
 /**
  * Faisal's day, exactly as WORKFLOW.md §3 writes it: sign in, add a company
@@ -170,25 +171,24 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     ).toHaveCount(1);
   });
 
-  await test.step("3 · Log a visit with a follow-up tomorrow; it is first in Activity", async () => {
+  await test.step("3 · Report a visit with a follow-up tomorrow; it is first in Reports", async () => {
     const drawer = dialogNamed(page, fixture.company);
-    // The primary Log, at the top of the drawer — the empty Activity panel
-    // offers a second one. `exact` because in Arabic "تسجيل" (Log) is a prefix
-    // of "تسجيل الخروج" (Sign out).
+    // The Add report at the top of the drawer, in its actions — `exact`, so a
+    // longer label that happens to start with the same words is not the one.
     await drawer
       .getByRole("group", { name: t("drawer.companyActions") })
-      .getByRole("button", { name: t("common.log"), exact: true })
+      .getByRole("button", { name: t("common.addReport"), exact: true })
       .click();
 
-    const dialog = dialogNamed(page, t("drawer.logTitle"));
-    await dialog.getByLabel(t("drawer.whatHappened")).fill(fixture.visit);
+    const dialog = dialogNamed(page, t("common.addReport"));
+    await answerReport(dialog, t, locale, { kind: "visit", text: fixture.visit });
 
-    // "Visit" is already the channel. The one picker still reading "pick a
-    // date" is the follow-up; the other already holds today.
+    // The day is two chips and already on today, so the one picker in the
+    // popup is the follow-up.
     await pickDay(page, dialog.getByRole("button", { name: t("common.pickDate") }), tomorrow);
 
     await dialog.getByRole("button", { name: t("common.save") }).click();
-    await expect(page.getByText(t("drawer.logged"))).toBeVisible();
+    await expect(page.getByText(t("reports.dialog.added"))).toBeVisible();
 
     // Newest first (SPEC S24) — the entry just written is the first one.
     const entries = dialogNamed(page, fixture.company).locator("ol > li");
@@ -410,16 +410,12 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     const archived = dialogNamed(page, fixture.renamed);
     await expect(archived).toBeVisible();
 
-    // But it takes nothing new (D24): a log entry would hang off a row that
-    // appears on no list.
-    await archived
-      .getByRole("group", { name: t("drawer.companyActions") })
-      .getByRole("button", { name: t("common.log"), exact: true })
-      .click();
-    const log = dialogNamed(page, t("drawer.logTitle"));
-    await log.getByLabel(t("drawer.whatHappened")).fill("after archiving");
-    await log.getByRole("button", { name: t("common.save") }).click();
-    await expect(page.getByText(t("errors.companyArchived"))).toBeVisible();
+    // But it takes nothing new (D24): a report would hang off a row that
+    // appears on no list — so it is not offered, and the action refuses one
+    // that arrives anyway (`addReportAction`, errors.companyArchived).
+    await expect(
+      archived.getByRole("button", { name: t("common.addReport"), exact: true }),
+    ).toHaveCount(0);
   });
 });
 
@@ -458,7 +454,7 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
     await expect(drawer.getByRole("button", { name: t("common.pickDate") })).toHaveCount(0);
 
     for (const label of [
-      t("common.log"),
+      t("common.addReport"),
       t("drawer.newProject"),
       t("common.edit"),
       t("drawer.archive"),
@@ -501,11 +497,11 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
     const sheet = page.getByRole("dialog").first();
     await expect(sheet).toBeVisible();
 
-    await expect(sheet.getByRole("tab", { name: t("projects.activity") })).toBeVisible();
+    await expect(sheet.getByRole("tab", { name: t("drawer.activity") })).toBeVisible();
     await expect(sheet.getByRole("button", { name: t("common.pickDate") })).toHaveCount(0);
 
     for (const label of [
-      t("common.log"),
+      t("common.addReport"),
       t("common.edit"),
       t("common.markLost"),
       t("drawer.archive"),

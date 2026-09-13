@@ -40,8 +40,8 @@ test("the last thing written about a customer is on the card that asks for the c
   // Written in Arabic on purpose: the line takes its own direction on either page.
   const said = `أراد عينات 4 مم — ${Date.now()}`;
   const entry = await one<{ id: string }>(
-    `insert into activities (company_id, user_id, text, channel, happened_on, next_follow_up)
-     values ($1::uuid, $2::uuid, $3, 'visit', $4::date, $4::date)
+    `insert into activities (company_id, user_id, text, channel, outcome_id, happened_on, next_follow_up)
+     values ($1::uuid, $2::uuid, $3, 'visit', (select min(id) from outcomes where active), $4::date, $4::date)
      returning id`,
     [company.id, faisal, said, today],
   );

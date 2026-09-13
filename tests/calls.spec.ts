@@ -4,6 +4,7 @@ import { formatPhone, storedE164, telHref, whatsappHref } from "@/lib/phone";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
+import { reportDialog } from "./helpers/report";
 
 /**
  * A number on screen is a message and a call (SPEC D98, P11A-11).
@@ -429,7 +430,7 @@ test("the number prompts name the customer", async ({ page, locale, t }) => {
   });
 });
 
-test("the log from a call card starts on the contact the card names", async ({
+test("a report from a call card starts on the contact the card names", async ({
   page,
   locale,
   t,
@@ -440,10 +441,9 @@ test("the log from a call card starts on the contact the card names", async ({
   const faisal = await userId("faisal@technopanel.com.sa");
   const today = todayRiyadh();
 
-  // Two people at least: the second step asserts the header opens on NOBODY,
-  // and a company with exactly one contact opens on that one by design (D115).
-  // A fixture that did not say so proved the opposite of what it claims the day
-  // the row it happened to pick had one person on it.
+  // Two people at least: with one contact on the company, "opens on the main
+  // contact" and "opens on the only contact" are the same screen, and a fixture
+  // that did not say so would prove nothing about which one was chosen (D115).
   const found = await dueWithContact(faisal, today, 2);
   let wroteFollowUp = false;
   const company = found[0] ?? (await anyWithContact(faisal, 2));
@@ -456,7 +456,7 @@ test("the log from a call card starts on the contact the card names", async ({
   }
 
   try {
-    await test.step("the card's Log button (D101): the dialog opens on the contact it names", async () => {
+    await test.step("the card's Add report (D101): the popup opens on the contact it names", async () => {
       await login(page, locale, "faisal");
       await page.goto(`/${locale}/day`);
       await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible(COLD);
@@ -465,12 +465,12 @@ test("the log from a call card starts on the contact the card names", async ({
       const card = section.getByRole("listitem").filter({ hasText: company.name });
       await expect(card).toBeVisible();
 
-      await card.getByRole("button", { name: t("day.logFor", { name: company.name }) }).click();
+      await card.getByRole("button", { name: t("reports.addFor", { name: company.name }) }).click();
 
-      const dialog = page.getByRole("dialog", { name: t("drawer.logTitle") });
+      const dialog = reportDialog(page, t);
       await expect(dialog).toBeVisible();
 
-      // A shadcn Select, not a native one (log-dialog.tsx): the trigger's own
+      // A shadcn Select, not a native one (report-dialog.tsx): the trigger's own
       // value slot shows the picked contact's name, and the rep can still
       // change it — nothing here disables the field.
       const contactField = dialog.getByRole("combobox", { name: t("common.contact") });
@@ -483,24 +483,25 @@ test("the log from a call card starts on the contact the card names", async ({
       await expect(dialog).toBeHidden();
     });
 
-    await test.step("the drawer header's Log button (D101): it does not know whom to preselect", async () => {
+    await test.step("the drawer header's Add report: the customer's main contact, already chosen", async () => {
       // The card knows whom it shows; the header, opened with no contact in
-      // hand, offers exactly the same field with nothing picked.
+      // hand, opens on the person a rep calls first (SPEC §3 P13, 13.8) — and it
+      // is the same field, which he can still change.
       await page.goto(`/${locale}/companies?open=${company.id}`);
       const drawer = page.getByRole("dialog", { name: company.name });
       await expect(drawer).toBeVisible(COLD);
 
       await drawer
         .getByRole("group", { name: t("drawer.companyActions") })
-        .getByRole("button", { name: t("common.log"), exact: true })
+        .getByRole("button", { name: t("common.addReport"), exact: true })
         .click();
 
-      const dialog = page.getByRole("dialog", { name: t("drawer.logTitle") });
+      const dialog = reportDialog(page, t);
       await expect(dialog).toBeVisible();
 
       const contactField = dialog.getByRole("combobox", { name: t("common.contact") });
       await expect(contactField.locator('[data-slot="select-value"]')).toHaveText(
-        t("drawer.noContact"),
+        company.contact_name,
       );
 
       await dialog.getByRole("button", { name: t("common.cancel") }).click();

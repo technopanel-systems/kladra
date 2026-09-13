@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { setCompanyFollowUpAction } from "@/actions/companies";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
-import { LogButton } from "@/components/activities/log-dialog";
+import { ReportButton } from "@/components/reports/report-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
 import { HandOverDialog } from "@/components/companies/hand-over-dialog";
 import { ShareCompanyDialog } from "@/components/companies/share-company-dialog";
@@ -112,6 +112,7 @@ export function CompanyHeader({
   company,
   standing,
   mine,
+  reports,
   handOverTo,
   sharers,
   shareWith,
@@ -127,6 +128,12 @@ export function CompanyHeader({
    * than a row of buttons that answer "Not allowed" (DESIGN §5).
    */
   mine: boolean;
+  /**
+   * Whether he may write a report on it: his own, or a customer shared with him
+   * (`mayReportOn`, D147). Wider than `mine` — a rep put on a colleague's
+   * customer reports what he did there — and narrower than reading it.
+   */
+  reports: boolean;
   /**
    * The people this company can be handed to, or null for a reader who may not
    * move it. Whose customer this is and what happened with him are two
@@ -338,17 +345,27 @@ export function CompanyHeader({
         </div>
       ) : null}
 
-      {mine ? (
+      {mine || reports ? (
       <div
         role="group"
         aria-label={t("drawer.companyActions")}
         className="flex flex-wrap items-center gap-2"
       >
-        {/* One primary action, and the one brand gradient with it (DESIGN §1). */}
-        <LogButton companyId={company.id} variant="brand" icon>
-          {t("common.log")}
-        </LogButton>
+        {/* One primary action, and the one brand gradient with it (DESIGN §1):
+            a report on this customer, the popup opening on him (SPEC §3 P13). */}
+        {reports ? (
+          <ReportButton
+            companyId={company.id}
+            companyName={company.name}
+            variant="brand"
+            icon
+          >
+            {t("common.addReport")}
+          </ReportButton>
+        ) : null}
 
+        {mine ? (
+        <>
         {/* Named in the title: on a phone the sheet covers the drawer, and
             "Add project" alone says nothing about where (P11H). */}
         <NewProjectDialog
@@ -381,13 +398,15 @@ export function CompanyHeader({
             that takes the company off the floor (SPEC §3 — archive, never
             delete). */}
         <ArchiveCompanyDialog companyId={company.id} companyName={company.name} />
+        </>
+        ) : null}
       </div>
       ) : null}
 
       {/* What he wrote about this customer, read back to him (D136). Below the
           actions, because the primary action is at the top of a drawer
           (DESIGN §2) and a note of four thousand characters would otherwise
-          push Log off an 88dvh sheet; and clamped for the same reason, with
+          push Add report off an 88dvh sheet; and clamped for the same reason, with
           Edit — already in the row above — as the way to the whole of it. */}
       <NoteBlock
         title={t("common.notes")}

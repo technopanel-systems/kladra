@@ -1,7 +1,8 @@
 import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query } from "./helpers/db";
-import { test, expect } from "./helpers/i18n";
+import { test, expect, type Locale, type Translate } from "./helpers/i18n";
+import { answerReport } from "./helpers/report";
 
 /**
  * P11I — the unhappy paths: nothing silent, nothing lost (D132).
@@ -46,18 +47,18 @@ async function loseTheAnswer(page: Page): Promise<void> {
   });
 }
 
-async function openLog(page: Page, locale: string, t: (key: string) => string) {
+async function openReport(page: Page, locale: Locale, t: Translate) {
   const company = await ownCompany();
   await page.goto(`/${locale}/companies?open=${company.id}`);
   const drawer = page.getByRole("dialog", { name: company.name });
   await expect(drawer).toBeVisible(COLD);
   await drawer
     .getByRole("group", { name: t("drawer.companyActions") })
-    .getByRole("button", { name: t("common.log"), exact: true })
+    .getByRole("button", { name: t("common.addReport"), exact: true })
     .click();
-  const form = page.getByRole("dialog", { name: t("drawer.logTitle") });
+  const form = page.getByRole("dialog", { name: t("common.addReport") });
   await expect(form).toBeVisible(COLD);
-  return { company, drawer, form, box: form.getByLabel(t("drawer.whatHappened")) };
+  return { company, drawer, form, box: form.getByLabel(t("reports.dialog.text")) };
 }
 
 async function ownCompany() {
@@ -71,7 +72,7 @@ async function ownCompany() {
   );
 }
 
-test("a log written with the server out of reach is kept, said, and saved when it is back", async ({
+test("a report written with the server out of reach is kept, said, and saved when it is back", async ({
   page,
   locale,
   t,
@@ -83,14 +84,14 @@ test("a log written with the server out of reach is kept, said, and saved when i
   await expect(drawer).toBeVisible(COLD);
   await drawer
     .getByRole("group", { name: t("drawer.companyActions") })
-    .getByRole("button", { name: t("common.log"), exact: true })
+    .getByRole("button", { name: t("common.addReport"), exact: true })
     .click();
-  const form = page.getByRole("dialog", { name: t("drawer.logTitle") });
+  const form = page.getByRole("dialog", { name: t("common.addReport") });
   await expect(form).toBeVisible(COLD);
 
   const written = `No signal in the lobby ${Date.now()}`;
-  const box = form.getByLabel(t("drawer.whatHappened"));
-  await box.fill(written);
+  const box = form.getByLabel(t("reports.dialog.text"));
+  await answerReport(form, t, locale, { kind: "call", text: written });
 
   await test.step("the wire is cut: a sentence, the words kept, Save alive", async () => {
     await cutTheWire(page);
@@ -106,7 +107,7 @@ test("a log written with the server out of reach is kept, said, and saved when i
   await test.step("the wire is back: the same press saves it", async () => {
     await mendTheWire(page);
     await form.getByRole("button", { name: t("common.save") }).click();
-    await expect(page.getByText(t("drawer.logged"), { exact: true })).toBeVisible(COLD);
+    await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
     await expect(form).toBeHidden();
     await expect(drawer.getByText(written)).toBeVisible(COLD);
   });
@@ -171,11 +172,11 @@ test("a confirmation the wire refused says so and keeps its question open", asyn
   await expect(drawer).toBeVisible();
 });
 
-test("a log whose answer was lost is written once, not twice", async ({ page, locale, t }) => {
+test("a report whose answer was lost is written once, not twice", async ({ page, locale, t }) => {
   await login(page, locale, "faisal");
-  const { drawer, form, box } = await openLog(page, locale, t);
+  const { drawer, form, box } = await openReport(page, locale, t);
   const written = `Answer lost on the way back ${Date.now()}`;
-  await box.fill(written);
+  await answerReport(form, t, locale, { text: written });
 
   // The row lands; the rep is told nothing did, and presses Save again (D134).
   await loseTheAnswer(page);
@@ -187,7 +188,7 @@ test("a log whose answer was lost is written once, not twice", async ({ page, lo
   expect(landed[0].n, "the answer was lost but the request never landed").toBe(1);
   await mendTheWire(page);
   await form.getByRole("button", { name: t("common.save") }).click();
-  await expect(page.getByText(t("drawer.logged"), { exact: true })).toBeVisible(COLD);
+  await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
   await expect(form).toBeHidden();
   await expect(drawer.getByText(written)).toBeVisible(COLD);
 
@@ -200,9 +201,9 @@ test("a log whose answer was lost is written once, not twice", async ({ page, lo
 
 test("a form whose session has ended says so and keeps the words", async ({ page, locale, t }) => {
   await login(page, locale, "faisal");
-  const { form, box } = await openLog(page, locale, t);
+  const { form, box } = await openReport(page, locale, t);
   const written = `Typed before the session ended ${Date.now()}`;
-  await box.fill(written);
+  await answerReport(form, t, locale, { text: written });
 
   // This page's session alone: other workers are signed in as Faisal too.
   const token = (await page.context().cookies()).find((c) => c.name.endsWith("session-token"));
@@ -222,9 +223,9 @@ test("an entry unfiled and written again in the same words is a new entry", asyn
   t,
 }) => {
   await login(page, locale, "faisal");
-  const first = await openLog(page, locale, t);
+  const first = await openReport(page, locale, t);
   const written = `Filed on the wrong day ${Date.now()}`;
-  await first.box.fill(written);
+  await answerReport(first.form, t, locale, { text: written });
   await first.form.getByRole("button", { name: t("common.save") }).click();
   await expect(first.form).toBeHidden(COLD);
   await expect(first.drawer.getByText(written)).toBeVisible(COLD);
@@ -241,8 +242,8 @@ test("an entry unfiled and written again in the same words is a new entry", asyn
   await expect(confirm).toBeHidden(COLD);
   await expect(first.drawer.getByText(written)).toBeHidden(COLD);
 
-  const again = await openLog(page, locale, t);
-  await again.box.fill(written);
+  const again = await openReport(page, locale, t);
+  await answerReport(again.form, t, locale, { text: written });
   await again.form.getByRole("button", { name: t("common.save") }).click();
   await expect(again.form).toBeHidden(COLD);
   await expect(

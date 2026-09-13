@@ -1,128 +1,266 @@
-import { getTranslations } from "next-intl/server";
-import { LogDialogHost } from "@/components/activities/log-dialog";
-import { DayNav } from "@/components/reports/day-nav";
-import { OwnCard, PersonCard } from "@/components/reports/person-card";
-import { ReportBox } from "@/components/reports/report-box";
+import { getLocale, getTranslations } from "next-intl/server";
+import { PeriodSwitch } from "@/components/reports/period-switch";
+import { PersonReports } from "@/components/reports/person-reports";
+import { ReportFilters } from "@/components/reports/report-filters";
+import { NothingWritten, TeamDay, TeamNav, TeamWeek } from "@/components/reports/team-reports";
+import { Avatar } from "@/components/ui-ext/avatar";
+import { DayText } from "@/components/ui-ext/day-text";
+import { Empty } from "@/components/ui-ext/empty";
+import { Button } from "@/components/ui/button";
+import { CHANNELS, type Channel } from "@/db/schema";
+import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/authz";
-import { todayRiyadh, type Day } from "@/lib/dates";
-import { logTargetsFor, NO_TARGETS } from "@/lib/log-targets";
-import { boxOffered } from "@/lib/report-figures";
-import { latestReportDay, mayWriteFor, owesReport, reportNeighbours, teamDay } from "@/lib/reports";
+import { listNonWorkingDays } from "@/lib/calendar";
+import { addDays, type Day } from "@/lib/dates";
+import { seesAllRoles } from "@/lib/floor";
+import {
+  isFiltered,
+  nothingWritten,
+  parseReportQuery,
+  periodFor,
+  reportsHref,
+  weekOf,
+} from "@/lib/report-view";
+import {
+  listOutcomes,
+  recordedFor,
+  recordedOn,
+  reportCounts,
+  reportEntries,
+  reportedCompanies,
+  reportingPeople,
+  reportPerson,
+  wroteOn,
+  type ReportFilter,
+} from "@/lib/reports";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
+import { todayRiyadh } from "@/lib/dates";
+import { isWorkingDay, stepWorkingDay } from "@/lib/workdays";
 
 /**
- * The daily report (SPEC D55-D58, WORKFLOW §4, Jerom's phase 9B).
+ * Reports (SPEC §3 P13, 13.8; D167).
  *
- * This is the thing that kept the Google Sheet open. A rep wrote one line a day,
- * the manager read them all in the evening, and Kladra replaced every other part
- * of that sheet and not this one — so the sheet stayed, and everything on it
- * that Kladra also holds drifted.
+ * A report is what a person wrote — one entry per thing that happened, against
+ * its customer, with what kind of thing it was and what came of it — and this is
+ * where they are read. The system's own events sit beside them in a marked lane
+ * and are never mixed in.
  *
- * S27 said there would be no report to write, on the grounds that a company's
- * history already is one. That half is kept and is the whole design of the
- * screen: nobody retypes a visit, a quotation or a metre, because all of it is
- * read back out of the records the work itself produced. What S27 got wrong is
- * that a history says what happened and never what it meant — "Al-Rajhi went
- * quiet, I think they went to the other supplier" is not derivable from any row
- * — and that sentence is the one thing this screen asks for (D55).
+ * Two screens behind one address, decided by who is reading:
  *
- * One screen, not two. The rep's own day is the card at the top with the box in
- * it; everybody else's is the list under it, alphabetically, and the same list
- * is what the manager reads. It is deliberately not a manager's inbox: a report
- * written to one person is a report to the boss, and the habit it is replacing
- * was a sheet the whole floor could open (D56).
+ * - A rep, marketing and the coordinator read their own: a calendar of the
+ *   month, the days newest first, filters by customer, kind and outcome.
+ * - The manager and the admin read everyone: the team by day or by week, the
+ *   same filters and a person, who has written nothing today, and every person
+ *   and every day a door into that person's own screen — the same one the rep
+ *   reads.
+ *
+ * Everything the screen is showing is in the address (D145), so a manager can
+ * send "Faisal's Tuesday" as a link. The day-or-week choice is also remembered
+ * for the person (D164).
  */
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [user, params, t] = await Promise.all([
+  const [user, raw, locale, t] = await Promise.all([
     requireUser(),
     searchParams,
-    getTranslations("reports"),
+    getLocale(),
+    getTranslations(),
   ]);
 
   const today = todayRiyadh();
-  // An unreadable ?day= is not an error page. The screen has an obvious right
-  // answer for "which day" and shows that instead (S8: no telling-off).
-  const asked = /^\d{4}-\d{2}-\d{2}$/.test(params.day ?? "") ? (params.day as Day) : null;
-  const day = asked && asked <= today ? asked : await latestReportDay(today);
+  const query = parseReportQuery(raw, today, CHANNELS);
+  const filter: ReportFilter = {
+    companyId: query.company,
+    kind: query.kind as Channel | null,
+    outcomeId: query.outcome,
+  };
+  const manager = seesAllRoles(user.role);
 
-  const [team, neighbours, dayIsOpen] = await Promise.all([
-    teamDay(user, day, today),
-    reportNeighbours(day, today),
-    mayWriteFor(day, today),
+  const allOutcomes = await listOutcomes(locale);
+  // The admin's active list, and a retired one only while it is the filter a
+  // link arrived with — a chip for a word nobody can choose any more would be
+  // a door onto a room that only ever empties.
+  const outcomes = allOutcomes.filter((row) => row.active || row.id === query.outcome);
+
+  /* ---- one person's reports ------------------------------------------------ */
+
+  const personId = manager ? query.person : user.id;
+  if (personId) {
+    const person = await reportPerson(user, personId);
+    const companies = person ? await reportedCompanies(user, person.id) : [];
+    const people = manager
+      ? (await reportingPeople(locale)).map((row) => ({ value: row.id, label: row.name }))
+      : null;
+
+    return (
+      <div className="flex flex-col gap-6">
+        <header className="flex flex-col gap-4">
+          <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
+          {manager && person ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Avatar id={person.id} name={person.name} size="lg" />
+              <div className="flex min-w-0 flex-col">
+                <p className="truncate text-base font-medium" data-slot="report-person">
+                  <bdi>{person.name}</bdi>
+                </p>
+                <p className="text-xs text-muted-foreground">{t(`common.${person.role}`)}</p>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="ms-auto">
+                <Link href={reportsHref(query, { person: null, month: null })}>
+                  {t("reports.everyone")}
+                </Link>
+              </Button>
+            </div>
+          ) : null}
+          <ReportFilters
+            query={query}
+            outcomes={outcomes}
+            companies={companies}
+            people={people}
+          />
+        </header>
+
+        {person ? (
+          <PersonReports user={user} person={person} query={query} filter={filter} today={today} />
+        ) : (
+          <Empty>{t("reports.personGone")}</Empty>
+        )}
+      </div>
+    );
+  }
+
+  /* ---- the team ------------------------------------------------------------ */
+
+  const remembered = await rememberedChoices(user.id);
+  const storedPeriod = chosen(remembered, "view", "reports");
+  const period = periodFor(query.period, storedPeriod);
+
+  // The day read: the one asked for, or today when today is a working day and
+  // otherwise the last one there was — a manager opening this on a Saturday
+  // wants Thursday, not an empty weekend.
+  const around = await listNonWorkingDays(addDays(query.day ?? today, -28), today);
+  const latest = isWorkingDay(today, around) ? today : stepWorkingDay(today, -1, around);
+  const day: Day = query.day ?? latest;
+
+  const [people, wrote, todayOff, companies] = await Promise.all([
+    reportingPeople(locale),
+    wroteOn(user, today),
+    listNonWorkingDays(today, today),
+    reportedCompanies(user, null),
   ]);
+  const silent = nothingWritten(people, wrote, todayOff, today);
+  const workingToday = isWorkingDay(today, todayOff);
 
-  // A viewer is a reader (D42). `requireActor` refuses every write while somebody
-  // is viewing as another person, so the box is not offered while viewing either
-  // — a screen never offers work the action behind it would turn down.
-  const canWrite = dayIsOpen && !user.viewedBy;
-
-  const mine = owesReport(user.role) ? team.people.find((p) => p.userId === user.id) : undefined;
-  const others = team.people.filter((person) => person.userId !== mine?.userId);
-
-  // What the reader's OWN entries can be corrected against (D70, D82). One
-  // dialog for the card, built from the customers his own day touched — the
-  // person most likely to notice that an entry went against the wrong customer
-  // is the one reading his day before he writes about it, and until now the
-  // only way to fix it was to remember which drawer he had been in.
-  const own = mine?.trail?.rows ?? [];
-  const targets = await logTargetsFor([...new Set(own.map((row) => row.companyId))]);
-  const logTargets = Object.fromEntries(
-    own.map((row) => [
-      row.companyId,
-      { companyName: row.companyName, ...(targets.get(row.companyId) ?? NO_TARGETS) },
-    ]),
+  const filters = (
+    <ReportFilters
+      query={query}
+      outcomes={outcomes}
+      companies={companies}
+      people={people.map((row) => ({ value: row.id, label: row.name }))}
+    />
   );
+
+  const head = (nav: React.ReactNode) => (
+    <header className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
+        <PeriodSwitch
+          period={period}
+          remembered={storedPeriod}
+          dayHref={reportsHref(query, { period: "day" })}
+          weekHref={reportsHref(query, { period: "week" })}
+        />
+      </div>
+      {nav}
+      {filters}
+    </header>
+  );
+
+  const nothing = (
+    <NothingWritten people={silent} working={workingToday} today={today} query={query} />
+  );
+
+  if (period === "week") {
+    const week = weekOf(day);
+    const [counts, weekOff] = await Promise.all([
+      reportCounts(user, { personId: null, from: week[0], to: week[6], filter }),
+      listNonWorkingDays(week[0], week[6]),
+    ]);
+    const nextWeek = addDays(week[0], 7);
+    return (
+      <div className="flex flex-col gap-6">
+        {head(
+          <TeamNav
+            label={
+              <>
+                <DayText day={week[0]} locale={locale} />
+                {" – "}
+                <DayText day={week[6]} locale={locale} />
+              </>
+            }
+            previous={reportsHref(query, { period: "week", day: addDays(week[0], -7) })}
+            next={nextWeek <= today ? reportsHref(query, { period: "week", day: nextWeek }) : null}
+            todayHref={reportsHref(query, { period: "week", day: null })}
+            isToday={week.includes(today)}
+          />,
+        )}
+        {nothing}
+        <TeamWeek
+          people={people}
+          week={week}
+          counts={counts}
+          nonWorking={weekOff}
+          today={today}
+          query={query}
+        />
+      </div>
+    );
+  }
+
+  const aroundDay = await listNonWorkingDays(addDays(day, -21), addDays(day, 21));
+  const previousDay = stepWorkingDay(day, -1, aroundDay);
+  const nextDay = stepWorkingDay(day, 1, aroundDay);
+  const [list, recorded, dayOff] = await Promise.all([
+    reportEntries(user, { personId: null, from: day, to: day, filter, limit: 200 }),
+    recordedFor(people, day, day, filter.companyId),
+    listNonWorkingDays(day, day),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <h1 className="text-xl font-semibold">{t("title")}</h1>
-        <DayNav day={day} previous={neighbours.previous} next={neighbours.next} today={today} />
-      </header>
-
-      {/* Yours first, because on the day you are reading it you are here to
-          write rather than to read. A person who is off gets no box and no
-          nagging — a day he did not work is not a day he owes (D57) — unless
-          the day is still open to him: a Saturday he worked can be written,
-          and the box says it is not owed (S47, D97). */}
-      {mine && boxOffered(mine.state, canWrite, mine.note) ? (
-        <LogDialogHost targets={logTargets}>
-          <OwnCard person={mine} open={team.open} correct={canWrite}>
-            <ReportBox
-              day={day}
-              note={mine.note}
-              canWrite={canWrite}
-              closed={!dayIsOpen}
-              optional={mine.state === "off"}
-              hasLog={own.length > 0}
-            />
-          </OwnCard>
-        </LogDialogHost>
-      ) : null}
-
-      {/* How many of the people who owed one wrote. It is a count and not a
-          list of names: the names are right underneath, and saying them twice
-          would turn a participation line into a roll call (D56). */}
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">
-          {!team.working
-            ? t("notWorking")
-            : team.owed === 0
-              ? t("nobodyOwes")
-              : t("written", { written: team.written, owed: team.owed })}
-        </h2>
-
-        <ul className="flex flex-col gap-3">
-          {others.map((person) => (
-            <li key={person.userId}>
-              <PersonCard person={person} open={team.open} />
-            </li>
-          ))}
-        </ul>
-      </section>
+      {head(
+        <TeamNav
+          label={
+            <>
+              <DayText day={day} locale={locale} />
+              {day === today ? (
+                <span className="ms-2 text-xs font-normal text-muted-foreground">
+                  {t("reports.today")}
+                </span>
+              ) : null}
+            </>
+          }
+          previous={reportsHref(query, { period: "day", day: previousDay })}
+          next={nextDay <= today ? reportsHref(query, { period: "day", day: nextDay }) : null}
+          todayHref={reportsHref(query, { period: "day", day: null })}
+          isToday={day === latest}
+        />,
+      )}
+      {nothing}
+      <TeamDay
+        people={people}
+        entries={list.rows}
+        total={list.total}
+        recorded={(person) => recordedOn(recorded, person, day)}
+        nonWorking={dayOff}
+        day={day}
+        today={today}
+        query={query}
+        filtered={isFiltered(query)}
+      />
     </div>
   );
 }

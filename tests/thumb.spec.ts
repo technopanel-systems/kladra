@@ -2,6 +2,7 @@ import type { Locator } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
+import { answerReport } from "./helpers/report";
 import { PHONE_MAX_PX } from "@/lib/breakpoint";
 
 /**
@@ -109,16 +110,16 @@ test("log, project and quotation: a bottom sheet each, Save under the thumb, and
     return save;
   }
 
-  await test.step("1 · log what happened, and it is logged", async () => {
-    await actions.getByRole("button", { name: t("common.log"), exact: true }).click();
-    const form = page.getByRole("dialog", { name: t("drawer.logTitle") });
+  await test.step("1 · a report of what happened, and it is added", async () => {
+    await actions.getByRole("button", { name: t("common.addReport"), exact: true }).click();
+    const form = page.getByRole("dialog", { name: t("common.addReport") });
     const save = await underTheThumb(form);
     // Not a word the toast uses: on a repeat the last run's sentence is in the
-    // history below, and "Logged" would match it too.
+    // history below, and "Report added" would match it too.
     const written = `With one thumb ${Date.now()}`;
-    await form.getByLabel(t("drawer.whatHappened")).fill(written);
+    await answerReport(form, t, locale, { kind: "call", text: written });
     await save.click();
-    await expect(page.getByText(t("drawer.logged"), { exact: true })).toBeVisible(COLD);
+    await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
     await expect(form).toBeHidden();
     await expect(drawer.getByText(written)).toBeVisible(COLD);
   });

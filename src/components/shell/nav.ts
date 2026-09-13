@@ -55,11 +55,10 @@ const day: NavItem = {
 };
 
 /**
- * The daily report sits second for every role — right after whatever that role
- * calls home — and is therefore always on the phone's bottom bar. It is the one
- * screen somebody opens at six in the evening, on a phone, having decided to
- * spend one minute on it; a screen that costs two taps to find is a screen that
- * loses to WhatsApp (SPEC D55).
+ * Reports sit second for every role — right after whatever that role calls home
+ * — and are therefore always on the phone's bottom bar, beside "Add report". A
+ * report is written in the minute after the call, on a phone, and a screen that
+ * costs two taps to find is a screen that loses to WhatsApp (SPEC §3 P13, D167).
  */
 const reports: NavItem = {
   href: "/reports",

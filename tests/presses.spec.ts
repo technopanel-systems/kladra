@@ -166,7 +166,7 @@ test("a new month's target box says what last month was, keeps it, and saves on 
   }
 });
 
-test("a log on a company with one contact opens on him", async ({ page, locale, t }) => {
+test("a report on a company with one contact opens on him", async ({ page, locale, t }) => {
   const faisal = await userId(FAISAL);
   const company = await one<{ id: string; name: string; contact: string }>(
     `select c.id, c.name, ct.name as contact
@@ -181,8 +181,8 @@ test("a log on a company with one contact opens on him", async ({ page, locale, 
   await page.goto(`/${locale}/companies?open=${company.id}`);
   const drawer = page.getByRole("dialog", { name: company.name });
   await expect(drawer).toBeVisible(COLD);
-  await drawer.getByRole("button", { name: t("common.log"), exact: true }).click();
-  const form = page.getByRole("dialog", { name: t("drawer.logTitle") });
+  await drawer.getByRole("button", { name: t("common.addReport"), exact: true }).click();
+  const form = page.getByRole("dialog", { name: t("common.addReport") });
   await expect(form.getByLabel(t("common.contact"))).toHaveText(company.contact);
   await form.getByRole("button", { name: t("common.cancel") }).click();
 });

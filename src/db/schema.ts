@@ -713,7 +713,8 @@ export const duplicateFlags = pgTable(
   ],
 );
 
-// The log. One row per thing that happened with a customer.
+// A report: one row per thing that happened with a customer, in the words of
+// the person it happened to (SPEC §3, P13).
 export const activities = pgTable(
   "activities",
   {
@@ -731,10 +732,13 @@ export const activities = pgTable(
     happenedOn: date("happened_on").notNull(),
     nextFollowUp: date("next_follow_up"),
     /**
-     * What came of it (SPEC §3, P13; D171). Nullable until the report popup that
-     * asks for it replaces the log dialog (P13-S4), which tightens it.
+     * What came of it (SPEC §3, P13; D171). Required: the report popup asks for
+     * it as one press among the chips, and a report that does not say how it
+     * went is half a report — the half the manager filters by (P13-S4).
      */
-    outcomeId: integer("outcome_id").references(() => outcomes.id),
+    outcomeId: integer("outcome_id")
+      .notNull()
+      .references(() => outcomes.id),
     /**
      * The quotation or dispatch it was about, when it was about one (SPEC §3,
      * P13: "optionally a project, quotation or dispatch"). Set null with the
@@ -759,7 +763,7 @@ export const activities = pgTable(
     index("activities_company_happened_idx").on(t.companyId, t.happenedOn),
     index("activities_user_happened_idx").on(t.userId, t.happenedOn),
     // The whole team's day, read by day rather than by company or by person —
-    // the daily report's own query, and the only one with no other index to use.
+    // the manager's Reports screen, and the only read with no other index to use.
     index("activities_happened_idx").on(t.happenedOn),
     // The projects list asks each project for the last day anything was logged
     // against it. Measured at the volume floor (D107) that subquery walked the
@@ -1313,46 +1317,6 @@ export const companyTargets = pgTable(
   ],
 );
 
-// ---- the daily report --------------------------------------------------------
-
-/**
- * One line a day, from the person whose day it was (SPEC D55).
- *
- * Only the sentence is stored. Everything a machine can know — visits logged,
- * quotations raised and sent back, dispatches approved, the m² they moved, the
- * calls that were due — is assembled from the records every time it is read, so
- * a visit logged late lands on the day it happened and the report changes with
- * it. Storing those figures here would be a second answer to every one of them
- * (rules/data.md, one definition per figure).
- *
- * `note` is never empty: an empty report is not a report, and a row that exists
- * to say nothing would make "who wrote today" a lie.
- */
-export const dailyReports = pgTable(
-  "daily_reports",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    /** The Riyadh day it is about, not the instant it was written. */
-    day: date("day").notNull(),
-    note: text("note").notNull(),
-    ...stamps,
-  },
-  (t) => [
-    uniqueIndex("daily_reports_user_day_idx").on(t.userId, t.day),
-    index("daily_reports_day_idx").on(t.day),
-    // At least one character that is not whitespace. It was `length(btrim(note))
-    // > 0`, and `btrim` with no second argument strips SPACES only — so a report
-    // of newlines and tabs passed a check written to refuse an empty one, and
-    // `tests/schema.spec.ts` caught it by trying exactly that. The app's own Zod
-    // `.trim()` was stricter than the column, which is the wrong way round: the
-    // column is the guard for the ways in that are not the app.
-    check("daily_reports_note_check", sql`${t.note} ~ '[^[:space:]]'`),
-  ],
-);
-
 // ---- notifications and audit -------------------------------------------------
 // `kind` + `params` render in the reader's language ("Q-12 issued" / "تم إصدار Q-12").
 
@@ -1463,7 +1427,6 @@ export const AUDIT_RECORD_TYPES = [
   "activity",
   "quotation",
   "dispatch",
-  "daily_report",
   "user",
   "companyTarget",
   "nonWorkingDay",

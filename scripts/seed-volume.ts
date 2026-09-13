@@ -165,6 +165,7 @@ async function main(): Promise<void> {
   const thicknessRows = await db.execute<{ id: number }>(sql`select id from thicknesses limit 5`);
   const methodRows = await db.execute<{ id: number }>(sql`select id from shipment_methods limit 5`);
   const warehouseRows = await db.execute<{ id: number }>(sql`select id from warehouses limit 8`);
+  const outcomeRows = await db.execute<{ id: number }>(sql`select id from outcomes where active`);
 
   const cityIds = cityRows.rows.map((row) => Number(row.id));
   const categoryIds = categoryRows.rows.map((row) => Number(row.id));
@@ -175,6 +176,8 @@ async function main(): Promise<void> {
   const thicknessIds = thicknessRows.rows.map((row) => Number(row.id));
   const methodIds = methodRows.rows.map((row) => Number(row.id));
   const warehouseIds = warehouseRows.rows.map((row) => Number(row.id));
+  const outcomeIds = outcomeRows.rows.map((row) => Number(row.id));
+  if (outcomeIds.length === 0) throw new Error("seed-volume: no outcomes — run seed:demo first");
 
   /** A Riyadh day this many days back. */
   const back = (days: number): Day => addDays(today, -days);
@@ -233,7 +236,8 @@ async function main(): Promise<void> {
         .values({
         companyId: row.id,
         userId: repId,
-        channel: pick(["visit", "call", "whatsapp", "other"] as const),
+        channel: pick(["visit", "siteVisit", "meeting", "call", "whatsapp", "other"] as const),
+        outcomeId: pick(outcomeIds),
         happenedOn: when,
         text: pick(NOTES),
         createdAt: at(when),

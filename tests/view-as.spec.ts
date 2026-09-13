@@ -128,7 +128,7 @@ test("Jerom checks a rep's screen, changes nothing, and stops", async ({ page, l
     await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
     await page.getByRole("table").first().getByRole("link").first().click();
     await expect(page.getByRole("dialog").first()).toBeVisible(COLD);
-    for (const label of ["common.log", "common.edit", "drawer.archive"]) {
+    for (const label of ["common.addReport", "common.edit", "drawer.archive"]) {
       await expect(
         page.getByRole("dialog").first().getByRole("button", { name: t(label) }),
         `${label} was offered while viewing`,

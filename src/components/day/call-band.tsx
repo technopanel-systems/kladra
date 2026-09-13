@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { LogButton } from "@/components/activities/log-dialog";
+import { ReportButton } from "@/components/reports/report-dialog";
 import { DayText } from "@/components/ui-ext/day-text";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import { Prose } from "@/components/ui-ext/prose";
@@ -109,19 +109,22 @@ export function CallBand({ band }: { band: CallBandData }) {
             ) : null}
 
             {/* Above the stretched link, like the phone number: the card
-                is one target and these two are the exceptions (D71). */}
+                is one target and these two are the exceptions (D71). The
+                report a call ends in opens on this customer and the person on
+                the card (SPEC §3 P13). */}
             <span className="relative z-10">
-              <LogButton
+              <ReportButton
                 companyId={row.id}
+                companyName={row.name}
                 contactId={row.mainContactId}
                 variant="outline"
                 size="sm"
                 className="text-xs"
-                aria-label={t("day.logFor", { name: row.name })}
+                aria-label={t("reports.addFor", { name: row.name })}
                 icon
               >
-                {t("common.log")}
-              </LogButton>
+                {t("common.addReport")}
+              </ReportButton>
             </span>
 
             {row.mainContactPhone ? (

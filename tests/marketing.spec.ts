@@ -79,7 +79,7 @@ test("marketing works its floor and is offered no price anywhere", async ({ page
     await expect(drawer).toBeVisible(COLD);
 
     // Everything a rep does with a customer.
-    for (const label of ["common.log", "drawer.newProject", "common.edit"]) {
+    for (const label of ["common.addReport", "drawer.newProject", "common.edit"]) {
       await expect(drawer.getByRole("button", { name: t(label) }), `${label} missing`).toHaveCount(
         1,
       );

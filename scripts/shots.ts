@@ -295,11 +295,11 @@ const MANIFEST: StateDef[] = [
   },
   {
     role: "rep",
-    key: "log-dialog",
+    key: "report-dialog",
     identity: "rep",
     path: "/day?tab=work",
-    steps: clickButtonByPrefix("day.logFor"),
-    waitFor: dialogWithText("drawer.logTitle"),
+    steps: clickButtonByPrefix("reports.addFor"),
+    waitFor: dialogWithText("reports.dialog.kind"),
   },
   { role: "rep", key: "projects", identity: "rep", path: "/projects", waitFor: heading("common.projects") },
   {
@@ -308,7 +308,7 @@ const MANIFEST: StateDef[] = [
     identity: "rep",
     path: "/projects",
     steps: openFirstRow("open"),
-    waitFor: dialogWithText("projects.activity"),
+    waitFor: dialogWithText("drawer.activity"),
   },
   {
     role: "rep",

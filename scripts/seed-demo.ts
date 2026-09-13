@@ -71,7 +71,6 @@ import {
   LEAVE_DAYS_AHEAD,
   LEAVE_NOTE,
   NOTIFICATIONS,
-  REPORTS,
   PROJECTS,
   QUOTATIONS,
   REP_TARGET_LAST_MONTH,
@@ -108,7 +107,6 @@ const {
   companyTargets,
   contacts,
   countries,
-  dailyReports,
   dispatchCredits,
   dispatchItems,
   dispatches,
@@ -745,16 +743,21 @@ async function seedProjects(
 }
 
 // ============================================================================
-// Phase 5 — the log
+// Phase 5 — reports
 // ============================================================================
 
+/** Every report, in `ACTIVITIES` order, so the paper can be linked once it exists. */
 async function seedActivities(
   companyIds: Map<string, string>,
   projectIds: Map<string, string>,
   contactIds: Map<string, string[]>,
   userIds: Map<string, string>,
-): Promise<number> {
+): Promise<string[]> {
   const repOf = new Map(COMPANIES.map((c) => [c.key, c.rep]));
+  // What came of it is required (SPEC §3 P13), looked up by the name the
+  // admin's list was seeded with — a word the list does not have stops the run.
+  const outcomeRows = await db.select({ id: outcomes.id, name: outcomes.nameEn }).from(outcomes);
+  const outcomeIds = new Map(outcomeRows.map((row) => [row.name, row.id]));
   return db.transaction(async (tx) => {
     const values = ACTIVITIES.map((a, i) => {
       const workday = back(a.back);
@@ -768,6 +771,7 @@ async function seedActivities(
         userId: must(userIds, rep, "user"),
         text: a.text,
         channel: a.channel,
+        outcomeId: must(outcomeIds, a.outcome, "outcome"),
         happenedOn: day,
         nextFollowUp: a.followUpDays === undefined ? null : addDays(TODAY, a.followUpDays),
         archivedAt: a.unfiled ? instant(day, 17, 5) : null,
@@ -792,14 +796,14 @@ async function seedActivities(
         action: "activity.create",
         recordType: "activity" as const,
         recordId: row.id,
-        details: { channel: values[i].channel },
+        details: { channel: values[i].channel, outcomeId: values[i].outcomeId },
         at: values[i].createdAt,
         createdAt: values[i].createdAt,
         updatedAt: values[i].createdAt,
       })),
     );
 
-    return rows.length;
+    return rows.map((row) => row.id);
   });
 }
 
@@ -1100,8 +1104,9 @@ async function seedDispatches(
   itemIds: Map<string, string[]>,
   userIds: Map<string, string>,
   lk: Lookups,
-): Promise<number> {
+): Promise<{ itemCount: number; dispatchIds: Map<string, string> }> {
   let itemCount = 0;
+  const dispatchIds = new Map<string, string>();
   await db.transaction(async (tx) => {
     for (const d of DISPATCHES) {
       const res = await tx.execute(sql.raw(`select nextval('dispatch_numbers')::int as n`));
@@ -1164,6 +1169,7 @@ async function seedDispatches(
           updatedAt: ended ?? created,
         })
         .returning({ id: dispatches.id });
+      dispatchIds.set(d.key, row.id);
 
       await tx.insert(dispatchCredits).values(
         creditedTo(userIds, d.rep, d.creditTo).map((userId) => ({ dispatchId: row.id, userId })),
@@ -1218,7 +1224,7 @@ async function seedDispatches(
       }
     }
   });
-  return itemCount;
+  return { itemCount, dispatchIds };
 }
 
 // ============================================================================
@@ -1628,43 +1634,48 @@ async function seedNotifications(
 }
 
 /**
- * The daily reports (D55).
+ * The paper a few reports were about (SPEC §3 P13, 13.8).
  *
- * Written at twenty to six in the evening, which is when a rep actually closes
- * his day, and clamped a minute behind now by `instant` so nothing in the
- * dataset claims to have been typed in the future.
+ * Linked here rather than where the reports are written, because the reports
+ * are written before any quotation or load exists. An entry about a load takes
+ * that load's quotation, and one about either takes the job it is on when the
+ * entry named none — which is what the popup does the moment one is chosen, so
+ * the seeded rows are rows the popup could have written.
  */
-async function seedReports(userIds: Map<string, string>): Promise<number> {
+async function linkReports(
+  activityIds: string[],
+  quotationIds: Map<string, string>,
+  dispatchIds: Map<string, string>,
+): Promise<number> {
+  let linked = 0;
   await db.transaction(async (tx) => {
-    const values = REPORTS.map((r) => {
-      const day = back(r.back);
-      const written = instant(day, 17, 40);
-      return {
-        userId: must(userIds, r.user, "user"),
-        day,
-        note: r.note,
-        createdAt: written,
-        updatedAt: written,
-      };
-    });
-    const rows = await tx.insert(dailyReports).values(values).returning({ id: dailyReports.id });
-
-    // The same rule as the log entries above: what a person did is counted from
-    // the audit log, so a seeded write without its audit row is work nobody did.
-    await tx.insert(auditLog).values(
-      rows.map((row, i) => ({
-        userId: values[i].userId,
-        action: "report.write",
-        recordType: "daily_report" as const,
-        recordId: row.id,
-        details: { day: values[i].day },
-        at: values[i].createdAt,
-        createdAt: values[i].createdAt,
-        updatedAt: values[i].createdAt,
-      })),
-    );
+    for (const [index, entry] of ACTIVITIES.entries()) {
+      const id = activityIds[index];
+      if (entry.dispatch) {
+        const dispatchId = must(dispatchIds, entry.dispatch, "dispatch");
+        await tx.execute(sql`
+          update activities
+             set dispatch_id = dispatches.id,
+                 quotation_id = dispatches.quotation_id,
+                 project_id = coalesce(activities.project_id, dispatches.project_id)
+            from dispatches
+           where activities.id = ${id}::uuid
+             and dispatches.id = ${dispatchId}::uuid`);
+        linked += 1;
+      } else if (entry.quotation) {
+        const quotationId = must(quotationIds, entry.quotation, "quotation");
+        await tx.execute(sql`
+          update activities
+             set quotation_id = quotations.id,
+                 project_id = coalesce(activities.project_id, quotations.project_id)
+            from quotations
+           where activities.id = ${id}::uuid
+             and quotations.id = ${quotationId}::uuid`);
+        linked += 1;
+      }
+    }
   });
-  return REPORTS.length;
+  return linked;
 }
 
 // ============================================================================
@@ -1783,8 +1794,8 @@ try {
   await seedShares(companyIds, projectIds, userIds);
   console.log(`  projects         ${projectIds.size}`);
 
-  const activityCount = await seedActivities(companyIds, projectIds, contactIds, userIds);
-  console.log(`  activities       ${activityCount}`);
+  const activityIds = await seedActivities(companyIds, projectIds, contactIds, userIds);
+  console.log(`  reports          ${activityIds.length}`);
 
   // After the projects and the log, so the fold has something to move (P12-8).
   const { open } = await seedDuplicates(companyIds, userIds);
@@ -1796,8 +1807,16 @@ try {
   const { quotationIds, itemIds, items } = await seedQuotations(companyIds, projectIds, contactIds, userIds, lk);
   console.log(`  quotations       ${quotationIds.size} (${items} items)`);
 
-  const dispatchItemCount = await seedDispatches(quotationIds, itemIds, userIds, lk);
+  const { itemCount: dispatchItemCount, dispatchIds } = await seedDispatches(
+    quotationIds,
+    itemIds,
+    userIds,
+    lk,
+  );
   console.log(`  dispatches       ${DISPATCHES.length} (${dispatchItemCount} items)`);
+
+  const linkedCount = await linkReports(activityIds, quotationIds, dispatchIds);
+  console.log(`  reports on paper ${linkedCount}`);
 
   const historyCount = await seedHistory(companyIds, projectIds, userIds, lk);
   console.log(`  history          ${historyCount} quotations of business already done`);
@@ -1805,9 +1824,6 @@ try {
   await seedTargets(userIds);
   await seedNotifications(userIds, quotationIds, companyIds);
   await seedNonWorkingDays(userIds);
-
-  const reportCount = await seedReports(userIds);
-  console.log(`  daily reports     ${reportCount}`);
 
   await printCounts();
   await printFaisalFollowUps();

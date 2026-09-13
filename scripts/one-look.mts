@@ -132,8 +132,6 @@ const RULES: Rule[] = [
       "src/components/ui-ext/empty.tsx",
       // A target line across a chart, not an empty state.
       "src/components/team/months-card.tsx#border-t border-dashed",
-      // The day a person wrote nothing, on the reports screen P13-S4 rebuilds.
-      "src/components/reports/person-card.tsx",
     ],
     fix: "use <Empty> from @/components/ui-ext/empty",
   },

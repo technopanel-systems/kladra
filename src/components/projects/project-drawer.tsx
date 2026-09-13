@@ -1,5 +1,4 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { LogDialogHost } from "@/components/activities/log-dialog";
 import { ActivityList } from "@/components/activities/activity-list";
 import { ProjectSheet } from "@/components/projects/projects-table";
 import { ShareProjectDialog } from "@/components/projects/share-project-dialog";
@@ -7,8 +6,8 @@ import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
+import { mayReportOn } from "@/lib/activities";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { getCompany } from "@/lib/companies";
 import { dayOf } from "@/lib/dates";
 import { issuesOwnQuotations, mayShare, mayWrite } from "@/lib/floor";
 import { floorHolderOptions } from "@/lib/pickers";
@@ -24,15 +23,11 @@ import { listQuotationsForProject } from "@/lib/quotations";
  * opened it — `?open=<id>` is the whole state, and a refresh or a shared link
  * reopens exactly this.
  *
- * Everything interactive — closing back to the list, the follow-up picker, Log
- * and Mark lost — lives in `ProjectSheet`, the client half in projects-table.tsx,
- * beside the rest of this screen's URL handling. This file only reads and hands
- * over.
- *
- * The company is read as well as the project because the Log dialog offers the
- * company's contacts and its other projects. `getProject` deliberately returns
- * the project and its own log; re-deriving either list here would be the second
- * definition the data rules forbid.
+ * Everything interactive — closing back to the list, the follow-up picker, Add
+ * report and Mark lost — lives in `ProjectSheet`, the client half in
+ * projects-table.tsx, beside the rest of this screen's URL handling. This file
+ * only reads and hands over. The report popup reads the company's people and
+ * papers itself when it opens, so nothing about them is read here.
  */
 
 /** `lost_at` is an instant; the header names the Riyadh day it fell on. */
@@ -63,9 +58,6 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   }
   if (!project) return null;
 
-  const company = await getCompany(user, project.companyId, locale);
-  const contacts = company?.contacts ?? [];
-  const projects = company?.projects ?? [];
   const [quotations, standing] = await Promise.all([
     listQuotationsForProject(user, project.id),
     projectStanding(project.id),
@@ -91,6 +83,11 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
    */
   const mine = mayWorkProject(user, project.repId, project.onProject);
   const owns = mayWrite(user, project.repId);
+  // A report about the job is a report on its customer: his own, or shared with
+  // him (D147) — the gate `addReportAction` asks, so the button is offered
+  // exactly where the popup would be accepted (DESIGN §5).
+  const reports =
+    !project.archivedAt && mayReportOn(user, project.company.repId, project.shared);
 
   /*
    * Who else is on this job, and whether this reader may change that. Read for
@@ -134,21 +131,9 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
     />
   );
 
-  // One log dialog for the whole drawer (D82): the sheet's Log button and the
-  // Correct button on every history entry press the same form.
+  // The sheet's Add report and the Correct on every history entry open the one
+  // popup the top bar mounts for the whole app (D82).
   return (
-    <LogDialogHost
-      targets={{
-        [project.companyId]: {
-          companyName: project.companyName,
-          contacts: contacts.map((row) => ({ id: row.id, name: row.name })),
-          // An entry that names a project is guarded by the project, not the
-          // company (`assertProjectMine`, D147), so the picker offers the other
-          // jobs at this customer only where this reader works them.
-          projects: projects.filter((row) => mayWorkProject(user, row.repId, row.onProject)),
-        },
-      }}
-    >
     <ProjectSheet
       projectId={project.id}
       name={project.name}
@@ -163,6 +148,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       lostReason={project.lostReason}
       notes={project.notes}
       mine={mine}
+      reports={reports}
       owns={owns}
       // Who else is on it, in words for every reader, with the control that
       // changes it beside the fact it is about (DESIGN §5). The dialog draws
@@ -213,8 +199,8 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
           )}
         </div>
       }
-      // Log is in the drawer's action row above and never moves, so the empty
-      // panel carries the sentence alone (D31, D35).
+      // Add report is in the drawer's action row above and never moves, so the
+      // empty panel carries the sentence alone (D31, D35).
       activity={
         <ActivityList
           activities={project.activities}
@@ -231,6 +217,5 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
         />
       }
     />
-    </LogDialogHost>
   );
 }

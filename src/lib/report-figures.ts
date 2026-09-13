@@ -1,89 +1,75 @@
 /**
- * A day, turned into the figures a screen shows (SPEC D55, WORKFLOW §4).
+ * What Kladra recorded on a person's day, turned into the figures its lane
+ * shows (SPEC §3 P13: "the system's own events are shown alongside, clearly
+ * marked, never mixed in").
  *
- * Pure — no database, no `server-only` — for two reasons. The screen's own card
- * and the team list want the same day in two densities, and a pure function is
- * the only way both get the same one; and `tests/report-figures.spec.ts` can ask
- * it directly, the way `tests/floor.spec.ts` asks the floor rule.
+ * Nobody types any of this. Every figure is read out of a record the work
+ * itself produced — a quotation raised, a dispatch approved — which is exactly
+ * why it is not the report: the report is what the person wrote, and this is
+ * the half a machine can know.
  *
- * The type it takes comes from `@/lib/reports`, which does touch the database.
- * A TYPE crosses that line and a value does not (rules/data.md), so this file
- * imports it with `import type` and nothing here drags `@/db` anywhere.
+ * Pure — no database, no `server-only` — so the screen and
+ * `tests/figures.spec.ts` ask the same function, and a TYPE is all that crosses
+ * from `@/lib/reports` (rules/data.md).
  */
 import { toNumber } from "@/lib/money";
-import type { DayWork, PersonDay } from "@/lib/reports";
+
+/** One person's recorded day. Counted by who the work counts for (D86, D148). */
+export type Recorded = {
+  /**
+   * May raise a quotation or a dispatch. A role that cannot has nothing in this
+   * lane to move, and six noughts it cannot change would read as a floor that
+   * did nothing (D50, D97).
+   */
+  sells: boolean;
+  quotationsRaised: number;
+  quotationsSentBack: number;
+  answersRecorded: number;
+  dispatchesRaised: number;
+  /**
+   * Dispatches approved that day that he was CREDITED on — counted the same way
+   * the metres beside it are (D86, D148), so the count and the m² can never
+   * disagree about which dispatches they mean.
+   */
+  dispatchesApproved: number;
+  /** The m² those approved dispatches moved for him (S41, S43). */
+  sqmMoved: string;
+};
+
+export const NOTHING_RECORDED: Omit<Recorded, "sells"> = {
+  quotationsRaised: 0,
+  quotationsSentBack: 0,
+  answersRecorded: 0,
+  dispatchesRaised: 0,
+  dispatchesApproved: 0,
+  sqmMoved: "0",
+};
 
 export type Figure = {
-  /** A key inside the `reports` namespace. */
+  /** A key inside the `reports` namespace; the label is `<key>Label`. */
   key: string;
   value: string | number;
   /** Square metres rather than a count — shown with its unit. */
   sqm?: boolean;
 };
 
-/**
- * Every figure of a day, in the order the work happens in.
- *
- * Zeroes included: on a person's own card a nought is a fact he is checking
- * against his memory before he writes his sentence, and a card that hid it
- * would be a card he could not check.
- */
-export function figuresOf(work: DayWork): Figure[] {
-  // Every key names the thing it counts, and the two cards share a key wherever
-  // they mean the same thing: a dispatch the desk approved is the same event on
-  // Rawan's card and on the floor's, so it is one word in both languages rather
-  // than two that drift (rules/words.md).
-  if (work.kind === "desk") {
-    return [
-      { key: "quotationsIssued", value: work.issued },
-      { key: "sentBack", value: work.sentBack },
-      { key: "dispatchesApproved", value: work.approved },
-      { key: "dispatchesRefused", value: work.refused },
-    ];
-  }
-  const floor: Figure[] = [
-    { key: "logged", value: work.logged },
-    { key: "companies", value: work.companies },
-    { key: "quotationRequests", value: work.quotationsRaised },
-    { key: "sentBack", value: work.quotationsSentBack },
-    { key: "answers", value: work.answersRecorded },
-    { key: "dispatchRequests", value: work.dispatchesRaised },
-    { key: "dispatchesApproved", value: work.dispatchesApproved },
-    { key: "moved", value: work.sqmMoved, sqm: true },
+/** Every figure of a recorded day, in the order the work happens in. */
+export function figuresOf(recorded: Recorded): Figure[] {
+  if (!recorded.sells) return [];
+  return [
+    { key: "quotationRequests", value: recorded.quotationsRaised },
+    { key: "sentBack", value: recorded.quotationsSentBack },
+    { key: "answers", value: recorded.answersRecorded },
+    { key: "dispatchRequests", value: recorded.dispatchesRaised },
+    { key: "dispatchesApproved", value: recorded.dispatchesApproved },
+    { key: "moved", value: recorded.sqmMoved, sqm: true },
   ];
-  // Only the figures this person can move (D97): marketing never raises a
-  // quotation or a dispatch (D50), and six noughts it cannot change are a card
-  // nobody reads — and a card the manager reads as a floor that did nothing.
-  return work.sells
-    ? floor
-    : floor.filter((figure) => figure.key === "logged" || figure.key === "companies");
 }
 
 /**
- * Only what actually happened.
- *
- * The team list is a floor in one scroll, and a row of eight figures per person
- * where five of them are nought is a screen nobody reads to the bottom.
- * What is left is the answer to "who moved" — and an empty line is the answer to
- * "who did not", which is the other half of the same question.
+ * Only what actually happened. A lane of six figures where five are nought is
+ * a lane nobody reads; an empty one says "nothing recorded" in one line.
  */
-export function whatMoved(work: DayWork): Figure[] {
-  return figuresOf(work).filter((figure) => toNumber(figure.value) > 0);
-}
-
-/**
- * Whether the reader's own card carries the box (D57, D97).
- *
- * A day he did not work is not a day he owes, so an off day shows no box and
- * no nagging — unless the day is still open to him, in which case the box is
- * there to be used and not to be filled: Saturday work is recorded, never
- * required (S47). A note already written is shown whatever the day was.
- */
-export function boxOffered(state: PersonDay["state"], canWrite: boolean, note: string | null): boolean {
-  return state !== "off" || canWrite || note !== null;
-}
-
-/** Nothing at all was recorded against this person on this day. */
-export function movedNothing(work: DayWork): boolean {
-  return whatMoved(work).length === 0 && (work.kind === "desk" || work.callsMade === 0);
+export function whatMoved(recorded: Recorded): Figure[] {
+  return figuresOf(recorded).filter((figure) => toNumber(figure.value) > 0);
 }

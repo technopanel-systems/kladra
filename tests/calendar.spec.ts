@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { one, personName, query } from "./helpers/db";
+import { one, query } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 import { formatDay, type Day } from "@/lib/dates";
 import { quotationLabel } from "@/lib/labels";
@@ -24,7 +24,8 @@ import { isWeekend, workingDaysBetween, type NonWorking } from "@/lib/workdays";
  * The second test is D97's other half: marketing's report card kept eight
  * figures though it can only ever move two of them (D50) — a card of six
  * noughts every day is a card nobody reads, and worse, a floor the manager
- * reads as having done nothing.
+ * reads as having done nothing. The card is gone (P13-S4) and the same rule
+ * holds for the lane of what Kladra recorded beside a person's reports.
  */
 
 const COLD = { timeout: 30_000 };
@@ -72,11 +73,6 @@ function longestWaitTile(page: Page, t: Translate): Locator {
     .first()
     .locator("> div")
     .filter({ hasText: t("queue.longestWait") });
-}
-
-/** A person's card in the report list, by the name on it (src/components/reports/person-card.tsx). */
-function reportCard(page: Page, name: string): Locator {
-  return page.locator('[data-slot="report-card"]').filter({ hasText: name });
 }
 
 test("a holiday before the first of the month is a day off on both desks", async ({
@@ -184,48 +180,56 @@ test("a holiday before the first of the month is a day off on both desks", async
   }
 });
 
-test("marketing's card carries the figures it can move, and the manager reads the same two", async ({
+test("marketing's recorded lane carries nothing it cannot move, and the manager reads the same lane", async ({
   page,
   locale,
   t,
 }) => {
   test.slow();
 
-  await test.step("marketing's own card offers only what it can move", async () => {
+  // A day on which each of them has something, read from the records rather
+  // than from the seed's calendar: marketing's newest report, and the newest
+  // day Faisal raised a quotation.
+  const marketing = await one<{ id: string; day: Day }>(
+    `select users.id, to_char(max(activities.happened_on), 'YYYY-MM-DD') as day
+       from users
+       join activities on activities.user_id = users.id and activities.archived_at is null
+      where users.email = 'marketing@technopanel.com.sa'
+      group by users.id`,
+  );
+  const faisal = await one<{ day: Day }>(
+    `select to_char(max((quotations.created_at at time zone 'Asia/Riyadh')::date), 'YYYY-MM-DD') as day
+       from quotations
+       join users on users.id = quotations.rep_id
+      where users.email = 'faisal@technopanel.com.sa'`,
+  );
+
+  const lane = () => page.getByRole("complementary", { name: t("reports.recorded") }).first();
+
+  await test.step("marketing's own lane offers nothing of the chain", async () => {
     await login(page, locale, "marketing");
-    await page.goto(`/${locale}/reports`);
-    await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
+    await page.goto(`/${locale}/reports?day=${marketing.day}`);
+    await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
 
-    const own = page.locator('[data-slot="report-own"]');
-    await expect(own).toBeVisible(COLD);
-    await expect(own.locator('[data-figure="logged"]')).toHaveCount(1);
-    await expect(own.locator('[data-figure="companies"]')).toHaveCount(1);
-    // Never these two: marketing stops at the quotation and moves no metres
-    // (D50), so a card with these figures would read as a floor that does
-    // nothing every single day.
-    await expect(own.locator('[data-figure="quotationRequests"]')).toHaveCount(0);
-    await expect(own.locator('[data-figure="moved"]')).toHaveCount(0);
+    // Marketing stops at the quotation and moves no metres (D50), so a lane of
+    // those figures would read as a floor that does nothing every single day.
+    await expect(lane()).toBeVisible(COLD);
+    await expect(lane().locator("[data-figure]")).toHaveCount(0);
+    await expect(lane().getByText(t("reports.recordedNothing"))).toBeVisible();
   });
 
-  await test.step("the manager reads marketing's card the same way", async () => {
-    const marketingName = await personName("marketing@technopanel.com.sa", locale);
-
+  await test.step("the manager, drilling into marketing, reads the same lane", async () => {
     await login(page, locale, "abdulrahman");
-    await page.goto(`/${locale}/reports`);
-    await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-    const card = reportCard(page, marketingName);
-    await expect(card, "marketing has no card on the manager's day").toBeVisible(COLD);
-    await expect(card.locator('[data-figure="quotationRequests"]')).toHaveCount(0);
+    await page.goto(`/${locale}/reports?person=${marketing.id}&day=${marketing.day}`);
+    await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
+    await expect(lane()).toBeVisible(COLD);
+    await expect(lane().locator("[data-figure]")).toHaveCount(0);
   });
 
-  await test.step("and a rep's own card still carries it", async () => {
+  await test.step("and a rep's lane carries the quotation he raised", async () => {
     await login(page, locale, "faisal");
-    await page.goto(`/${locale}/reports`);
-    await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-    const own = page.locator('[data-slot="report-own"]');
-    await expect(own).toBeVisible(COLD);
-    await expect(own.locator('[data-figure="quotationRequests"]')).toHaveCount(1);
+    await page.goto(`/${locale}/reports?day=${faisal.day}`);
+    await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
+    await expect(lane().locator('[data-figure="quotationRequests"]')).toHaveCount(1, COLD);
   });
 });

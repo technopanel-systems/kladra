@@ -13,6 +13,5 @@
   "refusedCount": "{count, plural, zero {لا شيء مرفوض} one {واحد مرفوض} two {اثنان مرفوضان} few {# مرفوضة} many {# مرفوضة} other {# مرفوضة}}",
   "withCustomerCount": "{count, plural, zero {لا شيء لدى العميل} one {واحد لدى العميل} two {اثنان لدى العميل} few {# لدى العميل} many {# لدى العميل} other {# لدى العميل}}",
   "whoToCall": "الاتصالات المطلوبة",
-  "nobodyToCall": "لا أحد ينتظر اتصالًا اليوم.",
-  "logFor": "تسجيل النشاط مع {name}"
+  "nobodyToCall": "لا أحد ينتظر اتصالًا اليوم."
 }

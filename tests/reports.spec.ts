@@ -1,52 +1,327 @@
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
-import { isWeekend } from "@/lib/workdays";
+import { nothingWritten } from "@/lib/report-view";
+import { isWeekend, isWorkingDay, type NonWorking } from "@/lib/workdays";
 import { login } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
+import { choose, pressChip } from "./helpers/pick";
+import { outcomeName, reportDialog, writeReport } from "./helpers/report";
 
 /**
- * The daily report (SPEC D55-D58, WORKFLOW §4, Jerom's phase 9B).
+ * Reports (SPEC §3 P13, 13.8; D167, D171).
  *
- * What is worth holding here is not that the screen renders. It is the four
- * sentences the design rests on, each of which was wrong in some earlier tool:
+ * A report is what a person wrote — one per thing that happened, against its
+ * customer, with what kind of thing it was and what came of it — and the
+ * system's own events sit beside it in a lane of their own. What is worth
+ * holding here is the five sentences the design rests on:
  *
- *  - nobody retypes the day. Every figure on the screen is asserted against the
- *    same records the app read it from, so a figure that quietly becomes a typed
- *    field fails here.
- *  - the day the screen opens on can always be written. That is not a
- *    coincidence of the calendar, it is the whole of D58 after the weekend bug,
- *    and it is asserted rather than assumed.
- *  - a missed day is one blank in a list, with no colour and no badge on it.
- *  - a day nobody worked is not a day anybody missed.
+ *  - it is written in one popup, from anywhere, in the presses a phone allows;
+ *  - opened from a record, the popup already knows the record;
+ *  - a rep reads his own and nobody else's, and the manager reads everyone's
+ *    and narrows them;
+ *  - "nothing written today" is who owes one, and leave is not silence (D57);
+ *  - what Kladra recorded is beside what he wrote, never among it.
  *
  * Both locale projects run against one seeded database (playwright.config.ts),
- * so nothing here writes a figure another spec reads, and the one test that
- * needs an unwritten day clears it first rather than assuming the seed's.
+ * so every report written here is deleted again in a `finally`, and every
+ * figure is asserted against the records at the moment it is read.
  */
 
 const COLD = { timeout: 30_000 };
+const PHONE = { width: 375, height: 812 };
+const FAISAL = "faisal@technopanel.com.sa";
+const SAAD = "saad@technopanel.com.sa";
 
 /** The people who owe a report — the same three roles as `writesReports`. */
-const REPORTERS = "u.active = true and u.role in ('rep', 'marketing', 'coordinator')";
+const REPORTERS = "users.active = true and users.role in ('rep', 'marketing', 'coordinator')";
 
-/** The day the screen opens on: the newest one the seed wrote about. */
-async function latestSeededDay(): Promise<Day> {
-  const { day } = await one<{ day: Day }>(
-    "select to_char(max(day), 'YYYY-MM-DD') as day from daily_reports",
+test("a rep adds a report from the top bar on a phone: the company, its main contact, a call that reached him, one line", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+  await page.setViewportSize(PHONE);
+
+  const faisal = await userId(FAISAL);
+  // One of his own customers, with a main contact he keeps himself — the one a
+  // call card would have dialled.
+  const company = await one<{ id: string; name: string; contact_id: string; contact: string }>(
+    `select companies.id, companies.name, contacts.id as contact_id, contacts.name as contact
+       from companies
+       join contacts on contacts.company_id = companies.id
+                    and contacts.rep_id = companies.rep_id
+                    and contacts.is_main and contacts.archived_at is null
+      where companies.rep_id = $1::uuid and companies.archived_at is null
+      order by companies.name
+      limit 1`,
+    [faisal],
   );
-  return day;
+  const today = todayRiyadh();
+  const written = locale === "ar" ? `كلّمته، وصلت الأسعار ${Date.now()}` : `Rang him, prices arrived ${Date.now()}`;
+
+  try {
+    await login(page, locale, "faisal");
+
+    await test.step("1 · the top bar's Add report opens the popup, as a bottom sheet", async () => {
+      const add = page.locator('[data-slot="add-report"]');
+      await expect(add).toHaveAccessibleName(t("common.addReport"), COLD);
+      await add.click();
+      await expect(reportDialog(page, t)).toBeVisible(COLD);
+      await expect(page.locator('[data-slot="drawer-content"]')).toHaveCount(1);
+    });
+
+    await test.step("2 · the company, and its main contact is already chosen", async () => {
+      const dialog = reportDialog(page, t);
+      await choose(page, dialog.getByRole("combobox", { name: t("common.company") }), company.name);
+      const contact = dialog.getByRole("combobox", { name: t("common.contact") });
+      await expect(contact.locator('[data-slot="select-value"]')).toHaveText(company.contact, COLD);
+    });
+
+    await test.step("3 · Call, Reached, one line, and Enter sends it", async () => {
+      const dialog = reportDialog(page, t);
+      await pressChip(dialog, t("common.call"));
+      await pressChip(dialog, await outcomeName(locale, "Reached"));
+      const box = dialog.getByLabel(t("reports.dialog.text"));
+      await box.fill(written);
+      await box.press("Enter");
+      await expect(dialog).toBeHidden(COLD);
+      await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
+    });
+
+    await test.step("4 · it is written as he said it, and audited in the same breath", async () => {
+      const stored = await one<{
+        id: string;
+        channel: string;
+        outcome: string;
+        company_id: string;
+        contact_id: string | null;
+        day: Day;
+      }>(
+        `select activities.id, activities.channel::text as channel, outcomes.name_en as outcome,
+                activities.company_id, activities.contact_id,
+                to_char(activities.happened_on, 'YYYY-MM-DD') as day
+           from activities
+           join outcomes on outcomes.id = activities.outcome_id
+          where activities.text = $1::text`,
+        [written],
+      );
+      expect(stored).toMatchObject({
+        channel: "call",
+        outcome: "Reached",
+        company_id: company.id,
+        contact_id: company.contact_id,
+        day: today,
+      });
+      const audit = await query(
+        `select 1 from audit_log
+          where audit_log.record_type = 'activity' and audit_log.action = 'activity.create'
+            and audit_log.record_id = $1::text`,
+        [stored.id],
+      );
+      expect(audit.length, "the report was not audited").toBe(1);
+    });
+
+    await test.step("5 · and it is on his Reports, under today", async () => {
+      await page.goto(`/${locale}/reports`);
+      await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
+      const day = page.locator(`[data-slot="report-day"][data-day="${today}"]`);
+      const entry = day.locator('[data-slot="report-entry"]').filter({ hasText: written });
+      await expect(entry).toHaveCount(1, COLD);
+      await expect(entry.locator('[data-slot="trail-company"]')).toHaveText(company.name);
+      await expect(entry.getByText(t("common.call"), { exact: true })).toBeVisible();
+    });
+  } finally {
+    await query("delete from activities where text = $1::text", [written]);
+  }
+});
+
+test("opened from a project drawer, the report arrives with the company and the job already chosen", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const faisal = await userId(FAISAL);
+  const project = await one<{ id: string; name: string; company_id: string; company: string }>(
+    `select projects.id, projects.name, companies.id as company_id, companies.name as company
+       from projects
+       join companies on companies.id = projects.company_id
+      where companies.rep_id = $1::uuid and companies.archived_at is null
+        and projects.archived_at is null and projects.lost_at is null
+      order by projects.name
+      limit 1`,
+    [faisal],
+  );
+  const written = `From the job ${Date.now()}`;
+
+  try {
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/projects?open=${project.id}`);
+    const sheet = page.getByRole("dialog", { name: project.name });
+    await expect(sheet).toBeVisible(COLD);
+
+    await sheet.getByRole("button", { name: t("common.addReport"), exact: true }).first().click();
+    const dialog = reportDialog(page, t);
+    await expect(dialog).toBeVisible(COLD);
+
+    await test.step("the customer is not a question, and the job is already the job", async () => {
+      await expect(dialog.getByRole("combobox", { name: t("common.company") })).toHaveCount(0);
+      await expect(dialog.getByText(project.company, { exact: true }).first()).toBeVisible();
+      const job = dialog.getByRole("combobox", { name: t("common.project") });
+      await expect(job.locator('[data-slot="select-value"]')).toContainText(project.name, COLD);
+    });
+
+    await test.step("and what he sends is filed against both", async () => {
+      await writeReport(dialog, t, locale, { kind: "siteVisit", outcome: "Meeting set", text: written });
+      const stored = await one<{ company_id: string; project_id: string | null; channel: string }>(
+        `select company_id, project_id, channel::text as channel from activities where text = $1::text`,
+        [written],
+      );
+      expect(stored).toEqual({
+        company_id: project.company_id,
+        project_id: project.id,
+        channel: "siteVisit",
+      });
+    });
+  } finally {
+    await query("delete from activities where text = $1::text", [written]);
+  }
+});
+
+type Entry = { user_id: string; day: Day; text: string; outcome: string };
+
+/**
+ * The newest report this person wrote before today, with what came of it.
+ * Before today, because today is the day every other spec writes on — and
+ * deletes again — so a row read from it can be gone by the time it is looked for.
+ */
+async function newestEntry(email: string): Promise<Entry> {
+  return one<Entry>(
+    `select activities.user_id, to_char(activities.happened_on, 'YYYY-MM-DD') as day,
+            activities.text, outcomes.name_en as outcome
+       from activities
+       join users on users.id = activities.user_id
+       join outcomes on outcomes.id = activities.outcome_id
+      where users.email = $1::text and activities.archived_at is null
+        and activities.happened_on < $2::date
+      order by activities.happened_on desc, activities.created_at desc
+      limit 1`,
+    [email, todayRiyadh()],
+  );
 }
 
-/** The one before it — a day that is finished, and has a report missing from it. */
-async function previousSeededDay(latest: Day): Promise<Day> {
-  const { day } = await one<{ day: Day }>(
-    "select to_char(max(day), 'YYYY-MM-DD') as day from daily_reports where day < $1::date",
-    [latest],
+/** Every report this person wrote on a day, optionally only one outcome's. */
+async function textsOn(userIdValue: string, day: Day, outcome?: string): Promise<string[]> {
+  const rows = await query<{ text: string }>(
+    `select activities.text
+       from activities
+       join outcomes on outcomes.id = activities.outcome_id
+      where activities.user_id = $1::uuid and activities.happened_on = $2::date
+        and activities.archived_at is null
+        and ($3::text is null or outcomes.name_en = $3::text)`,
+    [userIdValue, day, outcome ?? null],
   );
-  return day;
+  return rows.map((row) => row.text);
 }
 
-test("a rep's day is assembled for him, and he adds the one line it cannot know", async ({
+test("a rep reads only his own reports; the manager reads everyone's and narrows them by person and outcome", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const his = await newestEntry(FAISAL);
+  const theirs = await newestEntry(SAAD);
+  const entries = page.locator('[data-slot="report-entry"]');
+
+  await test.step("Faisal on Saad's day, with Saad's id in the address: none of Saad's", async () => {
+    await login(page, locale, "faisal");
+    // The person in the address is the manager's to choose. A rep who edits it
+    // reads his own day, not a colleague's.
+    await page.goto(`/${locale}/reports?day=${theirs.day}&person=${theirs.user_id}`);
+    await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
+    await expect(page.getByText(theirs.text)).toHaveCount(0);
+    await expect(entries).toHaveCount((await textsOn(his.user_id, theirs.day)).length, COLD);
+    await expect(page.getByRole("combobox", { name: t("reports.person") })).toHaveCount(0);
+  });
+
+  await test.step("and his own day reads as he wrote it", async () => {
+    await page.goto(`/${locale}/reports?day=${his.day}`);
+    await expect(entries.filter({ hasText: his.text })).toHaveCount(1, COLD);
+  });
+
+  const people = await one<{ n: string }>(
+    `select count(*)::text as n from users where ${REPORTERS}`,
+  );
+
+  await test.step("the manager's day is everybody's, a person to a section", async () => {
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/reports?day=${theirs.day}`);
+    await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
+    await expect(page.locator('[data-slot="team-person"]')).toHaveCount(Number(people.n), COLD);
+    await expect(entries.filter({ hasText: theirs.text })).toHaveCount(1);
+  });
+
+  const saadName = await personName(SAAD, locale);
+
+  await test.step("he narrows it to Saad, and the address says so", async () => {
+    await choose(page, page.getByRole("combobox", { name: t("reports.person") }), saadName);
+    await expect(page).toHaveURL(new RegExp(`person=${theirs.user_id}`), COLD);
+    await expect(page.locator('[data-slot="report-person"]')).toHaveText(saadName, COLD);
+
+    await page.goto(`/${locale}/reports?person=${theirs.user_id}&day=${theirs.day}`);
+    const saads = await textsOn(theirs.user_id, theirs.day);
+    await expect(entries).toHaveCount(saads.length, COLD);
+    await expect(entries.filter({ hasText: theirs.text })).toHaveCount(1);
+  });
+
+  await test.step("and to one outcome, and every report left says it", async () => {
+    const outcome = await outcomeName(locale, theirs.outcome);
+    await page
+      .getByRole("group", { name: t("reports.dialog.outcome") })
+      .getByRole("link", { name: outcome })
+      .click();
+    await expect(page).toHaveURL(/[?&]outcome=\d+/, COLD);
+    const matching = await textsOn(theirs.user_id, theirs.day, theirs.outcome);
+    await expect(entries).toHaveCount(matching.length, COLD);
+    for (const badge of await page.locator('[data-slot="report-outcome"]').all()) {
+      await expect(badge).toContainText(outcome);
+    }
+  });
+});
+
+/**
+ * Who owes a report, on days chosen for what they are (D57). Pure: the screen
+ * and this ask the same function, and a Sunday, a Friday, a holiday and a
+ * person's leave are four answers a calendar cannot be relied on to give on the
+ * day the suite runs.
+ */
+test("nothing written names who owes a report: not who wrote, not who is on leave, nobody on a day off", () => {
+  const sunday = "2026-09-13";
+  const friday = "2026-09-11";
+  expect(isWeekend(sunday)).toBe(false);
+  expect(isWeekend(friday)).toBe(true);
+
+  const people = [{ id: "faisal" }, { id: "saad" }, { id: "turki" }, { id: "rawan" }];
+  const wrote = new Set(["faisal"]);
+  const leave: NonWorking[] = [{ day: sunday, userId: "saad" }];
+
+  expect(nothingWritten(people, wrote, leave, sunday).map((p) => p.id)).toEqual(["turki", "rawan"]);
+  // Leave on another day is no excuse today.
+  expect(
+    nothingWritten(people, wrote, [{ day: addDays(sunday, 1), userId: "saad" }], sunday).map(
+      (p) => p.id,
+    ),
+  ).toEqual(["saad", "turki", "rawan"]);
+  // A weekend and a company holiday are nobody's.
+  expect(nothingWritten(people, new Set(), [], friday)).toEqual([]);
+  expect(nothingWritten(people, new Set(), [{ day: sunday, userId: null }], sunday)).toEqual([]);
+});
+
+test("the manager's 'nothing written today' names a person with no report and not a person on leave", async ({
   page,
   locale,
   t,
@@ -54,446 +329,104 @@ test("a rep's day is assembled for him, and he adds the one line it cannot know"
   test.slow();
 
   const today = todayRiyadh();
-  const day = await latestSeededDay();
-  const faisal = await userId("faisal@technopanel.com.sa");
+  const off = await query<{ day: Day; user_id: string | null }>(
+    `select to_char(non_working_days.day, 'YYYY-MM-DD') as day, non_working_days.user_id
+       from non_working_days
+      where non_working_days.day = $1::date`,
+    [today],
+  );
+  const nonWorking: NonWorking[] = off.map((row) => ({ day: row.day, userId: row.user_id }));
+  const people = await query<{ id: string; email: string }>(
+    `select users.id, users.email from users where ${REPORTERS} order by users.email`,
+  );
+  const wroteRows = await query<{ user_id: string }>(
+    `select distinct activities.user_id from activities
+      where activities.happened_on = $1::date and activities.archived_at is null`,
+    [today],
+  );
+  const silent = nothingWritten(people, new Set(wroteRows.map((row) => row.user_id)), nonWorking, today);
+  const onLeave = people.filter((person) =>
+    nonWorking.some((row) => row.userId === person.id),
+  );
 
-  // Both locale projects share one database and the English run writes this
-  // report, so the Arabic run would otherwise start from a day already closed.
-  // The transition from nothing-written to written is the thing under test.
-  await query("delete from daily_reports where user_id = $1::uuid and day = $2::date", [
-    faisal,
-    day,
-  ]);
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/reports`);
+  const section = page.getByRole("region", { name: t("reports.nothingYetTitle") });
+  await expect(section).toBeVisible(COLD);
+  const named = section.locator('[data-slot="silent-person"]');
 
-  await login(page, locale, "faisal");
+  if (!isWorkingDay(today, nonWorking)) {
+    await test.step("a day nobody works owes nothing from anybody", async () => {
+      await expect(section.getByText(t("reports.notWorkingToday"))).toBeVisible();
+      await expect(named).toHaveCount(0);
+    });
+    return;
+  }
 
-  await test.step("1 · the rail carries it, and his own day says it is not written", async () => {
-    const nav = page.getByRole("navigation", { name: t("shell.mainNav") }).first();
-    await expect(nav.getByRole("link", { name: t("reports.title") })).toHaveCount(1, COLD);
-
-    await page.goto(`/${locale}/day`);
-    const nudge = page.getByRole("link", { name: t("reports.closeTheDay") });
-    // A day he is not working is not a day he owes (D57): on a Friday or a
-    // Saturday there is nothing to nudge him about, and a reminder that is lit
-    // every day is one people learn to look past.
-    await expect(nudge).toHaveCount(isWeekend(today) ? 0 : 1, COLD);
-  });
-
-  await test.step("2 · his own day opens ready to write, whatever day of the week it is", async () => {
-    await page.goto(`/${locale}/reports`);
-    await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-    // The screen opens on the last working day and the last working day is
-    // always writable (D58). On a Saturday, with "yesterday" as the rule, it
-    // was not — and nobody on the floor could write anything at all.
-    const own = page.locator('[data-slot="report-own"]');
-    await expect(own).toBeVisible();
-    await expect(own.getByRole("button", { name: t("common.save") })).toBeVisible();
-  });
-
-  await test.step("3 · every figure on it is read back out of his own records", async () => {
-    const own = page.locator('[data-slot="report-own"]');
-
-    // An entry he unfiled stops counting (D70, tests/correct.spec.ts), so the
-    // count here leaves archived ones out as the figure does. This clause was
-    // missing and never noticed: every run before P10d fell on a Saturday,
-    // when the report day was Thursday and nothing had been logged on it.
-    const counted = await one<{ logged: string; companies: string; quotationRequests: string }>(
-      `select
-         (select count(*)::text from activities
-           where user_id = $1::uuid and happened_on = $2::date
-             and archived_at is null) as logged,
-         (select count(distinct company_id)::text from activities
-           where user_id = $1::uuid and happened_on = $2::date
-             and archived_at is null) as companies,
-         (select count(*)::text from quotations
-           where rep_id = $1::uuid
-             and (created_at at time zone 'Asia/Riyadh')::date = $2::date) as "quotationRequests"`,
-      [faisal, day],
-    );
-
-    for (const [figure, value] of Object.entries(counted)) {
-      await expect(own.locator(`[data-figure="${figure}"] dd`), `${figure} disagrees`).toHaveText(
-        value,
-      );
+  await test.step("everyone who owes one and has not written is named, and a door to their day", async () => {
+    // The day is not over: the sentence says "yet", not "missed" (D57).
+    await expect(section.getByText(t("reports.nothingYetMeans"))).toBeVisible();
+    expect(silent.length, "the seed has nobody who has not written today").toBeGreaterThan(0);
+    await expect(named).toHaveCount(silent.length);
+    for (const person of silent) {
+      const name = await personName(person.email, locale);
+      const link = named.filter({ hasText: name });
+      await expect(link).toHaveCount(1);
+      await expect(link).toHaveAttribute("href", new RegExp(`person=${person.id}`));
     }
   });
 
-  const note =
-    locale === "ar"
-      ? "زرت العميل اليوم ولم يصلني رد على السعر المعدّل."
-      : "Visited the customer today; still no answer on the revised price.";
-
-  await test.step("4 · one box, one press, and the day is closed", async () => {
-    const own = page.locator('[data-slot="report-own"]');
-    await own.getByLabel(t("reports.yourDay")).fill(note);
-    await own.getByRole("button", { name: t("common.save") }).click();
-
-    await expect
-      .poll(
-        async () =>
-          (
-            await query("select 1 from daily_reports where user_id = $1::uuid and day = $2::date", [
-              faisal,
-              day,
-            ])
-          ).length,
-        { timeout: 15_000 },
-      )
-      .toBe(1);
-
-    const saved = await one<{ note: string }>(
-      "select note from daily_reports where user_id = $1::uuid and day = $2::date",
-      [faisal, day],
-    );
-    expect(saved.note).toBe(note);
-
-    // Written down like every other transition, and against the report's own id
-    // rather than a key made up for the occasion (D54). `record_id` is TEXT —
-    // the audit log points at rows in a dozen tables and does not pretend they
-    // share a key type — so it is compared as text (rules/data.md).
-    const audit = await query(
-      `select 1 from audit_log
-        where audit_log.record_type = 'daily_report'
-          and audit_log.action = 'report.write'
-          and audit_log.user_id = $1::uuid
-          and audit_log.details->>'day' = $2::text
-          and audit_log.record_id = (
-            select r.id::text from daily_reports r
-             where r.user_id = $1::uuid and r.day = $2::date
-          )`,
-      [faisal, day],
-    );
-    expect(audit.length, "the report was not audited").toBeGreaterThan(0);
-  });
-
-  await test.step("5 · pressing Save again on the same day replaces, never adds", async () => {
-    const own = page.locator('[data-slot="report-own"]');
-    await own.getByLabel(t("reports.yourDay")).fill(`${note} ${note}`);
-    await own.getByRole("button", { name: t("common.save") }).click();
-
-    await expect
-      .poll(
-        async () =>
-          (
-            await query(
-              "select 1 from daily_reports where user_id = $1::uuid and day = $2::date",
-              [faisal, day],
-            )
-          ).length,
-        { timeout: 15_000 },
-      )
-      .toBe(1);
-  });
-
-  await test.step("6 · and the nudge is gone, because there is nothing left to do", async () => {
-    await page.goto(`/${locale}/day`);
-    await expect(page.getByRole("link", { name: t("reports.closeTheDay") })).toHaveCount(0, COLD);
+  await test.step("and a person on leave is not somebody who wrote nothing", async () => {
+    expect(onLeave.length, "the seed has nobody on leave today (D75)").toBeGreaterThan(0);
+    for (const person of onLeave) {
+      const name = await personName(person.email, locale);
+      await expect(named.filter({ hasText: name })).toHaveCount(0);
+    }
   });
 });
 
-type Entry = { day: Day; text: string; companyId: string; companyName: string };
-
-/** The newest entry this person logged, and the customer it was about. */
-async function newestEntry(email: string): Promise<Entry> {
-  return one(
-    `select to_char(a.happened_on, 'YYYY-MM-DD') as day, a.text,
-            c.id as "companyId", c.name as "companyName"
-       from activities a
-       join companies c on c.id = a.company_id
-       join users u on u.id = a.user_id
-      where u.email = $1::text and a.archived_at is null
-      order by a.happened_on desc, a.created_at desc
-      limit 1`,
-    [email],
-  );
-}
-
-/**
- * The newest entry of this person's BUSIEST day — the day the cap has something
- * to say about. The demo carries one on purpose: until P12-13 the busiest day
- * anybody had was three entries, so the line that says a card is not showing
- * the whole day had never once been drawn (§5 #197).
- */
-async function busiestEntry(email: string): Promise<Entry> {
-  return one(
-    `select to_char(a.happened_on, 'YYYY-MM-DD') as day, a.text,
-            c.id as "companyId", c.name as "companyName"
-       from activities a
-       join companies c on c.id = a.company_id
-       join users u on u.id = a.user_id
-      where u.email = $1::text and a.archived_at is null
-        and a.happened_on = (
-          select b.happened_on from activities b
-            join users bu on bu.id = b.user_id
-           where bu.email = $1::text and b.archived_at is null
-           group by b.happened_on
-           order by count(*) desc, b.happened_on desc
-           limit 1)
-      order by a.created_at desc
-      limit 1`,
-    [email],
-  );
-}
-
-test("the manager reads the day and not a count of it", async ({ page, locale, t }) => {
-  // S27: the history of a company IS the manager's daily report. It had been a
-  // figure — "4 log entries" — and the four were on four customer drawers he
-  // would have had to know to open (P12-13).
-  const entry = await busiestEntry("faisal@technopanel.com.sa");
-  const faisal = await userId("faisal@technopanel.com.sa");
-
-  await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/reports?day=${entry.day}`);
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-  const card = page.locator(`[data-slot="report-card"]`).filter({ hasText: entry.text });
-  await expect(card).toHaveCount(1);
-
-  await test.step("the entry names its customer, and the name is a door to him", async () => {
-    const named = card.locator('[data-slot="trail-company"]');
-    await expect(named.first()).toHaveText(entry.companyName);
-    await expect(named.first()).toHaveAttribute(
-      "href",
-      new RegExp(`open=${entry.companyId}`),
-    );
-  });
-
-  await test.step("and it does not repeat what the card already says", async () => {
-    // The day and the writer are the card's own heading. An entry that printed
-    // them would say the same date and the same name on every line of it.
-    const trail = card.locator('[data-slot="day-trail"]');
-    await expect(trail).toBeVisible();
-    await expect(trail.getByText(t("common.by", { name: await personName(
-      "faisal@technopanel.com.sa",
-      locale,
-    ) }))).toHaveCount(0);
-  });
-
-  await test.step("the figure counts the day; the list shows the first of it", async () => {
-    // D144: a figure is not the length of a capped list. Whatever the day held,
-    // these two agree or the tail line says why.
-    const logged = Number(
-      await card.locator('[data-figure="logged"] .num').first().innerText(),
-    );
-    const drawn = await card.locator('[data-slot="day-trail"] > ol > li').count();
-    expect(drawn).toBeLessThanOrEqual(logged);
-    // The busiest day is busier than a colleague's card draws, which is the
-    // whole point of asking for that day: the tail line is on a screen.
-    expect(logged, "the demo has no day the cap has anything to say about").toBeGreaterThan(
-      drawn,
-    );
-    await expect(card.locator('[data-slot="list-tail"]')).toHaveCount(1);
-  });
-
-  expect(faisal).toBeTruthy();
-});
-
-test("a rep reads his colleague's day, not his colleague's customers", async ({
+test("what Kladra recorded is its own region beside the written reports, never among them", async ({
   page,
   locale,
   t,
 }) => {
-  // D56 says the report is the whole team's and everybody reads the same page;
-  // S8 and D42 say a rep sees his own floor and nobody else's. Both hold: the
-  // figures and the sentence are on every card, the customer names are on the
-  // cards the reader may open (P12-13).
-  const his = await newestEntry("faisal@technopanel.com.sa");
-  const theirs = await newestEntry("saad@technopanel.com.sa");
+  test.slow();
+
+  const his = await newestEntry(FAISAL);
+  const raised = await one<{ n: string }>(
+    `select count(*)::text as n
+       from quotations
+      where quotations.rep_id = $1::uuid
+        and (quotations.created_at at time zone 'Asia/Riyadh')::date = $2::date`,
+    [his.user_id, his.day],
+  );
 
   await login(page, locale, "faisal");
   await page.goto(`/${locale}/reports?day=${his.day}`);
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
+  await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
 
-  await test.step("his own day is on his own card", async () => {
-    const own = page.locator('[data-slot="report-own"]');
-    await expect(own).toHaveCount(1);
-    await expect(own.locator('[data-slot="day-trail"]')).toBeVisible();
+  const day = page.locator(`[data-slot="report-day"][data-day="${his.day}"]`);
+  const written = day.getByRole("region", { name: t("reports.written") });
+  const lane = day.getByRole("complementary", { name: t("reports.recorded") });
+
+  await test.step("two landmarks, each with its own name", async () => {
+    await expect(written).toHaveCount(1, COLD);
+    await expect(lane).toHaveCount(1);
+    await expect(written.getByText(his.text)).toBeVisible();
   });
 
-  await test.step("and somebody else's card carries no customer of his", async () => {
-    const saad = await personName("saad@technopanel.com.sa", locale);
-    const card = page.locator('[data-slot="report-card"]').filter({ hasText: saad });
-    await expect(card).toHaveCount(1);
-    // The card is there and readable — this is not a hidden row (DESIGN §5).
-    await expect(card.getByText(saad)).toBeVisible();
-    await expect(card.locator('[data-slot="day-trail"]')).toHaveCount(0);
-    await expect(page.getByText(theirs.text)).toHaveCount(0);
-  });
-});
-
-test("a finished day carries one blank where a report is missing", async ({ page, locale, t }) => {
-  test.slow();
-
-  const day = await previousSeededDay(await latestSeededDay());
-
-  const counts = await one<{ owed: string; written: string; off: string }>(
-    `select
-       (select count(*)::text from users u where ${REPORTERS}) as owed,
-       (select count(*)::text from daily_reports r
-          join users u on u.id = r.user_id
-         where r.day = $1::date and ${REPORTERS}) as written,
-       (select count(*)::text from non_working_days where day = $1::date) as off`,
-    [day],
-  );
-  // Nobody was on leave that day, so everybody who works owed one — which is
-  // what makes the arithmetic below the plain subtraction it looks like.
-  expect(counts.off, "a day off would change who owed a report").toBe("0");
-  const missing = Number(counts.owed) - Number(counts.written);
-  expect(missing, "the seed has nobody silent on that day").toBeGreaterThan(0);
-
-  await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/reports?day=${day}`);
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-  await test.step("1 · the manager has no box of his own — he reads, he does not file", async () => {
-    await expect(page.locator('[data-slot="report-own"]')).toHaveCount(0);
-    await expect(page.getByRole("button", { name: t("common.save") })).toHaveCount(0);
+  await test.step("and neither holds the other", async () => {
+    await expect(written.getByRole("complementary")).toHaveCount(0);
+    await expect(lane.locator('[data-slot="report-entry"]')).toHaveCount(0);
+    await expect(lane.getByText(his.text)).toHaveCount(0);
   });
 
-  await test.step("2 · one line says how many wrote, and the names are underneath", async () => {
-    await expect(
-      page.getByRole("heading", {
-        name: t("reports.written", { written: Number(counts.written), owed: Number(counts.owed) }),
-      }),
-    ).toBeVisible();
-    await expect(page.locator('[data-slot="report-card"]')).toHaveCount(Number(counts.owed));
-  });
-
-  await test.step("3 · the missing one is a blank, not a mark against anybody", async () => {
-    const blanks = page.locator('[data-slot="report-missing"]');
-    await expect(blanks).toHaveCount(missing);
-    await expect(blanks.first()).toHaveText(t("reports.stateSilent"));
-    // Outlined, so the eye catches the gap in one scroll.
-    await expect(blanks.first()).toHaveCSS("border-top-style", "dashed");
-
-    // And nothing else: no badge, no colour, no icon. Every tinted thing in
-    // Kladra carries `data-tone` (src/lib/state-tone.ts), so counting those
-    // inside a silent card is the whole assertion.
-    const silent = page.locator('[data-slot="report-card"][data-state="silent"]');
-    await expect(silent.first().locator("[data-tone]")).toHaveCount(0);
-  });
-
-  await test.step("4 · each sentence runs in the direction of whoever typed it", async () => {
-    // Both languages are on this screen on both locales: Saad writes English,
-    // Rawan writes Arabic, and each reads the other's. `<Prose>` is a
-    // `p dir="auto"`, so the base direction comes from the text and not from the
-    // page — an English paragraph flush against the right margin of an Arabic
-    // card is the defect this holds shut (rules/words.md).
-    const notes = page.locator('[data-slot="report-note"]');
-    const directions = await notes.evaluateAll((nodes) =>
-      nodes.map((node) => getComputedStyle(node).direction),
-    );
-    expect(directions.length, "no reports to read").toBeGreaterThan(1);
-    expect(new Set(directions), "every sentence took the page's direction").toEqual(
-      new Set(["ltr", "rtl"]),
-    );
-  });
-
-  await test.step("5 · the day is still shown for the person who did not write it", async () => {
-    // The system saw the work and says so. What is missing is the half only he
-    // could have written, and that is the only thing the screen withholds.
-    const written = page.locator('[data-slot="report-card"][data-state="written"]');
-    await expect(written.first().locator('[data-slot="report-note"]')).toBeVisible();
-  });
-});
-
-test("a day nobody worked is not a day anybody missed", async ({ page, locale, t }) => {
-  test.slow();
-
-  // The most recent weekend day behind us. The arrows never land on one — they
-  // skip it — so this is reached by typing the day, which is the only way a
-  // person gets here and therefore the way it has to read.
-  let weekendDay: Day = addDays(todayRiyadh(), -1);
-  for (let i = 0; i < 8 && !isWeekend(weekendDay); i += 1) weekendDay = addDays(weekendDay, -1);
-  expect(isWeekend(weekendDay), "no weekend day in the last eight").toBe(true);
-
-  await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/reports?day=${weekendDay}`);
-
-  await expect(page.getByRole("heading", { name: t("reports.notWorking") })).toBeVisible(COLD);
-  // Nobody owed one, so nobody is short of one (D57).
-  await expect(page.locator('[data-slot="report-missing"]')).toHaveCount(0);
-  await expect(
-    page.locator('[data-slot="report-card"]').first().getByText(t("reports.stateWeekend")),
-  ).toBeVisible();
-  // And nothing tells anybody that nothing was recorded at the weekend. That
-  // line belongs to one kind of day only — a finished working one — and
-  // everywhere else it stutters against the line underneath it.
-  await expect(page.getByText(t("reports.quietDay"))).toHaveCount(0);
-});
-
-test("a day that has closed cannot be rewritten", async ({ page, locale, t }) => {
-  test.slow();
-
-  await login(page, locale, "faisal");
-  await page.goto(`/${locale}/reports`);
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-  await test.step("1 · the arrows step over the weekend, one working day at a time", async () => {
-    for (let step = 0; step < 2; step += 1) {
-      const before = new URL(page.url()).searchParams.get("day");
-      // A step that exists is a link and a step that does not is a disabled
-      // button, so this asks for the label rather than for a role.
-      await page.getByLabel(t("reports.previousDay")).click();
-      await expect
-        .poll(() => new URL(page.url()).searchParams.get("day"), { timeout: 15_000 })
-        .not.toBe(before);
-      // A weekend is never landed on by pressing back.
-      await expect(page.getByRole("heading", { name: t("reports.notWorking") })).toHaveCount(0);
+  await test.step("the lane is read out of the records, not typed", async () => {
+    const figure = lane.locator('[data-figure="quotationRequests"]');
+    if (Number(raised.n) === 0) {
+      await expect(figure).toHaveCount(0);
+    } else {
+      await expect(figure.locator(".num")).toHaveText(raised.n);
     }
   });
-
-  await test.step("2 · two working days back, his own card offers no box", async () => {
-    const own = page.locator('[data-slot="report-own"]');
-    await expect(own).toBeVisible();
-    await expect(own.getByRole("button", { name: t("common.save") })).toHaveCount(0);
-    await expect(own).toContainText(t("reports.dayClosed"));
-  });
-});
-
-test("the coordinator's day is the desk's, and it is the same screen", async ({
-  page,
-  locale,
-  t,
-}) => {
-  test.slow();
-
-  await login(page, locale, "rawan");
-  await page.goto(`/${locale}/reports`);
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-
-  const own = page.locator('[data-slot="report-own"]');
-  await expect(own).toBeVisible(COLD);
-
-  await test.step("1 · what she did, not what a rep did", async () => {
-    for (const figure of ["quotationsIssued", "dispatchesApproved", "dispatchesRefused"]) {
-      await expect(own.locator(`[data-figure="${figure}"]`), `${figure} missing`).toHaveCount(1);
-    }
-    // She owns no companies, so she logs no visits and moves no metres; a
-    // nought under those labels would be a figure that is wrong every day.
-    for (const figure of ["logged", "companies", "moved"]) {
-      await expect(own.locator(`[data-figure="${figure}"]`), `${figure} offered`).toHaveCount(0);
-    }
-  });
-
-  await test.step("2 · and she reads the floor's day, as the floor reads hers", async () => {
-    await expect(page.locator('[data-slot="report-card"]').first()).toBeVisible();
-  });
-});
-
-test("the day shown never runs ahead of today", async ({ page, locale, t }) => {
-  const ahead = addDays(todayRiyadh(), 7);
-
-  await login(page, locale, "abdulrahman");
-  await page.goto(`/${locale}/reports?day=${ahead}`);
-
-  // A day that has not happened is not an error page — the screen has an
-  // obvious right answer for "which day" and shows that instead (S8).
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-  await expect(page.getByLabel(t("reports.nextDay"))).toBeDisabled();
-  // And a garbled one lands on the same day rather than throwing.
-  await page.goto(`/${locale}/reports?day=not-a-day`);
-  await expect(page.getByRole("heading", { name: t("reports.title") })).toBeVisible(COLD);
-  await expect(page.locator('[data-slot="report-card"]').first()).toBeVisible();
 });

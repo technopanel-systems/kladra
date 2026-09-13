@@ -35,8 +35,8 @@ export function union(file: string, name: string): string[] {
 /**
  * The same blindness, one shape along: a table of `{ key: "x" }` rows that a
  * component turns into `t(row.key)`. `src/lib/report-figures.ts` is one — the
- * report screen renders ten labels out of it and not one of them is written at
- * a call site — so the keys are read back out of the table itself.
+ * lane on the Reports screen renders six labels out of it and not one of them
+ * is written at a call site — so the keys are read back out of the table itself.
  */
 export function tableKeys(file: string): string[] {
   const source = readFileSync(resolve(root, file), "utf8");
@@ -64,12 +64,10 @@ export const families: [string, string[]][] = [
   ["common", union("src/lib/authz.ts", "REFUSAL_KEYS")],
   ["common", union("src/db/schema.ts", "CHANNELS")],
   ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
-  ["reports", tableKeys("src/lib/report-figures.ts")],
   // The moved line's labels (P11E): every count figure has a `<key>Label` plural
   // beside its heading, and the m² figure's label carries the unit the bare
   // figure on that line leaves off.
   ["reports", tableKeys("src/lib/report-figures.ts").map((key) => `${key}Label`)],
-  ["reports", union("src/components/reports/person-card.tsx", "REPORT_STATES")],
   ["team.chain", union("src/lib/chain.ts", "CHAIN_STAGES")],
   ["quotations.event", union("src/lib/quotation-events.ts", "QUOTATION_EVENTS")],
   ["dispatches.event", union("src/lib/dispatch-events.ts", "DISPATCH_EVENTS")],

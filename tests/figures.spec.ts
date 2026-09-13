@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { boxOffered, figuresOf } from "@/lib/report-figures";
-import type { FloorDay } from "@/lib/reports";
+import { figuresOf, whatMoved, type Recorded } from "@/lib/report-figures";
 import { monthSentenceKey } from "@/lib/months";
 import { isQuiet, USE_WINDOW_DAYS } from "@/lib/use-window";
 
@@ -25,30 +24,23 @@ test("away today excuses today, whether he has been quiet a week or has never op
 });
 
 /**
- * The figures a card shows are the ones its person can move (SPEC D97, D50).
- * Marketing never raises a quotation or a dispatch, so its card carries two
- * figures and not eight — six noughts it cannot change read as a floor that
- * did nothing.
+ * What Kladra recorded beside a person's reports is what that person can move
+ * (SPEC §3 P13, D97, D50). Marketing never raises a quotation or a dispatch, so
+ * its lane has nothing of that chain in it — six noughts it cannot change would
+ * read as a floor that did nothing — and anybody's lane shows only what moved.
  */
-const floor: FloorDay = {
-  kind: "floor",
+const recorded: Recorded = {
   sells: true,
-  logged: 3,
-  companies: 2,
-  quotationsRaised: 0,
+  quotationsRaised: 2,
   quotationsSentBack: 0,
-  answersRecorded: 0,
+  answersRecorded: 1,
   dispatchesRaised: 0,
   dispatchesApproved: 0,
   sqmMoved: "0",
-  callsDue: 1,
-  callsMade: 1,
 };
 
-test("a rep's card carries the whole chain, marketing's the two it can move", () => {
-  expect(figuresOf(floor).map((figure) => figure.key)).toEqual([
-    "logged",
-    "companies",
+test("the recorded lane carries the chain for a seller and nothing for marketing", () => {
+  expect(figuresOf(recorded).map((figure) => figure.key)).toEqual([
     "quotationRequests",
     "sentBack",
     "answers",
@@ -56,23 +48,22 @@ test("a rep's card carries the whole chain, marketing's the two it can move", ()
     "dispatchesApproved",
     "moved",
   ]);
-  expect(figuresOf({ ...floor, sells: false }).map((figure) => figure.key)).toEqual([
-    "logged",
-    "companies",
-  ]);
+  expect(figuresOf({ ...recorded, sells: false })).toEqual([]);
 });
 
-/**
- * An off day is offered, not owed (SPEC S47, D57, D97): the box is there on a
- * Saturday that is still open, gone on a Saturday that has closed, and a note
- * already written is shown whatever the day was.
- */
-test("the box on an off day: offered while open, gone when closed, kept when written", () => {
-  expect(boxOffered("off", true, null)).toBe(true);
-  expect(boxOffered("off", false, null)).toBe(false);
-  expect(boxOffered("off", false, "worked the exhibition")).toBe(true);
-  expect(boxOffered("open", true, null)).toBe(true);
-  expect(boxOffered("silent", false, null)).toBe(true);
+test("the recorded lane shows only what moved, square metres included", () => {
+  expect(whatMoved(recorded).map((figure) => [figure.key, figure.value])).toEqual([
+    ["quotationRequests", 2],
+    ["answers", 1],
+  ]);
+  const approved = whatMoved({ ...recorded, dispatchesApproved: 1, sqmMoved: "182.40" });
+  expect(approved.map((figure) => figure.key)).toEqual([
+    "quotationRequests",
+    "answers",
+    "dispatchesApproved",
+    "moved",
+  ]);
+  expect(approved.find((figure) => figure.key === "moved")?.sqm).toBe(true);
 });
 
 /**

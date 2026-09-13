@@ -80,12 +80,17 @@ below by number.
                   (computed from the two sets by `quotation-diff`, recorded in the trail at the raise), or direct
                   for the company with its own prices (D169); refused is edited and resubmitted; payment
                   placeholders gone, the three-way choice.
-            - [ ] G2 · S4 **Reports** (13.8): one popup from anywhere — the top bar's `+`, and every drawer, prefilled
+            - [x] G2 · S4 **Reports** (13.8): one popup from anywhere — the top bar's `+`, and every drawer, prefilled
                   with what it was opened from — company, contact, what happened as buttons, outcome, text, next
                   follow-up, twenty seconds on a phone; the rep's view (his days, a calendar, filters by company,
                   kind and outcome); the manager's (the team by day and week, filters by rep, kind, outcome and
                   company, who has written nothing today, drill into a rep or a day); the coordinator's own as a rep;
-                  the system's events in a marked lane beside the written ones, never mixed.
+                  the system's events in a marked lane beside the written ones, never mixed. **Done** as migration 0026 (`daily_reports` gone, an outcome required): `ReportDialog`
+                  from the top bar, the bottom bar, the company and project drawers and the call cards (seven
+                  presses and a line from the top bar, five from a record, D176); the rep's month with a calendar
+                  and the "Recorded by Kladra" lane; the manager's day and week, filters, drill-in and "written
+                  nothing today" (D177); glossary Report / Reports. The quotation and dispatch drawers get their
+                  Add report when S3 is merged.
             - [ ] G3 · S5 **Leads and marketing** (13.7): the lead form as §3 states it; the rep's band of leads given
                   to him above his companies, newest first, highlighted until acknowledged; the manager's leads view
                   with assign and reassign and the unacknowledged; marketing's outcome per lead — acknowledged,
@@ -139,8 +144,8 @@ below by number.
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
-everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). S2 is merged. S3 (built on
-S2's branch) and S4 are with builders in `.claude/worktrees/`. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
+everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). S2 and S4 are merged. S3 (built
+on S2's branch) is with a builder in `.claude/worktrees/`. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
 session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
@@ -1107,3 +1112,6 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 209 A worktree inside the repo is inside every watcher, type check and lint the repo runs. (P13 Stage 2)
 - [x] 210 The dialog reported narrow twice was one class on the shared shell, not the form. (P13-S2)
 - [x] 211 A colour code in a field that follows the page's direction lost its last digits in Arabic. (P13-S2)
+- [x] 212 A heading found by a word the page also uses in its own counts found eight headings in English and one in Arabic. (P13-S4)
+- [x] 213 Two drawers called the same tab by two names, and a test that knew only one of them. (P13-S4)
+- [x] 214 A file a screenshot agent wrote for itself was swept into a commit by `git add -A`. (P13 Stage 2)

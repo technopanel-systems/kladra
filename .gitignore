@@ -64,3 +64,5 @@ yarn-error.log*
 
 # Agent worktrees the session creates inside the repo (P13 Stage 2)
 .claude/worktrees/
+# playwright-cli session settings written by a screenshot agent
+.playwright/

@@ -56,10 +56,6 @@ export type LiveEvent =
   | { type: "notification"; id: string; unread: number }
   | { type: "company"; id: string }
   | { type: "project"; id: string }
-  // A daily report landing. The manager reads the screen while the floor is still
-  // writing on it, and a participation count that has gone stale reads exactly
-  // like a missed day (D57) — which is the one thing it must never do.
-  | { type: "report"; id: string; day: string }
   // Sent by the channel itself when its listener comes back after an outage:
   // anything may have happened meanwhile, so the browser re-reads (D105).
   | { type: "resync" };

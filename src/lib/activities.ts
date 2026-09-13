@@ -1,5 +1,10 @@
 /**
- * The log — what actually happened with a customer, newest first (SPEC S24).
+ * Reports — what actually happened with a customer, in the words of the person
+ * it happened to, newest first (SPEC §3 P13, S24).
+ *
+ * A report is one row of `activities`: one thing that happened, against one
+ * company, with what kind of thing it was and what came of it. The table kept
+ * its name from when it was "the log"; the screens say report (P13-S4).
  *
  * This module sits at the BOTTOM of the rep-floor module graph: companies.ts
  * and projects.ts import from it, never the other way round. The gates every
@@ -9,15 +14,27 @@
  * a rep sees only his own companies, manager and admin see everyone's (S8) —
  * and `mayWrite`, which is the rep alone (D42).
  *
- * A log entry names a company always, and a contact and a project sometimes;
- * the reader shows the words a person recognises, never an id (DESIGN §2).
+ * A report names a company always, and a contact, a project, a quotation or a
+ * dispatch sometimes; the reader shows the words a person recognises, never an
+ * id (DESIGN §2).
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
 import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { activities, companies, contacts, countries, projects, users, type Channel } from "@/db/schema";
+import {
+  activities,
+  companies,
+  contacts,
+  countries,
+  dispatches,
+  outcomes,
+  projects,
+  quotations,
+  users,
+  type Channel,
+} from "@/db/schema";
 import { NotAllowed } from "@/lib/authz";
 import { personName } from "@/lib/people";
 import { mayOpen, mayWrite } from "@/lib/floor";
@@ -36,13 +53,17 @@ import {
 /** One list of what can happen, the column's own (src/db/schema.ts). */
 export type ActivityChannel = Channel;
 
-/** One line of the Activity tab. Words only — the ids are for links. */
+/** One report, as every list of them reads it. Words only — the ids are for links. */
 export type ActivityRow = {
   id: string;
   text: string;
   channel: ActivityChannel;
   happenedOn: Day;
+  userId: string;
   userName: string;
+  /** What came of it, in the reader's language (D171). */
+  outcomeId: number;
+  outcomeName: string;
   /**
    * Which customer it is about. Every entry names one (S24), and on a company's
    * own drawer that is the context rather than news — but on a person's DAY it
@@ -55,6 +76,12 @@ export type ActivityRow = {
   contactName: string | null;
   projectId: string | null;
   projectName: string | null;
+  /** The paper it was about, when it was about one (SPEC §3, P13). */
+  quotationId: string | null;
+  quotationNumber: number | null;
+  quotationRevision: number | null;
+  dispatchId: string | null;
+  dispatchNumber: number | null;
   /** The reader wrote this one, so it is theirs to correct or unfile (D70). */
   mine: boolean;
   /** …and its day is still open, so the words can still change (D58). */
@@ -62,6 +89,37 @@ export type ActivityRow = {
 };
 
 export { mayOpen, mayWrite };
+
+/**
+ * May this person write a report on a company whose rep is `repId`?
+ *
+ * The companies he sees as a floor sees them: his own, and one shared with him
+ * (D147). A rep put on a colleague's customer has been to see him too, and what
+ * he did there is his report to write — it is the colleague's company row and
+ * its follow-up date he does not touch. The manager's reading of every floor is
+ * NOT one of the ways in: he reads everyone's reports and writes on no floor but
+ * a company that has been handed to him (S8, D42). `mayWrite(user, user.id)` is
+ * the other two halves of that rule — a role with no floor, and an admin looking
+ * through somebody's eyes, write nothing — asked once rather than said again.
+ */
+export function mayReportOn(user: SessionUser, repId: string, shared: boolean): boolean {
+  return mayWrite(user, user.id) && (repId === user.id || shared);
+}
+
+/**
+ * A report can be written, corrected and unfiled for today and for the last
+ * WORKING day before today, and then it closes (D58, D70).
+ *
+ * The rule was "today and yesterday" and that was wrong in Riyadh, where the
+ * week ends on Thursday: on a Saturday not one person on the floor could write
+ * anything. Working days close the hole and keep the point — a report rewritten
+ * a week later is not a record of a day, it is a reconstruction.
+ */
+export async function mayWriteFor(day: Day, today: Day = todayRiyadh()): Promise<boolean> {
+  if (day === today) return true;
+  if (day > today) return false;
+  return day === (await lastWorkingDay(today));
+}
 
 /** The company's owner and whether it is archived, in ONE read. */
 async function companyRow(
@@ -125,6 +183,20 @@ export async function assertCompanyMine(
 ): Promise<{ repId: string; archived: boolean; country: string; shared: boolean }> {
   const row = await companyRow(user, companyId);
   if (!row || !mayWrite(user, row.repId)) throw new NotAllowed();
+  return row;
+}
+
+/**
+ * The same read, for writing a REPORT on it: his own company, or one shared
+ * with him (`mayReportOn`). Archived is returned rather than thrown on, so the
+ * action can say why in a sentence.
+ */
+export async function assertMayReport(
+  user: SessionUser,
+  companyId: string,
+): Promise<{ repId: string; archived: boolean; shared: boolean }> {
+  const row = await companyRow(user, companyId);
+  if (!row || !mayReportOn(user, row.repId, row.shared)) throw new NotAllowed();
   return row;
 }
 
@@ -243,10 +315,10 @@ export async function assertProjectMine(
  *
  * Renaming it, marking it lost and archiving it belong to whoever created it
  * (SPEC §3: an item belongs to the person who made it, and only he edits it).
- * Logging against it, reporting on it and quoting on it are the work, and
- * `assertProjectMine` answers those. Two questions, two helpers — the same
- * split as `mayOpen` and `mayWrite`, and for the same reason: one predicate
- * answering both is how a manager once came to write on every floor (D42).
+ * Reporting on it and quoting on it are the work, and `assertProjectMine`
+ * answers those. Two questions, two helpers — the same split as `mayOpen` and
+ * `mayWrite`, and for the same reason: one predicate answering both is how a
+ * manager once came to write on every floor (D42).
  */
 export async function assertProjectOwn(
   user: SessionUser,
@@ -258,11 +330,12 @@ export async function assertProjectOwn(
 }
 
 /**
- * The one activity query. `happened_on` is the day the rep says it happened;
- * `created_at` breaks ties, so two entries typed on the same day read in the
- * order they were written.
+ * The one report query. `happened_on` is the day the person says it happened;
+ * `created_at` breaks ties, so two reports on the same day read in the order
+ * they were written.
  */
 function activityQuery(locale: string, where: SQL) {
+  const arabic = locale.startsWith("ar");
   return db
     .select({
       id: activities.id,
@@ -271,18 +344,28 @@ function activityQuery(locale: string, where: SQL) {
       happenedOn: activities.happenedOn,
       userId: activities.userId,
       userName: personName(locale),
+      outcomeId: activities.outcomeId,
+      outcomeName: arabic ? outcomes.nameAr : outcomes.nameEn,
       companyId: activities.companyId,
       companyName: companies.name,
       contactId: activities.contactId,
       contactName: contacts.name,
       projectId: activities.projectId,
       projectName: projects.name,
+      quotationId: activities.quotationId,
+      quotationNumber: quotations.number,
+      quotationRevision: quotations.revision,
+      dispatchId: activities.dispatchId,
+      dispatchNumber: dispatches.number,
     })
     .from(activities)
     .innerJoin(users, eq(users.id, activities.userId))
     .innerJoin(companies, eq(companies.id, activities.companyId))
+    .innerJoin(outcomes, eq(outcomes.id, activities.outcomeId))
     .leftJoin(contacts, eq(contacts.id, activities.contactId))
     .leftJoin(projects, eq(projects.id, activities.projectId))
+    .leftJoin(quotations, eq(quotations.id, activities.quotationId))
+    .leftJoin(dispatches, eq(dispatches.id, activities.dispatchId))
     // The caller's own filter AND the one every caller needs: an unfiled entry
     // is off every list and out of every count (D70). The condition is an
     // argument rather than a second `.where()` because Drizzle allows one, and
@@ -290,20 +373,7 @@ function activityQuery(locale: string, where: SQL) {
     .where(and(isNull(activities.archivedAt), where));
 }
 
-type ActivityQueryRow = {
-  id: string;
-  text: string;
-  channel: ActivityChannel;
-  happenedOn: Day;
-  userId: string;
-  userName: string;
-  companyId: string;
-  companyName: string;
-  contactId: string | null;
-  contactName: string | null;
-  projectId: string | null;
-  projectName: string | null;
-};
+type ActivityQueryRow = Awaited<ReturnType<typeof activityQuery>>[number];
 
 async function toRows(rows: ActivityQueryRow[], user: SessionUser): Promise<ActivityRow[]> {
   // Asked once for the whole list rather than per row: the window is two days
@@ -317,15 +387,22 @@ async function toRows(rows: ActivityQueryRow[], user: SessionUser): Promise<Acti
     id: row.id,
     text: row.text,
     channel: row.channel,
-    happenedOn: row.happenedOn,
+    happenedOn: row.happenedOn as Day,
     userId: row.userId,
     userName: row.userName,
+    outcomeId: row.outcomeId,
+    outcomeName: row.outcomeName,
     companyId: row.companyId,
     companyName: row.companyName,
     contactId: row.contactId ?? null,
     contactName: row.contactName ?? null,
     projectId: row.projectId ?? null,
     projectName: row.projectName ?? null,
+    quotationId: row.quotationId ?? null,
+    quotationNumber: row.quotationNumber ?? null,
+    quotationRevision: row.quotationRevision ?? null,
+    dispatchId: row.dispatchId ?? null,
+    dispatchNumber: row.dispatchNumber ?? null,
     // Viewing as somebody is reading, never writing (D52) — every write action
     // refuses it, so the screen does not offer it either.
     mine: row.userId === user.id && !user.viewedBy,
@@ -345,7 +422,7 @@ export async function listActivitiesForCompany(
 }
 
 /**
- * The project drawer's Activity tab, newest first — only the entries filed
+ * The project drawer's Activity tab, newest first — only the reports filed
  * against this project, not everything at its company.
  */
 export async function listActivitiesForProject(
@@ -361,39 +438,26 @@ export async function listActivitiesForProject(
 }
 
 /**
- * One person's log for one day, newest first, with how many there are (S27).
+ * Reports matching a condition, newest first, capped — with how many there are
+ * (D80, D144).
  *
- * S24 to S27 read together are one sentence: a rep writes what happened with a
- * customer in his own words, he is asked for nothing a record already holds,
- * and the history that comes out of it IS what the manager reads at the end of
- * the day. Kladra had both halves and had never joined them — the entries lived
- * on each customer's drawer, the report card said "3 log entries" and named
- * none of them, and at six o'clock a rep summarised in the report box what he
- * had already typed three times. That is the second copy S26 forbids.
+ * The Reports screen's one read of the entries themselves. Who may read which
+ * person's reports is the CALLER's question (src/lib/reports.ts narrows the
+ * condition before it gets here), because that screen shows one person to a rep
+ * and everybody to the manager, and the answer is a WHERE clause rather than a
+ * filter over rows already read (rules/data.md).
  *
- * Capped, and the total comes back with it: the figure above the list counts
- * the DAY and the list shows the first few of it, which are two different
- * numbers whenever somebody has a busy afternoon (D144, D80).
- *
- * Who may read it is `mayOpen` — the same question every other screen asks
- * about a floor. It is asked by the caller, per person, because the report
- * screen shows everybody and the answer differs down the page.
+ * One row past the cap answers both questions at once in the ordinary case: a
+ * window that fits under the cap needs no count, because the rows ARE the
+ * count, and the second read happens only when there is a tail to say.
  */
-export async function listActivitiesForDay(
+export async function readReports(
   user: SessionUser,
-  personId: string,
-  day: Day,
+  where: SQL,
   limit: number,
 ): Promise<{ rows: ActivityRow[]; total: number }> {
-  if (!mayOpen(user, personId)) throw new NotAllowed();
-
-  const where = and(eq(activities.userId, personId), eq(activities.happenedOn, day))!;
-  // One row past the cap, which answers both questions at once in the ordinary
-  // case: a day that fits under the cap needs no count, because the rows ARE
-  // the count. The second read happens only on a day somebody was busy, which
-  // is also the only day the tail line has anything to say.
   const found = await activityQuery(await getLocale(), where)
-    .orderBy(desc(activities.createdAt))
+    .orderBy(desc(activities.happenedOn), desc(activities.createdAt))
     .limit(limit + 1);
 
   const rows = await toRows(found.slice(0, limit), user);
