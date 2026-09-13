@@ -56,7 +56,7 @@ import { cn } from "@/lib/utils";
  * line and its halalas.
  */
 const LINE_GRID =
-  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.75fr)_minmax(0,6.5fr)_minmax(0,6.75fr)_minmax(0,6.75fr)_minmax(0,3.5fr)_minmax(0,5.25fr)_minmax(0,5.25fr)_minmax(0,4.25fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,6.5fr)_2rem] xl:items-center xl:gap-x-2";
+  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.75fr)_minmax(0,6.5fr)_minmax(0,6.75fr)_minmax(0,6.75fr)_minmax(0,3.5fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,4.75fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,6.5fr)_2rem] xl:items-center xl:gap-x-2";
 
 /**
  * One line in the form: the nine fields, plus React's key.
