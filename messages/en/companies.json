@@ -9,12 +9,14 @@
   "openCompany": "Open {name}",
   "whatsappContact": "WhatsApp {name}",
   "callContact": "Call {name}",
-  "numberOf": "{name}\u2019s number",
+  "numberOf": "{name}’s number",
   "overdueCount": "{count} overdue",
   "todayCount": "{count} today",
   "neverCount": "{count, plural, one {# company never contacted} other {# companies never contacted}}",
   "nothingDue": "Nothing due — you are up to date.",
   "emptyFilter": "Nothing matches this filter.",
   "clearFilter": "Show all companies",
-  "quietCount": "{count, plural, one {# company gone quiet} other {# companies gone quiet}}"
+  "quietCount": "{count, plural, one {# company gone quiet} other {# companies gone quiet}}",
+  "copyNumber": "Copy number",
+  "numberCopied": "Number copied"
 }

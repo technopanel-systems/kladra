@@ -325,4 +325,74 @@ export const SPEC3: Spec3Entry[] = [
       "the month a rep is shown is the month he was credited",
     ],
   },
+
+  // ---- Phase 13: the founder's second round, owed to the slice that builds each (WORKFLOW §0) ----
+  {
+    says: "Any difference from the quotation is flagged on the dispatch for Rawan",
+    owed: "P13-S3",
+  },
+  {
+    says: "chooses what happened from buttons",
+    owed: "P13-S4",
+  },
+  {
+    says: "each with m² and a price per m², subtotalled apart from the panels",
+    owed: "P13-S2",
+  },
+  {
+    says: "How often each rep relies on her is tracked",
+    owed: "P13-S6",
+  },
+  {
+    says: "Credit and tasaheel are one payment option",
+    owed: "P13-S3",
+  },
+  {
+    says: "plus a Leads module",
+    owed: "P13-S5",
+  },
+  {
+    says: "a slice or a bar opens the list behind it",
+    owed: "P13-S9",
+  },
+  {
+    says: "it moves out of Metrics",
+    owed: "P13-S8",
+  },
+  {
+    says: "is the first and default view",
+    owed: "P13-S7",
+  },
+  {
+    says: "Its columns come from the project's real life",
+    owed: "P13-S7",
+  },
+  {
+    says: "horizontal scrollbar is visible without scrolling down",
+    owed: "P13-S7",
+  },
+  {
+    says: "for the item table plus the services section",
+    owed: "P13-S2",
+  },
+  {
+    says: "carry no hidden placeholder text",
+    owed: "P13-S3",
+  },
+  {
+    says: "pending quotations and pending dispatches side by side",
+    owed: "P13-S6",
+  },
+  {
+    says: "the customer's query as the single note",
+    owed: "P13-S5",
+  },
+  {
+    says: "Dropdowns must open in Microsoft Edge",
+    owed: "P13-S11",
+  },
+  {
+    says: "applied everywhere in one sweep",
+    owed: "P13-S12",
+  },
 ];

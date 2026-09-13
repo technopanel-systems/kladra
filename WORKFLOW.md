@@ -2,874 +2,171 @@
 
 ## §0 Checklist and where I stopped
 
-- [x] P0 Toolbox
-- [x] P1 Extract from FACET → the five files (redone from C:\Projects\facet-crm)
-- [x] P2 Scaffold: app, database, login, shell, seed, live updates, tests
-- [x] P3 Rep floor: companies, contacts, projects, log, follow-ups, search
-- [x] P3.5 Edit company, contact, project; archive contact and project; the SPEC §4 cuts go away
-- [x] P3.6 Root causes: no primary action disabled while data loads; the four review findings
-      become DESIGN rules with tests; one word per concept in both languages, glossary in SPEC;
-      tests get their own database, `kladra_test`
-- [x] P4 Quotations: rep request → coordinator issue / send back → customer decision
-- [x] P5 Dispatches: rep raise → coordinator approve / refuse → target counting
-- [x] P6 Manager view, admin, notifications
-- [x] P7 Polish, acceptance runs, PWA, handover
-- [x] P8 Depth — Jerom used it and asked for more (his list, added to SPEC §3 not replacing it)
-      - [x] P8.1 Research, the identity decisions, and the view rulings written into DESIGN
-      - [x] P8.2 Every list creates from itself; the missing-primary-action sweep
-      - [x] P8.3 Semantic colour: state, overdue, stuck, ahead — one small set, both themes
-      - [x] P8.4 m² is the headline on quotations and dispatches; price is the quiet one
-      - [x] P8.5 The drawers reworked: what a person needs first, at the top
-      - [x] P8.6 A dashboard per role, each answering that person's daily question
-      - [x] P8.7 Views where they earn it: a board of states, a timeline of follow-ups
-      - [x] P8.8 View as: the admin checks the app as any role or any person, marked
-      - [x] P8.9 Roles beyond the four, if the business needs them — propose, record, build
-- [x] P9 Think, then deepen — Jerom's second pass after using it (adds to SPEC §3, replaces nothing)
-      - [x] P9.1 Five days walked end to end, judged against the sheet, ranked list written here (9A)
-      - [x] P9.2 The schema read as a critic and fixed while the data is still fake (9D)
-      - [x] P9.3 The daily report: the system writes most of it, the person adds what it cannot know (9B)
-      - [x] P9.4 Numbers that answer a question somebody asks daily, and say what they mean (9C)
-            - [x] a The caption slot, and the coordinator's queue: a wait is a length, not a date
-            - [x] b One figure, one name, one definition — the labels audited across every screen
-            - [x] c m² by month, so there is a month before this one
-            - [x] d Where quotations die
-            - [x] e Which companies went quiet
-      - [x] P9.5 The login screen, and the identity audited as a whole (9E)
-            - [x] a The sign-in screen, built to the app it opens
-            - [x] b A person is named in the reader's script
-            - [x] c The rest of the identity, audited screen by screen
-      - [x] P9.6 The 9A list built, best first, and the ideas that only sounded impressive left out
-            - [x] a A log entry can be corrected, and unfiled (item 3)
-            - [x] b The rep logs the call without leaving his day (item 4)
-            - [x] c A quotation's history, and the reason that outlived it (item 5)
-            - [x] d Every quotation line is typed from nothing (item 7)
-            - [x] e Leave is invisible everywhere except the pace arithmetic (item 9)
-            - [x] f A revision does not say what changed (item 10)
-            - [x] g Nothing says whether the team is using the app (item 12)
-- [x] P10 The half-built and the carried, then a pilot on real volumes
-      - [x] a A person has a standing strip of his own — the one thing "how is this going"
-            is not asked about anywhere
-      - [x] b A notification that has been read and acted on stops being a row for ever
-      - [x] c The carried three: every list renders every row it is given, a form dialog
-            that scrolls does not say so, and a dispatch is typed from nothing too
-      - [x] d The pilot: the acceptance scripts walked at the founder's volumes
-            (`npm run seed:volume`), what broke fixed, what was measured written here
-- [x] P11 Independent review and hard polish — a different model reads it as a stranger,
-      owns it, and does not stop. The specs stay green; a rule that changes takes its test
-      and its reason with it, said out loud.
-      - [x] A Read it as a stranger, build nothing yet: schema, actions, screens, seed,
-            tests, a full day for each of the five people; a ranked findings list in §5
-            with the cause of each, not the symptom; then fixed worst first in slices
-            — the list is written (§5, sixty-seven entries, unverified); fixed so far:
-            1, 2, 6, 57 (a write holds its row, D85); 3, 4, 46, 52 (achieved is the
-            raiser's, the formula written once, D86); 7, 8, 44 (a terminal action
-            records what it did, D87); 5 (a typed key refused by name and corrected
-            in place, D88); 9, 13 (a phone read in its country, a month sentence that
-            matches its bars, D89, D90); 10, 11, 12 (a role and an id, a child restored
-            onto its company, a backup held to its own counts, D91–D93); 15, 16, 21 (a
-            drawer says what it writes, D94); 22, 23, 24 (a figure agrees with the figures
-            under it, D95); 14, 19, 25 (the guards, D96); 26, 30, 32 (a day as it happened,
-            D97); 29, 31, 39 (a number is a call, D98); 36, 37, 38 (derived from the source,
-            walked in the spec, D99); 42, 43, 55, 56 (the database says what the code assumes,
-            D100); 45, 58, 65, 67 (what it says it is, D101); 48, 59, 60 (one word for one
-            thing, D102); 47, 49, 50, 62 (a test that cannot pass for nothing, D103); 61 (the
-            volume floor has a past, D104); 11B: 17, 18, 54, 63, 64 (live is proved, D105);
-            11C-1 (closed where the code is closed, D106); 11C-2 (reads measured at the
-            volume floor, D107); 11D-1: 72 (a count counts the rows its list shows, D108); 11D-2: 73 (a
-            company that comes back is recognised, D109); 11D-3: 74 (a notice names the
-            customer, D110); 11D-4: 75 (a call card says why, D111); 11D-5: 76 (a dispatch line says what
-            already went, D112); 11D-6: 77 (a day off the calendar is a span, D113); 11D-7: 78
-            (Enter saves what a person typed, D114); 11D-8: 79, 80, 81 (a form starts from what
-            the app knows, a queue row names its person, D115, D116); 11D-9: 82 (a typed line
-            starts where its row starts; the targets row wraps alike with or without last
-            month's figure — both seen in the box's own shots); 11E-1: 83, 84, 91 (a count is
-            a door, the pace cell in words, a sum of estimates whole, D117); 11E-2: 85 (stopped
-            work first, the heading's doors, D118); 11E-3: 86 (the queue says the paper was
-            revised, D119); 11E-4: 87, 88, 89, 92 (the window in words, nouns counted, the m²
-            named, D120); 11F-1: the question each screen answers and every board move
-            written as tables in DESIGN §6; 11F-2: 93 (a warning that names a record is a
-            door to it, D121); 11G-1: 20 (error and missing screens are Kladra's, D122);
-            11G-2: 34, 66, 102 (a look asked for by name, current is a wash, dialogs in the
-            band, D123); 11G-3: 40, 41, 53 (the rail, the chrome and the splash decided
-            before the first byte, D124, D125); 11G-4: 94, 101 (a pressed link says it is
-            working, D126); 11G-5: 95, 96, 97, 98, 100 (empty says why, D127); 11G-6: 99
-            (a search term without a digit took three lists down); 11G-7: 103, 104, 105
-            (the guidelines pass: the hover is not the wash, the mark speaks, the menu
-            is named); 11G-8: 106, 107 (the critic's pass: the cookie guarded, the
-            Arabic digit found)
-      - [x] B Prove live updates end to end, two people, no reload — quotations, dispatches,
-            notifications; a dropped connection, a sleeping laptop, two tabs, a server
-            restart — and make it a permanent test
-      - [x] C Database and data honesty, read as a critic: shapes, constraints, indexes,
-            figures computable two ways, history worth keeping; then the messy realities;
-            migrations proved from information_schema
-      - [x] D The whole flow, creation to oversight, walked step by step: what is retyped,
-            how many clicks, what a person must remember, where two screens could disagree
-      - [x] E Dashboards and reports audited as products: one look, no interpretation,
-            every figure saying what it means; charts where a shape is clearer than a number
-      - [x] F A view per screen, chosen not copied, the question each answers written in
-            DESIGN; drag only where the drop needs nothing the system does not already have
-      - [x] G Identity, motion and feel audited as one thing; loading, empty, error and
-            offline states on every screen; reduced-motion honoured
-      - [x] H Phone: a rep with one hand free at 375 — log, call, quote, read what came back
-      - [x] I Speed and reliability, measured: first paint on a mid phone, ten thousand
-            rows, queries that grow, the unhappy paths — nothing silent, nothing lost
-      - [x] J What a good CRM has that Kladra does not: proposed freely, then deleted down
-            to what names a person, a day and what it replaces; the rejected list kept
-            (DESIGN §7) — 11J-1: 142 (a field that is written is read somewhere, D136);
-            11J-2: 143 (one search box per screen, her desk in her order, D137); 11J-3:
-            144, 145, 146 (the desk knows what it is holding, a stored code is never a
-            word on a screen, a hit opens something for whoever pressed it, D138, D139);
-            11J-4: 147 (why we lose, D140); 11J-5: 148, 149 (one clock for lateness,
-            whose customers have gone quiet, D141, D142); 11J-6: 150, 152 (a dispatch says
-            what happened to it, D143; and the demo record it turned out nothing had ever
-            read in order); 11J-7: 33, 151 (a figure is not the length of a capped list,
-            D144); 11J-8: 153 (one chip over a list, in one row, D145)
+Phases 0–12 are done and their boxes are collapsed to a line each; the account of every box is
+in this file's git history up to `e5c90cd`, and every decision it produced is in SPEC §4 and §5
+below by number.
 
-- [ ] P12 First real user feedback — reps, the coordinator and the manager have used it, and the
-      founder's list from that use is SPEC §3 authority: it overrides any earlier default it
-      touches, including D1, D12, D15, D51 and D81. His answer on sharing and credit is part of it.
-      - [x] 1 The hang, and its whole class: a picker that fires on a value that did not change
-      - [x] 2 A gate on founder decisions: §3 reachable from a test, `npm run check:spec3`
-      - [x] 3 One door, then sharing: a shared company, a shared project, owners on projects
-            and contacts, and the eleven visibility clauses re-pointed at one predicate
-      - [x] 4 Credit: chosen per quotation and per dispatch, split evenly between the sharers,
-            visible wherever the m² is, and no metre counted twice
-      - [x] 5 Roles: the coordinator sells, marketing's own lead source, handover to the manager
-      - [x] 6 The three-tab shell: today's work · metrics · the team
-      - [x] 7 Marketing leads: assigned in the same step, the customer's query, acknowledged,
-            and what an unacknowledged one looks like after two days
-      - [x] 8 Duplicate review: the customer number, the name rules in both languages, the
-            manager's three answers
-      - [x] 9 Quotations: company → project → contact, the width restored, the warehouse, one button
-      - [x] 10 Dispatches: project or stock, the chain and the difference, payment terms, resubmit
-      - [x] 11 The queue: the whole row opens it, and the SMAC number is the large one
-      - [x] 12 Metrics: proportions, a date range, a rep picker, every figure in its own words
-      - [x] 13 Reports and the company log rebuilt as one thing, per person, per day
-      - [ ] 14 Across: the panel's width, one primary action per list, the board ruling written
+- [x] P0–P2 Toolbox · extract from FACET → the five files · scaffold (app, database, login, shell, seed, live, tests)
+- [x] P3–P3.6 Rep floor · edit and archive · root causes (no disabled primary action, one word per concept, `kladra_test`)
+- [x] P4–P7 Quotations · dispatches · manager, admin, notifications · polish, PWA, handover
+- [x] P8 Depth after Jerom's first use — identity, every list creates from itself, semantic colour, m² the headline, the drawers, a dashboard per role, views where earned, view-as, roles (D1–D53)
+- [x] P9 Five days walked; the schema read as a critic; the daily report; figures that answer a question; the sign-in screen; the ranked list built (D54–D77)
+- [x] P10 The standing strip; a notice clears itself; the carried three; the pilot at volume (D78–D84)
+- [x] P11 A–J Independent review as a stranger: seventy findings fixed at the cause (§5 #1–#153, D85–D145)
+- [x] P12 First real user feedback (SPEC §3, P12): the hang and its class · the §3 gate · sharing · credit · roles · three tabs · leads · duplicates · quotations · dispatches · the queue · metrics · reports and the log as one thing · across (D146–D166, §5 #154–#205). Box 14's last three steps — the drawer shots, the namespace move, the guidelines pass — are closed by P13: the move is done in Stage 1, and the sweep (S12) shoots and reviews every drawer.
 
-P3.5 before P3.6 on purpose: P3.6's terminology sweep and its "one sentence per rejected input"
-rule have to cover the edit screens too, and sweeping twice is how a second definition survives.
+- [ ] **P13 Remake and polish, with nothing assumed** — the second round of real use (SPEC §3, P13). Three
+      model stops and no others: Stage 1 plans, Stage 2 builds every slice, Stage 3 audits as a stranger.
+      - [x] **Stage 1 (Fable)** — housekeeping, tooling, research, the plan; stopped once for approval.
+            Artefacts were already ignored and untracked; the stray root snapshot went; seven dead files,
+            three wrong dependency lines and two skills that did not earn their place went (§1); `check:dead`
+            (knip) joined lint; the prompt files were audited for Fable and shortened; this file shrank from
+            281 KB to what a session can read; the language is written (DESIGN §1b), the founder's round is
+            in SPEC §3, and the slices below are the plan.
+      - [ ] **Stage 2 (Opus, xhigh)** — every slice, in the groups below; parallel inside a group where files do
+            not overlap; the session integrates (spec3 registry, SPEC §4, DESIGN, §5) and runs the gate.
+            A slice is green on typecheck, lint, build and its own specs; a group is green on the full
+            suite before its slices are committed, one commit per slice. Every slice ends with shot-looker,
+            arabic-reviewer, web-design-guidelines, the axe spec and the critic's pass.
+            - [ ] G1 · S0 **Schema for the whole phase**, one migration set: a dispatch names its company and
+                  optionally its quotation and project, and carries its own typed lines (nullable link to the
+                  quotation line it came from); `quotation_services`; payment terms merge credit and tasaheel;
+                  `raised_by_id` on quotations and dispatches; marketing sells and carries metres; a log entry
+                  takes an outcome, a kind from the wider list, and an optional quotation or dispatch;
+                  `daily_reports` goes; seed and `tests/schema.spec.ts` follow.
+            - [ ] G1 · S1 **The language's primitives** (DESIGN §1b): `Avatar` with rings, `Empty`, the static shaped
+                  `Skeleton`, the hover and reveal utilities, `StickyScroll`, the chart kit (`npx shadcn add chart`),
+                  the eight avatar tints in both themes, `one-look` rules for each, and the axe spec that walks
+                  every screen for every role in both locales. The "before" screenshots of every screen are taken
+                  here, into the scratchpad, for S12's side-by-side.
+            - [ ] G2 · S2 **Quotations** (13.4): the request dialog wide enough for the lines and the services — a
+                  stated minimum on a desk, asserted by a test — and the services section with its own subtotal.
+            - [ ] G2 · S3 **Dispatches** (13.5): the request rebuilt per §3 — prefilled from the chosen or latest
+                  issued quotation, editable, linked, flagged where it differs (computed from the two line sets by
+                  `quotation-diff`, recorded in the trail at the raise), or direct for the company; refused is
+                  edited and resubmitted; payment placeholders gone, the three-way choice.
+            - [ ] G2 · S4 **Reports** (13.8): one popup from anywhere — the top bar's `+`, and every drawer, prefilled
+                  with what it was opened from — company, contact, what happened as buttons, outcome, text, next
+                  follow-up, twenty seconds on a phone; the rep's view (his days, a calendar, filters by company,
+                  kind and outcome); the manager's (the team by day and week, filters by rep, kind, outcome and
+                  company, who has written nothing today, drill into a rep or a day); the coordinator's own as a rep;
+                  the system's events in a marked lane beside the written ones, never mixed.
+            - [ ] G3 · S5 **Leads and marketing** (13.7): the lead form as §3 states it; the rep's band of leads given
+                  to him above his companies, newest first, highlighted until acknowledged; the manager's leads view
+                  with assign and reassign and the unacknowledged; marketing's outcome per lead — acknowledged,
+                  contacted, quoted, won — derived from the company's own records; marketing a rep everywhere else.
+            - [ ] G3 · S7 **Lists and boards** (13.3): "All" first and default on companies, quotations and dispatches;
+                  the projects board with the columns DESIGN §6 decides; `StickyScroll` on every board and wide
+                  table; the archive rebuilt from its question — who opens it and what they do there.
+            - [ ] G3 · S10 **Targets** (13.2): the current month only, editable where the admin sets it, history
+                  read-only beneath.
+            - [ ] G4 · S6 **The coordinator** (13.6): pending quotations and dispatches side by side from `lg` up; a
+                  rep picker at the top of both request dialogs for her, counting toward him, hers under Internal
+                  Sales when no rep is named; reliance per rep on the manager's team tab.
+            - [ ] G4 · S8 **Dashboards, the work tabs** (13.2): the target card at the top of the first tab on the day
+                  and team screens, out of Metrics; today's cards in the auto-fit grid; the team tab rebuilt in the
+                  language — avatars, rings for leave and stuck, a row that opens the person.
+            - [ ] G5 · S9 **Metrics and the report builder** (13.2): pies and rings where a share is the point, each
+                  slice a door to its list; the builder — measure, breakdown, period, rep — on the metrics tab, with
+                  the table under the chart, CSV export for the manager and a print stylesheet; every question a
+                  manager asks monthly answerable there.
+            - [ ] G5 · S11 **Edge** (13.9): an `edge` Playwright project on the msedge channel that runs only
+                  `tests/edge.spec.ts`, opening every menu, select, popover and palette on every screen in both
+                  locales; the hypotheses in order — Edge's translation of the Arabic screens mutating the portal
+                  (`translate="no"` on the shell if so), a modal menu dismissing a popover, Enhanced Security mode,
+                  duplicated Radix internals (`npm ls`, clean today); fixed once in the kit, the rule in DESIGN §5.
+            - [ ] G6 · S12 **The sweep** (13.10): the language applied to every screen not rebuilt above — companies,
+                  contacts, projects, admin, notifications, duplicates, the queue rows, the shell, the sign-in;
+                  "after" screenshots beside the "before" set, both themes, both directions, 1366 and 375, in one
+                  contact sheet for Jerom.
+      - [ ] **Stage 3 (Fable)** — audit everything as a stranger, refix, push, report; `/cost` at the end.
 
-**Where I stopped:** P11A is down to the entries that belong to later boxes. The stranger read
-is done and ranked — §5 below, seventy entries with causes — and seventeen slices fixed the
-worst in order, each verified in the code before it was called a defect: D85–D104 (a write
-holds its row; achieved metres are the raiser's and the m² formula written once; a terminal
-action records what it did; a SMAC number refused by name and corrected in place; a phone in
-its company's country and the six-month sentence true of its bars; a permission is a role and
-an id, a child restored onto its company, a backup held to its own counts; a drawer says what
-it writes; a figure agrees with the figures under it; the guards; a day as it happened; a
-number is a call; derived from the source, walked in the spec; the database says what the code
-assumes; what it says it is; one word for one thing; a test that cannot pass for nothing; the
-volume floor has a past). What remains in §5 is parked on purpose: 17–18, 54, 63–64 are 11B
-(live updates), 34, 40, 41, 53, 66 are 11G (identity, motion, states), 27, 28, 35, 51 are 11H
-(the phone at 375), 20 is 11G. The last two were carried to the end of the phase: 33 is
-fixed in 11J-7 (D144) and 68 is closed below as what it is, a rule about long-lived dev
-servers rather than a defect in Kladra. Box 11B is done in one
-slice (D105): two people, no reload, in `tests/live.spec.ts`, timed; every list marks an
-arrived row, and the mark's two seconds start when the row is on screen (timed on the page's
-own clock); the channel and the count open for a viewer; a listener outage ends with one
-resync; the chunking branch ran against four hundred. Box 11C is done in two slices, one
-commit (D106, D107): three more free-text columns closed where the code is closed, the trail's
-eighteen record kinds derived rather than copied, migration 0012; one archived company in the
-demo so the archive rule's second half and the archive screen have a row; the schema file and the
-catalogue held to each other both ways in `tests/schema.spec.ts`; every screen's reads logged
-and explained at the volume floor, one index added where a plan grew per row, the baseline
-written in §3 and the round-trip count parked for 11I as §5 #71. Box 11D is done in nine slices, one
-commit (D108-D116): the flow walked in the code and counted (§3 "The flow, counted"), ten
-findings written with their causes (§5 #72-81) and all ten fixed with a spec each — a count
-counts the rows its list shows; the archive is read when a company comes back; a notice names
-the customer; a call card says why; a dispatch line says what already went; leave is a span;
-Enter saves; a form starts from what the app knows; a queue row names its person — and one
-more (#82) seen in the box's own shots: a typed line starts where its row starts. The walk's
-own fan-out was the lesson of the box: nine readers rebuilding one context spent two million
-tokens and returned nothing, and the routing rule in §1 came out of it. Box 11E is done in
-five slices, one commit (D117-D120): the five dashboard screens read in the code and shot at
-volume, ten findings (§5 #83-92), eight fixed with a spec each and two refuted with the reason
-written — a count is a door; the pace cell says its unit; a sum of estimates is whole; stopped
-work sorts first and the heading's doors say of what kind; the queue says a paper was revised
-before the press; a figure's window is in its words; a noun after a number is counted; the m²
-is named. Box 11G is done in one commit (D122–D127): the six parked findings closed — error and
-missing screens inside the shell, no default look on a button or a badge, the board's current
-card a wash, the rail's width and the browser's chrome and the offline splash decided from the
-cookie before the first byte — and what the two inventories found on top: a pressed link says
-it is working, every empty state says why, and a search term with no digit in it no longer
-takes the quotations, dispatches and queue lists down (§5 #94–#102). Box 11H is done in one
-commit (D128–D130): the four parked findings closed — one phone line named once and held by the
-lint, every form a bottom sheet with Save lowest and a thumb tall, 44px on everything a thumb
-presses — and what walking the four flows at 375 found on top: the Add project sheet named no
-company, the library's sheet slid in 500 ms, and a sheet with words in it could be swiped away
-(§5 #108–#127). Box 11I is done in one commit (D131–D135): two harnesses with a baseline the
-next change is held to — `measure:reads` (459 → 400 statements over 43 screens once the session
-user and the calendar were once-per-request reads) and `measure:speed` (a cold screen live in
-2.9–3.5 s on a slowed phone for 467–582 kB once the fourth font weight was dropped) — and the unhappy
-paths walked with the wire cut: a rejected action was the error card with the words inside it
-and is one guard on every call now, a Save pressed twice after a lost answer is one write, a
-session that ended says so (§5 #128–#135). The figures measured and not acted on — the 500 kB
-list document, the twenty prefetches a screen fires, the two request writes with no twin guard —
-are under "Left" in §5. Two critic passes ran over the slice and both were acted on: the first
-found the guard's holes (§5 #136–#138), the second found that the speed harness could print green
-having measured nothing and that an interrupted reads run left the whole container logging every
-statement (§5 #139–#141).
+**Where I stopped.** Stage 1 is done and this is the stop for approval; nothing of Stage 2 is
+built. What the research took and refused is in DESIGN §1b and §4; the toolbox is §1. The dev
+database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. A dev
+server that has served a session's edits is restarted, not reused. The "12D" the founder's brief
+names under quotations is not in any of the five files — the P12 quotations box (9) built company →
+project → contact, the width, the warehouse and one button — so S2 builds the width and the services
+and the founder is asked what else 12D held.
 
-Box 11J is done in eight slices, eight commits, and Phase 11 closes with it. Seven readings
-proposed sixty things and eight survived the three questions — who, when, and what does it
-replace. Two more decisions came with them from older entries the box was the last chance to
-close, so §5 #142–#153 carries ten with their causes, and the refused list is kept by class in
-DESIGN §7. Both things parked for the box are done: the four hand-drawn search boxes are one
-component (§5 #121 → #143) and the quotations chips that wrapped round the list/board switch at
-375 are one component in one row (§5 #153, D145). Two defects were found by critic passes over slices that were
-already green, which is the habit worth keeping. §5 has no open entry left: 33
-is fixed in 11J-7 and 68 is closed as a rule about dev servers rather than a defect.
+## §1 Toolbox — what is installed, and why each earns its place
 
-**What is not done, and it is not code.** Not one of these screens has been in front of the
-person it was built for. The process rule in CLAUDE.md says a screen is done when its user has
-tried it — Faisal, Rawan, Abdulrahman, Jerom — and a suite of 475 checks in two languages is not
-that. The next phase begins there.
-
-The dev database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it
-back. A dev server that has served a session's edits is restarted, not reused (§5 #68).
-
-**Where P9 stopped.** P9.1–P9.5 done. 9C ended with four causes fixed rather than four
-figures added: a URL filter that parsed to nothing because the vocabulary lived in two
-lists (D64), a chart label truncated into a wrong year in Arabic (D65), a demo whose
-company target hid two of the three pace colours (D66), and the gone-quiet band itself
-(D63). 9E was the same shape: the sign-in screen was the last one built to rules the app
-had outgrown (D67), a person is named in the reader's script now rather than in Latin on
-every Arabic screen (D68), and the identity audit found the primary button written by
-hand in fourteen files and every floating surface drawing a ring where the app draws a
-border (D69). The mid-session sign-out seen during the 9C screenshots was confirmed as
-`seed:demo` truncating the `sessions` table under a live browser — correct behaviour that
-looks exactly like a bug, so the README says so now.
-
-P9.6 is the 9A list itself, best first, and all seven of its boxes are done — every
-item on the ranked list that was still open. A log entry can be
-corrected by its author and unfiled onto the audit line (D70), he logs the call from the
-row he called from (D71), and a quotation now remembers what happened to it (D72). The
-third one found the defect underneath it: a reason that outlived the state it explained,
-on a column whose twin on the dispatch table had been guarded by a constraint since the
-schema was written. Item 7 is done too: Add item opens on the sheet above it, and a
-customer who has been quoted before is offered his last quotation to start from (D74).
-Item 9 is done: a rep on leave is named on the manager's screen and what is due on his
-floor is listed beside him, and his own day says who has it while he is out (D75).
-Item 10 is done: a revision names what it changed from the quotation it was raised on,
-above the lines, where she reads it before pricing them (D76).
-Item 12 is done: the admin's own screen says who last opened Kladra and what each person
-changed this week, counted from the audit log (D77).
-
-**P10a is done.** A rep's floor carries its own band of three — pipeline, open quotations with
-the part the customer is holding beside it, and what has been sent back or refused — between the
-month card above it and the calls due below (D78). The manager reads it by pressing a name on the
-team screen, the rep reads the same band on his own floor, and the two counts come from the list
-his day already renders rather than from a second derivation of it. Two things were fixed at the
-cause while building it: "open quotations" existed twice, once in SQL and once in the query
-builder, and the strip's phone grid left an empty cell beside an odd last figure — the same defect
-as the half-empty two-figure strip in P9.6g, one width down, and now a rule in DESIGN §5.
-
-**A model change, at P10c's gate.** Fable 5.1 took over from Opus 5 with the P10c slice built
-and its suite running. The charter's rule for this applies: the previous model's work is
-another developer's, and P11A is where it is read as such before anything is built on it.
-The ordering change the founder asked for — lists capped before any volume testing — was
-already the shape of P10c, so P10d runs on a floor whose lists say what they left out.
-
-**P10c is done, and with it the carried list.** Every list on the app asks for what its
-screen will draw and says what it left out (D80): two hundred on a list screen, twenty-five
-in a band of the day, twenty in a group of the stuck list, with the true total beside it and
-the search box named as the way to the rest. The one list deliberately left whole is a
-company's own activity, because that history is the record and the export does not carry it.
-The same sentence fixed the form dialogs: a body with more below the fold now says so, in
-four lines of CSS on `FormBody` and therefore in every dialog at once. And a dispatch starts
-from the last one raised against its quotation — the site, the terms and the method, with
-the quantities left empty (D81).
-
-**P10d is done — the first walk at the founder's volume.** `seed:volume` had never been run:
-it was written against column names nobody checked (`countries.iso2`, `panel_classes`) and
-fell over on its first query. Fixed, it puts 828 companies, 432 projects, 348 quotations
-and 255 dispatches on the floor, Faisal holding 288. Every query was cheap at that size —
-nothing on the day screen took more than 6 ms warm — and the screen was still the slowest in
-the app, three times the two-hundred-row customer list beside it: 1.56 s and 1.04 MB in
-development. The cause was not data but shape. The day screen mounted a whole log dialog
-behind every one of a hundred cards, and drew the cards as a server loop over client
-leaves, so the page carried each card twice — once as HTML and once as props. The same
-shape was under the manager's stuck list and, worst, under a company's history, the one
-list left whole on purpose: three hundred entries made a 1.68 MB drawer that took two
-seconds. One dialog per screen now (`LogDialogHost` / `LogButton`; the trigger-owning
-form is gone so the per-row shape cannot return), and every long card list is one client
-component drawn from data (`CallBand`, `WaitingList`, `StuckRows`, `ActivityList`) — the
-rule is in DESIGN §5 and D82. Measured before and after, development, warm: day 1.56 s →
-0.49 s and 1.04 MB → 0.56 MB; team 0.71 s → 0.50 s; the 300-entry drawer 2.0 s → 0.6 s and
-1.68 MB → 1.09 MB. In production (`next start`, warm, three runs each) every screen at this
-volume answers in 20–60 ms and weighs 24–80 KB gzipped — day 52 KB, customer list 66 KB,
-team 33 KB, the drawer 80 KB — so nothing here is slow on a phone; the point of the change
-is what the browser has to hydrate, and that a history that grows for years stays flat.
-
-The walk itself, by shot-looker at 1366 and 375, en and ar: every capped list ends with its
-line and the figures agree — "The first 200 of 288 are here" on the customers, 347 quotations,
-255 dispatches; the bands say "Overdue 30 · and 5 more", "Never contacted 102 · and 77 more",
-"Gone quiet 87 · and 62 more", and the Arabic «و77 أخرى» reads right-to-left with Western
-digits in order; the stuck groups say "and 258 more"; no horizontal scroll at 375 anywhere;
-the scroll hint in a form is present in both themes and fades at both ends, measured in
-pixels, and the Totals card under it is whole. Two things it found were real and are fixed:
-"Waiting on you" was the one band with no cap and put sixty-four cards above the calls (D83);
-and "gone quiet" — 249 on this floor, the largest group on the manager's screen — had no
-figure in his strip, so it is the fifth (D83, the numbers spec now counts five). Two were
-not defects: Turki's Latin name on the Arabic screen is the seeded rep with no Arabic name
-(D68, on purpose); "Waiting" and "Sent back" sharing amber is DESIGN §6, both wait on
-somebody. Left for later, said here rather than hidden: the Unfile confirm on a history entry
-is still one dialog per row — it carries a closure per row and costs hydration only, not
-payload, so it waits for a phone measurement in 11H/11I; and the volume seed makes every
-project "Open" and has no lost ones, which a later walk of the projects screen should fix. The design-guidelines pass over the five new files found seven things: five fixed — Save
-moves the cursor to the refused box, a typed log form no longer closes on a tap beside it
-(D84), the waiting cards took the focus ring their siblings had, their names clip inside the
-card, and the middle dots on stuck rows are hidden from screen readers — and two declined
-with the reason in D84: virtualising the history, and an ellipsis convention on placeholders
-that the app does not follow anywhere. The critic pass then read the whole slice as a
-sceptical stranger and found four real things, all fixed before the commit: the waiting cap
-was keeping the newest twenty-five (each source listed newest-first, and the three were
-never ordered against each other), so the oldest sent-back quotation would have been the
-first hidden — it is ordered by when each stopped now, and a spec pushes the floor past the
-cap to prove it; the fifth tile broke the strip's own four-column contract and sat alone in a
-quarter of a second row — the strip takes five now, two columns to `lg`; an open log form
-read its company off a live prop, so a refresh from a live update could unmount it under a
-half-typed entry — the target is snapshotted at the press; and the drawer still mounted two
-hosts with the same contacts and projects — one host per drawer now, at the root, with the
-header's and the history's buttons pressing the same form. Smaller ones with it: the
-outside-tap guard covers every field and not only the words, the empty state of a history
-sits inside the host, the band key is a union of the four names, and the measurements in
-DESIGN say which change they measure. The gate then failed on two tests this slice never touched, and the calendar
-was the reason: every run before had fallen on a Friday or a Saturday, so the manager's leave
-test returned early with nobody away and the daily-report test counted a Thursday nothing had
-been logged on. On the first Sunday both asserted for the first time in weeks and both were
-wrong — the leave test's first text match was the phone copy of the team table, hidden above
-`md`, and the report test counted unfiled entries the figure rightly leaves out (D70). Both
-locators and the SQL are corrected; no rule changed. A test that only asserts on a working day
-is a test that is quiet five days in seven — 11I should run the suite on a pinned weekday.
-
-**P10b is done.** A notice says what it is ABOUT rather than only where the screen is, and every
-kind answers one question the compiler asks of it: what takes this off the screen (D79). Work is
-cleared by the transition that settles it, inside the same transaction, so the bell drops when the
-thing it described stops being the case; a finished fact is cleared by being read, because there is
-nothing else to do with it. What is left after "Mark all read" is the work still open. Two more
-causes went with it. The notification row was the one place in the app that stored a person's NAME
-rather than joining for it, so an Arabic screen read «طلب Faisal Al-Harbi» — the row carries his id
-now and `one-name` fails on a Latin name taken off the session, which is the shape neither of its
-first two checks could see. And the coordinator's typed reason was a clause inside a sentence built
-from the message file; it is a block of its own under it, in the direction of whoever typed it,
-which is the rule DESIGN §5 already carried for every other screen.
-
-**P9 is finished, and with it every item on the ranked list the five days produced.** What
-is next is P10, and it is the three things this phase deliberately did not do, in this
-order: the two half-built ones the walk named — a standing strip that answers "how is this
-going" for a company and a project but for no PERSON, and notifications that are created
-and never expire — and then the carried list below, which has grown to three. After that
-the app is ready for a pilot rather than for another feature: a run through every
-acceptance script with the founder's own data volumes, not the seed's.
-
-**Carried, new in P9.6d:** a form dialog that scrolls does not say so. Measured on the
-request form: one item fits exactly, two do not, and the totals and the note to the
-coordinator go below the fold with the footer still visible above them — so it reads as if
-the form ends at Add item. Nothing is lost and the scroller works; Chromium's overlay
-scrollbar simply fades, and every dialog in the app and every one of them at 375 has the
-same shape. The fix is one scroll affordance on `FormBody`, which is four lines of CSS and
-a visual change to every dialog in the app — a forms pass, not a line inside item 7.
-
-A dispatch is typed from nothing too. The destination and the
-payment terms are free text on every one, and a second dispatch against the same quotation
-goes to the same site on the same terms — the identical complaint one screen along from
-item 7. It is NOT on the ranked list and no user named it, so it is written here rather
-than built: the five days found it at the quotation, and the dispatch form has not been
-walked with a rep.
-
-**Carried, and still carried:** every list in the app renders every row it is given —
-`listCompanies`, `stuckList` and the four call-list bands have no LIMIT. It is NOT on the
-ranked list below, because the five days were walked on a seeded floor where no list is
-long enough to hurt; it came out of the interface-guidelines pass instead, and P9.6 weighs
-it against the twelve that are. The apostrophe question went into 9E and is done: English
-copy uses `’`, and the message checker fails on a typewriter one.
-
-Three checks were added to the gate across these two boxes, each after the defect it would
-have caught: the message checker reads the specs, because a key three of them named had
-moved and only a ten-minute suite noticed; `one-name` fails on a query that names a person
-in Latin on a screen, and found three the hand sweep had missed; and `one-look` fails on a
-primary button written as a class string or a surface drawn with a ring.
-
-The five days were walked before any P9 code and the ranked list is §4 below. Its first item was
-the daily report, and it is built: the system assembles the day — log entries, companies, quotation
-and dispatch requests, what came back, the customer's answers, dispatches approved, m² moved, calls
-due against calls followed up — and the only thing a person types is one box of free text. One
-screen for the whole floor, alphabetically, the manager reading the same page everybody else does.
-A missed day is one dashed empty box with no colour on it, and a day nobody worked is not a missed
-day (D55-D57).
-
-Three causes were fixed rather than their symptoms. The write window was "today and yesterday",
-which in a Fri-Sat week meant that on a Saturday nobody on the floor could write anything at all —
-it is the last WORKING day now (D58), and the rule is in `.claude/rules/data.md`. A block of text
-somebody TYPED was being laid out in the page's direction rather than its own, so an English log
-entry sat flush against the right margin of an Arabic card; `<Prose>` owns that everywhere now, and
-it was three older screens as well as this one. And the labels this screen builds from a table were
-invisible to the both-locales check, the same blindness that printed `common.marketing` on every
-screen in P8 — `check:messages` reads that table too now, and was proved to bite.
-
-`tests/reading.spec.ts` sweeps `/reports` as of this phase, and caught the date navigator on its
-first run: a date carries a month NAME, and it had been written with `dir="ltr"` and the mono figure
-face. A new screen goes on that list the day it lands.
-
-**Where P8 stopped.** P8 done. Jerom used Kladra himself and asked for depth rather than
-features, and his seven notes were all one complaint said seven ways: the app told him what
-records exist and not how anything is going. Every list creates from itself now and asks for
-the parent when it needs one; colour carries state from one five-tone map with the raw hues
-deleted so nothing can reach past it; m² is the headline and price the quiet line under it;
-the drawers open on how a customer is going before what he is; each role has a screen that
-answers its own morning question; quotations and dispatches have a board where a board earns
-its place; an admin can look through anybody's eyes and write nothing while he does; and
-marketing is a role of its own that owns companies, works them like a rep and stops at the
-price.
-
-Three of P8's defects were the shape P7 had already named — one rule kept in two places. The
-company and project drawers still asked `repId === user.id` by hand, so they offered Log and
-Edit while an admin was viewing as somebody, and the fix went into `mayWrite` where every
-screen reads it. The action guards took the literal `"rep"` while the screens asked
-predicates, which is how a manager could be offered a quotation button the server would
-refuse; the guards take `FLOOR_ROLES` and `SELLING_ROLES` now and a spec holds both lists to
-the functions they came from. And the View switch wrote `?view=` for the board but not for
-the list, so pressing List left a bare URL, the cookie still said board, and the board came
-straight back.
-
-Two screens were caught saying nothing rather than something: marketing's day carried a month
-card with no target behind it and a "waiting on you" band that can never fill, because
-everything that waits on a person there is a quotation or a dispatch. Both are gone for that
-role, which is the same sentence D44 already made about the team table.
-
-Handing a company over is the piece that makes the role work, and it is one column: every
-list is scoped by `companies.rep_id`, so the projects, quotations, dispatches and metres
-travel with the customer and the log stays where it was written. It is also how a floor
-survives somebody leaving, which had no answer before.
-
-What is left is still the part Claude cannot do: Faisal, Rawan, Abdulrahman and Jerom using
-it. The image builds and boots with no `.env`, and README.md is the handover.
-
-**Where P7 stopped.** Every box was ticked and the specs passed in both locales.
-
-P7's four defects were all one shape: a rule kept in more than one place. A manager and an
-admin could edit, log against and archive any rep's records for three phases because the
-code asked "may he touch this?" and got "yes, he is the manager" — seeing and writing are
-two questions now (D42) and `tests/floor.spec.ts` asks both directly, since the defect had
-no appearance on any screen. Five dialogs threw away the per-field half of a refusal and
-put "Required" at the bottom instead of at the box (D43). Three copies of one filter chip
-disagreed about what "selected" looks like, and the loud one was wrong. And the team table
-and the targets screen disagreed about who carries metres (D44).
-
-Two deploy defects were found by building the image rather than by reading the Dockerfile.
-`next build` imports every route to read its config, so a pool opened at module scope built
-here and died in a container with no `.env`; and `COPY /app/public` had no source, because
-the repo had no `public/` until the PWA icons landed. `npm run check:build-env` now builds
-with the environment blanked, and it was proved to bite before it was believed.
-
-The Arabic was reviewed as prose, not as coverage: 43 strings changed. Three of them were
-sentences addressing Rawan as a man, one was a feminine company restored with a masculine
-verb, and four were a figure called two names on two screens. The review also found the
-targets hint saying metres for a figure set in square metres.
-
-Last came the class the review pointed at: a value dropped into a sentence carries no
-direction, so a full stop, a colon or a «guillemet» beside it settles against the
-paragraph. It is fixed once, where messages load, rather than at forty call sites (D46),
-and two components that joined two names with a `·` got `<bdi>`. Screenshots then said the
-Arabic thickness list read unit-first; a range measurement said it does not, and that
-measurement is now a test — the third time a reviewer has read an RTL line left-to-right
-and called it a defect.
-
-P5's one real defect was found by its own test, which is what the test was for. The browser worked
-out a dispatch's m² as `round(width × length, 2) × qty` and SQL as `round(width × length × qty, 2)`.
-Thirty sheets of 1.24 × 5.8 came to 215.70 on screen and 215.76 in the database. Nobody would ever
-report six halalas; they would stop trusting the figure. One function now does it on both sides
-(D38, and a new rule in .claude/rules/data.md).
-
-Two decisions beyond §3, both written down: a dispatch goes against the live revision of a
-quotation and not a superseded one (D36), and there is no withdraw for a dispatch even though
-there is one for a quotation request — the coordinator refuses it with a reason, which is the
-conversation that was going to happen anyway (D37).
-
-The seed gained one quotation: issued, latest revision, nothing sent against it. Every other issued
-quotation in the demo had either been revised or already partly dispatched, so the ordinary state
-a rep starts a dispatch from was the one state the demo did not show.
-
-P4's two real defects were both about a component disappearing at the moment it worked. A dialog
-rendered inside an empty state is destroyed by the save that fills the list, and a destroyed
-component's success effect never runs — so the first quotation a rep raised on a project saved in
-silence and left him where he started, while the second one worked. Five triggers were written
-that way and now sit above their list instead of inside it. Where the button genuinely has to go
-— raising a revision removes the button it was raised from — the answer is awaited rather than
-watched for (`useSubmitAction`). Recorded as D35.
-
-Three things came out of the screenshot pass rather than the box. The number in the company
-drawer was the one the rep typed, not the stored one, so it showed ungrouped and its WhatsApp link
-had no country code; the storage form is now its own TypeScript type and the substitution cannot
-compile (D34). A date had thirteen call sites each deciding its own layout, and now has one
-component and a test that measures which way round it renders (D33). The top bar's search button
-carried a sentence it only had room for at 1024px and was cut mid-word at 768.
-
-P3.6 found more than the four review findings. The company drawer's projects tab crashed to
-"This page couldn't load" on a tab click in Arabic: a `<Button>` a server component hands to a
-dialog as its trigger reaches the browser as a lazy wrapper, not an element, and Radix's
-`asChild` throws on it. Six triggers were written that way; every trigger in the kit resolves it
-now (`useSlotChild`). Two guards came out of it — any uncaught browser exception fails the spec
-that provoked it, and `<Hydrated>` marks the document when React takes over so a press cannot
-land before the screen is live.
-
-The tests now own `kladra_test` on port 3101, because a run had been clearing the database a
-screenshot pass was reading. Forms carry `noValidate` so the action's sentence is the only
-sentence. Thirty-nine Arabic strings spoke to a man and now address nobody;
-`npm run check:messages` fails on the marked forms. SPEC §5 is the glossary. D31 records an
-overrule of a §3 line: an empty list shows its primary action where that action exists.
-
-Dead code swept: `companyOwner`, `formatInstant`, `isSaudi`, `defaultLocation`, `isValidPhone`,
-`ROLES`. `defaultLocation` was a second definition of a figure `src/actions/forms.ts` already
-owned — the exact drift trap. `src/lib/money.ts` and `src/lib/workdays.ts` keep their unwired
-arithmetic: it is P4's and P6's, and rewriting it a box later is churn, not a fix.
-
-**Phase 12 is where I am now.** Phase 11 closed at `f66bc93` with 475 specs green in both
-locales and the register empty. Then the app went in front of the people it was built for, and
-they came back with a list — that list is SPEC §3 now, and the fourteen slices above are the
-order I am building it in. Twelve readers went through the code first (workflow run
-`wf_c2b6533d-6e6`, script kept under the session's `workflows/scripts/`; resume it with
-`resumeFromRunId` and the finished readers replay from cache). What they found and I verified:
-the dispatch dialog's freeze is a picker firing a change for a value that did not change, and
-the same shape is live in the company form; the visibility rule is written eleven times and
-twenty-five figure queries take a rep id as an argument, so a shared company would be counted
-twice before it was hidden once; and SPEC §3's width chips were never built at all, along with
-the quantity column's position, the manager's target box, the long-press number and the
-per-person view memory — lost because nothing in the repo has ever compared §3 to the app,
-which is what slice 2 is for.
-
-**Where P12 has got to.** Boxes 1, 2, 3, 4, 5, 6, 7 and 12 are done. The freeze was fixed at its
-cause and the same picker shape swept out of the company form; `npm run lint` now fails on a §3
-sentence with no test behind it and prints what is owed (27 proved, 6 proved another way, 11
-owed); sharing is built end to end — a shared company, a shared project, an owner on every contact
-and every project, and the eleven visibility clauses re-pointed at one predicate — with four
-defects found in the building of it (§5 #155–#157, #159) and a fifth, the half-restored floor,
-found in the gate. The three-tab shell is on the rep's day and the manager's screen, and the
-metrics tab under it now answers the founder's proportion questions: where the metres went by kind
-of customer, how the work narrows, over a window chosen once for everything under it, for the
-whole floor or one person (D152, D154). And credit is built on top of the sharing the schema was
-written for: a quotation and a dispatch each say who they count for, chosen when they are raised
-and never inherited, asked only where a job has more than one rep on it; the metres of a shared
-dispatch divide exactly, with the odd hundredth given to a fixed name so the shares always add
-back; and achieved metres — the rep's card, the manager's table, the metrics tab, the daily report
-— are the sum of what a person was credited rather than of what he raised (D148, D155). Three
-defects came out of building it, none of them about credit: a migration that reported success and
-did nothing, a drawer that hid a button the action would have allowed, and a query whose failure
-made a question stop being asked (§5 #162–#164). Box 5 gave three roles what §3 asked for: the
-handover belongs to the sales manager alone, the Marketing lead source is not offered to a rep —
-as a column on the row, so renaming the lookup cannot switch the rule off — and the coordinator
-sells. She has a floor now, and the one thing about it that is hers alone is that she asks nobody
-for paper: the same dialog every rep uses gains a SMAC field for her, the button says Issue, and
-the quotation is raised and issued in one act, flagged so the manager reads who did both (D156).
-Two defects came out of it and neither was about roles: the Dispatches screen's own picker allowed
-only `issued`, so the door closed on a quotation the moment its rep recorded the customer's yes,
-while the drawer one click away still offered it (§5 #166); and a spec that proved a refusal
-stopped being refused, performed the change instead, and left a rep holding another role for every
-file that ran after it in the shared database (§5 #167). Box 7 built the module §3 gave marketing,
-and the shape of it is the decision: a lead IS a company — three columns on the table every screen
-already reads — so filing one is the assignment, and there is nothing to convert afterwards. One
-Save puts the customer on the chosen floor with somebody to ring on him; the person it lands on
-answers it with a press of his own, which is what takes it off his day, off marketing's list and
-off the manager's stuck band, all three from one column; and it is late at the two working days
-everything else on those screens is late at. Marketing loses Add company and gains its own home.
-What the box found on top was a shape rather than a defect: adding a fourth kind to a list of
-three would have quietly grown two figures that count by `else` and by `!==` (§5 #170). Box 8
-brought FACET's S21–S23 forward as D158 with one split the founder's own sentences make: the NAME
-warns the rep on the form, where he is looking at the customer's card and can decide in a second,
-and the NUMBER tells the MANAGER, who is the person deciding whose customer this is. One telephone
-number is one company; a name lookalike is ordinary in this trade, and a queue of pairs that are
-not duplicates is a queue nobody reads. The name rules are one immutable SQL function and
-`companies.name_folded` is generated from it, so no insert can forget it. The three answers reuse
-what exists — `company_shares` for "and share it", the hand-over permission for who may rule,
-`moveContacts` for the arriving people — so the box added one table, two columns and one screen
-rather than a parallel system. What it found on top was worth more than the screen: a migration
-rewritten after it was applied is applied to nothing in silence (#171), a `<bdi>` given a width is
-a block that changes direction (#172), the rail's own keys were checked by nobody (#173), a new
-namespace is where a second word for an old thing gets in (#174), an ellipsis on a label deletes
-the meaning and leaves the number (#175), a CHECK refuses only on FALSE so a fold could be
-recorded with nothing continuing (#176), and the quotation and dispatch pickers asked one rule
-with a clause missing, withholding work their own actions would have taken (#177). Box 9 put four
-of the founder's sentences on the screen a rep uses most. **Quantity is fifth** on a quotation
-line, where §3 put it and where it had not been for four phases — an order is not a value, so
-nothing in the gate could see it, and the debt was registered as "no test has walked this" rather
-than as "this is wrong" (#178). **The widths are written once**, in `src/lib/sheet.ts`: they had
-been a list in the form and a second list in the seed that nothing imported, which is not two
-copies drifting but one copy that is decoration (#179). **The warehouse** is a lookup and a NOT
-NULL column on the quotation and on the dispatch, never on their lines; a dispatch opens on its
-quotation's store, which is a child reading its parent rather than the carrying-forward §3
-forbids. And the button asks **company → project → contact**, the order a rep has the answers in,
-instead of one flat list of every job in the building; the contact is a new column, optional,
-because a price for stock is addressed to nobody. Two founder decisions came off the owed list and
-the suite found the class the compiler could not: six fixtures that write a quotation or a
-dispatch in raw SQL (#180). Two more came out of the box's own gate rather than out of its
-screens: a gap between two names is not a separator (#181), and a walk that had been passing on
-warmth since P8 — it left a page on the strength of a heading and expected the browser to have
-written a cookie it had had no chance to write (#182), and a walk that hung on a list that had
-closed under its own retry, in a helper three specs had each written out by hand (#183). Box 10 is
-the dispatch's own five sentences. **Payment terms are a choice plus notes** — the founder's
-decision tree, not one free-text box finance cannot count: an enum of four, a second question
-asked in its own words for the two that have one, a note the two finance reviews require, and
-three CHECKs that hold the shape where the form is not the only way in. **A dispatch implies the
-customer accepted**, inside the transaction that raises it and under the same hold, clearing the
-chase notice with it. **A refused dispatch is corrected and sent again**, which is what §2 S53
-already called it, and three things that were true of a terminal refusal stopped being true with
-it — its notice is cleared by the work, its colour is the amber the rep's own day screen had been
-painting it for phases, and the desk's "answered today" is counted from what she DID rather than
-from the states the rows are in now (#185). **Nothing is carried forward**: the site, the terms
-and the shipment method are off the form and the read behind them is gone. **And every quotation
-names its job** — `project_id` was nullable with eighteen queries and eight screens carrying a
-state only the seed could produce, and the picker's own comment explaining it (#184); the column
-is NOT NULL, the `set null` is gone, and the one seeded row that had no job is the workshop order
-it always was. The dispatch dialog now asks the chain the way box 9's does — the customer, then
-that customer's papers with the job on the row — and moving one shared sentence to `common` found
-a third copy of it nobody had been looking for (#186), and the Arabic review found an order to a
-man that every check in the gate had passed, because a checker matching whole words cannot see the
-conjunction Arabic glues to the front of a verb — the second time that shape has shipped, and the
-first time the rule rather than the word was fixed (#187). Box 11 is the queue's two sentences,
-and most of what it cost was found by reading its own work rather than by writing it. **A row is a
-door, all of it**: the coordinator reads across to how long a thing has waited and presses there,
-nine hundred pixels from the only cell that opened anything, and the fix is the row's own title
-link stretched over it rather than a handler on the row — one anchor, one tab stop, and Cmd-click
-still opens a new tab from anywhere along it. The checkpoint read then found that customers,
-projects and the call band had been doing exactly that since P8, in three arrangements of the same
-four classes, and that this box was writing a fourth which would not have fitted a card at all
-(#190); one utility owns the overlay and the ring now, six call sites read alike, `one-look`
-refuses the next spelling, and the escape hatch — the phone number that has to stay ON TOP of the
-overlay — got the test it never had. **SMAC's number is the large one**: the number on the paper
-the customer holds, that finance files and that anybody says out loud, was the small grey line
-under Kladra's own, and they are swapped on both lists, on the cards those lists draw on a phone,
-on the board tiles and on the rep's own waiting cards; where there is no SMAC number — a request
-nobody has issued, a load nobody has approved — Kladra's leads alone, because a dash under a
-heading is a field a reader has to decide is empty. A row that points AT another record points the
-same way (#191): the dispatch list still said Q-12 while the quotations list had just started
-leading with SMAC's, so following the reference meant reading one number and searching for
-another. The guidelines pass then asked why the loudest number on the row could be rewritten by a
-browser's translator, and the answer was that two places in the app carried `translate="no"` and
-about twenty hand-built the same four attributes without it (#192) — so a reference number is a
-component now, `Ref`, beside the two the app has had for metres and money since P8. And the Arabic
-screenshots caught what every gate had passed (#193): on the rep's day card the quiet number sat
-alone against the far left, because **an element that carries a direction resolves `text-align:
-start` against its own**, and the tables had been hiding it behind a column width. The rule is
-`<bdi>`'s rule one attribute over, it is written in DESIGN as its own line now, and the component
-carries it rather than every caller. Two more properties came out of the box's own gate and
-neither is about Kladra: a suite that takes thirty-five minutes cannot be started at midnight,
-because the seed's "today" is fixed when it starts and the app reads the Riyadh clock on every
-request (#188); and stopping a run stops the shell in front of it and nothing below it, so a
-replacement run cleared the database under the first one's browser and every symptom pointed at
-the code — `globalSetup` takes a lock now and refuses the second run before a single row is
-deleted (#189). Box 13 is two founder sentences that had been built ten phases apart and never
-read next to each other. S26 says a rep is asked to write only what the system cannot see; S27
-says the history of a company IS the manager's daily report. Kladra had the log since P3 and the
-report since P9, and on the report card the log was a NUMBER — "4 log entries", with the four on
-four customers' drawers a manager would have had to know to open. So he read a count, and at six
-o'clock the rep typed his day out a second time into the report box, which is the copy S26 forbids
-by name (#194). **The entries are on the card now**, under the sentence on everybody else's and
-above the box on the reader's own — under, because a manager going down eleven cards in the
-evening is reading the sentences and the log is what he drops into when one of them makes him
-curious; above, because the person about to write is writing ABOUT it. **An entry says what its
-screen does not already know**: a customer's drawer knows the customer, so the entry adds the day
-and the writer; a person's day knows both of those, so it adds the CUSTOMER, as a door to him.
-**And the day is finished where it is read** — his own entries carry the same Correct and Unfile
-the drawer offers, in the same window the report box has, which works because the ENTRY carries
-the customer it names rather than the screen handing one down. Who reads whose is the line worth
-the founder's eye: figures and sentence for everybody (D56), customer names only on the cards the
-reader may open (S8, D42). **Three defects came out of building it and none was in the new code.**
-The compressed figure line had read "2 companies added" since P9B over a query that counts the
-customers somebody DEALT with, in both languages, because a plural label reads as a caption rather
-than as a claim (#195). `lastWorkingDay` ran its own select on the holiday table, and so did two
-of its neighbours — three more reads of the table `calendar.ts` exists to read once — and the walk
-over it existed twice, capped in one copy and unbounded in the other; it surfaced as a module
-CYCLE, because the report could not read the log while the log imported the report for a calendar
-function that had been in the wrong file since P9 (#196). And the busiest day anybody in the demo
-had ever had was three entries, so the line saying a card is not showing the whole day could never
-once have been on a screen — the same fault as #185, and the same answer: Faisal now has one day
-of telephone work with nine entries on it, and the cap is two numbers because a colleague's card
-is read for its sentence and your own is read against your memory (#197). The Arabic review of two
-changed strings found four more, two of them on the English side (#198). **Box 14 is built and green but NOT ticked** — it is committed as a save
-point on a weekly usage limit, with three steps of its own checklist still to run. What is done:
-all three §3 decisions that were owed are paid (D163 nothing is carried forward, D164 a choice
-belongs to a person, D165 the number is on the screen and holding it takes it), the panel's width
-is one panel (D166), one primary action per list, and the board ruling is written into DESIGN §6.
-The gate is green — 597 passed, 3 skipped, 0 failed, both locales — and the only changes made
-after that run were comments. What is LEFT, in order: (1) shot-looker on the four drawers at
-1366/375 × en/ar × dark/light — it was killed mid-run having confirmed the width (672px) and the
-border edge on two of them, and what it had not yet reported is whether the company drawer at
-32rem and the project at 36rem leave anything stranded now they are 42rem; (2) the arabic-reviewer
-passed the three new strings unchanged but asked for one thing — `copyNumber` and `numberCopied`
-are phone-only strings sitting in `common`, so move them beside `whatsappContact`, `callContact`
-and `numberOf` in `companies` (six call sites: three in phone-links.tsx, three in calls.spec.ts)
-before somebody reuses the bare word for a SMAC number and breaks both locales at once;
-(3) web-design-guidelines on phone-links.tsx, record-panel.tsx and the four drawers. Then a full
-green gate, tick the box, and P12 is finished.
-
-## §4 Five days, walked (P9.1)
-
-Written before any P9 code. Every claim below was checked against the running app or
-the database, not remembered. Counts come from the seeded floor, which is FACET's
-shape at a smaller size.
-
-**Faisal, a rep.** Opens on his day. The month, then what has come back to him and is
-stopped, then who is owed a call with the phone number on the row. This is the part
-that already beats the sheet: the sheet never ordered anything or aged anything. Then
-the day breaks. He presses WhatsApp, has the conversation, comes back — and to write
-one sentence about it he presses the row, waits for the companies screen, presses Log,
-and types. Two of those five steps are navigation. If the customer wants a price he
-opens the project and types a quotation line: colour, supplier, fire rating, class,
-thickness, quantity, width, length, price. Nine fields, and this business sells the
-same handful of specifications over and over, to the same customers. Nothing offers him
-the last one. If he logs against the wrong company he cannot fix it — there is one
-activity action, `log`, and no edit and no delete, so the correction is a second entry
-that every count afterwards believes. At the end of the day he writes nothing at all,
-because there is nowhere to write it. And two thirds of his floor is dark: **eight of
-his twelve companies have been contacted once and carry no next step**, which puts them
-on no band of his day, in no stuck list, and in front of nobody.
-
-**Marketing.** The same day without the chain: calls, logs, follow-ups, and a handover
-when a lead is worth a rep's time. Its day is thin and honest. The one thing it cannot
-do from the screen it lives on is add a company, which is the thing it does most.
-
-**Rawan, the coordinator.** Opens on her queue with her four figures, including the one
-nobody else has — how many she has answered today. She issues in SMAC and types the
-number back. Two things are missing at the point of action. The row does not say how
-long that request has waited; only the strip at the top names the oldest, and she is
-the person who can fix it. And **nothing stops her typing the same SMAC number twice**
-— not the database, which has no unique index on it, and not the action, which never
-looks. That number is the only link between Kladra and the system that holds the money.
-
-**Abdulrahman, the manager.** Opens on the team: the company month, a row per person
-with target, achieved, pace and pipeline, then what is stuck. This is the screen that
-made the sheet redundant for him. What he cannot do is read a **day** — the screen only
-knows months — so "what happened yesterday" is still a WhatsApp question. He cannot see
-last month beside this one. He cannot see where quotations die, because the history is
-not kept: a quotation carries only the instants it was created, issued and decided, so
-how many times it was sent back, when, and by whom is gone, and the return reason is
-never cleared once the rep has fixed it. And a rep on leave still shows red overdue
-follow-ups on his screen; the pace arithmetic already knows about leave, the rest of the
-screen does not.
-
-**Jerom, the admin.** The manager's screen plus the admin menu, and viewing as anybody.
-Nothing on it tells him whether the app is being used. Adoption is what kills a CRM, and
-the one number that would say so — who has not opened it this week — is not there.
-
-### The ranked list
-
-Ordered by minutes saved per person per day, times how often the day contains it.
-
-1. **The daily report.** Nothing replaces the one line a day, which is the single
-   reason the sheet is still open. There is not even a query for "what did this person
-   do today": activities are readable by company and by project and by nothing else.
-2. **Companies with no next step are invisible.** Contacted once, no follow-up, on no
-   band of anybody's screen. Eight of Faisal's twelve. This is the leak the sheet also
-   had, and the one a CRM has no excuse for.
-3. **A log entry cannot be corrected.** One action, no edit, no delete. A visit against
-   the wrong company is wrong for ever and every figure built on it inherits the error.
-4. **Logging costs a page load.** The day screen lists who to call and then sends him
-   somewhere else to say what happened.
-5. **A quotation's history is not kept.** Sent back twice or five times reads the same,
-   the return reason outlives the fix, and "where do quotations die" cannot be answered
-   at all.
-6. **The same SMAC number can be typed twice**, on two quotations or two dispatches,
-   with nothing objecting anywhere.
-7. **Every quotation line is typed from nothing.** Nine fields, repeat customers,
-   repeat specifications, and no way to start from the last one.
-8. **The queue row does not say how long it has waited.**
-9. **Leave is invisible everywhere except the pace arithmetic.** Nobody covers a floor.
-10. **A revision does not say what changed**, so the coordinator re-issues blind.
-11. **No month before this one, anywhere.**
-12. **Nothing says whether the team is using the app.**
-
-Half-built rather than missing: the standing strips answer "how is this going" for a
-company and a project but for no person; notifications are created and never expire.
-
-### Not building
-
-Each of these was considered and dropped because it shortens nobody's day here.
-
-- **Lead scores and win probabilities.** Fourteen people who know their customers by
-  name do not need a machine's guess, and S46 already forbids one number that mixes
-  target with activity.
-- **A forecast.** Pipeline plus the rep's own judgement is what a manager acts on. A
-  forecast is a number with nobody's name on it.
-- **Email integration.** This team sells by visit and by WhatsApp. There is no inbox to
-  integrate.
-- **Territory maps.** Three reps, three regions, and everybody knows which is whose.
-- **A store-built mobile app.** The PWA installs and works; a store build is months of
-  work for the same screens.
-- **More activity types.** Four channels is the right number. A longer dropdown is the
-  failure mode the daily report has to avoid, not one to copy.
-
-## §1 Toolbox — six skills plus find-skills; one unused for two hours is removed
-
-| Skill (source) | For |
+| Skill · tool (source) | For |
 |---|---|
 | find-skills (vercel-labs/skills) | Searching the registry when a capability is missing. |
 | frontend-design (anthropics/skills) | Aesthetic direction, so screens do not read as shadcn defaults. |
 | vercel-react-best-practices (vercel-labs) | React 19 and Server Component patterns. |
-| web-design-guidelines (vercel-labs) | The review at the end of P3–P6: accessibility, focus, contrast, motion. |
+| web-design-guidelines (vercel-labs) | The review at the end of every slice: accessibility, focus, contrast, motion. |
 | next-best-practices (vercel-labs/openreview) | Next 16: caching, server actions, proxy, route handlers. |
-| shadcn (official) | CLI usage and composition for the DESIGN §3 kit. |
-| playwright-testing (alinaqi/maggy) | Locators, fixtures, clock control, flake avoidance. |
+| shadcn MCP (`.mcp.json`, `npx shadcn mcp`) | The registry itself — search, read and add items (the chart kit in S1) — replacing the shadcn skill, which only described it. |
+| knip (`npm run check:dead`, in `lint`) | Dead files, unused exports and wrong dependency lines. Its first run found seven files nothing imported, a dependency only a comment named, and three packages used directly but never listed. |
+| @axe-core/playwright (`tests/axe.spec.ts`, S1) | One spec walks every screen for every role in both locales and fails on a WCAG 2 A/AA violation; scoped to the screen, Radix's known false positives disabled by name with the issue beside each. |
+| Playwright `edge` project (S11) | `channel: "msedge"` against the installed Edge, running only `tests/edge.spec.ts`, so the matrix gains Edge without tripling the suite. |
+| shadcn chart + recharts (S1) | Bars, pies and rings drawn in the language (DESIGN §1b). |
 
-Agents: shot-looker (sonnet) · screen-builder (xhigh) · test-runner (sonnet) · arabic-reviewer
+Removed in P13, with the reason: **playwright-testing** (24 KB of generic page-object advice that
+contradicts `tests/helpers`' fixture style; the house style is the helpers and §3) · **shadcn skill**
+(replaced by the MCP server above). Refused: **Lighthouse CI** (duplicates `measure:speed`, D133, and
+needs a second Chrome and a puppeteer login for a database session; axe covers accessibility) ·
+**Playwright pixel baselines** (hundreds of PNGs per locale × theme × width is the artefact problem
+13.0 cleared; before/after is shot-looker's job, kept in the scratchpad and shown as a contact sheet) ·
+**Origin UI** (an avatar copied from a registry is code we own anyway; `Avatar` is specified in §1b) ·
+**Magic UI number ticker** (repeating motion that says nothing the figure does not).
+
+Agents: shot-looker (sonnet) · screen-builder (inherit) · test-runner (sonnet) · arabic-reviewer
 (opus). Hooks `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12; rules in `.claude/rules/`.
 
-**Who runs on what** (founder, 11D). Bounded, mechanical work with an exact file list and a
-schema — an inventory, a count, a grep matrix, a spec written and run, a screenshot read — goes
-to sonnet (test-runner, shot-looker, or a general agent handed the files). Judgement — a cause, a
-rank, a refutation, a design, a rule — stays in the session (fable); Arabic register stays with
-arabic-reviewer (opus). The session reads the authority files once and passes the extract in the
-prompt; a fan-out never hands the same documents to eight readers to rebuild. Never more than
-three agents at once. A workflow opens with one scout whose result decides whether the fan-out
-is worth its tokens, and a read the session can do in a few `grep`s is not an agent's job.
+**Who runs on what.** Bounded, mechanical work with an exact file list — an inventory, a spec written
+and run, a screenshot read, a research reading — goes to sonnet. Building goes to the session's model or
+screen-builder with the files it owns. Judgement — a cause, a rank, a refutation, a design, a rule —
+stays in the session; Arabic register stays with arabic-reviewer. The session reads the authority files
+once and passes the extract in the prompt; never more than three agents at once, one writer per file,
+and a read the session can do in a few `grep`s is not an agent's job.
 
 ## §2 The charter — how this gets built
 
 **I own this system.** Not a task list being executed. FACET failed because its interface was
 record-first, still, and built to be verified rather than used, and fourteen people went back to
 a Google Sheet. I know that business, and I know Faisal, Rawan, Abdulrahman and Jerom by name.
-From here I decide how Kladra gets built, and I do not stop until it is finished.
+From here I decide how Kladra gets built.
 
 **Authority.** Change, delete or rewrite anything already built — whole phases, the schema, the
-shell, my own earlier decisions, DESIGN.md, this file. Search the web whenever unsure: Next.js,
-Drizzle, shadcn, Playwright, Arabic RTL, CRM conventions, accessibility. Never guess an API that
-can be checked. Add, remove or replace skills whenever they help; no cap. Spawn subagents freely
-for parallel work, one writer per file, no third-party frameworks or swarms ever. Pick defaults
-without asking and record each in SPEC §4 as "DEFAULT — founder may change".
+shell, my own earlier decisions, DESIGN.md, this file. Search the web when unsure; never guess an
+API that can be checked. Add, remove or replace skills, MCP servers and libraries when they help,
+and record each in §1 with its reason. Delegate bounded work to subagents (§1 says who runs on
+what), one writer per file, never a third-party framework or swarm. Pick defaults without asking
+and record each in SPEC §4 as "DEFAULT — founder may change".
 
-**The one limit.** SPEC §3 is what real users asked for after testing FACET. An item there may be
-overruled only by writing in SPEC §4 what was observed and why the users' version does not work.
-Never delete one silently.
+**The one limit.** SPEC §3 is what real users asked for. An item there may be overruled only by
+writing in SPEC §4 what was observed and why the users' version does not work. Never delete one
+silently.
 
 **Fix causes, not symptoms.** Every defect gets two questions: where did this originate, and where
-else does it live? The bidi date bug was in two places and would have come back in every quotation
-date. Fixing one site is not finished. Sweep the whole system for the same cause, fix all of it,
-write the rule in DESIGN.md, and add the Playwright test that makes reintroducing it impossible.
+else does it live? Sweep the whole system for the same cause, fix all of it, write the rule in
+DESIGN.md, and add the Playwright test that makes reintroducing it impossible. Fixing one site is
+not finished.
 
-**Never stop.** No pause between boxes, no permission, no report until the end. Commit at the end
-of every box, update §0, start the next immediately. Only a usage limit or a model change ends a
-session; on restart, read §0 and carry on.
+**A slice is done when** a person could try it: schema, query, server action and screen exist in
+both locales; its WORKFLOW §3 script runs green; shot-looker has read it at 1366 and 375, en and ar,
+dark and light; arabic-reviewer has read the strings; the guidelines and axe passes are clean; and
+the checkpoint audit has read it as a critic — does it make a rep's day faster than the Google Sheet
+did, is any of it record-first, is a rule now wrong. Then tick the box, update "where I stopped",
+commit, and start the next slice. After a model change the audit is broader: the previous model's
+work is another developer's.
 
-**Checkpoint audits.** At the end of every box, and on `/audit`, read the code as a critic rather
-than its author. Does this screen make a rep's day faster than the Google Sheet did? Is any of it
-record-first? Is a rule now wrong? Fix what is found in the same session. After a model change the
-audit is broader: treat the previous model's work as another developer's and check it properly.
-
-**Inside a box:** schema → query → server action → screen → both locales → Playwright →
-shot-looker (1366/375 × en/ar × dark/light) → arabic-reviewer → fix → web-design-guidelines.
+**Reporting.** A few lines to Jerom at the end of each slice — what he can now try, in words he
+would use — and a full report at the end of a stage. Between those, work; do not ask permission for
+what the charter already grants.
 
 **Before every commit:** `npm run typecheck && npm run lint && npm run build && npm run test`.
-If a box cannot get green, cut scope inside it, note the cut in §0, commit green. The suite takes
+If a slice cannot get green, cut scope inside it, note the cut in §0, commit green. The suite takes
 about thirty-five minutes and seeds a floor dated to the day it starts, so do not start one near
-midnight (#188). Only one suite runs at a time — `globalSetup` now refuses a second one — and
-stopping a run means `taskkill /PID <pid> /T /F` on the `npm run test` process, because on Windows
-killing the shell in front of it leaves the server and the browser running (#189).
+midnight. Only one suite runs at a time — `globalSetup` refuses a second — and stopping a run means
+`taskkill /PID <pid> /T /F` on the `npm run test` process, because on Windows killing the shell in
+front of it leaves the server and the browser running.
 
-**Guards.** Never `docker stop/down/rm` outside compose project `kladra` (H12). If Docker is down,
-retry every minute for 30 minutes. If `git push` fails, commit locally and continue. FACET at
-`C:\Projects\facet-crm` is read-only. A build run deploys nothing.
+**Guards** are in CLAUDE.md: compose project `kladra` only, FACET read-only, retry Docker, commit
+locally when the push fails. A build run deploys nothing.
 
 **Commands** in `.claude/commands/`: `/go` continue from the first unchecked box · `/audit` audit
 everything built, fix, then continue · `/state` ten lines on where things stand.
@@ -1532,1691 +829,221 @@ the rail is a list of links too and an unscoped `li` finds a nav item first.
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.
 
 
-## §5 What a stranger found (P11A) — ranked, with causes
+## §5 What a stranger found — the ledger, one line per entry (P11A–P12)
 
-Twelve readers, each a fresh model given one lens and told to read Kladra as another
-developer's work: write paths, schema, the queue, Faisal's day, admin and backup, the team
-figures, live updates, hand-over and floor rules, seed and tests, words, identity, the phone.
-Seventy-three findings, sixty-seven after merging what two readers saw. The refute pass that
-was to follow them hit the usage limit and never ran, so **every entry below is unverified
-until the fix reads the code** — the worst ones first, and each fix slice starts by checking
-the claim. Where a reader quoted the code the entry says so; where two readers disagreed the
-entry says that too. Fixed items are ticked and dated in place; the list is not rewritten.
+Two hundred and five findings from twelve stranger readings and every box since, each fixed at its cause with a rule and a test. The full account of each — the cause, the sweep, what was refuted and why — is in the git history of this file up to commit e5c90cd; here every entry keeps its number, its title and the decision it produced, so a D-number or a #number quoted in SPEC, DESIGN or a code comment still resolves.
 
-Rank is by consequence to the people: wrong metres or money, silent loss, a screen that
-lies, a write that can corrupt, then a screen that confuses, then hygiene.
+- [x] 1 Two dispatches can spend the same panels. (D85)
+- [x] 2 A dispatch already waiting is never re-checked against a later revision. (D36, D85; P11A-1)
+- [x] 3 A hand-over rewrites past months' achieved metres. (D86; P11A-2)
+- [x] 4 A quotation names the rep who no longer owns the company. (D86; P11A-2)
+- [x] 5 A SMAC number cannot be corrected, and a duplicate says "something went wrong". (D88; P11A-4)
+- [x] 6 Six status transitions have no compare-and-swap. (D85; P11A-1)
+- [x] 7 Archiving a company records no reason. (D87; P11A-3)
+- [x] 8 Unfiling an old entry rewrites a reported day. (D87; P11A-3)
+- [x] 9 Phones are normalised as Saudi whatever the country. (D89; P11A-5)
+- [x] 10 A promoted account keeps its floor for ever. (D91; P11A-6)
+- [x] 11 Restoring a stray archived contact un-archives its company as a side effect. (D92; P11A-6)
+- [x] 12 `backup:verify` fails on any day the business used Kladra. (D93; P11A-6)
+- [x] 13 The six-month card calls a month "the first with anything" while its own bars say otherwise. (D90; P11A-5)
+- [x] 14 D84's guard does not cover the phone's back gesture. (D96; P11A-9)
+- [x] 15 The drawer's follow-up picker cannot clear a badge a project drives, and says it did. (D94; P11A-7)
+- [x] 16 A quotation raised from the company drawer belongs to no project, by default. (D94; P11A-7)
+- [x] 17 A Postgres blip longer than one reconnect loses live events with no resync. (D105; P11A-5)
+- [x] 18 `requireActor()` gates the SSE and count routes, so live updates 401 during "view as". (D105)
+- [x] 19 CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`. (D96; P11A-9)
+- [x] 20 No error boundary in the signed-in app. (D122; P11G-1)
+- [x] 21 Edit and unfile of a log entry never call `notifyLive`. (D94; P11A-7)
+- [x] 22 The adoption headline counts people the same screen excuses as away. (D95; P11A-8)
+- [x] 23 A rep's "open quotations" does not sum to the two figures under it. (D95; P11A-8)
+- [x] 24 The queue's "longest wait" can name a request in neither list under it. (D95; P11A-8)
+- [x] 25 `check-messages` guards five computed-key families and misses six more (D96; P11A-9)
+- [x] 26 A rep who works a Saturday cannot write that day's report. (D97; P11A-10)
+- [x] 27 The day's Log and WhatsApp controls are small and sit over a whole-card link. (D130; P11H)
+- [x] 28 New Project and Edit Project never become bottom sheets. (D129; P11H)
+- [x] 29 "Calls due" has no way to place a call. (D98; P11A-11)
+- [x] 30 Marketing's daily report shows six figures it can never move. (D97; P11A-10)
+- [x] 31 The SMAC prompt hides the company while the number is retyped. (D98; P11A-11)
+- [x] 32 Stuck-request ageing reads holidays from the first of this month only. (D97; P11A-10)
+- [x] 33 The queue's headline counts are a capped array's length. (D144; P11J-7)
+- [x] 34 The board's "current card" ring is the alert red DESIGN already retired once. (D123; P11G-2)
+- [x] 35 The phone breakpoint is written three times — 639, 640 and 768. (D128; P11H)
+- [x] 36 The admin gate is hand-copied into seven pages, and both test sweeps miss `admin/use`. (D99; P11A-12)
+- [x] 37 A dispatch is never refused in the seed, the spec or the walk. (D99; P11A-12)
+- [x] 38 Nor is a quotation ever rejected live, nor `quotations_decided_check` tested. (D99; P11A-12)
+- [x] 39 A call card with no contact says nothing; the customer list says "no contact". (D98; P11A-11)
+- [x] 40 A collapsed sidebar snaps open on every load. (D124; P11G-3)
+- [x] 41 The browser chrome colour follows the OS, not Kladra's theme. (D124; P11G-3)
+- [x] 42 `notifications.subject_type` is free text pretending to be a closed type. (D100; P11A-13)
+- [x] 43 `audit_log` has no index for the adoption query. (D100; P11A-13)
+- [x] 44 Seven admin writes log an audit row whether or not a row changed. (D87; P11A-3)
+- [x] 45 The funnel calls a fresh "sent back" request "never asked again". (D101; P11A-14)
+- [x] 46 The round-sum-round m² formula is retyped in six places. (D86; P11A-2)
+- [x] 47 `check:messages` is not in the build or the stated pre-commit chain (D103; P11A-16)
+- [x] 48 "Revision" is نسخة on a dispatch error and مراجعة everywhere else. (D102; P11A-15)
+- [x] 49 The D68 name test passes when the person does not render at all. (D103; P11A-16)
+- [x] 50 The "nothing can be written while viewing" test can skip its only write. (D103; P11A-16)
+- [x] 51 The 44px touch rule lives in one file. (D130; P11H)
+- [x] 52 The hand-over warning for marketing names what never moves and not what does. (D86; P11A-2)
+- [x] 53 The offline page is always dark. (D125; P11G-3)
+- [x] 54 The coordinator's queue never highlights an arrived row. (D105)
+- [x] 55 `quotation_items` has no unique index on position; `dispatch_items` has. (D100; P11A-13)
+- [x] 56 A target's month is normalised in Zod only, never in the database. (D100; P11A-13)
+- [x] 57 Two revisions at once collide on the unique index and crash generically. (D85; P11A-1)
+- [x] 58 `unused-messages` exempts all of `common.*` off one dynamic call (D101; P11A-14)
+- [x] 59 "picked" in `errors.cityNotInCountry`; the glossary says never pick or select. (D102; P11A-15)
+- [x] 60 "Person" is الموظف on the team screen and الشخص in admin. (D102; P11A-15)
+- [x] 61 `seed:volume` writes no audit trail (D104; P11A-17)
+- [x] 62 `admin.spec.ts` re-implements Riyadh-today and the weekend. (D103; P11A-16)
+- [x] 63 Nothing automated covers the live channel. (D105)
+- [x] 64 The NOTIFY chunking branch has never run. (D105)
+- [x] 65 The log dialog does not preselect the contact the card shows. (D101; P11A-14)
+- [x] 66 Eleven primary buttons fall back to a flat red instead of the brand gradient. (D123; P11G-2)
+- [x] 67 `archivedCount()` is dead code whose comment describes a badge that was never — deleted (P11A-14, D101) — built.
+- [x] 68 The dev server on 3100 hung with one core pinned and 3.5 GB resident, and stayed hung. (P11J-7)
+- [x] 69 `seed:volume` drew its SMAC numbers at random from four digits and collided with itself.
+- [x] 70 A typed reason on the quotation and dispatch sheets ran in the page's direction, not the writer's.
+- [x] 71 One screen asks the database forty-eight questions, and every screen reads the session row seven times over. (D107, D131; P11I-1)
+- [x] 72 A follow-up count counts dates, and the list it opens shows something else. (D9, D95, D108)
+- [x] 73 A company that comes back from the archive is not recognised. (D109)
+- [x] 74 A notice names a number and never the customer. (D68, D79, D110)
+- [x] 75 A call card says who to call and not why. (D111)
+- [x] 76 The dispatch sheet says quoted and sending, never what already went. (D85, D112)
+- [x] 77 Two weeks of leave is fourteen dialogs. (D113)
+- [x] 78 Enter does nothing in the coordinator's number box, a target box, or a new project. (D114)
+- [x] 79 A month's targets are five boxes, five Saves, and no memory of last month. (D115)
+- [x] 80 Logging on a company with one contact still asks which contact. (D101, D115)
+- [x] 81 A queue row does not say whose request it is. (D68, D116)
+- [x] 82 A typed line on a wide card floats to the far edge.
+- [x] 83 The desk team table's pace cell drops its unit. (D117)
+- [x] 84 The team table's habit counts go nowhere. (D117)
+- [x] 85 The day's waiting list ranks a customer's silence above a coordinator's send-back. (D118)
+- [x] 86 The queue does not say a quotation was revised under a waiting dispatch. (D85, D119)
+- [x] 87 The chain card's sentences at one. (D120)
+- [x] 88 The Use screen's words and its window disagree. (D120)
+- [x] 89 The report's biggest figure has the vaguest name. (D120)
+- [x] 90 Fifteen numbers where five bars would do.
+- [x] 91 The pipeline figure carries ".00" on a screen of whole metres. (D117)
+- [x] 92 The report's moved line says "1 Companies". (D120)
+- [x] 93 The duplicate warning cannot open the company it names. (D121)
+- [x] 94 A pressed row said nothing until the drawer answered. (D126)
+- [x] 95 A picker's search miss said the list was empty. (D127)
+- [x] 96 An empty board was six columns of "Nothing here." (D127)
+- [x] 97 The queue called the desk clear under a search that missed, and offered an "All" that led nowhere. (D127)
+- [x] 98 A manager's `?rep=` was dropped by a search, a row and the way back. (D127)
+- [x] 99 Any search term without a digit took the quotations, dispatches and queue lists down.
+- [x] 100 The lookups list said nothing when a kind had no rows. (D127)
+- [x] 101 The sign-out could be pressed twice. (D126)
+- [x] 102 Dialogs zoomed in 100 ms, outside the band DESIGN names. (D123)
+- [x] 103 The board's hover wash was the current wash.
+- [x] 104 The pending mark said nothing to a screen reader. (D126)
+- [x] 105 The account menu was named "Your account" and nobody's.
+- [x] 106 The rail's cookie could throw inside a render, and another tab's toggle was lost.
+- [x] 107 A quotation number typed on an Arabic keyboard was never found.
+- [x] 108 The Add project sheet named no company.
+- [x] 109 vaul slides a sheet in 500 ms, twice DESIGN's band. (D129)
+- [x] 110 A dirty log sheet could be swiped away. (D84, D129)
+- [x] 111 The bell wrote the 44px rule by hand.
+- [x] 112 A confirmation's Enter did nothing, and its buttons were not a form. (D114)
+- [x] 113 The prompt's "whose record" line was read by nobody. (D98)
+- [x] 114 The sheet's 250 ms outranked "less motion".
+- [x] 115 A held sheet still showed the handle that invites a swipe.
+- [x] 116 The log's channel chips were the one control in the sheet under 44. (D130)
+- [x] 117 Four forms' submit did not stop at itself, and the SMAC box could be autocorrected.
+- [x] 118 Five sheets could still be swiped away with words in them. (D129)
+- [x] 119 `(max-width: 767px)` is not `max-md:`. (D128)
+- [x] 120 The tab a thumb presses was 37px inside a 44px list. (D130)
+- [x] 121 Three search boxes' clear grew over the text.
+- [x] 122 The sheet's stated height was fiction.
+- [x] 123 Six dialogs grew four rem on the desktop and nobody wrote it down. (D129)
+- [x] 124 `one-look` had a hole the width of a file, and failed a block comment.
+- [x] 125 A comment lied about a field.
+- [x] 127 A press on Add company opened nothing, one time in thirty, at a phone width. (D129)
+- [x] 126 Six Arabic strings, and one imperative the lint did not list.
 
-- [x] 1 **Two dispatches can spend the same panels.** Verified and fixed in P11A-1 (D85). `src/actions/dispatches.ts:173-212`
-  `checkQuantities` is a plain SELECT under READ COMMITTED with no row lock; two Saves at once
-  both pass and both commit. Cause: the check is at the door and the door is not locked. Fix:
-  lock the quotation row for the transaction, and a test that races two requests. Two readers
-  cited the code; a third called the same function "correctly re-verified" — verify first.
-- [x] 2 **A dispatch already waiting is never re-checked against a later revision.** Verified; approval refuses a superseded one now (P11A-1, D85); the queue badge waits for 11E.
-  `src/actions/dispatches.ts:461-528`. D36's rule runs only when a dispatch is raised; Rawan
-  can approve one against a price the customer no longer holds. Fix: re-check the live revision
-  at approval and say so in the queue. Reader cites code.
-- [x] 3 **A hand-over rewrites past months' achieved metres.** Verified; achieved follows `dispatches.rep_id` now (P11A-2, D86). `src/lib/dispatches.ts:585-603`,
-  `src/lib/months.ts:67-73`. Achieved joins the CURRENT `companies.rep_id`, so moving a
-  customer moves his history to the new rep. Cause: no attribution at the time of the sale
-  although `dispatches.rep_id` already holds it. Fix: attribute to the rep who raised the
-  dispatch (decision for SPEC §4). Reader cites code.
-- [x] 4 **A quotation names the rep who no longer owns the company.** The label says "Raised by" now, which is what the column holds (P11A-2, D86). `src/lib/quotations.ts:
-  196-207`, `src/actions/companies.ts:407-411`. `quotations.rep_id` is frozen at creation while
-  the floor moved. With 3 decided, the display is right and the sentence beside it must say
-  "raised by". Reader cites code.
-- [x] 5 **A SMAC number cannot be corrected, and a duplicate says "something went wrong".** Verified; a clash names its holder at the field and the coordinator corrects the number in place — and the contact form's duplicate-phone answer had the same fault underneath (P11A-4, D88).
-  `src/db/schema.ts:374-391`, `src/actions/quotations.ts:388-446`, `src/actions/dispatches.ts:
-  461-528`; contrast the phone-duplicate handling in `src/actions/contacts.ts:27-31`. The one
-  value the spec itself calls error-prone has no named error and no way out of a typo. Fix: a
-  named 23505 check that says which record holds the number, and a correction path. Two readers.
-- [x] 6 **Six status transitions have no compare-and-swap.** Verified — seven, with withdraw — and every one holds its row now (P11A-1, D85). `src/actions/quotations.ts:409-413,
-  479-484, 558-562`, `src/actions/dispatches.ts:486-495, 563-567`; contrast `companies.ts:
-  460-466` which guards its UPDATE with the expected prior state. A second tab overwrites a
-  decision silently. Fix: `where status = expected`, check the returned count, say "somebody
-  already acted — reload". Two readers cite code.
-- [x] 7 **Archiving a company records no reason.** Verified; it asks why, keeps it, and the archive screen shows it (P11A-3, D87). `src/db/schema.ts:218-252`, `src/actions/
-  companies.ts:451-479`. Every other terminal state got a reason column or audit details; S16
-  promised "the record shows why". Reader cites code.
-- [x] 8 **Unfiling an old entry rewrites a reported day.** Verified; unfile takes the correction's window, in the action and on the button (P11A-3, D87). `src/actions/activities.ts:219-245`
-  vs `308-341`: edit checks `mayWriteFor(day)`, archive never does, and the button is always
-  offered. Fix: the same gate on both, and the button only while the day is open. Reader cites code.
-- [x] 9 **Phones are normalised as Saudi whatever the country.** Verified; every caller passes the company's country now, and the eight-digit fallback is gone (P11A-5, D89). `src/lib/phone.ts:34-47` and
-  its three callers; the country is in scope at every one. Fix: pass it. Reader cites code.
-- [x] 10 **A promoted account keeps its floor for ever.** Verified; `mayWrite` asks the role too, and a floorless role is refused while companies remain (P11A-6, D91). `src/lib/floor.ts:51-54` `mayWrite`
-  checks identity only; its sibling `mayQuote` checks the role too. Fix: require a floor-holding
-  role, and make a role change force a hand-over. Reader cites code.
-- [x] 11 **Restoring a stray archived contact un-archives its company as a side effect.** Verified; a child under an archived company gets a sentence, not a button, and the action refuses too (P11A-6, D92).
-  `src/actions/admin.ts:601-630`. Fix: restore the child alone when the company was archived on
-  its own, and say what the restore will do. Reader cites code.
-- [x] 12 **`backup:verify` fails on any day the business used Kladra.** Verified; counts are recorded with the dump and the restore is held to them (P11A-6, D93). `scripts/backup-verify.ts:
-  169-196` compares the live database now against a dump from earlier. Fix: capture the counts
-  when the dump is taken. Reader cites code.
-- [x] 13 **The six-month card calls a month "the first with anything" while its own bars say
-  otherwise.** Verified; first, after-empty and nothing are three sentences now (P11A-5, D90). `src/lib/months.ts:116-132`, `months-card.tsx:74-84`: null percent comes from the
-  previous month alone. Fix: first only when every earlier month is nought. Reader cites code.
-- [x] 14 **D84's guard does not cover the phone's back gesture.** Verified; the dirty sheet holds one history entry and the gesture lands on it (P11A-9, D96). `log-dialog.tsx`: a route
-  change loses the typed entry. Fix: a popstate guard while dirty. Reader cites code.
-- [x] 15 **The drawer's follow-up picker cannot clear a badge a project drives, and says it
-  did.** Verified; the drawer names the project's date and the toast stops pretending (P11A-7, D94). `src/lib/followups.ts:85-93`, `company-header.tsx:168-194`, `actions/companies.ts:
-  305-333`: the badge is least(company, projects); the picker writes the company only. Reader
-  cites code.
-- [x] 16 **A quotation raised from the company drawer belongs to no project, by default.** Verified; the drawer asks which project, offers nothing when there is none, and the action refuses (P11A-7, D94).
-  `company-drawer.tsx:377-384`, `request-quotation-dialog.tsx:184-274`, `actions/quotations.ts:
-  205-254`; SPEC says every quotation belongs to one. Reader cites code.
-- [x] 17 **A Postgres blip longer than one reconnect loses live events with no resync.** Verified in the route — readers who connected during the outage sat on a hub with no listener; a `resync` event when it returns (11B-1, D105).
-  Seen beside it (P11A-5, a test run's server log): `Error: The destination stream closed early.`
-  four times per locale project, each as a drawer closed in rep.spec — the SSE route does not
-  close cleanly when the browser drops it. Same file, same slice when 17 is taken.
-  `src/app/api/events/route.ts:92-174`, `live-provider.tsx:122-130`. Fix: broadcast a refresh
-  when the listener heals. Reader cites code. (11B territory.)
-- [x] 18 **`requireActor()` gates the SSE and count routes, so live updates 401 during
-  "view as".** Verified; `requireReader` (11B-1, D105). `events/route.ts:162-169`, `authz.ts:105-111`, `notifications/count/route.ts:
-  15-20`. Fix: a read-only identity check for reads. Reader cites code. (11B.)
-- [x] 19 **CSV cells are not neutralised against a leading `=`, `+`, `-`, `@`.** Verified; a cell Excel would run is written as text, numbers pass (P11A-9, D96). `src/lib/
-  export.ts:28-32`. Reader cites code.
-- [x] 20 **No error boundary in the signed-in app.** Verified; one card inside the shell for the screen that threw and the address that names none, a bare one above the shell, a static one above the root (P11G-1, D122). No `error.tsx` anywhere; `loading.tsx`
-  exists. Fix: a themed, bilingual error page in the shell. Reader cites absence. (11G.)
-- [x] 21 **Edit and unfile of a log entry never call `notifyLive`.** Verified; both send the event a new entry sends (P11A-7, D94). `activities.ts:276-296,
-  320-337`; every other write does. Reader cites code. (11B.)
-- [x] 22 **The adoption headline counts people the same screen excuses as away.** Verified; one predicate for the headline and the rows (P11A-8, D95). `src/lib/
-  adoption.ts:74-112`, `use-panel.tsx:118-132`. Reader cites code.
-- [x] 23 **A rep's "open quotations" does not sum to the two figures under it.** Verified; the caption names all three parts from the figure's own read (P11A-8, D95). `standing.ts:
-  69-81, 136-149`, `day.ts:57-160`: the total counts requested too; the breakdown never does.
-  Fix: a reason for a plain "requested" one, or a caption that says it. Reader cites code.
-- [x] 24 **The queue's "longest wait" can name a request in neither list under it.** Verified; it is read from the rows the page shows (P11A-8, D95).
-  `standing.ts:318-366` never filters archived companies; the lists do. Reader cites code.
-- [x] 25 **`check-messages` guards five computed-key families and misses six more**, — verified; all eleven are read from their source lists (P11A-9, D96) — including
-  `LINE_FIELDS` on the revision-diff screen. `scripts/check-messages.ts:186-192`. Two readers.
-- [x] 26 **A rep who works a Saturday cannot write that day's report.** Verified; the box is offered on an open off day and says nothing is owed (P11A-10, D97). `workdays.ts:13-16`,
-  `reports.ts:374-389`; S47 allows recorded Saturday work. Reader cites code.
-- [x] 27 **The day's Log and WhatsApp controls are small and sit over a whole-card link.** Verified — 28px over a stretched link; each is 44 by 44 on a phone now, measured in `tests/thumb.spec.ts` (P11H, D130).
-  `call-band.tsx:66-120`. A rushed thumb opens the drawer. Reader cites code. (11H.)
-- [x] 28 **New Project and Edit Project never become bottom sheets.** Verified, and four more with them — mark lost, the log, confirm and prompt; all six are `ResponsiveDialog` (P11H, D129). They call the raw Dialog;
-  nine others use `ResponsiveDialog`. Reader cites code. (11H.)
-- [x] 29 **"Calls due" has no way to place a call.** Verified; every number is a message and a call, drawn once (P11A-11, D98). `phone.ts:61-63` exports WhatsApp only;
-  `tel:` appears nowhere. Reader cites code.
-- [x] 30 **Marketing's daily report shows six figures it can never move.** Verified; its card carries the two it can (P11A-10, D97). `reports.ts:256`,
-  `report-figures.ts:32-49`; the coordinator got a trimmed set, marketing did not. Reader cites code.
-- [x] 31 **The SMAC prompt hides the company while the number is retyped.** Verified; the four number prompts carry the customer's name under the title (P11A-11, D98). `prompt-dialog.tsx:
-  94-101`: title and description carry a bare label. Reader cites code.
-- [x] 32 **Stuck-request ageing reads holidays from the first of this month only.** Verified; both screens read back to the oldest request's day (P11A-10, D97). `team.ts:
-  412-432, 516-532`, `calendar.ts:21-27`. Reader cites code.
-- [x] 33 **The queue's headline counts are a capped array's length.** Verified; her waiting
-  counts and her longest wait are asked of the list's own predicate, uncapped, and each list
-  carries the tail the four list screens already had (P11J-7, D144). `queue/page.tsx:71-134`; `/dispatches` counts. Unreachable
-  at fourteen people; wrong shape all the same. Reader cites code.
-- [x] 34 **The board's "current card" ring is the alert red DESIGN already retired once.** Verified; the `bg-surface-2` wash the lists give their open row (P11G-2, D123).
-  `board.tsx:98`, `globals.css:181`. Reader cites code. (11G.)
-- [x] 35 **The phone breakpoint is written three times — 639, 640 and 768.** Verified, four with the log dialog's `max-sm:`; one constant, one hook, one lint rule, and the spec opens the same form at 767 and 768 (P11H, D128). `responsive-dialog.
-  tsx:35`, `company-header.tsx:56`, `bottom-bar.tsx:34`; between 641 and 767 the shell is a
-  phone and the dialogs are not. Two readers. (11H.)
-- [x] 36 **The admin gate is hand-copied into seven pages, and both test sweeps miss `admin/use`.** Verified; one `requireAdmin`, and both sweeps read `ADMIN_PATHS` off the rail (P11A-12, D99).
-  Derive the lists from `nav.ts`. Reader cites code.
-- [x] 37 **A dispatch is never refused in the seed, the spec or the walk.** Verified; the seed carries one with its trail and the spec refuses one (P11A-12, D99). `demo-data.ts:
-  885-929`, `tests/dispatches.spec.ts`; WORKFLOW §3 marks it done. Reader cites code.
-- [x] 38 **Nor is a quotation ever rejected live, nor `quotations_decided_check` tested.** Verified; the spec rejects one through the screen and tries the check (P11A-12, D99). Same
-  shape. Reader cites code.
-- [x] 39 **A call card with no contact says nothing; the customer list says "no contact".** Verified; the card says the list's words (P11A-11, D98).
-  `call-band.tsx` vs `companies-table.tsx:101-111`. Reader cites code.
-- [x] 40 **A collapsed sidebar snaps open on every load.** Verified; a cookie the layout reads, so the first byte is the saved width and the `ready` frame is gone (P11G-3, D124). `use-sidebar.ts`: localStorage only,
-  no cookie like theme and locale. Reader cites code. (11G.)
-- [x] 41 **The browser chrome colour follows the OS, not Kladra's theme.** Verified; `generateViewport` reads the theme cookie and answers with the theme's canvas, named once with the manifest's (P11G-3, D124). `layout.tsx:46-54`.
-  Reader cites code. (11G.)
-- [x] 42 **`notifications.subject_type` is free text pretending to be a closed type.** Verified; a check that reads the one list (P11A-13, D100). `schema.
-  ts:592, 611`. Fix: a pgEnum or CHECK. Reader cites code. (11C.)
-- [x] 43 **`audit_log` has no index for the adoption query.** Verified; `audit_log_user_at_idx` (P11A-13, D100). `schema.ts:636-642`, `adoption.ts:
-  78-95`: `(user_id, at)`. Reader cites code. (11C.)
-- [x] 44 **Seven admin writes log an audit row whether or not a row changed.** Verified for five; each writes its row only when one came back (P11A-3, D87). Restore is finding 11; setting a target is an upsert, and clearing one that was never set is still what was asked for. `admin.ts:196-630`;
-  `.returning()` and a count, as `archiveCompanyAction` does. Reader cites code.
-- [x] 45 **The funnel calls a fresh "sent back" request "never asked again".** Verified; "not asked again yet", and the oldest's age beside it (P11A-14, D101). `chain.ts:34-121`.
-  Fix: an age, said in the caption. Reader cites code.
-- [x] 46 **The round-sum-round m² formula is retyped in six places.** Verified — six files and two specs; `src/lib/sqm.ts` and `one-figure` in the lint (P11A-2, D86). `dispatches.ts:571`,
-  `months.ts:65`, `reports.ts:157`, `standing.ts:59`, `export.ts:193`, a test. One fragment. (11C.)
-- [x] 47 **`check:messages` is not in the build or the stated pre-commit chain**, — verified; in `lint` and `prebuild` (P11A-16, D103) — though three
-  files say a locale gap fails the build. `package.json:12`. Fix: chain it. Reader cites code.
-- [x] 48 **"Revision" is نسخة on a dispatch error and مراجعة everywhere else.** Verified; مراجعة (P11A-15, D102). `messages/ar/
-  dispatches.json:44`, `common.json:48`. Reader cites code.
-- [x] 49 **The D68 name test passes when the person does not render at all.** Verified; it asserts for the reps by role (P11A-16, D103). `reading.spec.ts:
-  401-408`. Reader cites code.
-- [x] 50 **The "nothing can be written while viewing" test can skip its only write.** Verified; it asserts the control is absent (P11A-16, D103). `view-as.
-  spec.ts:104-120`. Reader cites code.
-- [x] 51 **The 44px touch rule lives in one file.** Verified — two, the bar and the bell by hand; it is the `touch` utility now, written once and carried by the kit (P11H, D130). `bottom-bar.tsx`, `button.tsx:29-41` tops
-  out at 36. Reader cites code. (11H.)
-- [x] 52 **The hand-over warning for marketing names what never moves and not what does.** Rewritten with D86: what moves, and that approved metres stay (P11A-2).
-  `drawer.json:46`, `companies.ts:407-422`. Reader cites code.
-- [x] 53 **The offline page is always dark.** Verified; the cookie is readable now and an inline script paints light before the first paint; the reader's claim that it already was readable was wrong — it was httpOnly (P11G-3, D125). `public/offline.html:20-33`; the theme cookie is
-  readable without a server. Reader cites code. (11G.)
-- [x] 54 **The coordinator's queue never highlights an arrived row.** Verified; the quotations and dispatches lists, and so the queue, mark arrivals (11B-1, D105). `use-arrived.ts` is wired
-  into two tables, not hers. Reader cites code. (11B.)
-- [x] 55 **`quotation_items` has no unique index on position; `dispatch_items` has.** Verified; `quotation_items_position_idx` (P11A-13, D100). `schema.
-  ts:407-448` vs `505-509`. Unreachable through the app today. (11C.)
-- [x] 56 **A target's month is normalised in Zod only, never in the database.** Verified; a check on both target tables (P11A-13, D100). `admin.ts:
-  297-300`, `schema.ts:516-542`. (11C.)
-- [x] 57 **Two revisions at once collide on the unique index and crash generically.** Verified; the parent row is held, so the second takes the next number (P11A-1, D85).
-  `quotations.ts:629-651`. Fix: name the collision. Reader cites code.
-- [x] 58 **`unused-messages` exempts all of `common.*` off one dynamic call**, — verified; a bare namespace reaches its families only, from the shared table (P11A-14, D101) — hiding a dead
-  and wrong key. `unused-messages.mts:28-46`. Reader cites code.
-- [x] 59 **"picked" in `errors.cityNotInCountry`; the glossary says never pick or select.** Verified; "chose", and the glossary pass in `check:messages` (P11A-15, D102).
-  `errors.json:12`. Reader cites code.
-- [x] 60 **"Person" is الموظف on the team screen and الشخص in admin.** Verified; one word, and a glossary row (P11A-15, D102). `team.json:14`,
-  `admin.json:61`. Reader cites code.
-- [x] 61 **`seed:volume` writes no audit trail**, — verified; the trail, the floor, the calendar and a self-check (P11A-17, D104) — so every trail panel is empty at the one scale
-  meant to be walked. `seed-volume.ts`. Reader cites code.
-- [x] 62 **`admin.spec.ts` re-implements Riyadh-today and the weekend.** Verified; imports `@/lib/dates` and `@/lib/workdays` (P11A-16, D103). `admin.spec.ts:37-58`.
-  Import the real ones. Reader cites code.
-- [x] 63 **Nothing automated covers the live channel.** `tests/live.spec.ts` — two people, no reload (11B-1, D105). No spec opens `/api/events`. (11B.)
-- [x] 64 **The NOTIFY chunking branch has never run.** `tests/live-unit.spec.ts`, four hundred recipients (11B-1, D105). `live.ts:30-51`, 150 per payload against
-  fourteen people. A unit test with a synthetic audience. (11B.)
-- [x] 65 **The log dialog does not preselect the contact the card shows.** Verified; `contactId` from the card (P11A-14, D101). `log-dialog.tsx`,
-  `call-band.tsx`: a `projectId` prop exists, no `contactId`. Reader cites code.
-- [x] 66 **Eleven primary buttons fall back to a flat red instead of the brand gradient.** Verified for seven that remained; the `default` variant is deleted from `Button` and `Badge` and `variant` is required, so the fallback cannot come back (P11G-2, D123).
-  `button.tsx:12`, `globals.css:169`: `default` aliases `--primary` to the brand hue. (11G.)
-- [x] 67 **`archivedCount()` is dead code whose comment describes a badge that was never — deleted (P11A-14, D101) —
-  built.** `admin.ts:275-282`. Reader cites code.
+Left on purpose, so the next reader does not re-find it: `transition-all` on the kit's button animates colour, a shadow and a one-pixel translate and nothing that lays out, which is what the guideline's warning is about; it stays. And one throw the suite now ignores: React's development build measures a redirected or missing page with a timestamp Chromium refuses ("cannot have a negative time stamp"), and nine specs failed on it in one warm run without a line of the app in the trace; the fixture names that one message and no other, and a production build never emits it (`tests/helpers/i18n.ts`). Speed and reliability, measured (P11I). Two harnesses first — what every screen asks the database (`npm run measure:reads`) and what a mid phone pays to draw the main screens (`npm run measure:speed`) — both against the production build, both keeping a baseline file the next change is held to; then the reads halved where they were repetition, and the unhappy paths walked with the wire cut.
 
-Merged: the quantity race (two readers), the SMAC pair, the six blind transitions, the
-computed-key families, the breakpoint trio. Dropped: the un-capped waiting list, fixed in
-P10d before this list was written (D83).
-- [x] 68 **The dev server on 3100 hung with one core pinned and 3.5 GB resident, and stayed hung.**
-  Seen once, P11A-3, while a screenshot pass signed Faisal in and opened `/en/companies` on the
-  volume-seeded dev database: no request logged after the login, `curl` to any route got
-  nothing, CPU time climbed without plateau for fifteen minutes. A fresh `next dev` served the
-  same page in a second, and the production build in 300 ms — so it is the dev compiler, not
-  the page, and it did not reproduce. Not a defect in Kladra's code as far as anything shows;
-  kept here because a hang that eats a core until somebody notices is what 11I is for. If it
-  is seen again: note what was compiled last (`.next/dev`), whether a second Next process was
-  running from the same tree, and take a CPU profile before killing it. Observed, one reader.
-  **Seen again, P11A-9, on the TEST server:** `next dev` on 3101, started by a spec run at 06:45,
-  was still alive two hours and nine runs later at 2.9 GB resident — Playwright's stop reached
-  the shell in front of it and not the server two processes down — and every run since had
-  reused it (`reuseExistingServer`). The suite slowed from 13 to 16.6 minutes and the Arabic
-  rep walk timed out at thirty seconds, on a step it passes in three. Killed; a fresh server
-  ran the same walk green. Cause fixed in `scripts/dev-test.ts`: the server's whole tree goes
-  when the script does, on a signal, on exit, or on finding its parent gone. The 3100 hang
-  above is the same shape — a long-lived dev compiler that has hot-reloaded through hours of
-  edits — so the rule for both is a dev server that has served one session's edits is restarted,
-  not reused. **Seen twice more in one session, P11J**, and it cost two full gate runs: a
-  `dev:test` server started by hand for a screenshot pass — outside the tree-kill the script does
-  when IT owns the server — sat there through nine shot passes and reached 6.7 GB, and the
-  machine killed a running acceptance suite twenty minutes in to get the memory back. Freed, it
-  grew again over the next two hours and took the next suite down the same way. Closed here
-  rather than left open, because four sightings say one thing and none of them is a defect in
-  Kladra's code: `scripts/dev-test.ts` now caps the compiler's heap at 4 GB, which
-  is six times a healthy run, so the next one dies at once and says why instead of starving
-  whatever else is running; and the rule is in README where a person reads it (P11J-7).
-- [x] 69 **`seed:volume` drew its SMAC numbers at random from four digits and collided with
-  itself.** Seen P11A-12, restoring the dev database after the demo reseed: `between(1000, 9999)`
-  for every issued quotation and approved dispatch, hundreds of each, so a duplicate under
-  `quotations_smac_number_idx` was a matter of when, and the run died half-way with the database
-  half-seeded. Cause: a random draw where a sequence belongs — the index is right, the draw was
-  wrong. Fixed in P11A-12: counted up from 20000 and 30000, clear of the demo floor's.
-- [x] 70 **A typed reason on the quotation and dispatch sheets ran in the page's direction, not
-  the writer's.** Found by the test-runner in P11A-12: the "Sent back because" / "Rejected
-  because" / "Refused because" box on each sheet was a bare `<p>`, while the same sentence two
-  lines down in the trail went through `Prose` (`dir="auto"`) — one sentence read two ways on
-  one sheet, against rules/words.md. Cause: a second way to lay out typed text, written by hand.
-  Fixed in P11A-12: both boxes are `Prose`, and `one-look` now refuses a hand-laid typed block
-  (`whitespace-pre-*` outside `prose.tsx`).
+- [x] 128 Every screen read the signed-in user twice and the calendar once per band. (D131)
+- [x] 129 A write with no signal became the error card, with the words inside it. (D132)
+- [x] 130 Nobody knew what a rep's phone paid to draw a screen. (D133)
+- [x] 131 Four font weights shipped for one bold letter.
+- [x] 132 A Save whose answer the wire lost made a twin. (D134)
+- [x] 133 A session that ended mid-form said "you are not allowed to do that." (D135)
+- [x] 134 The prompt dialog painted the number red when the server was not reached.
+- [x] 135 The sign-in card jumped when the server was out of reach. (D67)
+- [x] 136 The twin swallowed the correction it was meant to protect. (D70, D134)
+- [x] 137 Three reads called an action bare, and the lint could not see them.
+- [x] 138 The user menu told an expired session it was not allowed. (D135)
+- [x] 139 The speed harness could print green having measured nothing.
+- [x] 140 An interrupted reads run left the whole cluster logging every statement.
+- [x] 141 Three smaller things the second pass found.
 
-- [x] 71 **One screen asks the database forty-eight questions, and every screen reads the session
-  row seven times over.** Verified by the harness and halved where it was repetition: the session user and the calendar are once-per-request reads (P11I-1, D131); the rest of a screen's count is one statement per figure, each under 4 ms, and stays. `npm run measure:reads` keeps the baseline. Measured in 11C-2 (D107): the manager's day is 48 statements — seven of
-  them the session, six the non-working-days calendar, one per band — the rep's day 32, and each
-  statement is under 4 ms, so what a screen costs is round trips, not work. For 11I: read the
-  session once per request and let a screen's bands share one calendar; then re-measure against
-  the §3 baseline.
+Left for the founder, from the measurements and the critic. A request for a quotation or a dispatch has no twin guard: those two writes carry line items, so "the same write" means comparing every line of two papers, and it was not worth doing half. If the wire eats the answer to a request, the coordinator can get two identical papers seconds apart; the rep may withdraw his own (D32) and she may send one back, so nothing is stuck, but nobody is told why there are two. Refuted this box. The withdraw test's `pickFirst` hang (I6, seen once in the 11G gate) did not come back in eight runs of `tests/quotations.spec.ts:608` after the 11H opener fix (#127); it is treated as the same defect and closed. The pinned weekday (P10b) is decided against: the tests that depend on the working week branch on today's weekday and assert both sides (leave, reports, figures, manager), and a clock pinned in the app while the database keeps its own `now()` would split the one definition of today (rules/data.md) — the suite runs on the day it runs.
 
-The whole flow walked (P11D). One reader this time — the session, with the authority files
-already in hand — walking every dialog, drawer, band and notice in the code for four things:
-what is retyped, how many presses, what a person must carry in their head, and where two
-screens can answer one question two ways. Each entry was read in the code before it was written
-down, and the counts are in §3 "The flow, counted". Ranked as above: what lies or loses first,
-then what costs presses.
 
-- [x] 72 **A follow-up count counts dates, and the list it opens shows something else.**
-  Verified and fixed in P11D-1 (D108): the counts are the lists' own filters, companies on
-  Companies, the day and the team table, projects on Projects; `tests/counts.spec.ts`.
-  `followUpCounts` (`src/lib/followups.ts:219-247`) counts the rows of a `union all` of company
-  dates and project dates. The pill on Companies opens `?filter=overdue`, which is one row per
-  company by `least(company, min(project))` (`src/lib/companies.ts:177,250`;
-  `followups.ts:86`); the chip on Projects opens a list of projects only
-  (`src/lib/projects.ts:143`); the day's bands are `listCompanies` rows under `total:
-  totals.overdue` (`src/components/day/call-list.tsx:62-63`), so "and 2 more" can name
-  companies that are not there; the team table's "Overdue follow-ups" is the same count
-  (`src/lib/team.ts:183`) and opens the rep's companies (`team-table.tsx:57`). Measured on the
-  volume floor: Faisal's Projects screen says 37 overdue and the list under the chip holds one
-  project. Cause: one count for three units, written once "because the strip counts both" (D9)
-  — and D9 itself says "clicking it lists them", which is D95's rule. Fix: a count counts the
-  rows the list it opens will show — companies by their effective date on Companies, the day and
-  the team table; projects on Projects — through the same predicate the list filters by.
-- [x] 73 **A company that comes back from the archive is not recognised.** Verified and fixed
-  in P11D-2 (D109): archived rows match, the warning says when and why, a live one says where
-  and when last worked; `tests/known.spec.ts`. The duplicate check
-  reads live companies only (`src/lib/companies.ts:532`, `isNull(companies.archivedAt)`), so a
-  customer archived last year with "closed down" is created again as a stranger, and the reason
-  somebody gave up on him — the whole point of archiving rather than deleting (S16) — is never
-  shown to the rep typing him in. The warning that does fire names the company and the rep and
-  nothing a rep can decide by (`add-company-dialog.tsx:173-182`). Cause: the archive was built as
-  a place things go, not as a place the app looks. Fix: the check reads archived companies too
-  and the warning says what it knows — the city, the last activity, and for an archived one who
-  archived it, when, and why; creation stays unblocked (S15).
-- [x] 74 **A notice names a number and never the customer.** Verified and fixed in P11D-3
-  (D110): the customer is in every quotation and dispatch sentence, joined at read time from
-  the subject; the chain specs look for the sentence with the customer in it. Every quotation and dispatch
-  notice carries `label` and nothing about the company (`src/actions/quotations.ts:302, 390,
-  468, 644, 730, 827, 904`; `src/actions/dispatches.ts:354, 549, 725`), and both message files
-  say "{label} came back for edits" / «أُعيد عرض السعر {label} للتعديل». A rep with eight open
-  quotations and the coordinator with thirty must remember which customer Q-12 is before the
-  sentence means anything. The list already resolves the rep's name at read time from an id
-  (`src/lib/notifications.ts:83`, D68) and every notice carries its subject (D79). Cause: the
-  sentence was written from what the action had in hand, not from what the reader needs. Fix:
-  the customer's name, resolved at read time from the subject the way the rep's is, in the
-  sentence in both locales.
-- [x] 75 **A call card says who to call and not why.** Verified and fixed in P11D-4 (D111):
-  the last entry's words ride with the card, one line, in the writer's direction;
-  `tests/why.spec.ts`. The day's call band shows the company,
-  the main contact, the city, the date, Log and the number (`src/components/day/call-band.tsx:
-  55-120`); no list anywhere carries the words of the last entry — `listCompanies` and the
-  standing strips return `lastActivityOn` and nothing else (`src/lib/companies.ts:188`,
-  `standing.ts:29,220`). The rep who wrote "wants 4 mm samples, follow up tomorrow" reads
-  tomorrow's card as a name and a date, and either remembers or opens the drawer for the
-  Activity tab. Cause: the card was built from the follow-up table's columns, and the reason
-  lives in another table. Fix: a card that asks for a call carries the last entry's first line
-  and its day, from the same query that already finds the last activity's date.
-- [x] 76 **The dispatch sheet says quoted and sending, never what already went.** Verified and
-  fixed in P11D-5 (D112): each line reads sending · on the quotation · on other dispatches ·
-  left to send, from `committedQtySql`'s definition; Rawan's reading step in
-  `tests/dispatches.spec.ts` holds the two new figures to the line's own arithmetic. A dispatch's
-  lines carry `qty` and `quotedQty` only (`src/lib/dispatches.ts:364,407`); the quotation sheet
-  shows one total "left to send" and per-line quantities as quoted (`quotations.ts:430`). Rawan
-  approving the third partial dispatch reads "sending 40 of 100 quoted" and has to open the
-  quotation and count the mini list to know that 70 already went. Nothing corrupts — the action
-  holds the row and refuses an over-send (D85) — but she approves blind or clicks through. Cause:
-  the committed-quantity SQL exists for the rep's dialog (`dispatches.ts:156,556`) and was not
-  offered to the reader who checks the request. Fix: each line on the dispatch sheet reads
-  sending · already sent · quoted, from that one definition.
-- [x] 77 **Two weeks of leave is fourteen dialogs.** Verified and fixed in P11D-6 (D113): a first
-  day and a last day, one row per day, a day already there skipped; `tests/presses.spec.ts`. The calendar takes one day per submit
-  (`src/components/admin/holidays-panel.tsx:173-215`, one `DatePicker`, hidden `day`;
-  `src/actions/admin.ts:545+`, `day: regex`), six presses each with the person picked every
-  time. Eid is four or five days twice a year and S48's own example is "a rep back from two
-  weeks off" — eighty-four presses, or, likelier, leave that never gets entered and a pace that
-  says he is behind. Cause: the row is a day, and the form was drawn from the row. Fix: the
-  dialog takes a first and a last day and the action writes one row per day in the span; the
-  table, pace and leave stay exactly as they are.
-- [x] 78 **Enter does nothing in the coordinator's number box, a target box, or a new project.**
-  Verified and fixed in P11D-7 (D114): all five are forms; Rawan issues with Enter in
-  `tests/presses.spec.ts`.
-  `PromptDialog` has no form (`src/components/ui-ext/prompt-dialog.tsx:105-166`): Rawan types
-  SMAC's number and must find Issue or Approve with the mouse, on her most frequent act; the
-  target box saves from a button (`targets-panel.tsx:148`); New project, Edit project and Mark
-  lost submit from `onClick` (`new-project-dialog.tsx:186`, `edit-project-dialog.tsx:142`).
-  Every other dialog is a `<form>` and Enter saves it. Cause: three dialogs were written before
-  the form shell and never moved onto it. Fix: a dialog with a text field is a form and Enter
-  submits it; a multi-line reason keeps Enter as a new line and takes Ctrl/Cmd+Enter.
-- [x] 79 **A month's targets are five boxes, five Saves, and no memory of last month.** Verified
-  and fixed in P11D-8 (D115): last month's figure under an empty box and one press to keep it,
-  Enter saves; the boxes stay one Save each on purpose (the panel's own reason stands);
-  `tests/presses.spec.ts`. Each
-  person's target is its own box with its own Save (`targets-panel.tsx:85-150`), and a new month
-  opens every box empty (`value === null → ""`) with nothing on screen saying what last month
-  was. Cause: the box was built for one correction, and the monthly chore is five of them. Fix:
-  last month's figure under each box and one press to keep it, and one Save for the month.
-- [x] 80 **Logging on a company with one contact still asks which contact.** Verified and fixed
-  in P11D-8 (D115): one contact is the contact; several still open on nobody;
-  `tests/presses.spec.ts`. The log opens on
-  "No contact" unless the button that opened it named one (`log-dialog.tsx:232`, the call card's
-  D101); from a drawer, a company with exactly one person opens on nobody, so naming him is two
-  presses on every entry or the entry goes unnamed (S24). Cause: the default was written for the
-  many-contacts case. Fix: when a company has one contact, the log opens on him; with several it
-  still opens on nobody, because guessing would misname the call.
-- [x] 81 **A queue row does not say whose request it is.** Verified and fixed in P11D-8 (D116):
-  the queue's rows and cards name the rep in the reader's script, a rep's own list does not;
-  `tests/presses.spec.ts`. The coordinator's rows carry the
-  quotation, the company, the project, the metres, the total and the wait (`quotations-table.tsx:
-  316-323, 349-362`); the rep who raised it is in the sheet only (`:560`). The conversation
-  about a request is with the rep (S54), so she opens each row to learn whom to write to.
-  Cause: the row was drawn for the rep's own list, where the rep is himself. Fix: on the queue,
-  the row names the person, in the reader's script (D68).
-- [x] 82 **A typed line on a wide card floats to the far edge.** Seen in the box's own shots
-  and fixed in P11D-9: on Faisal's English day at 1366 the Arabic last-said line under a
-  company sat alone at the right edge of the card, nearer the date than the name, and the
-  sent-back reason on a waiting card had done the same since P11A-11 (parked then as a layout
-  note). Cause: `<Prose>` served two layouts with one rule — `dir="auto"` on the block gives a
-  paragraph its own alignment, which is right for a report or a log entry and wrong for a
-  one-line caption that belongs to the row above it. Fix: `<Prose line>` keeps the page's
-  alignment for the block and the writer's direction for the words in a `<bdi>`; the call
-  card, the waiting card, the notice, the history row, the archive row and the duplicate
-  warning use it; the rule is written beside the paragraph rule in DESIGN §5 and words.md;
-  `tests/why.spec.ts` reads both directions. In the same pass the targets row put its unit and
-  Save on the box's own line, so a row with last month's figure and one without wrap alike.
+Left for the founder, measured and not fixed. The document of a list screen is 500 kB decoded on the volume floor — the server-rendered HTML and the same tree again as the payload React takes over — and the phone parses both; the fix is fewer client components per row and less per row, which is a design change to the tables and not a box-11I one. Every screen also fires some twenty prefetches on load (one per link in view, in two flavours), each a server render of the layout with its session read; the reads harness counts the document alone and does not see them. A refusal toast on the phone covers the sheet's own Save button for the seconds it shows. `FormFooter` disables the pressed button while it saves, which is the double-press guard and also drops keyboard focus to the page; and its pending word is "Saving…" whatever the verb was. What a good CRM has that Kladra does not (P11J). Seven readings of the app — the rep's day, the coordinator's desk, the manager's week, the founder's question, the feature surface of the CRMs of 2026, FACET as it was actually used, and the cladding trade in Saudi Arabia — proposed freely; each proposal was then read against the same three questions (whose is it, when in their day, what does it replace) and against the code, and most of them died there. What survived is below; what did not is in DESIGN §4 and §6, with the reason.
 
-Refuted in the walk, so the next reader does not re-find them: the quotation line is nine
-fields but only colour, three lookups and the price are typed on a first line, and the second
-line and the next quotation start from the last (D74, 9A item 7); the second dispatch already
-opens on the first one's site and terms (D81); the log is three presses with the company,
-the contact, today and the channel filled (D82, D101); the phone number is the search key and
-Ctrl+K reaches it from anywhere (SPEC §3); every write refreshes every open screen of everyone
-it concerns, so the same figure on two screens is one query and one live event (D105); the
-team table, the rep's strip and the day read target, achieved and pace through one function
-(`repMonth`), and pipeline and open quotations through one (`personStanding`), so there was no
-second definition to find (D95, D102); and the manager's "stuck" is on his home screen at zero
-presses. Parked for other boxes: the date picker offers no "tomorrow" or "next week" (11H, the
-phone); the duplicate warning cannot open the company it names because the form would be lost
-(11F, views).
-
-The dashboards and reports audited as products (P11E). The session again, reading the five
-screens a person opens to know how things stand — the team screen, the rep's day, the daily
-report, the coordinator's queue, the admin's Use screen — in the code and then in shots at
-volume on the production build, for four things: one look, no interpretation, every figure
-saying what it means, and a chart only where a shape is clearer than a number. Ranked as above.
-
-- [x] 83 **The desk team table's pace cell drops its unit.** Verified and fixed in P11E-1
-  (D117): `team-table.tsx` printed `4 / 22` on the desk while the phone card and the month card
-  said "4 of 22 working days" — and the phone card's own comment claimed the desk already said
-  the words. Cause: the phone card was fixed in P9.4 against a reference nobody re-read. Fix:
-  the desk cell says `team.paceLine`; `tests/manager.spec.ts` reads it.
-- [x] 84 **The team table's habit counts go nowhere.** Verified and fixed in P11E-1 (D117):
-  open quotations, overdue follow-ups and never-contacted were bare numbers; the row's one link
-  was the name, to the whole floor. Cause: the table predates `?rep=&filter=`. Fix: overdue and
-  never open the floor under that filter, open quotations opens the floor whose strip carries
-  the figure and its parts, zero stays plain; the phone card's link moved onto the name so the
-  counts could be doors. `tests/counts.spec.ts` step 4 presses one and counts the rows.
-- [x] 85 **The day's waiting list ranks a customer's silence above a coordinator's send-back.**
-  Verified and fixed in P11E-2 (D118): `waitingOnRep` merged three kinds and sorted by age, so
-  on the volume floor Faisal's 83 (20 sent back, 24 refused, 39 with the customer) opened on a
-  month-old customer-held quotation and the calls began 2,987px down; the heading said 83 over
-  25 cards and the tail said "and 58 more" with nowhere to go, by its own comment. Fix: kind
-  first then age; the heading's three pills are doors to `/quotations?status=returned`,
-  `/dispatches?status=refused`, `/quotations?status=issued`; `tests/stopped.spec.ts`.
-- [x] 86 **The queue does not say a quotation was revised under a waiting dispatch.** Verified
-  and fixed in P11E-3 (D119), §5 #2's leftover: `selection()` carried the revision and no
-  "superseded" flag; approval refused it (D85) and the queue said nothing. Fix: a `superseded`
-  column from the same `exists (later revision)` test `isLiveRevision` runs, a line on the row
-  and the card, the sentence on the sheet, Approve disabled; `tests/revised.spec.ts`.
-- [x] 87 **The chain card's sentences at one.** Verified and fixed in P11E-4 (D120):
-  `team.chainMeans` "Of the 1 raised … each one", `team.chainAnswered` "1 of them reached a
-  customer, and 0 came back" — no plural forms in English, none in the Arabic of the second
-  (reviewer, P11A-8, P11A-15). Fix: ICU on each half, both locales.
-- [x] 88 **The Use screen's words and its window disagree.** Verified and fixed in P11E-4
-  (D120): "Changed this week" over the trailing `USE_WINDOW_DAYS` (`adoption.ts`); "nothing
-  opened for {days} days" with no English plural (reviewer, P11A-6). Fix: both take `{days}`
-  from the constant, plurals in both locales.
-- [x] 89 **The report's biggest figure has the vaguest name.** Verified and fixed in P11E-4
-  (D120): `reports.moved` "Moved" over the m² of dispatches approved on the floor that day
-  (`reports.ts`, S43). Fix: the board's heading is "m² approved" / «المساحة المعتمدة» and
-  the moved line's label carries the unit over a bare figure («م² معتمدة») — the first cut
-  printed "280.49 m² m² approved", seen in the after-shots.
-- [x] 90 **Fifteen numbers where five bars would do.** Refuted on the shots: a bar per rep
-  under the team table lines five people up for comparison, which is the ranking S46 forbids in
-  spirit; the achieved figure already wears the pace colour, and the company's one bar answers
-  the question the manager asks first. Not built.
-- [x] 91 **The pipeline figure carries ".00" on a screen of whole metres.** Seen in the shots,
-  fixed in P11E-1 (D117): `Sqm` printed two decimals everywhere; the team strip read
-  "1,280,171.00 m²" beside a table of whole figures. Fix: `<Sqm whole>` for a sum of
-  estimates on the team strip, the person strip and the company header; measured m² unchanged.
-- [x] 92 **The report's moved line says "1 Companies".** Seen in the shots, fixed in P11E-4
-  (D120): the moved line borrowed the board's headings as nouns after a number. Fix: a
-  `<key>Label` plural per count figure in both locales (registered as a message family), the
-  headings unchanged, the m² figure keeps its name.
-
-Refuted in the walk, so the next reader does not re-find them: the six-month sentence at 0%
-already says "matched" (`monthSentenceKey`, `team.monthSame`) — the P11A-11 note was stale;
-the queue strip counts the rows on the page on purpose (page comment, D95: a second query once
-named a request neither list showed), the cap is 200 and a desk with two hundred waiting
-requests has a bigger problem than a count — noted, not changed; the manager's strip and the
-table's two "overdue" figures carry their thresholds in words (D95); the current month's bar is
-grey and unjudged by design (D61); the report cards share keys across desk and floor; the Use
-screen's amber is one predicate (`isQuiet`); the rep's day order — month, stopped work, calls —
-is argued in the page and stands, and 11H reads its length on the phone.
-
-A view per screen, chosen not copied (P11F). Every screen read against its own question in
-the code and in the 11D-11E shots at volume, and the answer written where the views argument
-already lived: DESIGN §6 now carries the table of screens, questions and views, and the table
-of every move the board could offer with what its drop would need. The second table is the
-drag rule closed on evidence: nine transitions, seven needing typed data, two needing a
-confirmation, which is a dialog with a longer gesture in front of it — nothing qualifies, and
-at 375 there is no drag at all. One fix came out of the walk.
-
-- [x] 93 **The duplicate warning cannot open the company it names.** Parked from the 11D walk
-  and fixed in P11F-2 (D121): the warning said "looks like an existing company: X (rep)" and
-  the only way to look at X was to close the form and lose it. Cause: the form and the drawer
-  are two overlays on one screen and nothing had ever opened one over the other. Fix: "Open
-  {name}" in the warning opens the company's drawer over the form (`?open=`, `scroll={false}`);
-  the form keeps its state, Escape closes the top layer only. The first cut drew the door for
-  every match and the spec found the drawer empty: another rep's company is not his to read
-  (S8, `mayOpen`), so the hit now says whether it is his and the door is drawn only then;
-  `tests/known.spec.ts`.
-
-Refuted in the walk, so the next reader does not re-find them: the phone's card-per-row is the
-same view on a narrower page, not a second one (D59); the queue has one state and therefore no
-board; the projects screen has no states to make columns of; the admin panels are opened too
-rarely to earn a choice; the day and the team screen are one column on purpose (DESIGN §6,
-"a dashboard answers one question").
-
-Identity, motion and feel as one thing (P11G). Two inventories were taken first — every empty
-state on every screen, and every place a press waits for the server — and then the six parked
-findings and what the inventories added were fixed together, so that the error card, the
-pending mark, the wash on a current card and the flash on an arrived row are one hand's work.
-Every slice ended in the browser: the new error boundary was seen for the first time in the
-suite, drawn by a defect nobody knew about (#99).
-
-- [x] 94 **A pressed row said nothing until the drawer answered.** Fixed in P11G-4 (D126).
-  Rows, chips, the view switch, board cards and the follow-up pills are Links to a search
-  parameter; between the click and the streamed answer nothing on the page changed. Cause: no
-  Link in the app read its own status. Fix: `LinkPending` (`useLinkStatus`) inside each,
-  invisible for 150 ms; `tests/feel.spec.ts` holds the answer back and watches the mark.
-- [x] 95 **A picker's search miss said the list was empty.** Fixed in P11G-5 (D127). Three
-  request dialogs passed "no projects / quotations / companies yet" as `SearchableSelect`'s only
-  empty sentence, and it was shown for a typo. Cause: one slot for two states. Fix: the caller's
-  sentence only when `options` is empty; `forms.noMatch` for a miss; `tests/states.spec.ts`.
-- [x] 96 **An empty board was six columns of "Nothing here."** Fixed in P11G-5 (D127). The
-  board rendered whenever the view said so, past the empty branch. Fix: no rows, no board — the
-  list's sentence with its Clear; `tests/states.spec.ts`.
-- [x] 97 **The queue called the desk clear under a search that missed, and offered an "All"
-  that led nowhere.** Fixed in P11G-5 (D127). `waiting` counted the filtered rows, so a miss
-  read as a clear desk with two empty tables under it; the tables' status branch offered a link
-  to `/queue`, which fixes the status itself. Fix: the clear-desk sentence needs no search term
-  and replaces the tables; `fixed` on the empty branch drops the door; `tests/states.spec.ts`.
-- [x] 98 **A manager's `?rep=` was dropped by a search, a row and the way back.** Fixed in
-  P11G-5 (D127). Four URL builders on the companies screen, none carrying `rep`. Fix: the page
-  hands `repId` to the strip, the search, the table and the empty panel; `tests/states.spec.ts`.
-- [x] 99 **Any search term without a digit took the quotations, dispatches and queue lists
-  down.** Found by the new board test, which met the new error page instead of a sentence.
-  Fixed in P11G-6. Cause: `(${digits} <> '' and number = ${digits}::int)` — Postgres casts
-  before it guards, and `''::int` fails. Fix: `numberInTerm` decides in TypeScript, the first
-  run of digits (so "Q-12/3" asks for 12, not 123), bound only when it is an int; the rule is
-  in rules/data.md and DESIGN §5; `tests/states.spec.ts` searches all three for a word.
-- [x] 100 **The lookups list said nothing when a kind had no rows.** Fixed in P11G-5 (D127). An
-  unguarded `.map` — an empty column that reads as a screen that failed to load. Fix: one
-  sentence, `admin.emptyLookups`. Unreachable through the app today (rows are hidden, never
-  deleted), so no walk; the sentence is in both locales.
-- [x] 101 **The sign-out could be pressed twice.** Fixed in P11G-4 (D126). A plain form submit
-  with no pending state. Fix: `useFormStatus` on the item.
-- [x] 102 **Dialogs zoomed in 100 ms, outside the band DESIGN names.** Fixed in P11G-2 (D123).
-  shadcn's default, never revisited. Fix: 150 ms for dialogs, 200 ms for the drawer's overlay
-  to match its slide; menus keep 100 ms and the principle now says why; `tests/motion.spec.ts`.
-- [x] 103 **The board's hover wash was the current wash.** Found by the guidelines pass, fixed in
-  P11G-7. `hover:bg-surface-2` on every card made the card under the pointer look like the
-  open one. Fix: the hover is the lift `card-face` already has; the wash means open.
-- [x] 104 **The pending mark said nothing to a screen reader.** Found by the guidelines pass,
-  fixed in P11G-7 (D126). `aria-hidden` on the glyph and nothing else in the link changed. Fix:
-  a polite live region that is always in the link and says "Loading…" only while the answer is
-  out — present before it speaks, because a region added and filled in one breath is not read.
-- [x] 105 **The account menu was named "Your account" and nobody's.** Found by the guidelines
-  pass, fixed in P11G-7. The `aria-label` replaced the visible name, which is hidden below
-  `md` anyway. Fix: `shell.accountMenuFor`, "Your account, {name}", both locales.
-- [x] 106 **The rail's cookie could throw inside a render, and another tab's toggle was lost.**
-  Found by the critic, fixed in P11G-8. The first cut read `document.cookie` unguarded in the
-  store's snapshot — a refusal there is a render error, and the new boundary would have replaced
-  the whole shell with the error card; and the `storage` event that used to carry a second tab's
-  toggle has no cookie equivalent. Fix: both touches guarded, expanded as the fallback; the cookie
-  is read again when the tab comes back into focus.
-- [x] 107 **A quotation number typed on an Arabic keyboard was never found.** Found by the critic,
-  fixed in P11G-8. `numberInTerm` matched Western digits only, so ٤٥ asked for nothing — the
-  same defect as #99 in a quieter voice. Fix: Arabic-Indic and Extended Arabic-Indic digits are
-  read as 0–9 before the match; the pure test in `tests/states.spec.ts` types both.
-
-Refuted, so the next reader does not re-find them: the report screen's empty "others" list is
-an empty `<ul>` under a heading that already says the count, invisible and honest; the users and
-use panels cannot be empty while the admin reading them is a user; `QuotationHistory` returns
-null on zero events, which raising a quotation makes unreachable; the sign-in group has no
-`loading.tsx` because there is nothing to load; a missing screen under a streamed shell answers
-200, because the status line has gone out before the page says so — what a person gets is the
-card, and the spec reads the card; rendering the error card inside the Playwright runner is not
-possible (it compiles imported JSX for its own component tests), so the failed face is covered by
-the shared component and `check:messages`; the pressed-row spec cannot be pre-empted by a
-prefetch, because the suite runs on `next dev`, where a Link prefetches nothing; and the
-archive dialog's `router.push("/companies")` does drop `?rep=`, but only the company's own rep
-sees that button, and his URL never carries one.
-
-The phone, one-handed (P11H). The four parked findings first (#27, #28, #35, #51), then the
-four flows walked at 375 in a spec and looked at in both locales and themes, then the reviews.
-What the walk found on top:
-
-- [x] 108 **The Add project sheet named no company.** Found walking the drawer at 375, fixed in
-  P11H. `newProjectIn` ("Add project at {company}") existed and nobody passed the name, so the
-  sheet — which on a phone covers the drawer entirely — said "Add project" over a blank. Fix:
-  both call sites in the drawer pass `company.name`; the spec opens it by that title.
-- [x] 109 **vaul slides a sheet in 500 ms, twice DESIGN's band.** Found by the motion spec's
-  sibling, fixed in P11H (D129). Moving six forms onto vaul would have put every form on a
-  phone outside the band 11G had just measured. Fix: globals.css holds `[data-vaul-drawer]` and
-  its overlay to 250 ms with `!important`, because the library injects its own stylesheet and
-  writes the drag-release transition inline; `tests/motion.spec.ts` measures the sheet.
-- [x] 110 **A dirty log sheet could be swiped away.** Introduced by the move and closed in the
-  same slice (D129). The dialog's `onInteractOutside` guard (D84) did not survive the move:
-  vaul reads `onPointerDownOutside` first and stops only when it is already prevented, and a
-  drag down is a gesture Radix never had. Fix: `guardOutside` on `ResponsiveDialog` — no drag
-  (`handleOnly` with no handle) and no outside tap while dirty; Escape and Cancel still close.
-  The critic then found the other five sheets open to the same swipe (#118).
-- [x] 111 **The bell wrote the 44px rule by hand.** `size-11 md:size-8` on one button, the same
-  rule the bar wrote its own way (#51). Fix: the class goes; `Button` carries `touch`.
-- [x] 112 **A confirmation's Enter did nothing, and its buttons were not a form.** Found
-  converting `ConfirmDialog`, fixed in P11H. The confirm button was `type="button"` with an
-  `onClick`, so Enter in the question under it (the hand-over picker, an archive reason) did
-  not confirm (D114 says it should). Fix: a form, whose submit stops at itself — React carries
-  a submit through a portal to the form above it, and three admin panels open these from
-  inside one.
-- [x] 113 **The prompt's "whose record" line was read by nobody.** Found by the guidelines
-  review, fixed in P11H. The customer's name sat in a paragraph between the title and the
-  description; Radix wires only those two to the dialog, so a screen reader heard "Issue Q-12"
-  and the sentence and never the company — the whole point of D98. Fix: the name is the first
-  line of the description, in both faces of `ResponsiveDialog`.
-- [x] 114 **The sheet's 250 ms outranked "less motion".** Found by the guidelines review, fixed
-  in P11H. The vaul override is an attribute selector, which beats the reduced-motion block's
-  `*` whatever the source order, both being `!important`; a person who asked for less motion
-  still got the slide. Fix: the sheet is named inside the reduced-motion block too, and
-  `tests/motion.spec.ts` opens one at 375 with motion reduced.
-- [x] 115 **A held sheet still showed the handle that invites a swipe.** Found by the guidelines
-  review, fixed in P11H. With words typed the sheet does not drag (#110) and the pill at its
-  top said it would. Fix: the content carries `data-drag="off"` while held and the kit hides
-  the pill.
-- [x] 116 **The log's channel chips were the one control in the sheet under 44.** Found by the
-  guidelines review, fixed in P11H (D130). Native radios inside a label, and the label is not a
-  kit control, so `touch` never reached it. Fix: `touch` on the label.
-- [x] 117 **Four forms' submit did not stop at itself, and the SMAC box could be autocorrected.**
-  Found by the guidelines review, fixed in P11H. `stopPropagation` on the log, project and
-  mark-lost forms as on confirm and prompt (#112); `spellCheck` off on the number box.
-
-- [x] 118 **Five sheets could still be swiped away with words in them.** Found by the critic,
-  fixed in P11H (D129). #110 held the log by its own `dirty`; New and Edit project, Mark lost,
-  Prompt and Confirm — and the nine forms that were sheets before this box — passed nothing, so
-  a half-typed project was one downward swipe from gone. Fix: `ResponsiveDialog` hears `input`
-  under it and holds itself once anything is typed, on every form; `guardOutside` stays for what
-  inputs do not say.
-- [x] 119 **`(max-width: 767px)` is not `max-md:`.** Found by the critic, fixed in P11H (D128).
-  Tailwind compiles `max-md:` to `(width < 48rem)`; at a fractional width — zoom, an odd pixel
-  ratio — 767.5 was a phone to the stylesheet and a desktop to the hook, the very defect D128
-  closed, and the spec at 767 and 768 could not see it. Fix: `PHONE_QUERY` is `(width < 48rem)`;
-  `PHONE_MAX_PX` stays for the spec's viewport.
-- [x] 120 **The tab a thumb presses was 37px inside a 44px list.** Found by the critic, fixed in
-  P11H (D130). `touch` sat on the list; the trigger is `calc(100% - 1px)` of a padded list. Fix:
-  `touch` on the trigger, and the list lets go of its height on a phone.
-- [x] 121 **Three search boxes' clear grew over the text.** Found by the critic, fixed in P11H.
-  The projects, quotations and dispatches searches each draw their own clear button — a
-  `Button`, so 44 wide now — inside an input that reserved 40px; the tail of a long term sat
-  under the X. Fix: `max-md:pe-12` on the three. Four hand-drawn search boxes is the cause and
-  was fixed in P11J-2 (#143); the picker race is still parked.
-- [x] 122 **The sheet's stated height was fiction.** Found by the critic, fixed in P11H. The kit's
-  `max-h-[80vh]` is an attribute selector and the sheet's `max-h-[92dvh]` never applied. Fix:
-  `max-h-[88dvh]!`, the company drawer's figure, in dvh.
-- [x] 123 **Six dialogs grew four rem on the desktop and nobody wrote it down.** Found by the
-  critic, recorded in P11H (D129). The one responsive dialog is `sm:max-w-lg`; the six it took
-  over were `sm:max-w-md`. One width for every form is the point of one dialog; the change is
-  recorded rather than reversed.
-- [x] 124 **`one-look` had a hole the width of a file, and failed a block comment.** Found by the
-  critic, fixed in P11H. The whole of globals.css was exempt from the phone-line rule, so a
-  second hand-written query there passed; `max-[767px]:` and a range query were not matched; a
-  line opening with `/*` counted as a breach. Fix: `path#text` allowances that exempt only the
-  lines carrying the text (the 980px blur line), the pattern widened, `/*` skipped.
-- [x] 125 **A comment lied about a field.** Found by the critic, fixed in P11H. `spellCheck`
-  off on the prompt's single-line box was explained as "a number", and the same box takes the
-  admin's new password. The behaviour was right; the comment says both now.
-
-- [x] 127 **A press on Add company opened nothing, one time in thirty, at a phone width.** Seen
-  in the 11G gate (forms at 375, quotations), in the 11H gate (`reading.spec.ts:85`, Arabic, 375)
-  and once in 32 repeats of those two tests; fixed in P11H (D129). Cause: the trigger was a
-  Radix `DialogTrigger` inside the Dialog branch and a `DrawerTrigger` inside the Drawer branch,
-  and `useIsPhone` swaps the branch on the first render after hydration — the fixture waits for
-  `html[data-hydrated]`, which is the root's effect, and the swap commits a beat later, so the
-  button Playwright (or a thumb) had resolved was unmounted between press and release. Fix: the
-  opener stands outside the swap, a `Slot` that sets `open`, with `aria-haspopup` and
-  `aria-expanded`; the faces hand focus back to it on close (Radix only hands it to its own
-  trigger). Thirty-two repeats after: none failed. Was parked for 11I as "the picker race"; the
-  picker was innocent. The first cut of this fix handed the trigger to a raw `Slot` and skipped
-  the kit's `useSlotChild`: a button built in a server component crosses as a lazy wrapper, and
-  the Arabic company drawer went to the error card twice in the next gate; the opener resolves
-  its child first, as every trigger in the kit does.
-- [x] 126 **Six Arabic strings, and one imperative the lint did not list.** Found by the Arabic
-  reviewer on the 375 shots, fixed in P11H. «الأمتار» is linear metres where the field says
-  م²; "the number **on** Q-7" was an English calque twice («على {label}» → «لعرض السعر {label}»
-  and «للتوريد {label}»); «تُبلَّغ لصاحب» took the wrong preposition; the log's subtitle called
-  the entry «إدخال» where every other screen says «تسجيل»; and «فاتركه» — "leave it", to a man —
-  had shipped in the admin's last-day hint because the lint matches whole words and the
-  imperative wore a prefix and a suffix. Fix: the strings, and `gendered-arabic.mts` lists
-  «اترك» with its attached forms.
-
-Seen on the 375 shots and left, with the reason: «أبريل 2026» is the one month label on two
-lines, which is D65's rule (the year only where it changes) and not a fault; the focused textarea's
-ring peeks over the top of the scrolling body, which is the ring doing its job at an edge. The
-third one on that list — the quotations list's status chips wrapping round the list/board switch,
-so «الكل» landed on a second row that read as another group — was the search-box question's
-neighbour and was parked for box J. It is fixed there (§5 #153, D145).
-
-Refuted or confirmed by the critic, so the next reader does not re-find them: `@variant max-md`
-inside `@utility touch` compiles on Tailwind 4.3 to `@media (width < 48rem)`; the calendar's day
-cells use `buttonVariants` and stay small; the bell's hand-written `size-11 md:size-8` is exactly
-`size-8` plus `touch`; vaul's `handleOnly` with no handle is "no drag", `dismissible` stays true
-so Escape and the overlay work, and `onPointerDownOutside` prevented does stop it closing; the
-250 ms `!important` beats vaul's inline transition and not its `transition: none` during a drag;
-`useIsPhone` reads a server snapshot, so nothing mismatches on hydration, and every form holds
-its state above the Dialog↔Drawer swap, so a rotation mid-form loses nothing.
-
-Left on purpose, so the next reader does not re-find it: `transition-all` on the kit's button
-animates colour, a shadow and a one-pixel translate and nothing that lays out, which is what
-the guideline's warning is about; it stays. And one throw the suite now ignores: React's
-development build measures a redirected or missing page with a timestamp Chromium refuses
-("cannot have a negative time stamp"), and nine specs failed on it in one warm run without a
-line of the app in the trace; the fixture names that one message and no other, and a
-production build never emits it (`tests/helpers/i18n.ts`).
-
-Speed and reliability, measured (P11I). Two harnesses first — what every screen asks the
-database (`npm run measure:reads`) and what a mid phone pays to draw the main screens
-(`npm run measure:speed`) — both against the production build, both keeping a baseline file
-the next change is held to; then the reads halved where they were repetition, and the unhappy
-paths walked with the wire cut.
-
-- [x] 128 **Every screen read the signed-in user twice and the calendar once per band.** Measured
-  by the harness (459 statements over 43 screens on the volume floor), fixed in P11I-1 (D131).
-  `getRealUser`, `getUser` and `listNonWorkingDays` are React `cache` functions now: 400
-  statements over the same 43 screens, every screen at least one fewer, the team screen two.
-  What remains is one statement per figure, each under 4 ms.
-- [x] 129 **A write with no signal became the error card, with the words inside it.** Found reading
-  the submit paths for the unhappy walk, fixed in P11I-3 (D132). Every client call of a server
-  action — the submit helper, the four forms and the sign-in on `useActionState`, fourteen
-  `startTransition` sites — awaited it bare; a rejected call, not a refused one, went to the
-  boundary. The first fix caught it in four places and the company form still became the error
-  card, because a form's action rejects the same way; the cause is one guard, `useWireGuard`,
-  twenty-three calls go through it, and a lint rule refuses a bare one. `tests/unhappy.spec.ts`
-  cuts the wire under a log, the company form and the archive question.
-- [x] 130 **Nobody knew what a rep's phone paid to draw a screen.** The 11C measurement was of
-  the database alone; the phone was a feeling. P11I-4 built `npm run measure:speed` (D133) and
-  measured: a cold screen is live in 2.9–3.5 s on a slow 4G with the CPU held four times slower,
-  for 467–582 kB, of which 237–308 kB is script and about 160 kB fonts and styles. The first two
-  cuts of the script lied — "cold" had the sign-in page's chunks in the cache (65 kB for the day
-  screen), the hydration mark read 0 because tsx's `__name` wrapper threw silently inside the
-  init script, and `request.sizes()` reported cache hits as negative bytes — and each lie is a
-  sentence in the script's header now. The baseline is written; `--check` holds the next change.
-- [x] 131 **Four font weights shipped for one bold letter.** Found by the figures in #130: seven
-  font files preloaded on every cold load, and weight 700 used once, on the brand mark. Fixed in
-  P11I-4: three weights, the mark is 600, one file fewer per family on every first visit —
-  re-measured, every cold screen is 35–40 kB lighter and live about 300 ms sooner.
-- [x] 132 **A Save whose answer the wire lost made a twin.** Found walking the unhappy paths after
-  #129: with the sentence "nothing was saved" on the screen the rep presses Save again, and the
-  log — or the company, or the project — that had landed was written twice. Fixed in P11I-5
-  (D134): the creating actions answer the same words from the same person to the same record
-  inside two minutes with the row that exists (`src/lib/writes.ts`). `tests/unhappy.spec.ts` lets
-  the request through, drops the answer, and counts one row.
-- [x] 133 **A session that ended mid-form said "you are not allowed to do that."** Found reading
-  `NotAllowed`: it carried the reason (`signedOut`) and every guard threw the reason away. Fixed in
-  P11I-5 (D135): `refusalKey` in `src/lib/authz.ts`, nine guards answer through it, and the
-  sentence says the session ended, nothing was saved, and the way back — sign in again in a new
-  tab, press Save here once more. `tests/unhappy.spec.ts` deletes the page's own session row
-  mid-form and reads the sentence with the words still in the box.
-- [x] 134 **The prompt dialog painted the number red when the server was not reached.** Found by
-  the guidelines review: every whole-form refusal was shown as the field's, with `aria-invalid`
-  and the ring. Fixed in P11I-5: a field's refusal at the field, a whole attempt's in the footer,
-  the field read-only rather than disabled while it saves so the caret stays, ids from `useId`,
-  and `dir="auto"` on the reason.
-- [x] 135 **The sign-in card jumped when the server was out of reach.** Found by the guidelines
-  review: the error slot was one line, sized for the credentials sentence (D67), and the wire's
-  sentence takes two at 375. Fixed in P11I-5: two lines are reserved, and the fields are marked
-  invalid only when the server said they were.
-- [x] 136 **The twin swallowed the correction it was meant to protect.** Found by the critic over
-  the 11I diff, fixed in P11I-6 (D134). The twin matched on the words alone, so a second entry in
-  the same words against another project of the same company, or the same words written again
-  with the follow-up the rep had forgotten, was answered with the first row and its own row never
-  written — while the screen said "Logged". Worse, it did not exclude archived rows, so unfiling
-  an entry and writing it again — the only way to fix a wrong day (D70) — put the unfiled row's
-  id back and nothing appeared. Fix: every stored field is compared (`sameField`), archived rows
-  are excluded, and the company and project twins compare their whole form, the first contact's
-  phone included. `tests/unhappy.spec.ts` unfiles an entry and writes it again.
-- [x] 137 **Three reads called an action bare, and the lint could not see them.** Found by the
-  critic, fixed in P11I-6. The dispatch dialog's remaining items and last dispatch, and the
-  quotation dialog's last quotation, were `.then` chains with no catch: with the wire cut and the
-  lookups already cached, the dispatch form sat on its skeleton for ever with no sentence. The
-  rule only matched `await`, so it called this shape guarded when it was not. Fix: the three go
-  through `useWireGuard`, and the rule gained the `.then` shape and the JSX `action=` shape —
-  proved by linting a file that has both.
-- [x] 138 **The user menu told an expired session it was not allowed.** Found by the critic, fixed
-  in P11I-6 (D135). The theme and language actions, the search and the ten form lookups guard
-  themselves instead of through a shared `guard()`, and each one caught everything and answered
-  "You are not allowed to do that" — including the session that had simply run out while the menu
-  sat open, which is the commonest failure there. Fix: all thirteen answer through `refusalKey`,
-  and a failure that is not a refusal says `somethingWrong` rather than accusing anyone.
-- [x] 139 **The speed harness could print green having measured nothing.** Found by the second
-  critic pass, fixed in P11I-7. Its options were only understood as `--runs=3`; written the way its
-  own header showed, `--runs 3`, the value became the string "true", the count NaN, the loop ran
-  zero times — and the table of empty cells passed `--check` with "no screen is slower or heavier"
-  and exit 0, while `--write` saved a baseline of `{}` that made every later check pass for ever.
-  Fix: the parser takes both forms, refuses an option it does not know, and a figure that is not a
-  number fails the run before anything is written or compared. A guard that cannot fail is not a
-  guard.
-- [x] 140 **An interrupted reads run left the whole cluster logging every statement.** Found by the
-  second critic pass, fixed in P11I-7. `alter system` writes the container's own configuration
-  file, not the connection's, and the only undo was a `finally` — which Ctrl+C during a run of
-  forty-three screens never reaches. Statement logging would have stayed on for every database in
-  that container, the test suite's included, across restarts, and the four sessions the run made
-  would have stayed alive. Fix: one `putBack`, called from the `finally` and from SIGINT, SIGTERM,
-  SIGHUP and SIGBREAK. In the same pass the check learned to fail on a screen that answered with
-  an error or whose markers never reached the log: zero statements is a measurement that did not
-  happen, not the best figure in the table.
-- [x] 141 **Three smaller things the second pass found.** All fixed in P11I-7. The company twin
-  compared the whole company but only the contact's name and phone, so a corrected position, email
-  or note on the second press was swallowed — it compares all five now. `common.signedOut` is
-  reached only through `refusalKey`, so no call site writes it and `unused-messages` was blind to
-  it: `REFUSAL_KEYS` is exported from `src/lib/authz.ts` and read as a message family, the way
-  every other computed key is. And the docs said `npm run measure:reads --check`, which npm eats
-  before the script sees it; both here and in README it is `-- --check`.
-
-Left for the founder, from the measurements and the critic. A request for a quotation or a
-dispatch has no twin guard: those two writes carry line items, so "the same write" means comparing
-every line of two papers, and it was not worth doing half. If the wire eats the answer to a
-request, the coordinator can get two identical papers seconds apart; the rep may withdraw his own
-(D32) and she may send one back, so nothing is stuck, but nobody is told why there are two.
-
-Refuted this box. The withdraw test's `pickFirst` hang (I6, seen once in the 11G gate) did not
-come back in eight runs of `tests/quotations.spec.ts:608` after the 11H opener fix (#127); it is
-treated as the same defect and closed. The pinned weekday (P10b) is decided against: the
-tests that depend on the working week branch on today's weekday and assert both sides
-(leave, reports, figures, manager), and a clock pinned in the app while the database keeps
-its own `now()` would split the one definition of today (rules/data.md) — the suite runs on
-the day it runs.
-
-Left for the founder, measured and not fixed. The document of a list screen is 500 kB decoded
-on the volume floor — the server-rendered HTML and the same tree again as the payload React
-takes over — and the phone parses both; the fix is fewer client components per row and less
-per row, which is a design change to the tables and not a box-11I one. Every screen also fires
-some twenty prefetches on load (one per link in view, in two flavours), each a server render of
-the layout with its session read; the reads harness counts the document alone and does not see
-them. A refusal toast on the phone covers the sheet's own Save button for the seconds it shows.
-`FormFooter` disables the pressed button while it saves, which is the double-press guard and
-also drops keyboard focus to the page; and its pending word is "Saving…" whatever the verb was.
-
-What a good CRM has that Kladra does not (P11J). Seven readings of the app — the rep's day, the
-coordinator's desk, the manager's week, the founder's question, the feature surface of the CRMs
-of 2026, FACET as it was actually used, and the cladding trade in Saudi Arabia — proposed
-freely; each proposal was then read against the same three questions (whose is it, when in
-their day, what does it replace) and against the code, and most of them died there. What
-survived is below; what did not is in DESIGN §4 and §6, with the reason.
-
-- [x] 142 **Three fields were written by everybody and read by nobody.** Found by the rep's
-  reading, fixed in P11J-1 (D136). The founder asked for Notes on the company, on the contact
-  captured with it and on the project (SPEC §3); all three are kept, queried and carried into the
-  drawer — and the drawer spent them on the Edit form and rendered none of them. A rep in a lobby
-  who wants the sentence he wrote in March has to open a form to read it, which is why the field
-  quietly stopped being used. Fix: each note is read where its record is read. The labelled typed
-  block was already solved once on the quotation sheet, so the pattern became `NoteBlock` and the
-  five sites share it. `tests/notes.spec.ts` walks all three and the manager who may not write.
-
-- [x] 143 **The coordinator's desk had two search boxes over one URL, and ran newest first under a
-  caption that says oldest.** Found by the coordinator's reading, fixed in P11J-2 (D137). Four
-  screens search a list and four boxes were written: one component on companies, and a hand-drawn
-  one inside each of the projects, quotations and dispatches tables — which is why #121's clear
-  button had to be fixed three times. The queue renders two of those tables, so it drew two boxes
-  over one screen: both wrote `?q=`, each wrote its own `?status=` over the other's, and the
-  second box showed empty above a list that was already filtered, because a box holding its own
-  text cannot hear another one. Second fault on the same screen: `listQuotations` and
-  `listDispatches` order newest first — right for every screen where somebody looks something up,
-  wrong for the one desk that is worked DOWN, where it puts the row she must answer next at the
-  bottom and lets the row cap drop the oldest. Fix: `ListSearch` is the box, the three tables take
-  `showSearch={false}` and the queue draws one over both lists; both queries take
-  `order: "oldest"` and the queue passes it. `tests/queue.spec.ts` asserts one search role on the
-  desk, the term written once, and the longest wait as the first row.
-
-- [x] 144 **The coordinator prices projects that have already been given up.** Found by the
-  coordinator's reading, fixed in P11J-3 (D138). `markProjectLostAction` stamps `lost_at` and
-  nothing in the quotation or dispatch chain has ever read it — the only place that knows about
-  lost is the gate that refuses a NEW request. So the race is real and invisible: the rep marks
-  the project lost, his request stays in her queue looking exactly like work, and she prices a job
-  whose answer is already no. Fix: `projectLostOn` and `projectLostReason` on `QuotationRow` and
-  `DispatchRow` — `projects` is already joined, so it is two more columns and no new join — read
-  as a Riyadh day in SQL the way `issuedOn` is; one red line under the project name on the row,
-  the day and the reason in the drawer. Nothing is withdrawn on anybody's behalf. The demo had no
-  lost project at all, so it gained one, with a request still waiting on it.
-- [x] 145 **A stored code was printed on a screen.** Found by the same reading, fixed in P11J-3.
-  `projects.lost_reason` is a code for the nine reasons and the rep's own words for the tenth; the
-  projects table knew that and kept the rule in a client hook, and the company drawer rendered the
-  column. A rep opening a customer read "competitor". Fix: `src/lib/loss-reason.ts` owns the list
-  and the one reader, both screens use it, and `check-messages` reads the union from its new home.
-- [x] 146 **The palette sent the coordinator to a screen with nothing on it.** Found by the
-  coordinator's reading, fixed in P11J-3 (D139). The search action shows her every company on
-  purpose and the palette sent every company hit to `/companies?open=`, which narrows to the
-  reader's own floor — hers is empty — so she got "Nothing here yet" under a panel saying the
-  company she had just read the name of "is no longer available", on a screen her rail does not
-  even list. Fix: the destination is a function of the role, and hers is her own quotations
-  screen filtered to that company. Contacts route through the same rule even though she is shown
-  none.
-
-What P11J-3 did NOT do, and why. Marking a project lost still says nothing about a request
-waiting on it: warning the rep at that moment needs the count on the project drawer, four files
-deep, and the harm it prevents is a glance now that her desk says it. It is worth doing the day
-the project drawer next opens for another reason. And the queue's own row links still carry
-`?status=requested`, which the queue does not read: harmless, and not worth moving the parameter
-that decides which drawer opens mid-slice.
-
-- [x] 147 **Nothing said what we lose to.** Found by the founder's reading, fixed in P11J-4
-  (D140). Jerom's five questions got the chain card in P9 — of a quarter's quotations, where did
-  each end up — and the half underneath it was never built: when a project dies, what killed it.
-  The data was there the whole time, because Mark lost has refused a save without a reason since
-  P3, and the column had exactly one reader, on the project it belonged to. Fix: `lossCohort` in
-  `src/lib/losses.ts` over the chain card's own window, the nine codes bound from the constant
-  rather than written again in SQL, anything else folded into `other` by the same rule
-  `lossReasonLabel` reads by; `LossCard` beside `ChainCard`, metres first, one neutral tone. The
-  demo carried no lost project at all before P11J-3 and now carries five, on three floors, for
-  four different reasons and one written line.
-
-- [x] 148 **Two clocks on one screen.** Found by the manager's reading, fixed in P11J-5 (D141).
-  `stuckList` filters waiting requests in TypeScript on purpose, and says why four hundred lines
-  above: the weekend and the holiday table are `@/lib/workdays`'s business and a second copy of
-  that arithmetic in a `case` expression is how a rep back from Eid gets told he is late. The
-  follow-up half of the same function then did exactly that, in two statements, for the count and
-  for the threshold — so a call promised for Thursday read "3 days overdue" on Sunday beside a
-  request from Thursday reading "1 working day". Fix: SQL returns the day, `workingDaysBetween`
-  ages it against the rep whose call it is, and the calendar cut that survives in the WHERE is a
-  deliberate superset with the reason written on it. The uncovered band is aged the same way, and
-  the holiday window now reaches back to the oldest FOLLOW-UP as well as the oldest request —
-  the D97 bug would have come straight back through the new arithmetic otherwise. The demo moved
-  with the rule: its longest-overdue follow-up was four calendar days past, which is never three
-  working days past, so the band it is meant to fill was empty in every screenshot ever taken of
-  that screen. It is nine days past now.
-- [x] 149 **The strip said the team's gone-quiet total and the table said whose the OTHER figure
-  was.** Found by the manager's reading, fixed in P11J-5 (D142). Every other figure on that strip
-  has a column under it. `TeamMemberRow` gained `goneQuiet` from the same `followUpCountsForRep`
-  the never-contacted figure already came from, so a row and the strip above it cannot drift, and
-  the figure opens that rep's quiet list.
-
-What P11J-5 deliberately did NOT change: `goneQuietCompanySql` and `neverContactedCompanySql`
-still count CALENDAR days. They were on the list as the same defect and they are not one. Those
-two measure a customer's silence rather than a person's lateness: a fortnight without a word is a
-fortnight whoever was at work, the bands accuse nobody, and counting working days there would
-delay surfacing exactly the customers somebody should ring the morning he gets back from a
-holiday. The rule that tells the two apart is now in DESIGN §5, which is the change that was
-actually needed.
-
-- [x] 150 **The dispatch was the one record that could not say what had happened to it.** Found by
-  the coordinator's reading, fixed in P11J-6 (D143). Its five transitions have been writing audit
-  rows since P5 — requested, quantities edited, approved, number corrected, refused with her words
-  — and the drawer read none of them, so a refusal and the resubmission after it were invisible on
-  the screen they were about. Fix: `src/lib/dispatch-events.ts` is the list, the actions build
-  their audit string from it, `dispatchHistory` reads the log the way `quotationHistory` does, and
-  `DispatchHistory` draws it last in the sheet. `check-messages` reads the new union, so a sixth
-  transition cannot ship without a sentence in both languages. "was {number}" moved to `common`
-  on the way past: one sentence, said by both chains, had been two keys. `tests/smac.spec.ts`
-  asserts the one line this trail draws that no event on it draws — the number it used to carry,
-  under the correction — which the dialog's own hint promises in both languages and nothing
-  checked.
-
-- [x] 151 **Her desk counted itself off two capped arrays.** The stranger read's #33, fixed last
-  in P11J-7 (D144). `waiting`, the two late counts and the longest wait were all derived from the
-  rows the two lists had been given, and a list is two hundred rows (D80). The fix had to avoid
-  the trap the comment above it names — a hand-written second query over the same tables once put
-  a request on the strip that neither list showed (D95) — so the new read goes through `narrowTo`,
-  the predicate the list and the count already share, and asks for one column with no cap. The
-  working-day arithmetic stays where it belongs (D141). Both lists gained the tail every other
-  list screen has had since D80.
-
-- [x] 152 **The demo approved two dispatches the day before they were raised.** Found by the
-  critic pass over P11J-6 and fixed in the same slice. The seed builds a dispatch's two instants
-  on two clocks: `createdBack` counts WORKING days back from today, and `approvedOnDayOfMonth` is
-  a fixed calendar day of this month, because a month is counted from its approvals and the demo's
-  months must not move (S41). Past the first days of a month the working ladder overtakes the
-  fixed day — on Tuesday 8 September, three working days back is the 3rd, and "approved on the
-  2nd" is the day before — so two dispatches carried an `approved_at` earlier than their
-  `created_at`, and an `updated_at` earlier still. Nothing read the pair in order for five phases.
-  P11J-6 put the trail on the drawer and its first line said "Approved" over "Requested", on the
-  two current-month dispatches a reader is most likely to open. Fixed in three places, because
-  one of them is the cause and the other two are the guard: the seed derives an approved
-  dispatch's raising day from its approval day rather than from the ladder; the trail's own spec
-  asserts the first line is the request; and the database refuses the shape outright
-  (`dispatches_approved_after_created_check`, migration 0013) — the app cannot write it, but a
-  seed, a migration or the import that will exist next year can, which is what the rest of that
-  table's checks are for.
-
-- [x] 153 **The chips over a list were five components, and the row they sit in was four.** The
-  wrap was seen on the 375 shots in P11H and parked for box J as the search-box question's
-  neighbour; fixed in P11J-8 (D145). The symptom was the quotations list at 375, where the
-  list/board switch, four status chips and «All» were one wrapping row and «All» came round
-  underneath behind a divider, reading as a group of one. Reading for the cause found the rest of
-  it: the projects screen had its own private copy of the chip — a default-size square button, a
-  different height from the four on the other screens, and with no `LinkPending`, so it was the
-  one filter in the app that gave no sign it had been pressed (D126). Fix: `FilterRow` holds the
-  layout rule once and `FilterChip` gains the one thing the private copy had, in the app's own
-  words for the two tones; the four rows and the five chips are one of each.
-  `tests/filters.spec.ts` asks the pixels, so a sixth copy is a different height and fails.
-
-- [x] 154 **A picker said something had changed when nothing had, and the dialog waited for ever.**
-  Reported by a rep in the first real use (P12): raise a dispatch, choose a quotation, choose again,
-  and the dialog hangs. Reading found the exact sequence and it is not the dispatch screen's fault.
-  Every option in the list is pressable, the chosen one included — it wears a tick, and pressing what
-  is already true is ordinary. `SearchableSelect` called `onChange` for it, and the dialog's handler
-  read the word literally: it cleared the items it had loaded for that quotation, then set the same
-  value back. React bails on a setState that changes nothing, so the effect that reloads them found
-  every dependency equal, never re-ran, and the gate that swaps the skeleton for the form could never
-  come true again. Only closing the dialog recovered it. Nine fields are built on the control and a
-  second one had it live: choosing the same country again in the company form wiped the city under
-  it, which would have filed a company in Dubai under Riyadh had the rep not noticed. Fix: the
-  control reports a change only when the value is not the one it holds (D146), one line where the
-  word is said rather than nine where it is believed. `tests/picking.spec.ts` presses the same option
-  twice in both places.
-
-- [x] 155 **A handover moved the company and left the work behind.** Found while building P12-3,
-  by the agent that was writing the drawers rather than by the one that wrote the rule — it read
-  what the new write gate would refuse and saw that a rep handed a customer could not touch a
-  single project on it. Cause: D51 moved `companies.rep_id` alone, and that was complete while
-  every read went through that one column. P12 gave a project and a contact an owner of their own
-  (D147), so the same statement now leaves the man who left holding the jobs and the new owner
-  holding nothing. Fix: the handover moves the projects and the contacts THAT REP owned, and only
-  his — on a shared company a third rep's project stays his, because a handover is not a way to
-  take somebody else's work — and it drops the incoming rep's own share of the company he now
-  owns, so nobody is left sharing what is his. Walked in `tests/sharing.spec.ts`.
-
-- [x] 156 **A share check that was false for ever, and the screen that offered what it refused.**
-  Found by `tests/sharing.spec.ts` on the slice that introduced it: a rep put on a job was shown the
-  Request quotation button and told "you are not allowed to do that" when he pressed it. The cause
-  is in rules/data.md, written down after it happened three times in FACET, and it happened again
-  here: a Drizzle column handed to a `sql` template keeps its table qualifier only while the outer
-  query joins something. The project drawer's read joins a company, so `projects.id` stayed
-  qualified and the share was found; the action's read has a single FROM, so the same expression
-  rendered bare, resolved inside the subquery, and asked whether a share row points at its own id.
-  Never true, no error, no row. Fix at the shape rather than at the site: the two share fragments
-  take a written fragment and no longer accept a column at all, so the compiler refuses the trap,
-  and every call site names its table outright.
-- [x] 157 **Whose paper it is was still read off whose customer it is.** Found in the same walk. The
-  quotation drawer decided its whole action row with `mayQuote(user, companyRepId)` — edit, revise,
-  withdraw, record the customer's answer — and until a project could be shared that was the same
-  person as the raiser, so nothing was wrong. Sharing separated them and the flag broke both ways at
-  once: the rep who raised the quotation was offered none of his own buttons, and the rep whose
-  customer it was would have been offered all of somebody else's. SPEC §3 settles it in one line —
-  an item belongs to whoever created it, and only he edits it — so the drawer and the four actions
-  behind it ask `mayWrite(user, quotation.repId)` now. The lesson is the one D42 already wrote: when
-  two questions have had the same answer for a year, the day they stop is the day nobody notices.
-
-- [x] 158 **The dev server ate the machine again, and took a second acceptance run with it.**
-  §5 #68 was closed in P11J with a four-gigabyte ceiling on the test server. This is the same
-  failure on the other one: 3100 had no ceiling, grew to 3.9 GB across a long session of edits, and
-  when a full suite started beside it Windows took the memory back from both — the gate died thirty
-  minutes in and the founder's own audit copy died with it. Fix: `npm run dev` is `scripts/dev.ts`
-  now, the same fifteen lines `dev:test` has had since P11J, so both servers die by themselves and
-  say why rather than starving whatever else is running. No dependency added for it; `cross-env`
-  would have been a package to do what Node already does.
-
-- [x] 159 **The hand-over collided with the very thing sharing exists for.** Found by the gate, in
-  the shape a gate finds things: five failures across three files, none of them naming the cause. A
-  contact belongs to a rep since P12, so two men may hold the same person on one company and that
-  is not a duplicate — and then the manager hands that company to the second man, the first man's
-  people travel with it, and the same number arrives at somebody who already has it. Two unique
-  indexes refuse it at once: one number per rep per company, and one main contact per rep per
-  company. The transaction died, the manager read "something went wrong", and the hand-over silently
-  did not happen. Fix in `handOverCompanyAction`: the row that stands is the one the NEW owner wrote
-  himself, the arriving duplicate is archived where it is rather than deleted (S16) and keeps the
-  name of the rep who wrote it, and the people who do move arrive without the main flag when he has
-  already chosen a main contact. He is also no longer left sharing the projects he now owns.
-  `tests/sharing.spec.ts` builds the collision in one row and hands the company over through the
-  manager's own dialog.
-
-  **And the reason it took five failures to see one bug.** `tests/attribution.spec.ts` hands a
-  company over to prove that achieved metres do not move with it, and put back `companies.rep_id`
-  alone afterwards — true when a company was the only thing that moved, and false since P12. So it
-  left Faisal's contacts on Saad's floor for every file that ran after it: a duplicate phone that
-  was no longer a duplicate, a "his own contact" step where the contact was already his, and a Log
-  button the drawer was right to withhold. A spec that provokes a state change restores everything
-  that change touched, by ID, captured before it moved — `floorOfCompany` and `restoreCompanyFloor`
-  in `tests/helpers/db.ts`, one copy for every spec that hands a company over — and the walk that
-  leaves a contact and a quotation behind now takes them with it. The rule generalises past this
-  file: **when an action grows a second effect, every spec that undoes the first one is now
-  half-written**, and the failure lands in some other file, days later, wearing somebody else's
-  name.
-
-- [x] 160 **Two cards on one screen answered "whose" two different ways.** Found in the critic pass
-  over P12-12, before it shipped. The metrics tab puts four cards under one rep picker, and two of
-  them were written before a record could belong to anybody but the customer's owner: `chainCohort`
-  scoped by `companies.rep_id` and `lossCohort` did the same, while the segment card and the ratios
-  beside them scope by the person who RAISED the record, which is what achieved metres have meant
-  since D86. Until P12 the two were the same person and nothing was wrong. Sharing separated them,
-  and the picker put the difference on one screen: pick Faisal and the metres are his, the funnel
-  is his customers'. The cohorts ask `quotations.rep_id` and `projects.rep_id` now — whose paper
-  and whose job, not whose customer — which is the same sentence the rest of the tab says. The
-  general form is D42's, again: **two questions that have had the same answer for a year are still
-  two questions**, and the day they diverge is the day nobody notices.
-
-- [x] 161 **The card the founder asked for drew one bar.** Also found before it shipped, and only
-  because the demo was looked at. "Where did this month's metres go by customer segment" was built,
-  tested and green — and every approved metre in the seeded quarter but one had gone to a
-  contractor, so the ranked bars the whole card exists for drew a single row at 96%. Nothing was
-  wrong with the code; the demo had never had a floor that could show it. Fixed in the seed rather
-  than in the query: the last two months' history sells to a station, a consultant, a factory and a
-  sign-maker as well as to contractors, every rep's month and every bar on the six-month card
-  untouched, because only the customer changed. rules/data.md already had the rule — every band,
-  count and threshold needs a row on the wrong side of it — and this is the same rule for a shape:
-  **a card whose shape the demo cannot show is a card nobody has seen work.**
-
-- [x] 162 **A migration was generated, recorded, reported successful and never applied.** Found in
-  P12-4, by asking the catalogue for the indexes it had just created and getting nothing back. The
-  migrator applies a journal entry only when its `when` is past the newest one already in the
-  ledger, and 0014 carried a timestamp a day into the future, so 0015 — generated with the real
-  clock — was silently behind it and skipped. Every layer said everything was fine: `drizzle-kit`
-  wrote the file, the journal listed it, `db:migrate` printed a table count and exited 0. The
-  script's own docstring had named this exact failure for eleven migrations and the code below it
-  only ever refused an EMPTY database, which is the shape a defect takes when a comment is treated
-  as a guard. It compares the ledger against the journal now and fails naming the migrations that
-  were never run. The rule generalises past Drizzle: **a check that knows the failure mode by name
-  must refuse it, not describe it** — and rules/migrations.md's "confirm from information_schema"
-  is what caught it, which is the second time that habit has paid for itself.
-
-- [x] 163 **A drawer refused work the action behind it would have allowed.** Found by the credit
-  walk in P12-4, which could not press a button that should have been there. Sending goods against
-  a quotation was gated on `mayWrite(actor, quotation.repId)` — its raiser, and nobody else — while
-  `requestDispatchAction` asks `mayRaiseFor`: the customer's rep, or anybody put on the job. §3 is
-  explicit that every rep on a shared project raises quotations and dispatches against it, so the
-  rep whose customer it is could not send against paper his colleague had raised on his own job.
-  Until P12 the two predicates named one person and nothing was visible. DESIGN §5 has said since
-  P4 that a screen never offers work the action behind it would refuse; this is that rule in the
-  mirror, and it is worth writing down that **the mirror is also a defect** — a button missing where
-  the write would have said yes is a permission nobody can find and nobody will report.
-
-- [x] 164 **A UNION subquery answered a name that did not exist, and the screen just asked less.**
-  Same slice. "Everybody on this job" was built with the query builder as a union of two selects
-  read back through an alias, and Drizzle renders a union subquery with the underlying column
-  names — so the statement raised `column "u" does not exist` on every call. Nothing showed it: the
-  one caller is the dialog's courtesy read, whose failure means "there is nothing to ask", so the
-  credit question silently stopped being asked and every dispatch went to whoever raised it, which
-  is exactly what the screen looked like before the feature existed. A missing question looks like
-  a question with one answer. Two rules out of it: **write a read whose failure is invisible as
-  plain SQL**, where what it asks for is what it selects; and a courtesy read that decides whether a
-  control exists is not a courtesy — it is the control.
-
-- [x] 165 **A figure truncated into a different figure.** Found by shot-looker in P12-4's own
-  screenshots, on a screen the slice had not touched. `StandingStrip`'s value cell carried
-  `truncate`, and an Arabic date needs more room than an English one: «31/أغسطس/2026» in a 103px
-  grid cell at 375 rendered "31/أغسطس/6…" — a date that does not exist, printed with an ellipsis
-  small enough that nobody reads it as a warning. English never showed it, because "31/Aug/2026"
-  fits. The file already had the rule one line below the bug, on the caption: "wraps, because a
-  sentence that truncates says something else." The value gets it now too, and harder: **a sentence
-  that truncates says something else; a figure that truncates IS something else.** Every strip in
-  the app — the queue, the team, the company header, the project and quotation drawers — reads from
-  the one component, so it was one line. The general form is the reason DESIGN §4 measures both
-  locales: **a width that fits in English is not a width, it is a coincidence.**
-
-- [x] 166 **The dispatches screen closed its own door the moment a customer said yes.** Found by a
-  P12-5 walk that expected the coordinator to be offered a Request dispatch button on her own
-  accepted quotation and was not. "Goods may move against this paper" was written three times:
-  `requestDispatchAction` allows `issued` or `accepted`, the quotation drawer's Send button allows
-  both, and `dispatchableQuotationOptions` — the picker the Dispatches screen's own primary action
-  opens on — allowed only `issued`. So the door on the list screen closed on a quotation the
-  moment its rep recorded the answer he had been waiting for, while the same work stayed one click
-  away inside the drawer and the action behind both would have taken it. Nobody had noticed because
-  the demo's accepted quotations all had a dispatch on them already and the reps who tried it
-  reached for the drawer. One predicate now (`DISPATCHABLE` in `src/lib/quotations.ts`) and three
-  readers, which is what rules/data.md has said about figures since P9 and is just as true of a
-  rule: **a permission written twice is a permission that disagrees with itself, and the copy that
-  is wrong is always the one nobody is looking at.**
-
-- [x] 167 **A refusal that stopped happening rewrote the database for every spec after it.**
-  `tests/restore.spec.ts` proved D91 — a role with no floor cannot take an account that still holds
-  companies — by asking for Faisal to be made a coordinator and expecting the sentence that refuses
-  it. SPEC §3 gave the coordinator a floor, so the refusal correctly stopped firing and the save
-  went through. The spec did fail, twice and honestly, but only after the write had landed: Faisal
-  was a coordinator for every file that ran after it in the same database, and six more tests failed
-  in four files that have nothing to do with roles — each reporting a screen that was behaving
-  perfectly for the person it thought was signed in. Two lessons and the second is the one that
-  generalises. The small one: the only role with no floor now is the admin, and that is what this
-  asks for. The large one: **a spec that performs a write it expects to be refused is a spec that
-  writes, on the day the refusal moves** — and this suite shares one database across both locale
-  projects in file order, so its blast radius is everything downstream. Where a test drives a write
-  through the UI to see it refused, the fixture has to put the row back afterwards whatever
-  happened, the way `floorOfCompany`/`restoreCompanyFloor` already do for a handover
-  (tests/helpers/db.ts). A negative test is a test that changes something unless the app stops it.
-
-- [x] 168 **A rep could not edit a customer he had been given.** Found by the P12-5 gate, in
-  Arabic, on a spec about notes. Marketing files a lead under the Marketing source, the manager
-  hands the company to a rep — the exact path §3 describes — and from that moment the rep could not
-  save that company at all: not its notes, not its name, not its city. The new restriction asked
-  "is this a source he may pick" of every save, and the form was sending back the source the
-  company arrived with, so holding it read as claiming it. It was invisible until then because the
-  demo's marketing leads had not been handed on. Two halves, and both are the rule rather than the
-  patch. **Claiming is changing**: the guard now compares against the source the record already
-  carries, and a value that has not moved is not a claim. And **a form always offers the value its
-  record holds**: the narrowed list is right for choosing, and a picker whose value is missing from
-  its options silently renders the placeholder — so the screen said "Choose…" about a company that
-  has an answer, and the save that followed was refused on the strength of it. A screen that shows
-  a placeholder where the record has a value is the same defect as a figure that truncates (#165):
-  **it is not showing less, it is saying something else.**
-
-- [x] 169 **The caret never moved, on the two forms tall enough to need it.** `useFocusFirstError`
-  has been on nine dialogs since P4 and no spec had ever asserted `toBeFocused`, so nobody knew it
-  did nothing on the two biggest. The forms built on `useActionState` were fine: that hook delivers
-  the refusal and clears `pending` in one commit, so the field is alive when the caret is sent to
-  it. The two built on `useSubmitAction` — request a quotation, request a dispatch — are not:
-  `isPending` stays true for the whole of an async transition, the `setRefused` after the await
-  lands inside it, and every control on those dialogs is `disabled={pending}`. So at the one render
-  where the refused field first carried `aria-invalid`, it was disabled, and a disabled input cannot
-  take the caret. The effect fired, found its target unable to receive focus, did nothing, and never
-  ran again because the answer it watches had not changed since. Found by writing the first
-  `toBeFocused` in the suite, against the coordinator's own form, where the field that gets refused
-  sits on the scroller's clipped edge at 1366 and off the fold entirely at 375 — she would press
-  Issue, see nothing move, and press it again. The refusal is held back one commit now, so the
-  answer changes identity when the fields come back to life. The general form: **an effect that
-  acts on the DOM has to fire when the DOM can be acted on, not when the state says it should be** —
-  and a helper with no test is a helper nobody has watched work.
-
-- [x] 170 **Two figures would have grown a fourth kind without being asked.** Adding the lead to
-  the rep's "waiting on you" list (P12-7) was one entry in a union type, and the compiler caught
-  every place that had to change except the two that mattered. `waitingCounts` was an `if / else if
-  / else` whose last branch was `counts.withCustomer += 1`, so a lead would have been counted as a
-  quotation the customer was holding — on a pill that is a door to a list it is not on. And
-  `personStanding.sentBack`, the manager's "Sent back or refused" figure, was written as
-  `reasonKey !== "day.withCustomer"`, so a lead landing on a floor would have added itself to a
-  number captioned "waiting on the rep, not on the customer" — true of a lead, and not what those
-  two words name. Neither is a type error and neither would have failed a test: both would have
-  been off by one on a screen, in the direction that looks plausible. Fixed by making both name
-  their members — the count is a lookup by kind, the filter lists the two kinds it means. The rule
-  is the shape rather than these two sites: **a closed set is counted by lookup and filtered by
-  naming its members, never by `else` and never by `!==`** — the negative form silently recruits
-  whatever is added next, which is the same defect as a list beside a union (rules/words.md).
-  And the suite would not have caught it, which is the part worth keeping: `tests/numbers.spec.ts`
-  held the manager's figure to `rows - withCustomer`, the same negative form, so the defect and its
-  test agreed and both were wrong. Three specs did fail once the app was right — the two that count
-  the pills and the one that caps the list — because each keeps its own copy of "what is waiting on
-  him" and each copy had to learn the fourth kind. That is the copies doing their job; a spec that
-  restates the app's arithmetic in the app's own shape is not a second opinion.
-- [x] 171 **A migration rewritten after it was applied is applied to nothing, in silence.**
-  Found in P12-8, by me, doing it: migration 0020 was written, applied, and then edited to add a
-  notification kind. `npm run db:migrate` printed success, the ledger still had as many rows as the
-  journal had entries — so the count guard from #162 saw nothing — and the database kept the old
-  statements while the file, the snapshot and `src/db/schema.ts` all described the new ones. It
-  surfaced a minute later as a CHECK constraint that refused a kind the code was about to write,
-  which is the lucky version; the unlucky one is a column that quietly is not there. **The cause is
-  the same as #162 and the guard could not see it**: the migrator applies an entry only when its
-  `when` is past the newest applied, and a rewritten file's `when` never moves, so it is skipped
-  exactly as a backdated one is. The count guard was written for the shape where the ledger is
-  SHORTER than the journal; here it is the same length and every row is about a file that has since
-  changed. `scripts/db-migrate.ts` now compares each ledger row's hash — the migrator's own sha256
-  of the file — against the file on disk, names the ones that have changed, and says what to do:
-  there is no production data, so the answer is to drop the public and drizzle schemas and run it
-  again. Proved by touching a migration and watching it fail. The rule underneath: **a guard that
-  checks a count is a guard against one shape of a failure, and the failure has as many shapes as
-  the thing it is guarding has states.** A ledger row is not "a migration happened", it is "this
-  file happened", and only the hash says which.
-- [x] 172 **A `<bdi>` that is the block is a block that changes direction.** Found by shot-looker
-  on the duplicate screen (P12-8): «شركة الواجهة الذهبية للتجارة» sat flush RIGHT at the top of an
-  English card while every field under it — the rep, the city, the dates, the four figures — started
-  flush left. The name looked like it belonged to the card beside it. **The cause is one line of
-  HTML no rule had noticed.** `<bdi>` carries `dir=auto`, which is what makes it right for an
-  inline run inside a sentence; but a `<bdi>` given `truncate`, `block`, `flex-1` or `max-w-full`,
-  or dropped straight into a `flex flex-col`, becomes a BOX wider than its own text, and that box
-  aligns by the name's direction rather than by the page's. rules/words.md already knew the shape —
-  "an Arabic line on a wide English card sat at the far right edge, detached from its company" — and
-  said it about `<Prose>` for a typed caption. Nobody had said it about a NAME. The oldest screen in
-  the app had it right by accident: `stuck-rows.tsx` puts the layout on a `<span>` and the `<bdi>`
-  inside it, which is the pattern. Fifteen sites in five files did not — the leads table shipped in
-  P12-7 with it, and the board, the searchable select and the waiting list have had it for phases.
-  All swept: **the block belongs to the page and only the run belongs to the writer.**
-  `scripts/one-look.mts` refuses a `<bdi>` whose own class list makes it a box, which is the check
-  that would have caught every one of them.
-- [x] 173 **The rail's own keys were checked by nobody.** Found while adding the duplicates entry
-  to the rail (P12-8): it carried a `shortKey` and no locale had a word for it, and every check in
-  the gate passed. `navFor` hands a component `item.labelKey` and `item.shortKey`, and the
-  component renders `t(item.labelKey)` — one call site, fifteen keys, so the both-locales check
-  (which compares en against ar) sees nothing, `unused-messages` sees nothing, and the literal-`t()`
-  scan sees nothing. A short label is drawn only on the phone's bottom bar and only for the roles
-  whose first four items include that entry, so the raw key would have surfaced on one width for
-  some people and never in a screenshot. The same shape as `common.marketing` the day the fifth
-  role landed (rules/words.md), one list further out. `scripts/check-messages.ts` reads nav.ts and
-  demands a word for every `labelKey` and `shortKey` in it. Proved by putting the key back and
-  watching it fail.
-- [x] 174 **A new namespace is where a second word for an old thing gets in.** Found by
-  arabic-reviewer across the twenty-two strings box 8 added (P12-8). The Arabic was correct
-  Arabic; what it was not was THIS app's Arabic. «السجل» is the app's word for a record, used
-  eleven times in the same file, and the keep dialog also used it bare for the activity log —
-  «تنتقل إليه … والسجل» inside a sentence that already says «هذا السجل», so the manager reads
-  "the record moves onto the record". «الوصول» was a fifth word for access on a screen whose
-  sibling already says «يتوقف اطّلاع هذا الشخص على الشركة». «الزوج» — the word I reached for to
-  say "pair" — is a husband before it is a pair to a Riyadh sales manager. And in English
-  "Last worked" sat over `lastActivityOn`, the same figure the drawer, the company list and the
-  duplicate warning all call "Last activity", with its own empty state one line below it.
-  **The cause is that a namespace is written in one sitting, by somebody holding the new screen
-  in mind and not the eleven old ones.** Every check in the gate passed: both locales had the
-  key, every key was rendered, no string addressed a gender. None of them can see that two
-  strings in two files mean one thing — that is what the glossary is for, and the glossary is
-  read by a person. So the rule is about the ORDER of the work, and it is now in the loop: the
-  words a new screen needs are searched for in the files that already have them BEFORE they are
-  written, and arabic-reviewer runs against the app's existing namespaces and not only the new
-  one. The English half of every fix landed too, because a word invented in one locale is
-  invented in both — SPEC §5 is the glossary for the app, not for the Arabic.
-
-  **And it happened again in the very next box, which is the useful part.** P12-9's two new
-  placeholders said "Choose a customer" over a field whose own label, one line above it, says
-  **Company** — and §5's entry for that word is the one sentence in the glossary that anticipates
-  exactly this: "§2 S11 calls it the customer; the screens never do." `projects.pickCompany`, the
-  identical control on the Add-project form, had said «اختيار الشركة» since P8. The rule written
-  here was to search the existing files before writing, and writing D159's prose in the founder's
-  own register — where he says customer throughout — is what carried it onto the screen. So the
-  rule needs its sharper half: **the glossary is checked against the LABEL of the field, not
-  against the paragraph that describes it.** The reviewer caught both, both times, which is the
-  loop working; what it is not is a substitute for looking.
-- [x] 175 **An ellipsis on a LABEL deletes the meaning and leaves the number.** Found in the same
-  pass (P12-8), by measuring rather than by looking: the four counts under each side of a pair were
-  `grid-cols-4` inside two nested `p-3`, which is about 74px a column, and each caption was
-  `truncate` at 11px. In English the four words fit. In Arabic «جهات الاتصال» and «عروض الأسعار» —
-  `common.contacts` and `common.quotations`, the app's own words, correct on every screen that has
-  room for them — are wider than the column, so the manager comparing two records would have read
-  four figures and two captions. **The cause is that the card was designed at the width it was
-  drawn at**, and the count block is the one thing on it that is neither a name nor a sentence: a
-  name may truncate because the reader already knows it and the row is a door to the whole of it,
-  and a sentence wraps, but a caption is the only thing that says WHICH figure this is. Truncated,
-  it is not a shorter caption; it is no caption. Two columns until the card is wide enough for
-  four, and the caption wraps. `standing-strip.tsx` and `months-card.tsx` had each learned half of
-  this the same way — a date that truncates IS a different date — and the general form is now in
-  DESIGN §5: **truncation is for a name and never for a label.** The other sixty-seven `truncate`
-  sites were read against it; every one of them is a name, a city, a person or a typed value, and
-  the two nav rails truncate a destination whose short word is chosen for that bar (§5 #173).
-- [x] 176 **A CHECK refuses a row only when its expression is FALSE, and `null in (a, b)` is
-  NULL.** `duplicate_flags_survivor_check` read `case when status in ('kept','keptAndShared') then
-  survivor_id in (company_id, other_id) else survivor_id is null end`, which is the sentence the
-  column means and is not the sentence the database enforces: with `survivor_id` null the `in`
-  yields NULL, the CHECK is satisfied, and the database accepted a fold with nothing continuing —
-  the one state the whole screen exists to prevent. Nothing in the app writes it; every ruling goes
-  through `ruleDuplicateAction`, which refuses first. **That is exactly why the column has to.** A
-  constraint is the guard for the ways in that are not the app (rules/data.md), and the way in here
-  is next year's import or a hand-written UPDATE at 10pm. Found by `tests/schema.spec.ts` asking the
-  database directly, which is the rule that already exists — every CHECK gets a row it must refuse —
-  doing its job on the first run of a new table. `is not null and …` in front of it now, in the
-  schema, the migration and the snapshot, proved from `pg_get_constraintdef`. The general form:
-  **write a three-valued predicate as though NULL were an attacker**, and never trust a CHECK you
-  have not watched refuse something.
-- [x] 177 **Two screens asked one rule and one of them asked it with a clause missing.** The project
-  drawer offers Request quotation when `mayRaiseFor` says yes — the customer is his, the job is
-  his, or the job is one he was put on — and `requestQuotationAction` guards itself with the same
-  sentence. `projectOptions`, which fills the picker on the Quotations screen's own primary action,
-  asked only the last two. So a rep whose own company carried a project another rep created could
-  raise a quotation from the project's drawer and was not offered it on the screen built for
-  raising quotations. **The cause is that the SQL twin of a rule is written in a different file from
-  the rule**, and a clause added to one is not added to the other: `onProjectSql`'s own comment
-  records this defect the other way round — a control that refuses — and the missing-work direction
-  is the quieter half, because nothing errors and nobody knows what they were not shown.
-  `dispatchableQuotationOptions` had it too, and worse: it asked whether the READER raised the
-  paper, which is not one of `mayRaiseFor`'s three clauses at all. Both now say the three, and all
-  three pickers ask the other two halves of `mayWrite` — a role that holds no floor and an admin
-  looking through somebody's eyes write nothing (D42) — which none of them did. It surfaced when a
-  fold moved one rep's project onto another rep's company, which is the arrangement D147 made
-  ordinary and which the seed had never contained until P12-8.
-- [x] 178 **A field order the founder dictated, drifted, and nothing could see it.** SPEC §3 lists
-  a quotation line as "Colour code · Supplier · Fire rating · Class · **Qty** · Thickness · Width ·
-  Length · Price per m²". Qty sat EIGHTH, after the three measurements, from the phase the form was
-  built in until P12-9. **The cause is that an order is not a value**: every check in the gate can
-  see that a field exists, that its word is in both locales and that its value round-trips, and not
-  one of them can see where it is drawn. `check:spec3` knew — the clause was registered as owed —
-  and what it was owed for was a TEST, so the debt read as "nobody has walked this" rather than as
-  "this is wrong", and it had been carried for four boxes. It matters more than a form-design
-  quibble: what a rep says out loud when he quotes is the colour, the make-up and how many, then
-  the sheet it is on, so asking the three dimensions first makes him hold the number he arrived
-  with while he answers three questions that are already filled in. `tests/create.spec.ts` reads
-  the nine labels off the line in drawing order now and compares them to §3 word for word, which is
-  the only shape of check that can catch this: **an order is proved by reading it, never by
-  asserting that its members exist.**
-- [x] 179 **The second copy nobody read was the one that was right.** The widths a sheet comes in
-  were written twice: `WIDTH_CHOICES` in the line editor, which the form offers, and
-  `STANDARD_WIDTHS` in `scripts/seed/lookups.ts`, which nothing imported. Both said
-  `["1.24", "1.5", "2.0"]`, so they agreed — and they agreed the way two clocks agree when one of
-  them has stopped: the seed's copy sat in a file of DATA, under a heading that made it look
-  authoritative, and could have been edited by anybody sure they were changing what the form
-  offers. The same shape as a list beside a union (rules/words.md), one step further out: not two
-  copies drifting, but one copy that is decoration. `src/lib/sheet.ts` holds the widths, the
-  standard sheet and the standard thickness now, and the seed re-exports it rather than restating
-  it. And the deciding question is worth keeping: **a value only ever read by nobody is not a
-  source, it is a comment that compiles.** Found while clearing #178, because the walk that opens
-  the width control had to know where the list came from.
-- [x] 180 **The compiler found every writer in the app and none of the six in the suite.** Adding
-  two NOT NULL columns in P12-9 was, from the app's side, a pleasure: `tsc` named the seed, the
-  volume seed, the history seed, the request action and the dispatch action, one after another,
-  which is "never land a column without its writer" (rules/data.md) working exactly as written. Six
-  more writers went unmentioned, because they are `insert into quotations (…)` in raw SQL inside
-  `tests/`, and a spec's fixture is a string. They failed thirty minutes later, in the run, six
-  times over — three of them in under 120ms, which is the shape of a fixture dying before its first
-  assertion. **The cause is that a fixture which names its columns is a second copy of the schema,
-  and it is the copy nothing checks.** Three of the six were immune to half of it already: they
-  build their row with `insert into quotations (…) select …, from quotations where id = $1`, which
-  copies a real record and overrides what must differ, so adding the column to both lists was one
-  word in each. The two that listed columns from nothing had to be told where a warehouse comes
-  from. The rule: **a fixture copies an existing row and overrides what must differ; it does not
-  describe a record from scratch.** What that buys is not tidiness — it is that the next NOT NULL
-  column costs one line in three files instead of a suite run to discover.
-- [x] 181 **A gap is space; only a mark says "two values".** Found by shot-looker on the rebuilt
-  quotation dialog (P12-9): the closed job picker carries the job and, quieter beside it, its
-  customer. Both are `<bdi>`, so each name kept its own direction — and the two BOXES are laid out
-  in the PAGE's direction, with nothing but a `gap-1.5` between them. On an English screen, two
-  Arabic names therefore sat side by side with white space between them, and a reader scanning that
-  pair the way Arabic is scanned read the CUSTOMER first: the reverse of what the control says.
-  **The cause is a rule applied to strings and not to elements.** rules/words.md already said it —
-  `` `${company} · ${project}` `` is a defect, render them as `<bdi>a</bdi> · <bdi>b</bdi>` — and
-  the shape it names is a joined STRING, so a component that put the same two values in two
-  elements read as compliant. It is not: what the rule is really about is that a neutral mark is
-  what tells a reader "two values, in the page's order", and a gap tells them nothing. One dot,
-  `aria-hidden`, in `searchable-select.tsx`, which fixes it for every picker in the app that shows
-  a parent's name beside a child's — the job picker, the quotation picker on a dispatch, and
-  whatever the next one is.
-
-- [x] 182 **A visible heading proves the server answered; it never proves the browser is
-  listening.** Found by P12-9's confirming run, in a walk that had passed since P8: "the view a
-  person chose is the view they get back" opened the board with `?view=board`, waited for the
-  heading, went to the bare screen and asked for the board back. It was given the list, polled
-  fifty-two times for the other answer and timed out — and it could never have recovered, because
-  the list it was given writes `list` over the memory it was waiting for. The memory is a cookie
-  `ViewSwitch` writes in an effect, which is the right place for it (DESIGN §6: a preference, not
-  data), and an effect runs after hydration while the heading it waited on is in the first byte of
-  HTML. On a warm server those are milliseconds apart and the walk had never lost the race; on the
-  first compile of a route that had just grown a second query they were seconds apart. **The cause
-  is that the step asserted the state it wanted — this page shows a board — instead of the evidence
-  the NEXT step needed: the browser has stored `board`.** It waits for the cookie itself now, in
-  both places it navigates away expecting to be remembered. The rule is not about cookies: **a step
-  that leaves a page on the strength of server HTML is racing that page's hydration**, so anything a
-  walk depends on that only the browser can produce — a cookie, local storage, a registered service
-  worker, a listener — is waited for by asking for that thing, never by looking at the screen it
-  arrived with. Swept: three effects write a cookie (`view-switch`, `page-tabs`, `range-chips`) and
-  the rail's hook writes a fourth, and the view walk is the only one that crossed a navigation on
-  one — every `?tab=` and `?range=` walk names the value in the URL, and the memories themselves are
-  proved by pure tests in `tests/ranges.spec.ts`.
-
-- [x] 183 **A wait for a list nobody was drawing any more, and the three copies of the helper that
-  waits.** The gate's own run hung for ninety seconds on the Arabic quotation chain: the fire-rating
-  option on the second line resolved, was "not stable" twice while the popover settled over a form
-  that P12-9 had grown two fields taller, and was then detached — and what followed was a wait for
-  an option in a list that had closed, which is a wait that cannot end. **The cause is that a click
-  which lands where a popover has just been is a click OUTSIDE it, and outside is how a popover is
-  dismissed**: the retry that was meant to survive the movement is the thing that shut the list. So
-  the pick opens the control again rather than waiting on a list that has gone — three goes, a short
-  timeout on each, and the failure stands after that. The same file already carried one scar of this
-  shape (P11E: the first `option` on the page belonged to the list that was closing), which is the
-  argument for putting the second one beside it rather than in the spec that met it. And the sweep
-  found the other half: `choose`, the same act by name instead of by position, had been written out
-  by hand in `create.spec`, `drawer-writes.spec` and `roles.spec` — three copies of a helper, which
-  is the four-search-boxes defect (#143) inside the suite this time. One copy now, hardened once.
-- [x] 184 **A state the app could not create, carried by eighteen queries and eight screens.**
-  `quotations.project_id` was nullable, with `on delete set null` under it, and every reader
-  carried the second shape: eighteen left joins, four nullable types, eight `?? "—"` branches,
-  and a comment in the picker explaining that a quotation with no job is "the company's own
-  stock" — a sentence about a state no screen has been able to produce since D94, because
-  `requestQuotationAction` refuses it. **The only writer that ever made one was the seed**,
-  twenty-one times, so the demo showed dashes down a column that a real floor could never
-  produce and every branch behind them had never run. The cost is not the null; it is that
-  every reader of the column had to decide what to do about it, and eight of them decided
-  differently. A column looser than the form is the wrong way round (rules/data.md): the column
-  is the guard for the ways in that are not the app, and here it was the only thing still
-  claiming the state existed. NOT NULL in migration 0023, the `set null` dropped with it — a
-  project is archived and never deleted, so that clause only ever said "quietly detach the
-  prices" — the seed's history given real jobs, and the one row that genuinely had none given
-  the job it always was: a workshop buying sheets to cut up.
-- [x] 185 **A figure about this morning that somebody else's afternoon could take away.** The
-  coordinator's "answered today" counted quotations in `('issued','returned')` and dispatches in
-  `('approved','refused')` whose `updated_at` was today — a count of the states rows are in NOW,
-  standing in for a count of what she DID. It was almost right while a refusal was the end of a
-  dispatch. The moment P12-10 let the rep correct one and send it again, her own figure went
-  DOWN as he worked: she refused it at ten, he fixed it at two, and the row left the states the
-  query names. **A figure about an event is counted from the event.** Both halves read
-  `audit_log` now — the four answers, and the arrivals including a resubmission, which the two
-  update actions already record by the state they came from — so nothing anybody does
-  afterwards can move a number about her morning. The same read also found the older half of
-  it: the demo had never once shown that figure as anything but zero, so the green band on her
-  own screen had never been on a screen. The seed answers two things on the day it arrives now,
-  which is the ordinary shape of her morning (rules/data.md: a band needs a row on each side).
-- [x] 186 **One sentence, three keys, and the third found by moving the other two.** "Choose a
-  company" existed as `quotations.pickCompany` and `projects.pickCompany`, identical in both
-  languages, and the dispatch dialog was about to need a fourth. Moving the pair to `common`
-  made `check:messages` name the third immediately — the same sentence written three times is
-  the four-search-boxes defect (#143) in the message files, where nothing had been looking for
-  it because every copy was correct. One key now, and the two specs that read it read the
-  shared one.
-- [x] 188 **A suite that takes half an hour cannot be started at midnight.** The box-11 gate
-  failed on the daily report's own figures — "logged" said 1 where the walk had just written 2 —
-  and nothing in the app was wrong: the run began at 23:54, `tests/global-setup.ts` seeded a
-  floor whose "today" was the 9th, and by the time the report specs ran it was the 10th. Every
-  row the seed places relative to today is placed ONCE, at the start, and the app reads the
-  Riyadh clock on every request, so a run that crosses midnight is a run whose fixture and whose
-  app disagree about what day it is — for the second half of it, silently, on the figures rather
-  than on the screens. It is not a defect in Kladra and it is not worth engineering around: the
-  seed is deliberately relative (a demo floor dated to a fixed day is a demo that ages), and a
-  run pinned to a frozen clock would stop proving the thing rules/data.md cares about most, which
-  is that "today" is Riyadh's. **The rule is about when to press the button**: a full run is
-  thirty-five minutes, so one started after about eleven at night will be read as a failure the
-  next morning by somebody who did not start it. Start it earlier, or read the timestamps before
-  believing the tally.
-- [x] 187 **The same hole, one letter over: a checker that cannot see through a prefix.**
-  `فاكتب` — "so write", an order to a man — shipped in the payment hint and every check in
-  the gate passed it. `scripts/gendered-arabic.mts` lists `اكتب` and matches whole words, and
-  Arabic glues its conjunction to the front of the verb, so the prefix walked straight through.
-  **This is the second time.** P11H found `فاتركه` the same way, and the fix that time was to
-  add two more spellings to a list — which closed that word and left the rule open, because a
-  list of thirty verbs times two conjunctions times their attached objects is not a list
-  anybody keeps. It reads THROUGH the conjunction now: `ف` and `و` only, because the other
-  proclitics attach to nouns and to the imperfect and never to an imperative, so admitting
-  them would only widen the ways an innocent word can be mistaken for one. Found by the
-  arabic-reviewer, not by the gate — which is the point of running it — and the general
-  lesson is the one #171 already taught in another key: **a checker patched with one more
-  entry has been told about one case, not taught the rule.**
-- [x] 189 **Stopping a run stopped the shell in front of it, and nothing below it.** The
-  midnight rerun failed twice in its first two minutes — Jerom could not get past the sign-in
-  page, and a dev-server worker died of "2 child process exceptions" — and the app was fine.
-  The run it replaced was still going. Killing the background command ended one Git Bash
-  process; `npm run test` under it, Playwright under that, and the whole `npm run dev:test`
-  chain down to `next dev` on 3101 were all still alive, so the new run attached to the old
-  server (`reuseExistingServer`) and cleared the database while the old run's browser was
-  still signing people in. Two suites, one database, and every symptom pointing at the code.
-  **On Windows a process tree does not die with its shell** — `taskkill /PID <pid> /T /F` is
-  what ends one — and `scripts/dev-test.ts` already carried the orphan watch that was supposed
-  to catch this, from the last time it happened (#68); it did not fire, because the parent it
-  watches was never killed either. So the guard moved to where the damage is done rather than
-  where the process is: `tests/suite-lock.ts` takes a lock in `globalSetup` BEFORE the health
-  check and long before `db:clear`, refuses to start when the holding process is alive, names
-  the process to end, and is released in `globalTeardown`; a lock whose process is gone is
-  stale and gets taken, so a crashed run never blocks the next one. **The reading lesson is
-  the wider one**: two failures at the very top of a suite that passed an hour ago are almost
-  never two new bugs, and the first question is what else is running.
-- [x] 190 **The pattern was already there four times; the box was about to write it a fifth.**
-  Box 11 set out to make the whole row open the record and found, in its own checkpoint read,
-  that customers, projects and the call band had all been doing it since P8 — `relative` on the
-  row, `after:absolute after:inset-0` on the link — in three arrangements of the same four
-  classes, two of them with a focus ring and one without. The new work added a CSS utility that
-  did the same thing a fourth way, scoped to `td:first-child`, which would not have fitted a
-  card at all. **A rule written twice is a rule that will disagree with itself**, and this one
-  is worse than most because the way it fails is invisible: an overlay covers a second link and
-  the phone number in that row simply stops answering, on one screen, with nothing on any
-  console. So `row-door` owns the overlay AND the ring now, the row or card takes the class and
-  its link takes `data-door`, all six call sites read the same, and `one-look` refuses
-  `after:inset-0` anywhere but shadcn's avatar — the same shape as the rule that stopped the
-  primary button being a class string in fourteen files. The escape hatch got the test it never
-  had: `elementFromPoint` over a customer row proves the phone chip is still on top and the
-  cell beside it is the door, which is the assertion that would have caught a covered number.
-- [x] 191 **A number the row shows and a number the row points at are the same question.**
-  Swapping the two lists to lead with SMAC's number left the dispatch list saying "Q-12" in its
-  quotation column — a cross-reference to a record whose own list now leads with a different
-  number, so following it meant reading one number and searching for another. The rule was
-  written for what a row leads with and it is really about what a reader is about to look up,
-  which is the same thing whether the record is this row or the one it names. The column and
-  the drawer's Quotation fact both say SMAC's number now, with Kladra's under it in the list
-  where there is room for two. The general form: **when a figure or a name changes on the
-  screen that owns it, every screen that points at it has changed too.**
-- [x] 192 **A number that names something is not a number, and only two places knew.** The
-  guidelines pass on box 11 asked why the row's new headline number carried no `translate="no"`,
-  and the answer was that two places in the whole app did: the phone chip, and one row of the
-  manager's stuck list. Everywhere else — both lists, both drawers, the board tiles, the rep's
-  day, the mini lists inside a drawer, the search results — a document number was a hand-built
-  `<span dir="ltr" className="num">`, the same four attributes written out about twenty times.
-  It matters more than it sounds: a browser's translator rewrites Western digits into
-  Arabic-Indic ones, rules/words.md forbids exactly that, and a Q-12 whose digits have changed
-  script is no longer the name of the paper the customer is holding. **A reference number is not
-  a figure** — `Sqm` and `Money` have been components since P8 for the same reason and this one
-  never was — so `Ref` sits beside them, carries the direction, the face and the attribute, and
-  `one-look` now keeps `translate="no"` in that one file. Found by the guidelines pass rather
-  than by the gate, on the box that made those numbers the loudest thing on a row, which is
-  where a rule applied twice out of twenty was always going to show.
-- [x] 193 **The same rule as `<bdi>`, one attribute over, found by looking at the Arabic.** The
-  shot-looker read the rep's day card and measured what the eye had already caught: SMAC's 4531
-  sat correctly at the right of the Arabic card and Q-7, the quiet line meant to sit under it,
-  was alone against the far LEFT edge, 1036 pixels wide in a card whose number is 33. The cause
-  is the one §5 #172 wrote down for `<bdi>` and nobody generalised: **an element carrying a
-  direction resolves `text-align: start` against ITS OWN direction**, so the moment such an
-  element is block-level — `block`, or simply a child of a flex column — it stops going where
-  the page puts things. The tables hid it: a table cell constrains the box to the column, so the
-  stretched span happened to end up under the number anyway. That is luck, and it would have
-  come back in the first wide column anybody added. The fix is in the component rather than at
-  the call sites, because a rule every caller has to remember is a rule (`Ref` is two elements
-  now: the outer takes the layout and the page's own direction, only the inner run is turned
-  around). The test measures where the two numbers START — the same edge in either language —
-  which is the assertion that reads the way a person looks at the card, and it runs in Arabic
-  where the defect lives. **The lesson about looking**: every gate in the repo was green over
-  this, in both locales, for the whole box; the defect was visible in the first Arabic
-  screenshot, and nothing but a screenshot was ever going to say so.
-- [x] 194 **Two halves of one sentence, built ten phases apart and never joined.** S26 says a rep
-  is asked to write only what the system cannot see, and S27 that a company's history IS the
-  manager's daily report. Kladra had both: the log since P3, the report since P9. What it did not
-  have was them on one screen — the card said "4 log entries" and named none of the four, which
-  lived on four customers' drawers a manager would have had to know to open. So he read a number,
-  and at six o'clock the rep typed his day out a second time into the report box, which is the
-  copy S26 forbids by name. **The defect was invisible because both halves were right.** Nothing
-  was broken, no test could fail, and the only way to see it was to read the two founder
-  sentences next to each other and ask what a person does at six o'clock. The entries are on the
-  card now, with the customer as the heading of each — and the correction with them, so the day
-  is finished on the screen where it is read rather than on the drawer he would have to remember.
-- [x] 195 **A figure whose words said something its query did not.** The report's compressed line
-  read "2 companies added" beside "4 log entries", in both languages. The figure is
-  `count(distinct company_id)` over that day's entries — how many customers he DEALT with, which
-  on an ordinary day includes none that were added at all. It had been wrong since P9B and read
-  by everybody, because a plural label reads as a caption rather than as a claim. D59 is the rule
-  it breaks: a figure carries the words that say what it means. Found by reading the query and
-  the message file side by side while building the trail above them — which is the only way this
-  class is ever found, since the app cannot know that a noun is the wrong noun.
-- [x] 196 **A third read of the small table, and a second walker over it.** `lastWorkingDay` ran
-  its own `select` on `non_working_days`, and so did `latestReportDay` and `reportNeighbours` —
-  three more reads of the one table `src/lib/calendar.ts` was written to read once with `cache`
-  after §5 #71 counted six of them on a single screen. And the walk itself existed twice: a
-  private `stepWorking` in reports.ts and `nextWorkingDay` in workdays.ts, differing in the two
-  ways a near-copy always differs — one was capped at three weeks against a bad row in the
-  holiday table and one was a `while` with nothing to stop it; one could ask about a person and
-  one only about the company. Both halves are one function now, in the pure module that owns the
-  arithmetic, and the loading is in the module that owns the loading. **It surfaced as a
-  layering problem, not as a bug**: `activities.ts` imported `lastWorkingDay` from `reports.ts`,
-  so the report could not read the log without a cycle — and the cycle was the sign that a
-  calendar function had been living in the wrong file since P9.
-- [x] 197 **The busiest day anybody in the demo had ever had was three entries.** Box 13 put a
-  cap on the log a report card draws and a line under it saying what is not shown, and the line
-  was unreachable: the seeded floor's fullest day held three, so nobody — not a reviewer, not a
-  screenshot, not the founder — could ever have seen that state. It is the same fault as #185,
-  where the coordinator's "answered today" had never once been anything but zero, and the same
-  answer: **a demo that cannot show a state is a demo that has not been checked.** Faisal now has
-  one day of telephone work, nine entries on it, which is an ordinary day for this trade and was
-  simply missing from a floor whose entries were all site visits spread thin. The cap is two
-  numbers rather than one, for the reason `DayBoard` and `MovedLine` are two densities: four on
-  somebody else's card, because that card is read for its sentence, and twelve on the reader's
-  own, because he is checking the day against his memory and a day cut off at four is a day he
-  cannot check. The acceptance test asks the database for the busiest day rather than naming one,
-  so the day the seed's story changes the test follows it.
-- [x] 198 **Three things the Arabic reviewer found that the English side owned.** The review of
-  two changed strings turned up four defects, and only one of them was in the two strings. The
-  demonstrative «ذلك» opened the write box pointing at nothing — it is Arabic's FAR demonstrative
-  and resolves backwards, so in an empty box it is a pronoun the reader holds until the third
-  sentence tells him where to look. «هذا اليوم» is concrete and is already the file's own way of
-  naming the day. The counted noun lost its tanween in the 11–99 branch, which its neighbours in
-  the same file had right. And on a Saturday the Arabic said "not a working day" twice within one
-  scroll — the box and the heading 150 pixels under it, verbatim — where the English says it two
-  different ways. **The two it could not fix itself were on the English side.** The board heading
-  read "m² approved" over a figure that prints its own unit, so an English screen said m² twice
-  and an Arabic one did not, because «المساحة المعتمدة» has been right since P9B — the heading is
-  "Area approved" now and both locales read the same shape. And the new prompt ends by pointing at
-  the entries above the box, which on a day with nothing logged points at nothing: there are two
-  prompts now, chosen by whether there is anything above, because **a sentence that is false on
-  some days is a screen people learn to stop reading** — the same rule the card already applies to
-  "nothing was recorded on this day". One the reviewer raised and this box declined: the board
-  heading "Companies" could be read as companies ADDED, most plausibly on marketing's card, and
-  every unambiguous alternative is either a four-word relative clause in an 11px grid cell or a
-  word that means something else. The lie was in the compressed label and it is fixed; the
-  heading is terse and the founder can settle it.
-- [x] 199 **Two things only a screenshot could say, on states nothing had ever drawn.** The demo's
-  new nine-entry day put both of the log's capped states on a screen for the first time, and both
-  were wrong in ways every gate had passed. **The line under a shortened list told the reader to
-  search**, because `ListTail` carries one sentence for every list in the app — "search by name or
-  number to find the rest" — and a report card has no search box. A screen offering work it cannot
-  do is DESIGN §5's own rule, and the fix is that the SENTENCE belongs to the screen while the
-  markup stays written once: the report's says the rest of that day is under Activity on each
-  customer, which is where it has always been. **And the write box had moved two screens down.**
-  The log went above it on the reader's own card, argued from "a person about to write is writing
-  ABOUT it" — which is true and was still wrong: he opened the screen to write, D55 promises him
-  under a minute on a phone at six in the evening, and on the day he has most to say the box was
-  past his whole afternoon. Both cards now read the same way — what moved, the person's own words,
-  then the log — which is also simpler to explain than the asymmetry it replaces. **Neither was
-  findable any other way**: the tally was green, the seed could not produce either state until
-  this box changed it, and a person had to look at the pixels of a nine-entry day.
-- [x] 200 **A comment that answered a question the founder had already answered, three times
-  over.** §3 says the chosen view is "remembered per person and carried in the URL". The URL half
-  was built in P8; the memory was a cookie, under a paragraph explaining that a preference was not
-  worth a table because "one person signs into one browser here". That sentence was written before
-  §3 existed and was never read against it — and a cookie is per BROWSER, so the rep who chose the
-  board at his desk got the list back on his phone, which is the founder's own example. Two more
-  controls had copied the paragraph WITH its reasoning: the home screens' tabs and the metrics
-  window, each with its own `document.cookie` effect and its own copy of the justification. So one
-  rule had three mechanisms and three defences of the wrong one. All three are rows of
-  `screen_choices` now, keyed by person, kind and screen, written by one hook that says so only
-  when the choice is news. **The general form is about the comment rather than the cookie**: a
-  paragraph justifying a decision is evidence about the day it was written, not about today, and
-  the same words appearing in three files is the signal that nobody has re-read any of them.
-  Three smaller things fell out of it: the new table's kinds were about to be a TypeScript union
-  beside a literal list inside a CHECK — the pair rules/words.md names — and are one exported list
-  the check, the validator and the spec all read; the write asks `requireActor`, so an admin
-  reading a rep's screens cannot leave a preference behind on that man's account; and the sweep
-  that holds schema.ts and the catalogue to each other failed on the index behind the new table's
-  PRIMARY KEY, because it was the first COMPOSITE one in this schema — Postgres names a
-  single-column key `<table>_pkey` and Drizzle names a composite one after its columns, and the
-  sweep only knew the two suffixes it had met.
-- [x] 201 **Four screens drew the same drawer and agreed about none of it.** Work happens in a
-  drawer over the list (DESIGN §2), and companies, projects, quotations and dispatches each wrote
-  their own `SheetContent`. **Three widths**: a company at 32rem, a project at 36rem, a quotation
-  at 42rem, so the surface changed size as a rep walked one job from the customer to the paper.
-  **Two of the three loading skeletons came from the wrong edge**: pinned to `side="right"`, which
-  is right in English and wrong in Arabic, so the panel that stands in while the query runs slid in
-  from one side and the record replacing it arrived from the other. **And three of the four drew
-  their line on the edge facing away from the page** — the kit's own rule, written for a component
-  that may come from either side, puts the border on the outer edge when the drawer comes from the
-  left, which in this app only ever happens in Arabic. Not one of the three was visible in an
-  English screenshot, and the skeleton is on screen for exactly as long as a dev server takes to
-  answer. `RecordPanel` owns the width, the side and the border; the kit stops asserting a width
-  nothing wanted; `one-look` refuses a fifth screen that draws its own; and the spec measures all
-  four panels and compares them with each other rather than with a number, because the rule is
-  that they agree.
-- [x] 202 **Two screens answered "one sentence and its primary action" by drawing the action
-  twice.** The companies list and the leads list each rendered their Add button in the heading row
-  and AGAIN inside the empty-list card — two brand gradients on one screen, which is the one signal
-  DESIGN §2 keeps for "this is the thing to press". D35 had already ruled on the identical shape
-  inside a drawer ("where the action row already carries the button, the empty state carries its
-  sentence alone") and neither screen had been read against it. **Neither is reachable on the
-  seeded floor**: every rep has customers and marketing has leads, so no screenshot and no walk in
-  fourteen boxes had ever drawn either card. What holds it now is not a walk of the empty state but
-  a count of the gradient on every screen every role can reach, added to the spec that already
-  walks all of them for dead controls — a rule about how many is cheaper to check everywhere than
-  in the one place it broke.
-- [x] 203 **The half of a founder sentence that looked already done.** "Tapping a phone anywhere
-  opens WhatsApp via wa.me; long-press/secondary shows the number." Kladra prints the number as the
-  link's own label rather than hiding it behind an icon (D98), so "shows the number" read as
-  satisfied for eleven phases and the second half was bound to nothing. It was not satisfied: a tap
-  opens WhatsApp before a finger can select anything, so a rep reading a customer's number out to a
-  colleague, or pasting it into another app, could see it and never take it — and the browser's own
-  menu would have offered him the wa.me address instead of the number in it. **A screen can satisfy
-  the words of a decision and not the act behind it**, which is what a §3 gate reading sentences
-  cannot catch on its own: the entry sat in the registry as owed for two boxes with a note saying
-  the tap was walked, and what was missing was the thing the tap makes impossible. It is a hold or
-  a secondary press now, opening the number as text with one thing to do, and `contextmenu` rather
-  than a mouse button, so the keyboard's own menu key reaches it.
-- [x] 204 **Taking a feature out left its supporting cast behind.** §3's "nothing is carried
-  forward" removed the offer that filled a new quotation with the last one's lines, and the removal
-  took the control, the read behind it and its two message keys — and left `isBlankLine`, an
-  exported helper that existed to decide when the offer was safe, called by nothing. ESLint does
-  not flag an unused export and neither does the compiler; `unused-messages` covers strings and
-  `one-figure` covers duplicated formulas, and nothing in the gate asks whether an exported
-  function has a caller. It was found by grepping the removed feature's own vocabulary, which is
-  the answer for now: **after taking something out, search for every name it used**, not only for
-  the name of the thing itself.
-- [x] 205 **A memory that outlives its browser outlives its test.** Moving three choices off
-  cookies and onto the person (#200) quietly took a property the suite had been leaning on for
-  eleven phases: `login` clears cookies, so whatever one spec had pressed, the next one started
-  from the defaults. A row does not clear, and it is not supposed to — that is the founder's
-  sentence. So a walk that opened `?view=board` would have left the NEXT spec's bare
-  `/quotations` on the board, and "the next spec" includes the whole of the other locale project,
-  half an hour later, looking for a table that is not there. Reading the specs for bare `/team`,
-  `/day` and `/quotations` found it before the gate did, and the first fix was still wrong: the
-  fixture forgot the choices in its TEARDOWN, which races the write and loses. The write is fire
-  and forget by design — an effect the browser sends after the screen has already changed, that
-  nothing waits for — so the manager's last `?tab=metrics` landed a moment after the row had been
-  deleted, and the next spec's bare `/team` opened on his metrics with no stuck list on it, thirty
-  seconds of timeout later. It is forgotten at SETUP now, where the context that could still be
-  sending one has been closed for a fixture's worth of time. **Two general forms, and the second
-  is the one worth keeping**: making something outlive a session is also making it outlive a test,
-  and the suite's independence was resting on a property nobody had written down; and a cleanup
-  that races an unobserved write belongs before the next thing, never after the last one.
+- [x] 142 Three fields were written by everybody and read by nobody. (D136)
+- [x] 143 The coordinator's desk had two search boxes over one URL, and ran newest first under a caption that says oldest. (D137)
+- [x] 144 The coordinator prices projects that have already been given up. (D138)
+- [x] 145 A stored code was printed on a screen.
+- [x] 146 The palette sent the coordinator to a screen with nothing on it. (D139)
+- [x] 147 Nothing said what we lose to. (D140)
+- [x] 148 Two clocks on one screen. (D97, D141)
+- [x] 149 The strip said the team's gone-quiet total and the table said whose the OTHER figure was. (D142)
+- [x] 150 The dispatch was the one record that could not say what had happened to it. (D143)
+- [x] 151 Her desk counted itself off two capped arrays. (D80, D95, D141, D144)
+- [x] 152 The demo approved two dispatches the day before they were raised.
+- [x] 153 The chips over a list were five components, and the row they sit in was four. (D126, D145)
+- [x] 154 A picker said something had changed when nothing had, and the dialog waited for ever. (D146; P12)
+- [x] 155 A handover moved the company and left the work behind. (D51, D147)
+- [x] 156 A share check that was false for ever, and the screen that offered what it refused.
+- [x] 157 Whose paper it is was still read off whose customer it is. (D42)
+- [x] 158 The dev server ate the machine again, and took a second acceptance run with it.
+- [x] 159 The hand-over collided with the very thing sharing exists for.
+- [x] 160 Two cards on one screen answered "whose" two different ways. (D42, D86)
+- [x] 161 The card the founder asked for drew one bar.
+- [x] 162 A migration was generated, recorded, reported successful and never applied.
+- [x] 163 A drawer refused work the action behind it would have allowed.
+- [x] 164 A UNION subquery answered a name that did not exist, and the screen just asked less.
+- [x] 165 A figure truncated into a different figure.
+- [x] 166 The dispatches screen closed its own door the moment a customer said yes.
+- [x] 167 A refusal that stopped happening rewrote the database for every spec after it. (D91)
+- [x] 168 A rep could not edit a customer he had been given.
+- [x] 169 The caret never moved, on the two forms tall enough to need it.
+- [x] 170 Two figures would have grown a fourth kind without being asked. (P12-7)
+- [x] 171 A migration rewritten after it was applied is applied to nothing, in silence.
+- [x] 172 A `<bdi>` that is the block is a block that changes direction. (P12-8)
+- [x] 173 The rail's own keys were checked by nobody. (P12-8)
+- [x] 174 A new namespace is where a second word for an old thing gets in. (P12-8)
+- [x] 175 An ellipsis on a LABEL deletes the meaning and leaves the number. (P12-8)
+- [x] 176 A CHECK refuses a row only when its expression is FALSE, and `null in (a, b)` is NULL.
+- [x] 177 Two screens asked one rule and one of them asked it with a clause missing. (D42, D147)
+- [x] 178 A field order the founder dictated, drifted, and nothing could see it.
+- [x] 179 The second copy nobody read was the one that was right.
+- [x] 180 The compiler found every writer in the app and none of the six in the suite.
+- [x] 181 A gap is space; only a mark says "two values". (P12-9)
+- [x] 182 A visible heading proves the server answered; it never proves the browser is listening.
+- [x] 183 A wait for a list nobody was drawing any more, and the three copies of the helper that waits.
+- [x] 184 A state the app could not create, carried by eighteen queries and eight screens. (D94)
+- [x] 185 A figure about this morning that somebody else's afternoon could take away.
+- [x] 186 One sentence, three keys, and the third found by moving the other two.
+- [x] 188 A suite that takes half an hour cannot be started at midnight.
+- [x] 187 The same hole, one letter over: a checker that cannot see through a prefix.
+- [x] 189 Stopping a run stopped the shell in front of it, and nothing below it.
+- [x] 190 The pattern was already there four times; the box was about to write it a fifth.
+- [x] 191 A number the row shows and a number the row points at are the same question.
+- [x] 192 A number that names something is not a number, and only two places knew.
+- [x] 193 The same rule as `<bdi>`, one attribute over, found by looking at the Arabic.
+- [x] 194 Two halves of one sentence, built ten phases apart and never joined.
+- [x] 195 A figure whose words said something its query did not. (D59)
+- [x] 196 A third read of the small table, and a second walker over it.
+- [x] 197 The busiest day anybody in the demo had ever had was three entries.
+- [x] 198 Three things the Arabic reviewer found that the English side owned.
+- [x] 199 Two things only a screenshot could say, on states nothing had ever drawn. (D55)
+- [x] 200 A comment that answered a question the founder had already answered, three times over.
+- [x] 201 Four screens drew the same drawer and agreed about none of it.
+- [x] 202 Two screens answered "one sentence and its primary action" by drawing the action twice. (D35)
+- [x] 203 The half of a founder sentence that looked already done. (D98)
+- [x] 204 Taking a feature out left its supporting cast behind.
+- [x] 205 A memory that outlives its browser outlives its test.

@@ -71,6 +71,108 @@ row, and in Arabic it is `03/سبتمبر/2026` — a Latin day and year around 
 Setting that string in IBM Plex Mono would render the month in whatever the browser falls
 back to, so the one string on the screen that mixes two scripts would also mix two typefaces.
 
+## §1b One language (P13) — what every screen is drawn in
+
+Written before the P13 sweep, from reading Twenty's code (`packages/twenty-ui/src/theme`,
+`record-table`, `record-board`, `Avatar`), Attio and Folk's record pages, Pipedrive's board,
+Close's activity table, and the current pattern writing. What was taken is below with its
+number; what was refused is in §4. Everything here is tokens and components, so a screen
+cannot follow it partly: it imports the piece or `one-look` refuses the hand-drawn copy.
+
+**Spacing is a 4px unit on an 8px rhythm.** Every gap, padding and height is a multiple of
+4, and the ones a reader feels are multiples of 8: `gap-2` (8) inside a row, `gap-4` (16)
+between the parts of a card, `gap-6` (24) between cards and sections, `p-4` (16) inside a
+card on a desk and `p-3` (12) on a phone. A list row is 40px on a desk (two lines of 14px
+text and their padding) and 48px on a phone, where the thumb rule (D130) already asks for
+44. A table cell is `px-3 py-2`. Nothing is 5, 10 or 18px; a value off the scale is a
+value nobody chose. (Twenty: base 4, row 32 — theirs is a dense grid for people who live in
+it; Kladra's rows carry a second line and a phone number, so 40.)
+
+**Alignment: text starts, numbers end.** Words align to the start of the line in both
+scripts (`text-start`); every figure aligns to the end in tabular figures (`.num`), so a
+column of metres reads as a column. In a drawer, a label sits in a `w-28` column and its
+value beside it; the two columns are the same width on every drawer, which is what makes
+four drawers look like one app. On a dashboard, cards sit in `grid-cols-[repeat(auto-fit,minmax(18rem,1fr))]`:
+as many across as fit, the last row stretched to the edge, so a day with two things on it
+is two wide cards and a day with six is two rows of three — never card, gap, card.
+`grid-flow-dense` is not used: it reorders what a screen reader and the Tab key walk, and
+this app is read in two directions.
+
+**One density.** Fourteen people, one setting: 14px text, 13px secondary, 12px captions,
+rows of 40. No density toggle — a toggle is a saved view with one option, and it would be
+the first control on the screen that changes nothing a rep is here to do.
+
+**An avatar names a person or a company, and a ring says one thing about them.** `Avatar`
+in `ui-ext`: initials in the reader's script (D68 — a person is named in the script the
+reader reads), round for a person and `rounded-md` for a company, in three sizes — 24 in a
+row, 32 in a card, 40 at the head of a drawer. The hue comes from a hash of the record's
+own id across eight quiet tints (`--avatar-1` … `--avatar-8`, defined for both themes,
+low saturation, text in the same hue's foreground), so one person is one colour on every
+screen and no two colleagues in the team table share one by accident. That is identity,
+not state — the rule "colour only means something" (SPEC §3) holds because the meaning is
+"this is Faisal" — and it is a solid tint, never a gradient (§1's four gradients stay four).
+A ring is drawn only where a state exists and only in the five state colours: `state-over`
+around a rep on leave, `state-wait` around a lead nobody has acknowledged, `state-bad`
+around a company with an overdue follow-up, nothing around anybody else. A ring with no
+meaning is decoration, and the word for the state is beside the avatar as well (colour is
+never the only carrier). (Twenty: hash → one of 25 hues; round for a person, square for a
+company from the record's own shape. Eight, not 25: on a warm-black canvas twenty-five hues
+is a fruit bowl.)
+
+**Hover is a tint, never a swap; actions appear, they do not arrive.** A row or a card
+under the pointer takes `bg-surface-2/60` in 100ms and nothing else moves; a floating
+surface does not change on hover at all. The controls a row keeps for the pointer — Log,
+Call, the drawer's own buttons — are `opacity-0` until the row is hovered or focused
+within, then 150ms to 1; on a phone, where nothing hovers, they are always drawn (`@media
+(hover: hover)` gates the hiding, never the showing). Hover and focus are two things: focus
+is the 2px brand outline offset 1px on the focused element itself, and it never borrows
+the hover tint. A button, a chip and a tab hover by one step on the same tint ladder. (Twenty
+wraps every hover in `hover-capable` for exactly this reason; Linear's rows tint, they do not
+lift.)
+
+**Elevation has three levels and a page has none.** Level 0 is the canvas. Level 1 is a
+card at rest: a hairline `--line` border, no shadow unless it is `card-face`. Level 2 is a
+floating surface — menu, popover, select list — the same hairline and its own tight shadow.
+Level 3 is a dialog or a drawer: the hairline and the card shadow. Nothing is lifted by
+hover, nothing is lifted by being important; importance is position and words.
+
+**Colour means five states, one brand and eight identities.** The five state tones (§6),
+brand on exactly one control per screen, and the eight avatar tints. A chart series takes
+its colour from that same set: a state series in the state tone, a per-person series in that
+person's avatar tint, so the legend needs no key a reader has not already learned from the
+table beside it. There is no sixth state and no colour for a category.
+
+**Motion has four durations and explains, or it is not there.** 100ms for a hover, a colour
+or a text change; 150ms for a menu, a popover, a reveal; 200ms for a dialog, a drawer, a row
+that changes place; 2000ms for the arrived flash, which is colour and not travel. Enter
+eases out, exit eases in, and `prefers-reduced-motion` keeps every duration and drops every
+translate. A number does not count up: a KPI that changes is a live update and takes the
+arrived flash like any row, because a ticker is motion that repeats and says nothing the
+figure does not (Magic UI's number ticker was looked at and refused for that reason).
+
+**Empty and loading are two components, written once.** `Empty` is one sentence of at most
+two lines and forty characters a line, saying why there is nothing and, where the work is
+done elsewhere, where (D127, D31); it carries no button, because the screen's one primary
+action is already at the top (§2). `Skeleton` is the shape of the thing it stands in for —
+rows of the row's own height, a card of the card's own edges — drawn once, static: it does
+not pulse, because motion that loops is noise (§2) and a grey shape says "loading" as well as
+a breathing one. Both take `aria-busy` and `role="status"` where a reader needs them.
+
+**Charts are the shadcn kit's, drawn in the language.** `ChartContainer` over Recharts, the
+series colours as above, `accessibilityLayer` on, every mark labelled with its figure in the
+text beside the drawing so the drawing is never the only carrier (D150's reading argument
+stands even where the shape changed). A bar for a comparison, a pie for a share of a whole
+with at most six slices and the figure written on each, a ring for progress to a target.
+Every slice and bar is a door: pressing it opens the list it counts (D117). Recharts has no
+RTL of its own, so the axis and the tooltip are mirrored by the app under `dir="rtl"`, and
+the Arabic project of every chart spec asserts the first category sits at the inline start.
+
+**A wide surface shows its scrollbar where the reader is.** A board and a wide table scroll
+sideways inside `StickyScroll`: the scrollbar is a thin proxy pinned to the top of the surface
+that stays on screen while the surface is, synced both ways, so nobody scrolls to the bottom
+of forty rows to find the fifth column. Under `dir="rtl"` the proxy normalises `scrollLeft`
+by the container's computed direction, because Chromium and Firefox disagree about its sign.
+
 ## §2 Principles
 
 - Work happens in dialogs and drawers over a list; a full page is the exception — users called FACET record-first and slow because every step was a page.
@@ -89,8 +191,8 @@ back to, so the one string on the screen that mixes two scripts would also mix t
 
 shadcn/ui via CLI (Radix, RTL on): Dialog, Sheet, Drawer (phone bottom sheet), Command
 (searchable dropdowns), Popover + Calendar (date pickers), Sonner (toasts), Skeleton, Tabs,
-Badge, Table, Field (forms), Select, Tooltip, plus Button, Input, Textarea, Card,
-Dropdown-menu, Switch, Checkbox, Scroll-area, Avatar. On top of them, the app's own
+Badge, Table, Field (forms), Select, Tooltip, plus Button, Input, Textarea,
+Dropdown-menu, Checkbox, Avatar — a kit file nothing imports is deleted, and `check:dead` says so. On top of them, the app's own
 small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, `Prose`
 — one `<p dir="auto">` for any block a PERSON typed — and `NoteBlock`, which is `Prose` under
 the word for what it is, in a face of its own so a paragraph that swings to the other end of a
@@ -870,8 +972,17 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 
 ## §4 Not built until asked
 
-Drag-and-drop, bulk edit, saved views, charts beyond bars, comments, file attachments,
-refresh buttons, any gradient beyond the primary button.
+Drag-and-drop, bulk edit, saved views, comments, file attachments, refresh buttons, any
+gradient beyond the primary button. "Charts beyond bars" came off this list in P13: the founder
+asked twice for pies and rings where a share is the point, and §1b says how they are drawn.
+
+Refused in P13's research, so the next reader does not re-propose them: a density toggle (one
+setting for fourteen people, §1b); `grid-flow-dense` and CSS masonry (the first reorders what a
+reader and the Tab key walk, the second is behind a flag in two of three engines); a number
+ticker (motion that repeats); per-user card fields on the board (Pipedrive's seven — a settings
+surface for a card that carries four things); a top-N leaderboard (Close's, built for a team where
+the full table would not fit — ours fits); a bespoke PDF renderer for the report builder (the
+browser prints the table).
 
 Two came off this list in P8, and one did not. A colour-per-status map was asked for and is
 built (§6). Remembering which view a person last chose is not a saved view: a saved view is

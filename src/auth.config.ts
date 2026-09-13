@@ -61,8 +61,8 @@ function unreachable(method: string): () => never {
 
 /**
  * The whole adapter: sessions, and the two user reads Auth.js needs to resolve
- * one. No accounts table and no verification tokens — @auth/drizzle-adapter
- * would demand both and Kladra's schema has neither.
+ * one. No accounts table and no verification tokens — the official adapter
+ * would demand both and Kladra's schema has neither, so it is not installed.
  */
 export const kladraAdapter: Adapter = {
   async getUser(id) {

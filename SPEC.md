@@ -184,6 +184,63 @@ item exists and who owns it until that item is shared with him.
   Every m² is attributed, no metre is counted twice, and the manager can see for any shared project
   who was credited what.
 
+Phase 13 is the second round of real use: the reps, Rawan, Abdulrahman and Jerom have worked in
+Kladra twice now. These are the founder's decisions from that round. None of it is speculation, and
+each overrides whatever earlier default it touches — the defaults it overrules are named. (P13)
+
+- **A dispatch opens prefilled with the chosen quotation's items, or the latest one, all editable.**
+  Any difference from the quotation is flagged on the dispatch for Rawan and recorded for later
+  analysis. **A dispatch may also be direct**, for a company with no quotation and no project. This is
+  a child reading its parent, which D163 already allows; what it overrules is the line above that a
+  dispatch is "raised from an issued quotation" and only that, and D36 keeps only its second half — a
+  dispatch that does name a quotation names the live revision.
+- **Reports are what the person wrote, not what the system recorded.** The rep picks the company, the
+  contact, optionally a project, a quotation or a dispatch; chooses what happened from buttons — visit,
+  call, WhatsApp, meeting, site visit, and so on — and an outcome; writes the rest. A rep sees only his
+  own; the manager sees everyone. The system's own events are shown alongside, clearly marked, never
+  mixed in. **Overrules D55 and D162's first half** ("the system writes the day") — the system's half
+  is still shown, but it is not the report.
+- **Services — CNC cutting, denting, fabrication — live inside the quotation as their own section**,
+  each with m² and a price per m², subtotalled apart from the panels.
+- **The coordinator may raise a quotation or a dispatch on a rep's behalf; it counts toward that rep.**
+  How often each rep relies on her is tracked, so the manager can see whether it is occasional or a
+  habit. If she picks no rep, it is hers, under Internal Sales.
+- **Credit and tasaheel are one payment option**, with a mandatory note. Narrows the P12 payment line
+  above from four options to three.
+- **Marketing is a rep in everything**, plus a Leads module. **Overrules D44 and D50**: marketing carries
+  a target and metres, quotes and dispatches like a rep, and keeps its own module for passing leads.
+- **Shares are drawn as pies and rings where a share is the point**, and they are interactive: pressing
+  a slice or a bar opens the list behind it. The founder saw the bars D150 chose and asked again, so
+  **D150 is reversed**; what D150 kept — every share says what it is a share OF, and the figure is written
+  beside the shape — stays.
+- **The company's target this month sits at the top of the first tab**, always visible, above the three
+  sections that exist now; it moves out of Metrics. **Targets are the current month only**: no navigation
+  across months, editable only where the admin sets it, history read-only elsewhere.
+- **"All" is the first and default view** for companies, quotations and dispatches. Nobody should be
+  able to forget a company because the default hid it.
+- **Projects get a board view.** Its columns come from the project's real life, decided in DESIGN §6.
+- **Every board's horizontal scrollbar is visible without scrolling down**, pinned to the viewport or at
+  the top, and the same for every wide table.
+- **The quotation request dialog is wide enough** for the item table plus the services section, with a
+  stated minimum width on a desk and a test that asserts it. Reported twice.
+- **Payment terms carry no hidden placeholder text** — "30 days from delivery" and any other — anywhere.
+- **The coordinator's desk shows pending quotations and pending dispatches side by side**, not stacked.
+  Narrows D137 ("her desk in the order she works it"): the order stays, the two halves sit beside each
+  other where the screen is wide enough.
+- **A lead is filed with the company, a contact with a phone, where it came from (Marketing is on that
+  list for this role) and the customer's query as the single note** — no other note fields — and is
+  assigned to a rep or to herself in the same step. The rep receives it apart from his own companies,
+  newest first, highlighted until he acknowledges; a notification; after two days unacknowledged it
+  shows for the manager. The manager's leads view assigns and reassigns. Marketing sees what became of
+  each lead it passed: acknowledged, contacted, quoted, won. Once acknowledged, the lead is a normal
+  company owned by the rep, keeping its origin.
+- **Dropdowns must open in Microsoft Edge.** Reproduced with Playwright's msedge channel, fixed at the
+  cause once for every popup, and Edge stays in the test matrix.
+- **One visual language, applied everywhere in one sweep** (DESIGN §1b): avatars with initials and
+  meaningful rings for people and companies, hover on every row and card, one spacing and alignment
+  scale, consistent density, colour that only means something, motion that explains, empty and loading
+  states everywhere; both themes, both directions, the phone; proved with side-by-side screenshots.
+
 ## §4 Defaults Claude chose — founder may change
 
 - D1 Lead sources, in order: Field visit · Direct contact · Referral · Exhibition · Marketing · Online · WhatsApp · Other (FACET's list with "Online or WhatsApp" split and "Consultant or architect" dropped, per §3).
@@ -368,7 +425,7 @@ item exists and who owns it until that item is shared with him.
 
 - D149 **The skills installed for Phase 12, and the one that was thrown away.** The brief said to research freely and install whatever helps, which overrides CLAUDE.md's cap of six — recorded here rather than done quietly. Three were kept. **ui-ux-audit** is a checklist of the failures a model reliably ships — a layout that breaks when the content grows, a state nobody drew, a target too small for a thumb — and it is read before writing a screen as well as after. **yafa-ui-dashboard** is about the order a dashboard puts things in, the anatomy of a figure card and what happens to a row of filters as the width goes; its own first rule is that the host product's identity wins, which is why it is safe here. **dataviz** is Tufte's argument with a chart-picking table and colour ramps checked for contrast, and it earns its place for one decision this phase has to make properly: which shares are worth a ring and which are a bar with a number beside it. What none of them govern is the look. DESIGN.md is eleven phases of decisions taken against this business and it wins over any of them — their palettes, their typefaces, their canvas colours and their component kits are not imported. A fourth was installed, inspected and deleted: a twenty-two megabyte plugin for banners, brand decks and slides, which is a different trade. DEFAULT — founder may change.
 
-- D150 **Overrules a §3 line** — "Shares as pie or ring charts where a share is the point." The ask underneath it stands and is being built: the metrics answer proportion questions, and each says what it is a share OF. What changes is the shape. A pie asks the eye to compare angles, which it cannot do — the reading research is one-sided enough that the visualization reference installed for this phase (D149) lists pie and donut as banned outright, with one exception nobody here needs: two slices and a dramatic majority. The question the founder actually asked is "where did this month's metres go by customer segment", and the segments are the ten company categories (D2). Ten angles is a chart that has to be read with a legend and a key, and a ring in the middle of it removes the one part a reader could have judged, the area. Ranked horizontal bars answer it in one glance, in order, with the figure on each row. There is a second reason to prefer them and it is Kladra's own: the app already has this component — the chain card and the loss card have drawn a share as a bar since P11 — so the alternative was a second way of drawing one thing, which rules/data.md forbids for a figure and DESIGN §3 forbids for a component. Nothing else about the request is refused, and CLAUDE.md's "no charts beyond bars" survives intact rather than being reopened for a shape that reads worse. Founder may overrule this back; if he does, it wants a ring drawn only where a share has two parts.
+- D150 **Overrules a §3 line** — "Shares as pie or ring charts where a share is the point." The ask underneath it stands and is being built: the metrics answer proportion questions, and each says what it is a share OF. What changes is the shape. A pie asks the eye to compare angles, which it cannot do — the reading research is one-sided enough that the visualization reference installed for this phase (D149) lists pie and donut as banned outright, with one exception nobody here needs: two slices and a dramatic majority. The question the founder actually asked is "where did this month's metres go by customer segment", and the segments are the ten company categories (D2). Ten angles is a chart that has to be read with a legend and a key, and a ring in the middle of it removes the one part a reader could have judged, the area. Ranked horizontal bars answer it in one glance, in order, with the figure on each row. There is a second reason to prefer them and it is Kladra's own: the app already has this component — the chain card and the loss card have drawn a share as a bar since P11 — so the alternative was a second way of drawing one thing, which rules/data.md forbids for a figure and DESIGN §3 forbids for a component. Nothing else about the request is refused, and CLAUDE.md's "no charts beyond bars" survives intact rather than being reopened for a shape that reads worse. Founder may overrule this back; if he does, it wants a ring drawn only where a share has two parts. **Reversed by the founder in P13** (§3): he saw the bars and asked again. DESIGN §1b says how — a pie only for a share of a whole with at most six slices and the figure written on each, a ring only for progress to a target, every slice a door to its list, and every share still saying what it is a share OF.
 
 - D151 **The three tabs, and what decides which one a thing belongs on** (P12, §3). Every home screen — the rep's day, the coordinator's queue, the manager's team — is one long column today, and the founder's complaint about the six-month chart is the symptom: it sits above the work and pushes it under the fold, so the screen a person opens twenty times a day starts with something he cannot act on. The rule that sorts it is one question. **Today's work** is what a person can do something about before he goes home: a call that is owed, a request waiting on him, a job that has stopped. **Metrics** is everything measured over a window rather than acted on — a share, a rate, a month against a target, the six months behind it. **The team** is the third tab and only the manager has it, because only he is asked about people rather than about work; it is the whole team in one place instead of a table here and a standing strip there. A figure that fails the first question does not belong on the first tab however interesting it is, and that single sentence is what keeps the tabs from drifting back into three copies of the same scroll. The chosen tab rides in the URL, so a link a manager sends opens on what he was looking at, and it is remembered per browser exactly as the list-and-board switch already is (`src/lib/view.ts`) rather than growing a second mechanism. **This overrules the reason written on the daily report's position** — it sat last because the report is the last thing done, which is true and was still wrong: a person who has finished his day should not have to scroll past three lists of unfinished work to write it, and putting it at the top costs the lists nothing. DEFAULT — founder may change.
 

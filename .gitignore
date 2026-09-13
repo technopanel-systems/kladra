@@ -36,6 +36,17 @@ current.yml
 /*.yml
 !/docker-compose.yml
 
+# what this phase's tools leave behind: axe and Lighthouse reports, visual
+# baselines (regenerated per phase, compared in the session, never committed),
+# and the Edge channel's own profile directory.
+.lighthouseci/
+lighthouse/
+axe-report*/
+*-snapshots/
+__screenshots__/
+*.trace.zip
+.playwright-mcp/
+
 # backups (dumps hold every row and every password hash)
 backups/
 logs/

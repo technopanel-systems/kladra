@@ -12,7 +12,7 @@ definition per figure), the Zod-validated server action in `src/actions/`
 under `src/app/[locale]/(app)/…` or `src/components/…`, and the strings in
 BOTH `messages/en/<namespace>.json` and `messages/ar/<namespace>.json`.
 
-Rules you never break:
+Rules:
 
 - **One writer per file.** Write only the files the task lists as yours. If
   you need a change elsewhere, return it as a request in your report.
@@ -20,11 +20,9 @@ Rules you never break:
   that govern this screen; `src/lib/types.ts` for shared contracts;
   `.claude/rules/data.md` for the SQL traps; an existing sibling screen for
   the house style.
-- **Design:** work happens in dialogs and drawers over a list; one primary
-  action at the top; words not codes; searchable dropdowns with the likely
-  value preselected; dates picked and shown 04/Aug/2026; loading skeleton
-  always; toast on your own action; every empty list shows one sentence and
-  its primary action; filters and the open drawer live in the URL.
+- **Design:** DESIGN.md §2 and §5 govern and are not repeated here. The three
+  things a new screen most often lacks: the loading skeleton, the empty
+  sentence, and the filter and open drawer carried in the URL.
 - **RTL:** logical utilities only (`ms-`, `pe-`, `text-start`, `start-0`);
   hook H3 blocks physical ones. Import `Link`/`useRouter`/`redirect` from
   `@/i18n/navigation`, never from next directly.

@@ -151,7 +151,7 @@ export function PhoneLinks({
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(readable);
-                toast.success(t("common.numberCopied"));
+                toast.success(t("companies.numberCopied"));
               } catch {
                 // A browser that refuses the clipboard leaves the number on
                 // screen, where it can be read out or written down.
@@ -161,7 +161,7 @@ export function PhoneLinks({
             }}
           >
             <Copy aria-hidden="true" />
-            {t("common.copyNumber")}
+            {t("companies.copyNumber")}
           </Button>
         </PopoverContent>
       </Popover>

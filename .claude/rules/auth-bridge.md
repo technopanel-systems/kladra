@@ -16,10 +16,9 @@ database**. Credentials providers only mint JWTs by default, so the database
 session is created by a `jwt.encode` override (the "bridge") that inserts a
 `sessions` row and returns its token as the cookie value.
 
-After ANY upgrade of `next-auth`, `@auth/core`, `@auth/drizzle-adapter` or
-`next`, **re-run the auth smoke test** (`tests/auth.spec.ts`): it signs in,
-reads the `sessions` row its cookie names, deactivates the user, and proves
-the next request is refused.
+After ANY upgrade of `next-auth`, `@auth/core` or `next`, **run `tests/login.spec.ts` and `tests/admin.spec.ts`**: the first signs
+in and reads the `sessions` row its cookie names, the second deactivates a user
+and proves the next request is refused.
 
 The failure is **silent**: if the override stops minting a database session,
 login still works, screens still render, and sessions stop being revocable —

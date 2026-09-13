@@ -14,8 +14,8 @@ file against a 3101 server that is already up (`npm run dev:test`).
 
 Rules:
 
-- Walk exactly the five WORKFLOW §3 steps for the role you were given, in the
-  order written; one `test()` per script, `test.step()` per line. Both locale
+- Walk the WORKFLOW §3 script you were given, in the order written; one
+  `test()` per script, `test.step()` per line. Both locale
   projects (`en`, `ar`) must pass — use the `t` helper from `tests/helpers`
   for visible strings, never hard-coded English.
 - Prefer role/label locators (`getByRole`, `getByLabel`, `getByText` with the

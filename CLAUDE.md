@@ -49,14 +49,13 @@ Every commit is green on typecheck, lint, build, test.
 Hooks: `guard-writes.mjs` H0–H9, `guard-bash.mjs` H11–H12.
 
 ## Permissions
-`permissions.defaultMode` of `bypassPermissions` or `auto` is IGNORED from project settings
-(Claude Code 2.1.257+). It is honoured only from `~/.claude/settings.json`, managed settings,
-or `--permission-mode` / `--dangerously-skip-permissions` at launch. Do not put it in the repo;
-it would be a lie about what the system does. Blanket allow rules live in `settings.local.json`,
-which reloads live — no restart. To stop prompts for good: `/permissions` → Bypass permissions.
+Blanket allow rules live in `.claude/settings.local.json` (git-ignored, reloads live). To stop
+prompts for good: `/permissions` → Bypass permissions. A permission mode set in the repo's
+settings is ignored by Claude Code, so none is set there.
 
 ## Never
 No third-party agent frameworks or swarms. No production data — migrations clear.
-No comments feature, refresh buttons, drag-and-drop, bulk edit, saved views, charts
-beyond bars. No internal codes or IDs on screen.
-Six installed skills was the cap; P12 lifted it and D149 says which are installed and why.
+No comments feature, refresh buttons, drag-and-drop, bulk edit, saved views. No chart for
+decoration: a bar, a pie or a ring only where it answers a question a manager asks (P13).
+No internal codes or IDs on screen.
+Which skills, agents and MCP servers are installed, and why each earns its place: WORKFLOW §1.

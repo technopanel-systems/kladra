@@ -82,6 +82,7 @@ the one that matches the change before committing it, and `-- --write` to move a
 ```bash
 npm run typecheck && npm run lint && npm run build
 npm run check:messages        # every key in both locales, every key used, no gendered Arabic
+npm run check:dead            # knip: a file nothing imports, an export nothing calls, a dependency nothing uses
 npm run test                  # Playwright: boots dev:test on 3101, reseeds kladra_test, runs tests/ in en and ar
 npm run check:build-env       # builds with no .env, the way the Docker image does
 ```

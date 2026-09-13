@@ -23,5 +23,5 @@ Ask, of every screen and every query:
    a message key nothing renders. Wire it or delete it.
 
 Fix what you find in the same session. Green before every commit. Write what changed into
-WORKFLOW §0 under "where I stopped", then continue from the first unchecked box exactly as
-`/go` would — do not stop and report.
+WORKFLOW §0 under "where I stopped", tell Jerom in a few lines what the audit changed, then
+continue from the first unchecked box as `/go` would.

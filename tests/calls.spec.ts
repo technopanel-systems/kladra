@@ -260,9 +260,9 @@ test("a held number shows itself, and offers to be copied", async ({ page, local
     // The number itself, not the address the link carries.
     await expect(panel).toContainText(readable);
 
-    await panel.getByRole("button", { name: t("common.copyNumber") }).click();
+    await panel.getByRole("button", { name: t("companies.copyNumber") }).click();
     await expect(panel).toBeHidden();
-    await expect(page.getByText(t("common.numberCopied"), { exact: true })).toBeVisible(COLD);
+    await expect(page.getByText(t("companies.numberCopied"), { exact: true })).toBeVisible(COLD);
 
     // What was taken is what was on the screen, not the wa.me address and not
     // the stored form nobody was shown.
