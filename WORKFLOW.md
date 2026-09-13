@@ -23,28 +23,47 @@ below by number.
             (knip) joined lint; the prompt files were audited for Fable and shortened; this file shrank from
             281 KB to what a session can read; the language is written (DESIGN §1b), the founder's round is
             in SPEC §3, and the slices below are the plan.
-      - [ ] **Stage 2 (Opus, xhigh)** — every slice, in the groups below; parallel inside a group where files do
+      - [ ] **Stage 2 (Opus, xhigh)** — approved by the founder with three changes, written into S0, S1
+            and G6 below. Every slice, in the groups below; parallel inside a group where files do
             not overlap; the session integrates (spec3 registry, SPEC §4, DESIGN, §5) and runs the gate.
             A slice is green on typecheck, lint, build and its own specs; a group is green on the full
             suite before its slices are committed, one commit per slice. Every slice ends with shot-looker,
             arabic-reviewer, web-design-guidelines, the axe spec and the critic's pass.
-            - [ ] G1 · S0 **Schema for the whole phase**, one migration set: a dispatch names its company and
-                  optionally its quotation and project, and carries its own typed lines (nullable link to the
-                  quotation line it came from); `quotation_services`; payment terms merge credit and tasaheel;
-                  `raised_by_id` on quotations and dispatches; marketing sells and carries metres; a log entry
-                  takes an outcome, a kind from the wider list, and an optional quotation or dispatch;
-                  `daily_reports` goes; seed and `tests/schema.spec.ts` follow.
-            - [ ] G1 · S1 **The language's primitives** (DESIGN §1b): `Avatar` with rings, `Empty`, the static shaped
-                  `Skeleton`, the hover and reveal utilities, `StickyScroll`, the chart kit (`npx shadcn add chart`),
-                  the eight avatar tints in both themes, `one-look` rules for each, and the axe spec that walks
-                  every screen for every role in both locales. The "before" screenshots of every screen are taken
-                  here, into the scratchpad, for S12's side-by-side.
+            **How Stage 2 runs.** The session builds G1 itself — everything after it stands on the schema
+            and the identity. From G2 on, up to three screen-builders run at once on disjoint files in this
+            tree, each told the files and message namespaces it owns; none of them runs Playwright. The
+            session runs each slice's specs one file at a time, integrates what several slices share (the
+            spec3 registry, `common` messages, SPEC §4, DESIGN, §5), and runs the full suite once per group.
+            - [ ] G1 · S0 **Schema for the whole phase**, one migration set, and the least code that keeps the
+                  gate green on it: a dispatch names its company and optionally its quotation and project, and
+                  carries its own typed lines AND its own services — the same inputs as a quotation, each with a
+                  nullable link to the quotation line or service it came from, so the difference flag compares
+                  the whole thing (founder, P13 approval); `quotation_services` and `dispatch_services`; payment
+                  terms merge credit and tasaheel; `raised_by_id` on quotations and dispatches; marketing sells and
+                  carries metres (D168); a log entry takes an outcome from an admin lookup (D171), a kind from the
+                  wider list, and an optional quotation or dispatch; `daily_reports` goes (D167); seed and
+                  `tests/schema.spec.ts` follow.
+            - [ ] G1 · S1 **The identity** (founder, P13 approval). First the "before" set: `scripts/shots.ts`, one
+                  manifest of every screen, dialog, drawer, board, dashboard, list, form and empty state, per
+                  role, captured into `shots/` at 1366 and 375, en and ar, dark and light — the same manifest
+                  takes the "after" set in G6. Then three visual directions drawn from everything 13.1 studied
+                  (Twenty's code, Attio and Folk's restraint, Linear's motion, the shadcn chart kit, the avatar and
+                  hover rules in §1b), each a token set switchable on the dev server and rendered on three real
+                  screens — the rep's home, the coordinator's queue, a quotation drawer — in both themes and both
+                  directions. Palette, type scale, radius, elevation and density are open; kept whatever wins:
+                  dark by default, one gradient on the primary action, calm. One is picked with its reason written
+                  in DESIGN §1, its tokens set, the other two deleted, and the work carries on without a stop.
+                  Then the primitives drawn in it: `Avatar` with rings, `Empty`, the static shaped `Skeleton`, the
+                  hover and reveal utilities, `StickyScroll`, the chart kit (`npx shadcn add chart`), the avatar
+                  tints in both themes, a `one-look` rule for each, and `tests/axe.spec.ts` walking every screen
+                  for every role in both locales.
             - [ ] G2 · S2 **Quotations** (13.4): the request dialog wide enough for the lines and the services — a
                   stated minimum on a desk, asserted by a test — and the services section with its own subtotal.
             - [ ] G2 · S3 **Dispatches** (13.5): the request rebuilt per §3 — prefilled from the chosen or latest
-                  issued quotation, editable, linked, flagged where it differs (computed from the two line sets by
-                  `quotation-diff`, recorded in the trail at the raise), or direct for the company; refused is
-                  edited and resubmitted; payment placeholders gone, the three-way choice.
+                  issued quotation with its panels AND its services, editable, linked, flagged where either differs
+                  (computed from the two sets by `quotation-diff`, recorded in the trail at the raise), or direct
+                  for the company with its own prices (D169); refused is edited and resubmitted; payment
+                  placeholders gone, the three-way choice.
             - [ ] G2 · S4 **Reports** (13.8): one popup from anywhere — the top bar's `+`, and every drawer, prefilled
                   with what it was opened from — company, contact, what happened as buttons, outcome, text, next
                   follow-up, twenty seconds on a phone; the rep's view (his days, a calendar, filters by company,
@@ -56,8 +75,8 @@ below by number.
                   with assign and reassign and the unacknowledged; marketing's outcome per lead — acknowledged,
                   contacted, quoted, won — derived from the company's own records; marketing a rep everywhere else.
             - [ ] G3 · S7 **Lists and boards** (13.3): "All" first and default on companies, quotations and dispatches;
-                  the projects board with the columns DESIGN §6 decides; `StickyScroll` on every board and wide
-                  table; the archive rebuilt from its question — who opens it and what they do there.
+                  the projects board, Open · Quoted · Dispatching · Won · Lost (D170); `StickyScroll` on every board
+                  and wide table; the archive rebuilt from its question — who opens it and what they do there.
             - [ ] G3 · S10 **Targets** (13.2): the current month only, editable where the admin sets it, history
                   read-only beneath.
             - [ ] G4 · S6 **The coordinator** (13.6): pending quotations and dispatches side by side from `lg` up; a
@@ -71,23 +90,42 @@ below by number.
                   the table under the chart, CSV export for the manager and a print stylesheet; every question a
                   manager asks monthly answerable there.
             - [ ] G5 · S11 **Edge** (13.9): an `edge` Playwright project on the msedge channel that runs only
-                  `tests/edge.spec.ts`, opening every menu, select, popover and palette on every screen in both
-                  locales; the hypotheses in order — Edge's translation of the Arabic screens mutating the portal
-                  (`translate="no"` on the shell if so), a modal menu dismissing a popover, Enhanced Security mode,
-                  duplicated Radix internals (`npm ls`, clean today); fixed once in the kit, the rule in DESIGN §5.
-            - [ ] G6 · S12 **The sweep** (13.10): the language applied to every screen not rebuilt above — companies,
-                  contacts, projects, admin, notifications, duplicates, the queue rows, the shell, the sign-in;
-                  "after" screenshots beside the "before" set, both themes, both directions, 1366 and 375, in one
-                  contact sheet for Jerom.
+                  `tests/edge.spec.ts` (D172), opening every menu, select, popover and palette on every screen in
+                  both locales; the hypotheses in order — Edge's translation of the Arabic screens mutating the
+                  portal (`translate="no"` on the shell if so), a modal menu dismissing a popover, Enhanced Security
+                  mode, duplicated Radix internals (`npm ls`, clean today); fixed once in the kit, the rule in DESIGN §5.
+            - [ ] **G6 · The front end, re-audited and reshaped** (founder, P13 approval) — its own group at the end,
+                  as many slices as it needs, and it may take longer than the rest combined. Every screen, dialog,
+                  drawer, board, dashboard, list, form and empty state opened as if never seen, and judged against
+                  DESIGN §1 and §1b and the products studied — never against what an earlier phase built. Where one
+                  falls short it is reshaped: layout, hierarchy, density, hover, avatars, motion, colour meaning,
+                  empty and loading states, the phone. Rewriting a component is allowed; what was fine in P8 and is
+                  merely acceptable now is rebuilt. The libraries adopted are used where they fit, each use recorded
+                  in §1. Both themes, both directions, 375 and 1366, before beside after for every screen. Not done
+                  until a stranger would say the whole product was built by one hand, this month.
+                  - [ ] S12.0 The cold inventory: every state in the shots manifest, per role, judged and ranked here
+                        with what falls short of what, and the reshape each one gets.
+                  - [ ] S12.1 The shell: rail, top bar, bottom bar, search palette, bell and notifications, sign-in,
+                        error and missing screens, the view-as banner.
+                  - [ ] S12.2 Companies and contacts: list, strip, drawer, forms, hand-over, share, archive.
+                  - [ ] S12.3 Projects: list, board, drawer, forms, lost.
+                  - [ ] S12.4 Quotations: list, board, the drawer rebuilt, request dialog, history, revision.
+                  - [ ] S12.5 Dispatches: list, board, drawer, request dialog, trail.
+                  - [ ] S12.6 The coordinator's desk.
+                  - [ ] S12.7 The rep's day and the manager's three tabs, metrics and the builder.
+                  - [ ] S12.8 Reports, leads, duplicates.
+                  - [ ] S12.9 Admin: users, targets, lookups, holidays, use, archive, export.
+                  - [ ] S12.10 The stranger's pass: every state again, before beside after in one contact sheet for
+                        Jerom; whatever still reads as another hand is reshaped here.
       - [ ] **Stage 3 (Fable)** — audit everything as a stranger, refix, push, report; `/cost` at the end.
 
-**Where I stopped.** Stage 1 is done and this is the stop for approval; nothing of Stage 2 is
-built. What the research took and refused is in DESIGN §1b and §4; the toolbox is §1. The dev
-database is seeded at volume (`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. A dev
-server that has served a session's edits is restarted, not reused. The "12D" the founder's brief
-names under quotations is not in any of the five files — the P12 quotations box (9) built company →
-project → contact, the width, the warehouse and one button — so S2 builds the width and the services
-and the founder is asked what else 12D held.
+**Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
+as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
+on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
+front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
+everything it held is built or in S2. Stage 2 starts at G1 · S0. The dev database is seeded at volume
+(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. A dev server that has served a
+session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
 
