@@ -60,6 +60,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
+            userId={user.id}
             name={personNameFrom(user, locale)}
             role={user.role}
             theme={theme}

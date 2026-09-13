@@ -31,7 +31,7 @@ export function BottomBar({ role }: { role: Role }) {
     <>
       <nav
         aria-label={t("shell.mainNav")}
-        className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-rail glass pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-rail pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {bar.map((item) => {
           const active = isActive(pathname, item.href);

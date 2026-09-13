@@ -73,7 +73,7 @@ export function Sidebar({
       <aside
         data-collapsed={collapsed}
         className={cn(
-          "sticky top-0 z-30 hidden h-svh shrink-0 flex-col overflow-hidden border-e border-line bg-rail glass md:flex",
+          "sticky top-0 z-30 hidden h-svh shrink-0 flex-col overflow-hidden border-e border-line bg-rail md:flex",
           "transition-[width] duration-200 ease-out",
           collapsed ? "w-[4.5rem]" : "w-60",
         )}
@@ -102,7 +102,7 @@ export function Sidebar({
                 <p
                   id={`nav-group-${index}`}
                   className={cn(
-                    "px-2.5 pt-5 pb-1.5 text-[11px] font-medium text-rail-text/70",
+                    "px-2.5 pt-5 pb-1.5 text-[11px] font-medium text-rail-text",
                     collapsed && "sr-only",
                   )}
                 >

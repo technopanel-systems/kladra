@@ -5,11 +5,27 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Kladra tokens (DESIGN.md §1). Warm black with a red undertone. Dark is the
- * default; light is designed, not inverted. The palette is mapped onto shadcn's
- * semantic names so components say bg-card / text-muted-foreground and never a
- * raw colour. Red is --brand, not --accent (shadcn owns --accent for hover).
+ * Kladra tokens (DESIGN.md §1, "Sandstone", P13-S1). Warm neutrals — Najdi
+ * plaster by day, a brown-black at dusk — with the brand red on one control per
+ * screen. Dark is the default; light is designed, not inverted. The palette is
+ * mapped onto shadcn's semantic names so components say bg-card /
+ * text-muted-foreground and never a raw colour. Red is --brand, not --accent
+ * (shadcn owns --accent for hover).
  */
+
+/*
+ * The type scale, a half step above Tailwind's own (DESIGN §1). Readex Pro is one
+ * family for Arabic and Latin, and Arabic at 13px is where a rep reading a phone
+ * in the sun starts to squint; the Latin rides at the same size so the two
+ * locales are one voice, not a large one and a small one.
+ */
+@theme {
+  --text-xs: 0.78125rem;
+  --text-sm: 0.90625rem;
+  --text-base: 0.96875rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+}
 
 @theme inline {
   --font-sans: var(--font-app), ui-sans-serif, system-ui, sans-serif;
@@ -88,7 +104,7 @@
   --color-chart-4: var(--a-green-fg);
   --color-chart-5: var(--text-muted);
 
-  /* --radius 10px: controls 8–10px, cards 14px (rounded-xl), badges full pills. */
+  /* --radius 12px: controls 8–12px, cards 16px (rounded-xl), badges full pills. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -107,64 +123,80 @@
      too. */
   color-scheme: light;
 
-  --radius: 0.625rem;
+  --radius: 0.75rem;
 
-  --red-600: #c8102e;
-  --red-500: #e5233c;
+  --canvas: #f5f0e9;
 
-  --canvas: #f5f2ef;
-  --glow-x-red: 8%;
-  --glow-x-blue: 100%;
-  --canvas-glow:
-    radial-gradient(1200px 600px at var(--glow-x-red) -10%, rgba(200, 16, 46, 0.1), transparent 60%),
-    radial-gradient(900px 500px at var(--glow-x-blue) 0%, rgba(43, 92, 168, 0.08), transparent 55%);
-
-  --surface: rgba(255, 255, 255, 0.85);
-  --surface-2: rgba(26, 22, 20, 0.05);
-  --surface-solid: #ffffff;
+  /* Solid, all of them. The frosted glass went in P13: a translucent card over
+     a glow is a card whose colour depends on where it sits, and every tint
+     measured against it was measured against a guess. */
+  --surface: #fffcf8;
+  --surface-solid: #fffcf8;
+  --surface-2: #efe8de;
+  --surface-2-solid: #efe8de;
   /* The shade under a scroll hint, dark on a light ground (D80). */
-  --scroll-shadow: rgba(26, 22, 20, 0.16);
-  --surface-2-solid: #f3efeb;
-  --line: rgba(26, 22, 20, 0.13);
-  --line-strong: rgba(26, 22, 20, 0.24);
-  --line-hi: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  --scroll-shadow: rgba(60, 40, 20, 0.16);
+  --line: rgba(70, 45, 20, 0.1);
+  --line-strong: rgba(70, 45, 20, 0.19);
 
-  --text: #1a1614;
-  --text-muted: #6b615c;
-  --text-faint: #736c67;
+  --text: #251d16;
+  --text-muted: #6c5f52;
+  --text-faint: #6f6256;
 
-  --rail: rgba(23, 19, 17, 0.94);
-  --rail-solid: #171311;
-  --rail-text: #b5aba6;
-  --rail-text-strong: #ffffff;
-  --rail-active: rgba(255, 255, 255, 0.07);
+  --rail: #231b15;
+  --rail-solid: #231b15;
+  --rail-text: #bcae9f;
+  --rail-text-strong: #fff8f1;
+  --rail-active: rgba(255, 240, 225, 0.08);
 
-  --brand: #c8102e;
+  --brand: #bb2638;
   --brand-ink: #ffffff;
-  --brand-grad: linear-gradient(135deg, #c8102e, #e5502f);
-  --brand-glow: 0 0 0 1px rgba(200, 16, 46, 0.25), 0 8px 24px -8px rgba(200, 16, 46, 0.4);
-  --mark-grad: linear-gradient(140deg, var(--red-500), #7a1020);
-  --avatar-user-grad: linear-gradient(140deg, #8a3244, #4a1622);
+  --brand-grad: linear-gradient(135deg, #bb2638, #d9613a);
+  --brand-glow: 0 6px 18px -8px rgba(187, 38, 56, 0.45);
+  --mark-grad: linear-gradient(140deg, #e5233c, #7a1020);
 
-  --a-red-bg: rgba(200, 16, 46, 0.09);
-  --a-red-fg: #c8102e;
+  --a-red-bg: rgba(187, 38, 56, 0.09);
+  --a-red-fg: #b3202f;
   --a-blue-bg: rgba(43, 92, 168, 0.09);
   --a-blue-fg: #2b5ca8;
   --a-amber-bg: rgba(138, 90, 0, 0.11);
-  --a-amber-fg: #8a5a00;
+  --a-amber-fg: #7d5207;
   --a-green-bg: rgba(21, 128, 61, 0.09);
-  --a-green-fg: #15803d;
+  --a-green-fg: #116a34;
 
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset, 0 12px 36px -18px rgba(26, 22, 20, 0.42);
-  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 20px 50px -20px rgba(26, 22, 20, 0.48);
-  --blur: blur(18px) saturate(1.1);
+  /*
+   * Who somebody is (DESIGN §1b): eight quiet tints, one per hash of a record's
+   * id. Low chroma on purpose — they sit beside the five state colours and must
+   * never be mistaken for one — and spaced around the wheel so two colleagues
+   * are told apart by hue, not by two shades of the same brown.
+   */
+  --avatar-1-bg: oklch(0.91 0.035 25);
+  --avatar-1-fg: oklch(0.43 0.08 25);
+  --avatar-2-bg: oklch(0.91 0.035 70);
+  --avatar-2-fg: oklch(0.43 0.07 70);
+  --avatar-3-bg: oklch(0.92 0.04 110);
+  --avatar-3-fg: oklch(0.42 0.07 110);
+  --avatar-4-bg: oklch(0.91 0.035 155);
+  --avatar-4-fg: oklch(0.42 0.07 155);
+  --avatar-5-bg: oklch(0.91 0.03 200);
+  --avatar-5-fg: oklch(0.42 0.06 200);
+  --avatar-6-bg: oklch(0.91 0.03 245);
+  --avatar-6-fg: oklch(0.43 0.08 245);
+  --avatar-7-bg: oklch(0.91 0.035 290);
+  --avatar-7-fg: oklch(0.43 0.08 290);
+  --avatar-8-bg: oklch(0.91 0.035 335);
+  --avatar-8-fg: oklch(0.43 0.08 335);
+
+  /* A card at rest and a dialog: soft, under a solid surface. Nothing is lifted
+     by hover (DESIGN §1b). */
+  --shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 10px 28px -18px rgba(60, 40, 20, 0.26);
 
   /* shadcn semantic aliases */
   --background: var(--canvas);
   --foreground: var(--text);
   --card: var(--surface);
   --card-foreground: var(--text);
-  --popover: var(--surface-solid); /* popovers and dialogs are solid, never blurred */
+  --popover: var(--surface-solid);
   --popover-foreground: var(--text);
   --primary: var(--brand);
   --primary-foreground: var(--brand-ink);
@@ -185,75 +217,63 @@
 .dark {
   color-scheme: dark;
 
-  --canvas: #0f0d0c;
-  --canvas-glow:
-    radial-gradient(1200px 600px at var(--glow-x-red) -10%, rgba(229, 35, 60, 0.13), transparent 60%),
-    radial-gradient(900px 500px at var(--glow-x-blue) 0%, rgba(43, 92, 168, 0.09), transparent 55%);
+  --canvas: #15110e;
 
-  --surface: rgba(30, 26, 24, 0.72);
-  --surface-2: rgba(40, 35, 32, 0.6);
-  --surface-solid: #1b1816;
+  --surface: #1e1915;
+  --surface-solid: #1e1915;
+  --surface-2: #28221d;
+  --surface-2-solid: #28221d;
   /*
    * LIGHT on a dark ground. A black shadow on a near-black surface is four
    * levels out of 255 and invisible — measured, not guessed — so on this theme
-   * the edge is a faint light one, which is the same thing a card's own
-   * hairline highlight does one component along.
+   * the edge is a faint light one.
    */
-  --scroll-shadow: rgba(255, 255, 255, 0.14);
-  --surface-2-solid: #232120;
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.12);
-  --line-hi: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  --scroll-shadow: rgba(255, 240, 225, 0.14);
+  --line: rgba(255, 238, 220, 0.08);
+  --line-strong: rgba(255, 238, 220, 0.14);
 
-  --text: #f3eeeb;
-  --text-muted: #a69d99;
-  --text-faint: #8f8480;
+  --text: #f4ece3;
+  --text-muted: #b2a496;
+  --text-faint: #9d8f82;
 
-  --rail: rgba(9, 8, 7, 0.85);
-  --rail-solid: #0e0c0b;
-  --rail-text: #8f8683;
-  --rail-text-strong: #fff8f5;
-  --rail-active: rgba(255, 255, 255, 0.05);
+  --rail: #100c09;
+  --rail-solid: #100c09;
+  --rail-text: #a3978a;
+  --rail-text-strong: #fff8f1;
+  --rail-active: rgba(255, 238, 220, 0.06);
 
-  --brand: #f2566b; /* #c8102e is too dark on a dark canvas */
+  --brand: #ec5e62; /* #bb2638 is too dark on a dark canvas */
   --brand-ink: #ffffff;
-  --brand-grad: linear-gradient(135deg, #f2566b, #ff7a4a);
-  --brand-glow: 0 0 0 1px rgba(242, 86, 107, 0.35), 0 8px 28px -8px rgba(242, 86, 107, 0.55);
+  --brand-grad: linear-gradient(135deg, #ec5e62, #f08a4a);
+  --brand-glow: 0 8px 24px -10px rgba(236, 94, 98, 0.5);
 
-  --a-red-bg: rgba(242, 86, 107, 0.14);
-  --a-red-fg: #ff8fa0;
-  --a-blue-bg: rgba(127, 173, 238, 0.14);
-  --a-blue-fg: #8fb8f0;
-  --a-amber-bg: rgba(227, 166, 62, 0.14);
-  --a-amber-fg: #ebb35a;
-  --a-green-bg: rgba(87, 197, 126, 0.14);
-  --a-green-fg: #6fd08f;
+  --a-red-bg: rgba(236, 94, 98, 0.14);
+  --a-red-fg: #ff9a92;
+  --a-blue-bg: rgba(130, 170, 225, 0.13);
+  --a-blue-fg: #9dbde8;
+  --a-amber-bg: rgba(230, 170, 80, 0.14);
+  --a-amber-fg: #eab766;
+  --a-green-bg: rgba(110, 190, 120, 0.13);
+  --a-green-fg: #86cf92;
 
-  --shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 40px -18px rgba(0, 0, 0, 0.8);
-  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 20px 50px -20px rgba(0, 0, 0, 0.9);
-  --blur: blur(18px) saturate(1.2);
-}
+  --avatar-1-bg: oklch(0.34 0.045 25);
+  --avatar-1-fg: oklch(0.86 0.07 25);
+  --avatar-2-bg: oklch(0.34 0.04 70);
+  --avatar-2-fg: oklch(0.86 0.07 70);
+  --avatar-3-bg: oklch(0.34 0.04 110);
+  --avatar-3-fg: oklch(0.87 0.07 110);
+  --avatar-4-bg: oklch(0.34 0.04 155);
+  --avatar-4-fg: oklch(0.86 0.07 155);
+  --avatar-5-bg: oklch(0.34 0.035 200);
+  --avatar-5-fg: oklch(0.86 0.06 200);
+  --avatar-6-bg: oklch(0.34 0.045 245);
+  --avatar-6-fg: oklch(0.86 0.07 245);
+  --avatar-7-bg: oklch(0.34 0.045 290);
+  --avatar-7-fg: oklch(0.86 0.07 290);
+  --avatar-8-bg: oklch(0.34 0.045 335);
+  --avatar-8-fg: oklch(0.86 0.07 335);
 
-/* The glow's positions are physical percentages; mirror them in Arabic. 108%
- * rather than 92%, so the red ellipse's fade lands off-frame at 1366px. Must
- * stay after both theme blocks. */
-[dir="rtl"] {
-  --glow-x-red: 108%;
-  --glow-x-blue: 0%;
-}
-
-@media (max-width: 980px) {
-  :root { --blur: blur(8px) saturate(1.1); }
-  .dark { --blur: blur(8px) saturate(1.2); }
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  :root, .dark {
-    --surface: var(--surface-solid);
-    --surface-2: var(--surface-2-solid);
-    --rail: var(--rail-solid);
-    --blur: none;
-  }
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -18px rgba(0, 0, 0, 0.7);
 }
 
 /* ---- utilities ----------------------------------------------------------- */
@@ -262,11 +282,6 @@
 @utility num {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-}
-
-/* Frosted surface — cards, the rail, the top bar. Nothing else. */
-@utility glass {
-  backdrop-filter: var(--blur);
 }
 
 /*
@@ -356,6 +371,13 @@
  */
 @utility row-door {
   position: relative;
+  /* A door tints under the pointer like every pressable row (DESIGN §1b). */
+  transition: background-color 100ms ease-out;
+  @media (hover: hover) {
+    &:hover {
+      background-color: color-mix(in oklab, var(--surface-2-solid) 70%, var(--surface-solid));
+    }
+  }
   & [data-door] {
     border-radius: var(--radius-sm);
   }
@@ -370,7 +392,9 @@
   }
 }
 
-/* Card texture: 1px line, hairline highlight on top, shadow lift on hover. */
+/* A thing at rest (DESIGN §1): the hairline, the radius, the soft shadow. It does
+   not move under the pointer — a card that is pressed says so with `hover-tint`,
+   and one that is only read says nothing. */
 @utility card-face {
   position: relative;
   overflow: hidden;
@@ -378,16 +402,39 @@
   border-radius: calc(var(--radius) + 4px);
   background-color: var(--surface);
   box-shadow: var(--shadow);
-  &::before {
-    content: "";
-    position: absolute;
-    inset-inline: 0;
-    top: 0;
-    height: 1px;
-    background-image: var(--line-hi);
+}
+
+/*
+ * Under the pointer (DESIGN §1b): a tint in 100 ms, and nothing moves. Gated on
+ * a pointer that can hover, because a phone "hovers" whatever was last tapped
+ * and leaves it tinted as though it had been chosen. Also a host `reveal`
+ * answers to.
+ */
+@utility hover-tint {
+  transition: background-color 100ms ease-out;
+  @media (hover: hover) {
+    &:hover {
+      background-color: color-mix(in oklab, var(--surface-2-solid) 70%, var(--surface-solid));
+    }
   }
-  &:hover {
-    box-shadow: var(--shadow-lift);
+}
+
+/*
+ * A control a row keeps for the pointer (DESIGN §1b): drawn when its row is
+ * hovered or anything in the row has focus, in 150 ms. Only the HIDING is gated
+ * on hover — on a phone, where nothing hovers, it is simply always there. An
+ * open menu keeps its trigger drawn, or the button would vanish from under its
+ * own menu.
+ */
+@utility reveal {
+  @media (hover: hover) {
+    opacity: 0;
+    transition: opacity 150ms ease-out;
+    :where(.hover-tint:hover, .hover-tint:focus-within, .row-door:hover, .row-door:focus-within) &,
+    &:focus-visible,
+    &[data-state="open"] {
+      opacity: 1;
+    }
   }
 }
 
@@ -478,10 +525,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 0.875rem;
+    font-size: var(--text-sm);
     line-height: 1.5;
-    background-image: var(--canvas-glow);
-    background-attachment: fixed;
   }
   /* A rep uses this standing up, on a phone, one-handed. Without this every
      tap waits ~300ms for a double-tap that is never coming, and the whole app
@@ -508,3 +553,4 @@
     min-width: calc(var(--spacing) * 11);
   }
 }
+

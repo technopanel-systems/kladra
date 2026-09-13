@@ -8,16 +8,18 @@ import { SearchCommand } from "./search-command";
 import { UserMenu } from "./user-menu";
 
 /**
- * Search first, then what changed, then who you are. The bar frosts over the
- * canvas rather than sitting on a slab, so a long list scrolls under it and
- * stays readable.
+ * Search first, then what changed, then who you are. The bar is the canvas's
+ * own colour with a hairline under it, so a long list scrolls under an edge
+ * rather than under a slab.
  */
 export async function TopBar({
+  userId,
   name,
   role,
   theme,
   home,
 }: {
+  userId: string;
   name: string;
   role: Role;
   theme: Theme;
@@ -26,7 +28,7 @@ export async function TopBar({
   const t = await getTranslations();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-canvas/85 glass">
+    <header className="sticky top-0 z-20 border-b border-line bg-canvas">
       <div className="flex h-14 items-center gap-2 px-4 md:px-8">
         {/* The rail carries the mark from md up; on a phone it lives here. */}
         <Link href={home} className="flex shrink-0 items-center md:hidden">
@@ -38,7 +40,7 @@ export async function TopBar({
 
         <div className="ms-auto flex shrink-0 items-center gap-0.5">
           <NotificationBell />
-          <UserMenu name={name} role={role} theme={theme} />
+          <UserMenu userId={userId} name={name} role={role} theme={theme} />
         </div>
       </div>
     </header>

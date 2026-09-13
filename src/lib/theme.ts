@@ -17,7 +17,7 @@ export type Theme = "dark" | "light";
  * and no server) — so a change here is a change in four files, on purpose
  * named here so none is missed.
  */
-export const CANVAS: Record<Theme, string> = { dark: "#0f0d0c", light: "#f5f2ef" };
+export const CANVAS: Record<Theme, string> = { dark: "#15110e", light: "#f5f0e9" };
 
 export function isTheme(v: unknown): v is Theme {
   return v === "dark" || v === "light";

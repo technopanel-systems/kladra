@@ -26,7 +26,8 @@
     "@playwright/cli",
     "shadcn",
     "tw-animate-css",
-    "tailwindcss"
+    "tailwindcss",
+    "playwright-core"
   ],
   "ignoreExportsUsedInFile": true,
   "rules": {

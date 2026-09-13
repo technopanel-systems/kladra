@@ -53,7 +53,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
         <span className="font-heading text-2xl font-semibold tracking-tight">{t("common.app")}</span>
       </header>
 
-      <div className="card-face glass flex flex-col gap-4 p-5">
+      <div className="card-face flex flex-col gap-4 p-5">
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-lg leading-snug font-medium">{t("auth.signIn")}</h1>
           <p className="text-sm text-muted-foreground">{t("auth.subtitle")}</p>

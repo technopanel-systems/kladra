@@ -48,6 +48,8 @@ const eslintConfig = defineConfig([
     // The test server's build directory — same artefacts, different name
     // (next.config.ts, NEXT_DIST_DIR).
     ".next-test/**",
+    // Agent worktrees inside the repo: each is a whole copy of it, linted in its own tree.
+    ".claude/worktrees/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

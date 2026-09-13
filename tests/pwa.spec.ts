@@ -43,7 +43,7 @@ test("a phone is given everything it needs to install Kladra", async ({ page, lo
   expect(manifest.start_url).toBe("/");
   expect(manifest.scope).toBe("/");
   // Dark is the default theme (D16), so the splash matches the first screen.
-  expect(manifest.background_color).toBe("#0f0d0c");
+  expect(manifest.background_color).toBe("#15110e");
 
   // Android needs one of each: an icon used as drawn, and one it may crop.
   const purposes = new Set(manifest.icons.map((icon) => icon.purpose));
@@ -135,8 +135,8 @@ test("the splash wears the reader's theme", async ({ page, context, locale }) =>
     await page.reload().catch(() => {});
     await expect(page.getByText("No connection")).toBeVisible({ timeout: 15_000 });
     const background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(background, "the splash ignored the light theme").toBe("rgb(245, 242, 239)");
-    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f5f2ef");
+    expect(background, "the splash ignored the light theme").toBe("rgb(245, 240, 233)");
+    await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#f5f0e9");
   } finally {
     await context.setOffline(false);
     await context.clearCookies({ name: "theme" });

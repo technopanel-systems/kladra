@@ -2,32 +2,58 @@
 
 ## §1 Identity
 
-Warm-black palette with a red undertone; dark is the default and light is designed, not
-inverted. Fonts: IBM Plex Sans (en), IBM Plex Sans Arabic (ar), IBM Plex Mono for every
-number. Base 14px / 1.5. Card radius 14px (`--radius` 10px + 4). Brand gradient on the
-primary button only. Values carried from FACET's globals.css:
+**Sandstone** (P13-S1). Warm neutrals — Najdi plaster by day, a brown-black at dusk — with
+the brand red on one control per screen; dark is the default and light is designed, not
+inverted. Fonts: **Readex Pro** for both scripts, **IBM Plex Mono** for every money and m²
+figure. Base `text-sm` 14.5px / 1.5. Radius 12px (`--radius`), a card 16px. Surfaces are
+solid; a card at rest has a hairline and a soft shadow; nothing is lifted by hover.
+
+**How it was chosen.** Three directions were built as token sets switchable on the dev
+server and rendered on the rep's home, the coordinator's queue and a quotation drawer, in
+both themes and both directions, at 1366 and 375 (`scripts/shots.ts --look`):
+
+- *Ember* — the identity as it stood, made calm: glass off, the glow down to one faint red,
+  radius 8. It kept everything people liked and changed so little that a stranger would
+  still have seen P8.
+- *Aluminium* — neutral greys, Inter with Noto Sans Arabic a step smaller, flat surfaces told
+  apart by tone, radius 6, a light rail in the light theme. The most current of the three in
+  English and the weakest in Arabic: Noto at 13px set every Arabic company name visibly
+  smaller than the Latin one on the next row, and the queue read as dense before it read as
+  calm.
+- *Sandstone* — chosen, for one reason above the others: **Readex Pro is one family drawn for
+  Arabic and Latin together.** A Latin company name inside an Arabic row sits at the same
+  height and weight as the words around it, so the two locales — which ship together, and
+  which half the office reads in Arabic — look like one product written once, not a product
+  and its translation. At a half step above Tailwind's scale an Arabic name on a phone stays
+  legible in Riyadh daylight. The warm neutrals keep what people already liked (dark by
+  default, the red on one button, nothing moving), and solid surfaces with a soft shadow
+  replace the glass and the canvas glow, under which every tint on the screen had depended on
+  what happened to be behind it.
 
 | Token | Dark (default) | Light |
 |---|---|---|
-| canvas / background | `#0f0d0c` | `#f5f2ef` |
-| surface (card) | `rgba(30,26,24,.72)` solid `#1b1816` | `rgba(255,255,255,.85)` solid `#ffffff` |
-| surface-2 (muted, secondary, accent) | `rgba(40,35,32,.6)` solid `#232120` | `rgba(26,22,20,.05)` solid `#f3efeb` |
-| line (border, input) | `rgba(255,255,255,.07)` strong `.12` | `rgba(26,22,20,.13)` strong `.24` |
-| text | `#f3eeeb` | `#1a1614` |
-| text-muted | `#a69d99` | `#6b615c` |
-| text-faint | `#8f8480` | `#736c67` |
-| rail (sidebar) | `rgba(9,8,7,.85)` text `#8f8683` strong `#fff8f5` | `rgba(23,19,17,.94)` text `#b5aba6` strong `#ffffff` |
-| brand (primary, ring) | `#f2566b` | `#c8102e` |
-| brand-grad | `linear-gradient(135deg,#f2566b,#ff7a4a)` | `linear-gradient(135deg,#c8102e,#e5502f)` |
-| brand-glow | `0 0 0 1px rgba(242,86,107,.35), 0 8px 28px -8px rgba(242,86,107,.55)` | `0 0 0 1px rgba(200,16,46,.25), 0 8px 24px -8px rgba(200,16,46,.4)` |
+| canvas / background | `#15110e` | `#f5f0e9` |
+| surface (card, popover) | `#1e1915` | `#fffcf8` |
+| surface-2 (muted, secondary, accent) | `#28221d` | `#efe8de` |
+| line (border, input) | `rgba(255,238,220,.08)` strong `.14` | `rgba(70,45,20,.10)` strong `.19` |
+| text | `#f4ece3` | `#251d16` |
+| text-muted | `#b2a496` | `#6c5f52` |
+| text-faint | `#9d8f82` | `#6f6256` |
+| rail (sidebar, bottom bar) | `#100c09` text `#a3978a` strong `#fff8f1` | `#231b15` text `#bcae9f` strong `#fff8f1` |
+| brand (primary, ring) | `#ec5e62` | `#bb2638` |
+| brand-grad | `linear-gradient(135deg,#ec5e62,#f08a4a)` | `linear-gradient(135deg,#bb2638,#d9613a)` |
 | mark-grad (the K, both themes) | `linear-gradient(140deg,#e5233c,#7a1020)` | same |
-| avatar-user-grad (the initials circle in the top bar) | `linear-gradient(140deg,#8a3244,#4a1622)` | same |
-| state-bad (raw red) bg / fg | `rgba(242,86,107,.14)` / `#ff8fa0` | `rgba(200,16,46,.09)` / `#c8102e` |
-| state-wait (raw amber) bg / fg | `rgba(227,166,62,.14)` / `#ebb35a` | `rgba(138,90,0,.11)` / `#8a5a00` |
-| state-good (raw green) bg / fg | `rgba(87,197,126,.14)` / `#6fd08f` | `rgba(21,128,61,.09)` / `#15803d` |
-| state-open (raw blue) bg / fg | `rgba(127,173,238,.14)` / `#8fb8f0` | `rgba(43,92,168,.09)` / `#2b5ca8` |
-| canvas glow | two radials under 14% (red top-start, blue top-end), on body only; mirrored in RTL | same |
-| shadow | `0 1px 0 rgba(255,255,255,.04) inset, 0 12px 40px -18px rgba(0,0,0,.8)` | `0 1px 0 rgba(255,255,255,.8) inset, 0 12px 36px -18px rgba(26,22,20,.42)` |
+| state-bad bg / fg | `rgba(236,94,98,.14)` / `#ff9a92` | `rgba(187,38,56,.09)` / `#b3202f` |
+| state-wait bg / fg | `rgba(230,170,80,.14)` / `#eab766` | `rgba(138,90,0,.11)` / `#7d5207` |
+| state-good bg / fg | `rgba(110,190,120,.13)` / `#86cf92` | `rgba(21,128,61,.09)` / `#116a34` |
+| state-open bg / fg | `rgba(130,170,225,.13)` / `#9dbde8` | `rgba(43,92,168,.09)` / `#2b5ca8` |
+| avatar-1…8 bg / fg | `oklch(.34 .04 h)` / `oklch(.86 .07 h)` | `oklch(.91 .035 h)` / `oklch(.43 .08 h)` |
+| shadow (card, dialog) | `0 1px 2px rgba(0,0,0,.3), 0 12px 32px -18px rgba(0,0,0,.7)` | `0 1px 2px rgba(60,40,20,.05), 0 10px 28px -18px rgba(60,40,20,.26)` |
+
+The eight avatar hues are 25, 70, 110, 155, 200, 245, 290 and 335 degrees. The type scale is
+`text-xs` 12.5 · `text-sm` 14.5 · `text-base` 15.5 · `text-lg` 17 · `text-xl` 20 (px), set once
+in `@theme`; a component that writes `text-[13px]` is a component the scale cannot move, and
+G6 takes each of those back onto it.
 
 An apostrophe in English copy is `’`, never `'`. Ten strings carried the typewriter
 mark — "the coordinator's queue", "today's report" — and one straight quote in a card of
@@ -39,24 +65,25 @@ and dialogs take the solid surface — never blurred. Row colour means how long 
 waited: overdue red, due today amber, otherwise faint. Status was a word and not a colour
 until P8; it is now a word AND a colour, from the five in §6, and the word never goes away.
 
-The two gradients below brand-grad are marks, not surfaces: the K in the sidebar, on the
-sign-in screen and on the installed app's icon, and the initials circle in the top bar. They
-are the same in both themes because a logo does not change colour when somebody turns the
-lights off. `scripts/icons.ts` redraws the icon files from mark-grad; the K there is paths,
-not type, so no machine's font list can change it.
+The one gradient below brand-grad is a mark, not a surface: the K in the sidebar, on the
+sign-in screen and on the installed app's icon. It is the same in both themes because a logo
+does not change colour when somebody turns the lights off. `scripts/icons.ts` redraws the icon
+files from mark-grad; the K there is paths, not type, so no machine's font list can change it.
 
-So there are exactly four gradients in the running app: the primary button, the mark, the
-initials circle, and the canvas glow on `<body>`. A third mark gradient, for a contact's own
-initials circle, was defined for eleven months and used by nothing — an identity table that
-lists a colour nobody can see is a table that cannot be checked, so it is gone (D69).
+So there are exactly two gradients in the running app: the primary button and the mark. The
+top bar's initials circle had a gradient of its own and is an `Avatar` now, in its person's
+tint like everybody else; the canvas glow went with the glass (P13-S1). A mark gradient for a
+contact's initials was defined for eleven months and used by nothing — an identity table
+that lists a colour nobody can see is a table that cannot be checked (D69).
 
 **One primary action means one button.** `variant="brand"` on `Button`, in the fifteen places
 a screen has a primary action. It was a class string written by hand in fourteen files, in
 two syntaxes and under two token names for the same colour, which is how the app's most
 important control drifts without anybody deciding anything.
 
-**Two surfaces, and they are not interchangeable.** `card-face` is a thing at rest: 14px,
-a 1px `--line` border, the shadow, and a hairline along its top edge. The inset strip —
+**Two surfaces, and they are not interchangeable.** `card-face` is a thing at rest: 16px,
+a 1px `--line` border and the soft shadow, and it does not change under the pointer — a card
+that is pressed says so with `hover-tint`. The inset strip —
 `rounded-xl border border-line bg-surface-2` — is a panel WITHIN a card or a header, and has
 no shadow because a shadow says "this is lifted off the page" and it is not. Every floating
 surface (dialog, drawer, menu, popover, select) takes the same `--line` border as a card;
@@ -98,19 +125,22 @@ is two wide cards and a day with six is two rows of three — never card, gap, c
 `grid-flow-dense` is not used: it reorders what a screen reader and the Tab key walk, and
 this app is read in two directions.
 
-**One density.** Fourteen people, one setting: 14px text, 13px secondary, 12px captions,
-rows of 40. No density toggle — a toggle is a saved view with one option, and it would be
+**One density.** Fourteen people, one setting: `text-sm` for text, `text-xs` for what is
+secondary and for captions, rows of 40. No density toggle — a toggle is a saved view with one option, and it would be
 the first control on the screen that changes nothing a rep is here to do.
 
 **An avatar names a person or a company, and a ring says one thing about them.** `Avatar`
 in `ui-ext`: initials in the reader's script (D68 — a person is named in the script the
-reader reads), round for a person and `rounded-md` for a company, in three sizes — 24 in a
-row, 32 in a card, 40 at the head of a drawer. The hue comes from a hash of the record's
+reader reads — first and last letter in Latin with a family's "Al-" set aside, so Faisal
+Al-Harbi is FH; ONE letter in Arabic, because two Arabic letters join into a fragment of a
+word, with the article and a leading شركة or مؤسسة set aside), round for a person and
+`rounded-md` for a company, in three sizes — 24 in a row, 32 in a card and in the top bar, 40
+at the head of a drawer. The hue comes from a hash of the record's
 own id across eight quiet tints (`--avatar-1` … `--avatar-8`, defined for both themes,
 low saturation, text in the same hue's foreground), so one person is one colour on every
 screen and no two colleagues in the team table share one by accident. That is identity,
 not state — the rule "colour only means something" (SPEC §3) holds because the meaning is
-"this is Faisal" — and it is a solid tint, never a gradient (§1's four gradients stay four).
+"this is Faisal" — and it is a solid tint, never a gradient (§1's two gradients stay two).
 A ring is drawn only where a state exists and only in the five state colours: `state-over`
 around a rep on leave, `state-wait` around a lead nobody has acknowledged, `state-bad`
 around a company with an overdue follow-up, nothing around anybody else. A ring with no
@@ -120,11 +150,13 @@ company from the record's own shape. Eight, not 25: on a warm-black canvas twent
 is a fruit bowl.)
 
 **Hover is a tint, never a swap; actions appear, they do not arrive.** A row or a card
-under the pointer takes `bg-surface-2/60` in 100ms and nothing else moves; a floating
-surface does not change on hover at all. The controls a row keeps for the pointer — Log,
+under the pointer takes the `hover-tint` utility — seventy per cent of the way to `surface-2`
+in 100ms — and nothing else moves; every `row-door` row has it built in; a floating surface
+does not change on hover at all. The controls a row keeps for the pointer — Log,
 Call, the drawer's own buttons — are `opacity-0` until the row is hovered or focused
-within, then 150ms to 1; on a phone, where nothing hovers, they are always drawn (`@media
-(hover: hover)` gates the hiding, never the showing). Hover and focus are two things: focus
+within, then 150ms to 1 — the `reveal` utility; on a phone, where nothing hovers, they are always
+drawn (`@media (hover: hover)` gates the hiding, never the showing), and a control whose
+menu is open stays drawn. Hover and focus are two things: focus
 is the 2px brand outline offset 1px on the focused element itself, and it never borrows
 the hover tint. A button, a chip and a tab hover by one step on the same tint ladder. (Twenty
 wraps every hover in `hover-capable` for exactly this reason; Linear's rows tint, they do not
@@ -151,14 +183,17 @@ arrived flash like any row, because a ticker is motion that repeats and says not
 figure does not (Magic UI's number ticker was looked at and refused for that reason).
 
 **Empty and loading are two components, written once.** `Empty` is one sentence of at most
-two lines and forty characters a line, saying why there is nothing and, where the work is
-done elsewhere, where (D127, D31); it carries no button, because the screen's one primary
-action is already at the top (§2). `Skeleton` is the shape of the thing it stands in for —
+two lines and forty characters a line, in a dashed edge — the space where things will be, not a
+card at rest — saying why there is nothing and, where the work is done elsewhere, where (D127,
+D31); it never draws the screen's primary action a second time, because that is already at
+the top (§2), and its one slot is for the way OUT of an empty result, "clear the search". `Skeleton` is the shape of the thing it stands in for —
 rows of the row's own height, a card of the card's own edges — drawn once, static: it does
 not pulse, because motion that loops is noise (§2) and a grey shape says "loading" as well as
 a breathing one. Both take `aria-busy` and `role="status"` where a reader needs them.
 
-**Charts are the shadcn kit's, drawn in the language.** `ChartContainer` over Recharts, the
+**Charts are the shadcn kit's, drawn in the language.** The kit (`npx shadcn add chart`) is
+added by the first slice that draws a chart (S7) rather than by S1, because a kit file nothing
+imports fails `check:dead` — the rule §3 already keeps. `ChartContainer` over Recharts, the
 series colours as above, `accessibilityLayer` on, every mark labelled with its figure in the
 text beside the drawing so the drawing is never the only carrier (D150's reading argument
 stands even where the shape changed). A bar for a comparison, a pie for a share of a whole
@@ -170,8 +205,10 @@ the Arabic project of every chart spec asserts the first category sits at the in
 **A wide surface shows its scrollbar where the reader is.** A board and a wide table scroll
 sideways inside `StickyScroll`: the scrollbar is a thin proxy pinned to the top of the surface
 that stays on screen while the surface is, synced both ways, so nobody scrolls to the bottom
-of forty rows to find the fifth column. Under `dir="rtl"` the proxy normalises `scrollLeft`
-by the container's computed direction, because Chromium and Firefox disagree about its sign.
+of forty rows to find the fifth column. Direction needs no arithmetic: the proxy and the
+surface inherit the same `dir`, so both count `scrollLeft` from the same edge with the same
+sign in any browser, and copying the number is right in Arabic too — what would break it is
+giving the proxy a direction of its own.
 
 ## §2 Principles
 
@@ -192,7 +229,8 @@ by the container's computed direction, because Chromium and Firefox disagree abo
 shadcn/ui via CLI (Radix, RTL on): Dialog, Sheet, Drawer (phone bottom sheet), Command
 (searchable dropdowns), Popover + Calendar (date pickers), Sonner (toasts), Skeleton, Tabs,
 Badge, Table, Field (forms), Select, Tooltip, plus Button, Input, Textarea,
-Dropdown-menu, Checkbox, Avatar — a kit file nothing imports is deleted, and `check:dead` says so. On top of them, the app's own
+Dropdown-menu, Checkbox — a kit file nothing imports is deleted, and `check:dead` says so
+(the kit's Avatar went in P13-S1, when `ui-ext/avatar` replaced its one user). On top of them, the app's own
 small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, `Prose`
 — one `<p dir="auto">` for any block a PERSON typed — and `NoteBlock`, which is `Prose` under
 the word for what it is, in a face of its own so a paragraph that swings to the other end of a
@@ -207,7 +245,9 @@ the figure written on every row, the bar hidden from a reader because there is n
 that is not in the text (D150, D65); and `RangeChips`, the window a measured screen is read
 over, which is `FilterChip` in a row rather than a fourth kind of chip; and `RecordPanel`, the
 drawer a record opens in — one width, one edge and one border for a company, a project, a
-quotation or a dispatch, and for the skeleton that stands in while each of them loads (D166).
+quotation or a dispatch, and for the skeleton that stands in while each of them loads (D166); and, from P13-S1,
+`Avatar` (a person or a company, §1b), `Empty` (nothing here, and why), `StickyScroll` (a wide
+surface with its scrollbar at the top) and the `hover-tint` and `reveal` utilities.
 Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.

@@ -3,7 +3,9 @@
 import { useLocale, useTranslations } from "next-intl";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Ref, Sqm } from "@/components/ui-ext/figures";
+import { Empty } from "@/components/ui-ext/empty";
 import { LinkPending } from "@/components/ui-ext/link-pending";
+import { StickyScroll } from "@/components/ui-ext/sticky-scroll";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
 import { TONE_CLASS, TONE_TEXT, type StateTone } from "@/lib/state-tone";
@@ -57,79 +59,79 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
 
   return (
     // One horizontal scroller, never the page: a board that widens the document
-    // takes the whole app's layout with it (DESIGN §2).
-    // `overscroll-x-contain`: swiping past the last column on a phone must not
-    // become the browser's back gesture (DESIGN §2 — the page never scrolls
-    // sideways, and neither does the history).
-    <div
-      data-slot="board"
-      className="-mx-1 flex snap-x gap-3 overflow-x-auto overscroll-x-contain px-1 pb-2"
-    >
-      {columns.map((column) => (
-        <section
-          key={column.key}
-          aria-label={`${column.label} (${column.cards.length})`}
-          className="flex w-64 shrink-0 snap-start flex-col gap-2"
-        >
-          <header className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5">
-            <h3 className={cn("text-xs font-medium tracking-wide uppercase", TONE_TEXT[column.tone])}>
-              {column.label}
-            </h3>
-            <span
-              dir="ltr"
-              className={cn("num rounded-full px-1.5 text-xs", TONE_CLASS[column.tone])}
-            >
-              {column.cards.length}
-            </span>
-          </header>
+    // takes the whole app's layout with it (DESIGN §2). Its scrollbar is at the
+    // top, where the reader is, not under the longest column (StickyScroll,
+    // P13 13.3); the scroller contains its overscroll, so swiping past the last
+    // column on a phone does not become the browser's back gesture.
+    <StickyScroll label={t("common.viewBoard")}>
+      <div
+        data-slot="board"
+        className="flex snap-x gap-3 px-1 pt-2 pb-2"
+      >
+        {columns.map((column) => (
+          <section
+            key={column.key}
+            aria-label={`${column.label} (${column.cards.length})`}
+            className="flex w-64 shrink-0 snap-start flex-col gap-2"
+          >
+            <header className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-2.5 py-1.5">
+              <h3 className={cn("text-xs font-medium tracking-wide uppercase", TONE_TEXT[column.tone])}>
+                {column.label}
+              </h3>
+              <span
+                dir="ltr"
+                className={cn("num rounded-full px-1.5 text-xs", TONE_CLASS[column.tone])}
+              >
+                {column.cards.length}
+              </span>
+            </header>
 
-          {column.cards.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-line px-3 py-6 text-center text-xs text-muted-foreground">
-              {t("common.boardEmpty")}
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {column.cards.map((card) => (
-                <li key={card.id}>
-                  <Link
-                    href={card.href}
-                    aria-current={card.current ? "true" : undefined}
-                    className={cn(
-                      "card-face flex flex-col gap-1.5 p-3 transition-colors",
-                      card.current && "bg-surface-2",
-                    )}
-                  >
-                    <span className="flex items-baseline justify-between gap-2">
-                      <span className="flex items-center gap-1.5">
-                        <Ref className="text-sm font-medium">
-                          {card.label}
-                        </Ref>
-                        <LinkPending />
+            {column.cards.length === 0 ? (
+              <Empty size="panel">{t("common.boardEmpty")}</Empty>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {column.cards.map((card) => (
+                  <li key={card.id}>
+                    <Link
+                      href={card.href}
+                      aria-current={card.current ? "true" : undefined}
+                      className={cn(
+                        "card-face hover-tint flex flex-col gap-1.5 p-3",
+                        card.current && "bg-surface-2",
+                      )}
+                    >
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="flex items-center gap-1.5">
+                          <Ref className="text-sm font-medium">
+                            {card.label}
+                          </Ref>
+                          <LinkPending />
+                        </span>
+                        <Sqm value={card.sqm} className="text-xs" />
                       </span>
-                      <Sqm value={card.sqm} className="text-xs" />
-                    </span>
-                    <span className="truncate text-sm">
-                      <bdi>{card.title}</bdi>
-                    </span>
-                    {card.subtitle ? (
-                      <span className="truncate text-xs text-muted-foreground">
-                        <bdi>{card.subtitle}</bdi>
+                      <span className="truncate text-sm">
+                        <bdi>{card.title}</bdi>
                       </span>
-                    ) : null}
-                    {card.day ? (
-                      <DayText
-                        day={card.day}
-                        locale={locale}
-                        className="text-xs text-muted-foreground"
-                      />
-                    ) : null}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ))}
-    </div>
+                      {card.subtitle ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          <bdi>{card.subtitle}</bdi>
+                        </span>
+                      ) : null}
+                      {card.day ? (
+                        <DayText
+                          day={card.day}
+                          locale={locale}
+                          className="text-xs text-muted-foreground"
+                        />
+                      ) : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+      </div>
+    </StickyScroll>
   );
 }

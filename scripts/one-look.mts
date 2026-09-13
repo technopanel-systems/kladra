@@ -38,12 +38,9 @@ const RULES: Rule[] = [
     //    JavaScript query that has to agree with it is derived once
     //    (src/lib/breakpoint.ts). It was 639, 640 and 768 in three files, and a
     //    tablet between them had a bottom bar under centred dialogs (P11H, §5 #35).
-    //    globals.css is allowed through for its one other threshold, the blur
-    //    strength at 980px, which is about the machine and not the hand — that
-    //    line and no other.
     name: "the phone line is written once",
     pattern: /max-width:\s*\d+px|\bmax-(?:sm|lg|xl|2xl|\[[^\]]+\]):|\(width\s*<=?\s*\d/,
-    allow: ["src/lib/breakpoint.ts", "src/app/globals.css#980px"],
+    allow: ["src/lib/breakpoint.ts"],
     fix: "use useIsPhone() from @/hooks/use-is-phone, or max-md: in CSS",
   },
   {
@@ -115,6 +112,61 @@ const RULES: Rule[] = [
     allow: [],
     fix: "wrap it: <span className={…}><bdi>{…}</bdi></span>",
   },
+  {
+    // 9. A person or a company is drawn one way (P13-S1, DESIGN §1b): the tint
+    //    from the record's id, the letters in the reader's script, round for a
+    //    person and square for a company. The top bar drew its own circle in a
+    //    gradient of its own, which is how an identity becomes four.
+    name: "an avatar is drawn once",
+    pattern: /AvatarFallback|avatar-user-grad|initialsOf\(/,
+    allow: ["src/components/ui-ext/avatar.tsx", "src/lib/avatar.ts"],
+    fix: "use <Avatar id={…} name={…} /> from @/components/ui-ext/avatar",
+  },
+  {
+    // 10. Nothing here, and why (P13-S1, DESIGN §1b): one sentence in a dashed
+    //     edge, written once. Four lists and a drawer each drew their own, in
+    //     three paddings and two surfaces.
+    name: "an empty state is Empty",
+    pattern: /border-dashed/,
+    allow: [
+      "src/components/ui-ext/empty.tsx",
+      // A target line across a chart, not an empty state.
+      "src/components/team/months-card.tsx#border-t border-dashed",
+      // The day a person wrote nothing, on the reports screen P13-S4 rebuilds.
+      "src/components/reports/person-card.tsx",
+    ],
+    fix: "use <Empty> from @/components/ui-ext/empty",
+  },
+  {
+    // 11. Loading stands still (P13-S1, DESIGN §1b). A grey shape says "loading"
+    //     as well as a breathing one, and motion that loops is noise (§2).
+    name: "a skeleton does not pulse",
+    pattern: /animate-pulse/,
+    allow: [],
+    fix: "use <Skeleton> shaped like what it stands in for",
+  },
+  {
+    // 12. Hover is a tint and nothing moves (P13-S1, DESIGN §1b); a control a row
+    //     keeps for the pointer is `reveal`, which hides it only where a pointer
+    //     can hover, so a phone always has it.
+    name: "hover tints, it does not lift, and a hidden control is reveal",
+    pattern: /hover:shadow|hover:-?translate|hover:scale|group-hover(\/[\w-]+)?:opacity|hover:opacity-100/,
+    allow: [],
+    fix: "use `hover-tint` on the row and `reveal` on the control (globals.css)",
+  },
+  {
+    // 13. A wide surface shows its scrollbar where the reader is (P13-S1, 13.3).
+    //     The kit's Table keeps its own scroller until each list moves into
+    //     StickyScroll in G6; the page tabs are a row of links, not a surface.
+    name: "a wide surface scrolls in StickyScroll",
+    pattern: /overflow-x-auto/,
+    allow: [
+      "src/components/ui-ext/sticky-scroll.tsx",
+      "src/components/ui/table.tsx",
+      "src/components/ui-ext/page-tabs.tsx",
+    ],
+    fix: "wrap it in <StickyScroll label={…}> from @/components/ui-ext/sticky-scroll",
+  },
 ];
 
 const root = resolve(import.meta.dirname, "..");
@@ -157,5 +209,6 @@ if (problems.length > 0) {
 }
 console.log(
   "one-look — the primary button, the surface edge, typed text, the phone line, the direction " +
-    "of a name, the row door, a reference number and a record's panel are each written once",
+    "of a name, the row door, a reference number, a record's panel, an avatar, an empty state, " +
+    "a skeleton, hover and a wide scroller are each written once",
 );

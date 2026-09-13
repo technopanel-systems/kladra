@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { signOutAction } from "@/actions/auth";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { setLocaleAction, setThemeAction } from "@/actions/prefs";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -30,18 +30,17 @@ import type { Theme } from "@/lib/theme";
  * shown as a word, never as `rep` or a code.
  */
 
-/** First letters of the first two words; codepoint-safe, so Arabic works. */
-function initialsOf(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => [...part][0] ?? "")
-    .join("")
-    .toUpperCase();
-}
-
-export function UserMenu({ name, role, theme }: { name: string; role: Role; theme: Theme }) {
+export function UserMenu({
+  userId,
+  name,
+  role,
+  theme,
+}: {
+  userId: string;
+  name: string;
+  role: Role;
+  theme: Theme;
+}) {
   const t = useTranslations();
   const locale = useLocale();
   const pathname = usePathname();
@@ -87,11 +86,7 @@ export function UserMenu({ name, role, theme }: { name: string; role: Role; them
           aria-label={t("shell.accountMenuFor", { name })}
           className="h-11 gap-2 px-1.5 md:h-9 md:px-2"
         >
-          <Avatar className="size-7">
-            <AvatarFallback className="bg-(image:--avatar-user-grad) text-[11px] font-semibold text-brand-ink">
-              {initialsOf(name)}
-            </AvatarFallback>
-          </Avatar>
+          <Avatar id={userId} name={name} />
           {/* 36 (144px) cut "Abdulrahman Al-Zahrani" mid-surname at 1366, where
               there is room to spare. Widen once the viewport can afford it. */}
           <span className="hidden min-w-0 flex-col items-start leading-tight md:flex">

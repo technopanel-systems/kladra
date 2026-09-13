@@ -48,7 +48,7 @@ below by number.
                   moved to the slice that writes them, so no column lands without its writer (rules/data.md):
                   `daily_reports` goes and `outcome_id` becomes required in S4 (D174), and marketing's seat on
                   the floor is S5's. Service m² never counts (D173).
-            - [ ] G1 · S1 **The identity** (founder, P13 approval). First the "before" set: `scripts/shots.ts`, one
+            - [x] G1 · S1 **The identity** (founder, P13 approval). First the "before" set: `scripts/shots.ts`, one
                   manifest of every screen, dialog, drawer, board, dashboard, list, form and empty state, per
                   role, captured into `shots/` at 1366 and 375, en and ar, dark and light — the same manifest
                   takes the "after" set in G6. Then three visual directions drawn from everything 13.1 studied
@@ -61,7 +61,13 @@ below by number.
                   Then the primitives drawn in it: `Avatar` with rings, `Empty`, the static shaped `Skeleton`, the
                   hover and reveal utilities, `StickyScroll`, the chart kit (`npx shadcn add chart`), the avatar
                   tints in both themes, a `one-look` rule for each, and `tests/axe.spec.ts` walking every screen
-                  for every role in both locales.
+                  for every role in both locales. **Done**: 344 "before" shots with no failure; Ember, Aluminium and Sandstone
+                  rendered on the three screens in every theme, direction and width; **Sandstone** chosen for Readex
+                  Pro, one family for both scripts (DESIGN §1 has the reason and the other two); the glass and the
+                  canvas glow gone; `Avatar`, `Empty`, static `Skeleton`, `hover-tint`/`reveal`, `StickyScroll` on
+                  the boards; one-look rules 9–13; axe clean on every screen in both locales and themes after two
+                  contrast fixes. The chart kit arrives with the first chart (S7), because a kit file nothing
+                  imports fails `check:dead`.
             - [ ] G2 · S2 **Quotations** (13.4): the request dialog wide enough for the lines and the services — a
                   stated minimum on a desk, asserted by a test — and the services section with its own subtotal.
             - [ ] G2 · S3 **Dispatches** (13.5): the request rebuilt per §3 — prefilled from the chosen or latest
@@ -128,8 +134,8 @@ below by number.
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
-everything it held is built or in S2. G1 · S0 is done (0025). S1 continues on its branch, S2 and S4
-are with builders. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
+everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). S2 and S4 are with
+builders in `.claude/worktrees/`; S3 starts when S2 is merged, because a dispatch copies services. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
 session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
@@ -1090,3 +1096,7 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 203 The half of a founder sentence that looked already done. (D98)
 - [x] 204 Taking a feature out left its supporting cast behind.
 - [x] 205 A memory that outlives its browser outlives its test.
+- [x] 206 A test fixture that builds a row by hand is a second schema, and it drifts. (P13-S0)
+- [x] 207 A contrast failure that only one theme and one surface could show. (P13-S1)
+- [x] 208 A screenshot cannot prove a scrollbar: the headless browser hides them. (P13-S1)
+- [x] 209 A worktree inside the repo is inside every watcher, type check and lint the repo runs. (P13 Stage 2)

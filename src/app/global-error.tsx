@@ -24,9 +24,9 @@ export default function GlobalError({
           display: "grid",
           placeItems: "center",
           padding: 24,
-          background: "#0f0d0c",
-          color: "#f3eeeb",
-          fontFamily: '"IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
+          background: "#15110e",
+          color: "#f4ece3",
+          fontFamily: '"Readex Pro", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
           lineHeight: 1.5,
           textAlign: "center",
         }}
@@ -65,7 +65,7 @@ export default function GlobalError({
             style={{
               margin: 0,
               fontSize: 15,
-              fontFamily: '"IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif',
+              fontFamily: '"Readex Pro", ui-sans-serif, system-ui, sans-serif',
             }}
           >
             تعذّر على كلادرا عرض هذه الشاشة.

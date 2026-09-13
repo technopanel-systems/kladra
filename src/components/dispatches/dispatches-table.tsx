@@ -4,6 +4,7 @@ import { Fragment, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
+import { Empty } from "@/components/ui-ext/empty";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { Prose } from "@/components/ui-ext/prose";
 import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
@@ -482,12 +483,7 @@ function EmptyDispatches({
 }
 
 function EmptyCard({ sentence, children }: { sentence: string; children: ReactNode }) {
-  return (
-    <div className="card-face flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">{sentence}</p>
-      {children}
-    </div>
-  );
+  return <Empty action={children}>{sentence}</Empty>;
 }
 
 /* -------------------------------------------------------------------------- */

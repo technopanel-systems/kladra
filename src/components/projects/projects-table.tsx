@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { setProjectFollowUpAction } from "@/actions/projects";
+import { Empty } from "@/components/ui-ext/empty";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { LogButton } from "@/components/activities/log-dialog";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
@@ -346,12 +347,7 @@ function EmptyProjects({
 }
 
 function EmptyCard({ sentence, children }: { sentence: string; children: ReactNode }) {
-  return (
-    <div className="card-face flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">{sentence}</p>
-      {children}
-    </div>
-  );
+  return <Empty action={children}>{sentence}</Empty>;
 }
 
 /* -------------------------------------------------------------------------- */

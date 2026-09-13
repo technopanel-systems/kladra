@@ -18,6 +18,7 @@ import { MakeMainButton } from "@/components/contacts/make-main-button";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
+import { Empty } from "@/components/ui-ext/empty";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Prose } from "@/components/ui-ext/prose";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
@@ -605,10 +606,9 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
  */
 function EmptyPanel({ sentence, action }: { sentence: string; action?: ReactNode }) {
   return (
-    <div className="card-face flex flex-col items-center gap-3 px-4 py-10 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">{sentence}</p>
-      {action}
-    </div>
+    <Empty size="panel" action={action}>
+      {sentence}
+    </Empty>
   );
 }
 

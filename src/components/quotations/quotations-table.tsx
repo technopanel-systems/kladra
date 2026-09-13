@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { Empty } from "@/components/ui-ext/empty";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { formatDay } from "@/lib/dates";
 import { lossReasonLabel } from "@/lib/loss-reason";
@@ -474,12 +475,7 @@ function EmptyQuotations({
 }
 
 function EmptyCard({ sentence, children }: { sentence: string; children: ReactNode }) {
-  return (
-    <div className="card-face flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">{sentence}</p>
-      {children}
-    </div>
-  );
+  return <Empty action={children}>{sentence}</Empty>;
 }
 
 /* -------------------------------------------------------------------------- */

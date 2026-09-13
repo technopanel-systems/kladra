@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { IBM_Plex_Mono, Readex_Pro } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { DirectionProvider } from "@/components/direction-provider";
@@ -10,22 +10,19 @@ import { dirOf } from "@/i18n/routing";
 import { CANVAS, getTheme } from "@/lib/theme";
 import "./globals.css";
 
-// Static families: weights listed explicitly. Arabic gets its own family and
-// the per-locale switch is one CSS variable on <html> (see globals.css).
-// Three weights, not four: nothing on a screen is bolder than 600, the brand
-// mark included, and the 700 file was 36 kB on every cold load (P11I, D133).
-const plexLatin = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-latin",
+// One family for both scripts (DESIGN §1, P13-S1): Readex Pro was drawn for
+// Arabic and Latin together, so a Latin company name inside an Arabic row sits
+// at the same height and weight as the words around it, and the locale switch
+// changes the words and nothing about the voice. The variable file rather than
+// three static weights: one file per script covers 400–600, and nothing on a
+// screen is bolder than 600 (P11I, D133).
+const readex = Readex_Pro({
+  subsets: ["arabic", "latin"],
+  variable: "--font-app",
   display: "swap",
 });
-const plexArabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600"],
-  variable: "--font-arabic",
-  display: "swap",
-});
+// Every money and m² figure stays in a monospace of its own: those stand in
+// columns that must line up (DESIGN §2).
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["500", "600"],
@@ -70,8 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang={locale}
       dir={dir}
       data-theme={theme}
-      className={`${plexLatin.variable} ${plexArabic.variable} ${plexMono.variable} ${theme === "dark" ? "dark" : ""} min-h-full antialiased`}
-      style={{ ["--font-app" as string]: locale === "ar" ? "var(--font-arabic)" : "var(--font-latin)" }}
+      className={`${readex.variable} ${plexMono.variable} ${theme === "dark" ? "dark" : ""} min-h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-svh">
