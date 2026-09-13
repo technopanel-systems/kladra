@@ -5,6 +5,10 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
+  // The round development badge sat over the lowest button of every phone sheet in
+  // every screenshot the review passes read (P13 G2), and it is not the app. Build
+  // errors still open their own overlay.
+  devIndicators: false,
   // Emits a self-contained server bundle so the Docker runtime stage does not
   // need node_modules. See Dockerfile.
   output: "standalone",
