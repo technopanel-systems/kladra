@@ -135,14 +135,16 @@ test("how a load is paid for is a choice the column holds to its own shape (0022
     "credit carrying an answer nobody asked for",
   ).toContain("dispatches_payment_detail_check");
 
-  // "Credit and tasaheel — a note from the rep explaining the terms is
-  // mandatory, for finance to review" (SPEC §3).
-  for (const terms of ["credit", "tasaheel"]) {
-    expect(
-      await set(`payment_terms = '${terms}', payment_detail = null, payment_note = null`),
-      `${terms} with nothing written for finance`,
-    ).toContain("dispatches_payment_note_check");
-  }
+  // "Credit and tasaheel are one payment option with a mandatory note" (SPEC §3,
+  // P13) — for finance to review.
+  expect(
+    await set("payment_terms = 'credit', payment_detail = null, payment_note = null"),
+    "credit with nothing written for finance",
+  ).toContain("dispatches_payment_note_check");
+  expect(
+    await set("payment_terms = 'tasaheel'"),
+    "tasaheel as a fourth option, after P13 made it one with credit",
+  ).toContain("invalid input value for enum");
 
   // A note that is there says something. `btrim` trims spaces and not tabs or
   // newlines, which is how an empty daily report once satisfied its own
@@ -151,9 +153,9 @@ test("how a load is paid for is a choice the column holds to its own shape (0022
     "dispatches_payment_note_blank_check",
   );
 
-  // And the four are a closed set: a fifth way to pay is a migration, not a
+  // And the three are a closed set: a fourth way to pay is a migration, not a
   // string somebody types.
-  expect(await set("payment_terms = 'cheque'"), "a way to pay that is not one of the four")
+  expect(await set("payment_terms = 'cheque'"), "a way to pay that is not one of the three")
     .toContain("invalid input value for enum");
 });
 
@@ -209,12 +211,132 @@ test("one line of a quotation goes on a dispatch once", async () => {
   );
 
   // The same line again on the same dispatch: the m² it moved would count twice.
+  // Its whole sheet is copied and only the position moved, so the one thing
+  // wrong with the row is that it is the same line.
   const message = await refused(
-    `insert into dispatch_items (dispatch_id, quotation_item_id, qty)
-     values ($1::uuid, $2::uuid, 1)`,
+    `insert into dispatch_items
+       (dispatch_id, quotation_item_id, qty, position, colour_code, supplier_id, fire_rating_id,
+        class_id, thickness_id, width, length, price_per_sqm)
+     select dispatch_id, quotation_item_id, 1, position + 1000, colour_code, supplier_id,
+            fire_rating_id, class_id, thickness_id, width, length, price_per_sqm
+       from dispatch_items
+      where dispatch_id = $1::uuid and quotation_item_id = $2::uuid`,
     [item.dispatch_id, item.quotation_item_id],
   );
   expect(message).toContain("dispatch_items_line_idx");
+});
+
+test("a dispatch is a load: its own customer and sheet, a job under a paper, a difference only where there was one (0025, P13)", async () => {
+  const d = await one<{ id: string }>(
+    "select id from dispatches where quotation_id is not null limit 1",
+  );
+  const set = (fields: string) =>
+    refused(`update dispatches set ${fields} where id = $1::uuid`, [d.id]);
+
+  // The customer is the dispatch's own now, because a direct one has no paper to
+  // read it through.
+  expect(await set("company_id = null"), "a load to nobody").toContain("not-null");
+  expect(await set("raised_by_id = null"), "a load nobody raised").toContain("not-null");
+  // A quotation is always for a job (S18), so a dispatch prefilled from one is.
+  expect(await set("project_id = null"), "a paper's load with no job").toContain(
+    "dispatches_project_check",
+  );
+  // The difference is recorded exactly when there was a paper to differ from.
+  expect(await set("quotation_difference = null"), "a paper's load with no record").toContain(
+    "dispatches_difference_check",
+  );
+  expect(
+    await set("quotation_id = null, quotation_difference = '[]'::jsonb"),
+    "a direct load claiming to match a paper it does not have",
+  ).toContain("dispatches_difference_check");
+  expect(
+    await refused(
+      "update quotations set raised_by_id = null where id = (select id from quotations limit 1)",
+    ),
+    "a quotation nobody raised",
+  ).toContain("not-null");
+
+  // A line carries its own sheet, held to the same rules as a quotation's.
+  const line = await one<{ id: string }>(
+    "select id from dispatch_items where dispatch_id = $1::uuid limit 1",
+    [d.id],
+  );
+  for (const [column, value] of [
+    ["qty", "0"],
+    ["width", "0"],
+    ["length", "-1.24"],
+    ["price_per_sqm", "-1"],
+  ] as const) {
+    expect(
+      await refused(`update dispatch_items set ${column} = ${value} where id = $1::uuid`, [line.id]),
+      `a dispatch line with ${column} = ${value}`,
+    ).toContain("violates check constraint");
+  }
+  // Its m² is generated from its own sheet, never from the quotation's.
+  const stale = await one<{ n: string }>(
+    "select count(*)::text as n from dispatch_items where sqm is distinct from round(width * length * qty, 2)",
+  );
+  expect(Number(stale.n)).toBe(0);
+  // "Item 1, Item 2" on a load is a position, and two lines cannot share one.
+  const [two] = await query<{ dispatch_id: string }>(
+    "select dispatch_id from dispatch_items group by dispatch_id having count(*) > 1 limit 1",
+  );
+  expect(two, "the demo floor has a dispatch of more than one line").toBeTruthy();
+  if (two) {
+    expect(
+      await refused(
+        `update dispatch_items set position = (
+           select min(position) from dispatch_items where dispatch_id = $1::uuid)
+          where id = (select id from dispatch_items where dispatch_id = $1::uuid
+                       order by position desc limit 1)`,
+        [two.dispatch_id],
+      ),
+    ).toContain("dispatch_items_position_idx");
+  }
+});
+
+test("a service is priced over an area, once per position, on a quotation and on a dispatch (0025, P13)", async () => {
+  const q = await one<{ id: string }>("select id from quotations limit 1");
+  const d = await one<{ id: string }>("select id from dispatches limit 1");
+  for (const [table, parent, id] of [
+    ["quotation_services", "quotation_id", q.id],
+    ["dispatch_services", "dispatch_id", d.id],
+  ] as const) {
+    const insert = (rows: string) =>
+      refused(
+        `insert into ${table} (${parent}, position, service_id, sqm, price_per_sqm)
+         select $1::uuid, v.position, (select id from services order by sort_order limit 1), v.sqm, v.price
+           from (values ${rows}) as v(position, sqm, price)`,
+        [id],
+      );
+    expect(await insert("(1, 0::numeric, 10::numeric)"), `${table}: no area`).toContain(
+      `${table}_sqm_check`,
+    );
+    expect(await insert("(1, 12::numeric, -1::numeric)"), `${table}: a minus price`).toContain(
+      `${table}_price_check`,
+    );
+    expect(
+      await insert("(1, 12::numeric, 5::numeric), (1, 8::numeric, 5::numeric)"),
+      `${table}: two services at one position`,
+    ).toContain(`${table}_position_idx`);
+  }
+});
+
+test("a log entry takes an outcome from the admin's list and the kinds a report offers (0025, P13)", async () => {
+  // Six kinds of what happened, a site visit and a meeting among them.
+  const kinds = await one<{ kinds: string }>("select enum_range(null::channel)::text as kinds");
+  expect(kinds.kinds).toBe("{visit,siteVisit,meeting,call,whatsapp,other}");
+  // An outcome is a row the admin keeps, never a word typed into the entry.
+  expect(
+    await refused(
+      "update activities set outcome_id = 2147483647 where id = (select id from activities limit 1)",
+    ),
+  ).toContain("activities_outcome_id_outcomes_id_fk");
+  const lists = await one<{ services: string; outcomes: string }>(
+    "select (select count(*)::text from services) as services, (select count(*)::text from outcomes) as outcomes",
+  );
+  expect(Number(lists.services)).toBeGreaterThan(0);
+  expect(Number(lists.outcomes)).toBeGreaterThan(0);
 });
 
 test("the same SMAC number cannot be typed twice", async () => {

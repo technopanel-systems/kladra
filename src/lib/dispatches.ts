@@ -73,15 +73,17 @@ export type DispatchRow = {
   label: string;
   number: number;
   status: DispatchStatus;
-  quotationId: string;
+  /** The paper it was prefilled from; null on a direct dispatch (SPEC §3, P13). */
+  quotationId: string | null;
   /** Q-12, or Q-12/2 — the paper this is against. */
-  quotationLabel: string;
+  quotationLabel: string | null;
   /** The quotation's SMAC number, which is what finance knows it by. */
   smacNumber: string | null;
   companyId: string;
   companyName: string;
-  projectId: string;
-  projectName: string;
+  /** The job, when there is one: always under a quotation, optional on a direct dispatch. */
+  projectId: string | null;
+  projectName: string | null;
   /**
    * The project this is against has been marked lost SINCE it was raised
    * (D138). A Riyadh day, as text, and the stored reason — a code or the rep's
@@ -171,7 +173,6 @@ const dispatchTotals = qb
     itemCount: sql<number>`count(*)::int`.as("item_count"),
   })
   .from(dispatchItems)
-  .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
   .groupBy(dispatchItems.dispatchId)
   .as("dispatch_totals");
 
@@ -203,8 +204,7 @@ export function projectIsWonSql(projectId: SQL): SQL<boolean> {
   return sql`exists (
     select 1
       from dispatches d
-      join quotations qq on qq.id = d.quotation_id
-     where qq.project_id = ${projectId}
+     where d.project_id = ${projectId}
        and d.status = 'approved'
   )`;
 }
@@ -223,9 +223,9 @@ function selection(locale: string) {
     quotationNumber: quotations.number,
     quotationRevision: quotations.revision,
     smacNumber: quotations.smacNumber,
-    companyId: quotations.companyId,
+    companyId: dispatches.companyId,
     companyName: companies.name,
-    projectId: quotations.projectId,
+    projectId: dispatches.projectId,
     projectName: projects.name,
     projectLostOn: riyadhDay(sql`projects.lost_at`),
     projectLostReason: projects.lostReason,
@@ -272,14 +272,14 @@ type Selected = {
   id: string;
   number: number;
   status: string;
-  quotationId: string;
-  quotationNumber: number;
-  quotationRevision: number;
+  quotationId: string | null;
+  quotationNumber: number | null;
+  quotationRevision: number | null;
   smacNumber: string | null;
   companyId: string;
   companyName: string;
-  projectId: string;
-  projectName: string;
+  projectId: string | null;
+  projectName: string | null;
   projectLostOn: string | null;
   projectLostReason: string | null;
   repId: string;
@@ -307,13 +307,16 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     number: row.number,
     status: row.status as DispatchStatus,
     quotationId: row.quotationId,
-    quotationLabel: quotationLabel(row.quotationNumber, row.quotationRevision),
+    quotationLabel:
+      row.quotationNumber === null || row.quotationRevision === null
+        ? null
+        : quotationLabel(row.quotationNumber, row.quotationRevision),
     superseded: row.superseded === true,
     smacNumber: row.smacNumber ?? null,
     companyId: row.companyId,
     companyName: row.companyName,
-    projectId: row.projectId,
-    projectName: row.projectName,
+    projectId: row.projectId ?? null,
+    projectName: row.projectName ?? null,
     projectLostOn: row.projectLostOn ?? null,
     projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
@@ -352,11 +355,11 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
   const rows = await db
     .select({ ...selection(input.locale ?? (await getLocale())), shipmentMethod: shipmentName(input.locale) })
     .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .innerJoin(companies, eq(companies.id, dispatches.companyId))
+    .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(users, eq(users.id, dispatches.repId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
-    .innerJoin(projects, eq(projects.id, quotations.projectId))
+    .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(and(...conditions))
     .orderBy(input.order === "oldest" ? asc(dispatches.createdAt) : desc(dispatches.createdAt))
@@ -408,9 +411,9 @@ export async function dispatchWaitDays(input: ListDispatchesInput): Promise<Day[
   const rows = await db
     .select({ day: riyadhDay(sql`dispatches.created_at`) })
     .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .innerJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(companies, eq(companies.id, dispatches.companyId))
+    .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
+    .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .where(and(...narrowTo(input)))
     .orderBy(asc(dispatches.createdAt));
   return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
@@ -421,22 +424,23 @@ export async function countDispatches(input: ListDispatchesInput): Promise<numbe
   const [row] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .innerJoin(projects, eq(projects.id, quotations.projectId))
+    .innerJoin(companies, eq(companies.id, dispatches.companyId))
+    .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
+    .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .where(and(...narrowTo(input)));
   return Number(row?.total ?? 0);
 }
 
 export type DispatchItemRow = {
   id: string;
-  quotationItemId: string;
+  /** The quotation line it was prefilled from; null on a line the rep added or a direct dispatch. */
+  quotationItemId: string | null;
   /** The line's number on the quotation, so the two papers read the same way. */
   position: number;
   colourCode: string;
   qty: number;
-  /** What the quotation asked for on that line. */
-  quotedQty: number;
+  /** What the quotation asked for on that line; null where there is no line behind it. */
+  quotedQty: number | null;
   /**
    * What OTHER dispatches — waiting or approved — already hold of that line,
    * and what is left once this one is counted (D112). The coordinator checking
@@ -444,7 +448,7 @@ export type DispatchItemRow = {
    * quotation's mini list; the definition is `committedQtySql`'s (D12).
    */
   elsewhereQty: number;
-  leftAfter: number;
+  leftAfter: number | null;
   width: string;
   length: string;
   sqm: string;
@@ -493,12 +497,12 @@ export async function getDispatch(
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
     })
     .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .innerJoin(companies, eq(companies.id, dispatches.companyId))
+    .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(users, eq(users.id, dispatches.repId))
     .innerJoin(warehouses, eq(warehouses.id, dispatches.warehouseId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
-    .innerJoin(projects, eq(projects.id, quotations.projectId))
+    .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(eq(dispatches.id, id))
     .limit(1);
@@ -511,8 +515,8 @@ export async function getDispatch(
     .select({
       id: dispatchItems.id,
       quotationItemId: dispatchItems.quotationItemId,
-      position: quotationItems.position,
-      colourCode: quotationItems.colourCode,
+      position: dispatchItems.position,
+      colourCode: dispatchItems.colourCode,
       qty: dispatchItems.qty,
       quotedQty: quotationItems.qty,
       // Both tables named outright inside the subquery (rules/data.md), and
@@ -521,18 +525,18 @@ export async function getDispatch(
         select coalesce(sum(di.qty), 0)::int
           from dispatch_items di
           join dispatches d on d.id = di.dispatch_id
-         where di.quotation_item_id = quotation_items.id
+         where di.quotation_item_id = dispatch_items.quotation_item_id
            and d.status in ('submitted', 'approved')
            and d.id <> dispatch_items.dispatch_id
       )`,
-      width: quotationItems.width,
-      length: quotationItems.length,
+      width: dispatchItems.width,
+      length: dispatchItems.length,
       sqm: lineSqm,
     })
     .from(dispatchItems)
-    .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
+    .leftJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
     .where(eq(dispatchItems.dispatchId, id))
-    .orderBy(asc(quotationItems.position));
+    .orderBy(asc(dispatchItems.position));
   // This dispatch holds its own share only while it is waiting or approved; a
   // refused or cancelled one gave its quantities back (D12).
   const holds = row.status === "submitted" || row.status === "approved";
@@ -544,11 +548,12 @@ export async function getDispatch(
     credit: await creditOnDispatch(id, detail.totalSqm),
     items: items.map((item) => ({
       ...item,
+      sqm: String(item.sqm ?? "0"),
       elsewhereQty: Number(item.elsewhereQty ?? 0),
-      leftAfter: Math.max(
-        0,
-        item.quotedQty - Number(item.elsewhereQty ?? 0) - (holds ? item.qty : 0),
-      ),
+      leftAfter:
+        item.quotedQty === null
+          ? null
+          : Math.max(0, item.quotedQty - Number(item.elsewhereQty ?? 0) - (holds ? item.qty : 0)),
     })),
   };
 }
@@ -562,11 +567,11 @@ export async function listDispatchesForQuotation(
   const rows = await db
     .select({ ...selection(locale ?? (await getLocale())), shipmentMethod: shipmentName(locale) })
     .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
+    .innerJoin(companies, eq(companies.id, dispatches.companyId))
+    .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(users, eq(users.id, dispatches.repId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
-    .innerJoin(projects, eq(projects.id, quotations.projectId))
+    .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(
       and(
@@ -700,7 +705,6 @@ export async function companyAchievedSqm(month: string): Promise<string> {
     .select({ sqm: approvedSqm })
     .from(dispatches)
     .innerJoin(dispatchItems, eq(dispatchItems.dispatchId, dispatches.id))
-    .innerJoin(quotationItems, eq(quotationItems.id, dispatchItems.quotationItemId))
     .where(
       and(
         eq(dispatches.status, "approved"),

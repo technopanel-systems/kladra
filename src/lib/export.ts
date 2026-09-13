@@ -168,30 +168,32 @@ async function dispatchesCsv(): Promise<string> {
            coalesce(d.payment_note, '') as payment_note,
            to_char((d.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as requested,
            to_char((d.approved_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as approved,
-           qi.position as item,
-           qi.colour_code as colour_code,
-           qi.qty as quoted_qty,
+           di.position as item,
+           di.colour_code as colour_code,
+           coalesce(qi.qty::text, '') as quoted_qty,
            di.qty as sent_qty,
            -- Rounded ONCE, at the end, exactly as dispatchTotals in
            -- src/lib/dispatches.ts and lineSqm in src/lib/money.ts do it. The
            -- three move together or the file disagrees with the screen (D38).
            ${sql.raw(LINE_SQM)} as sqm
       from dispatches d
-      join quotations q on q.id = d.quotation_id
-      join companies c on c.id = q.company_id
+      join companies c on c.id = d.company_id
       join users u on u.id = d.rep_id
       join shipment_methods sm on sm.id = d.shipment_method_id
       join dispatch_items di on di.dispatch_id = d.id
-      join quotation_items qi on qi.id = di.quotation_item_id
-      join projects p on p.id = q.project_id
-     order by d.number, qi.position
+      -- A direct dispatch has no paper and may have no job (SPEC §3, P13).
+      left join quotations q on q.id = d.quotation_id
+      left join quotation_items qi on qi.id = di.quotation_item_id
+      left join projects p on p.id = d.project_id
+     order by d.number, di.position
   `);
 
   // Both labels from the functions the screens use (src/lib/labels.ts).
   const rows = result.rows.map((row) => ({
     ...row,
     dispatch: dispatchLabel(Number(row.d_number)),
-    quotation: quotationLabel(Number(row.q_number), Number(row.q_revision)),
+    quotation:
+      row.q_number === null ? "" : quotationLabel(Number(row.q_number), Number(row.q_revision)),
   }));
 
   return csv(

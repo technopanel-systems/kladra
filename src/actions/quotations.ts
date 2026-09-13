@@ -422,6 +422,8 @@ export async function requestQuotationAction(
           contactId: addressing.contactId,
           warehouseId: addressing.warehouseId,
           repId: actor.id,
+          // Nobody raises on anybody's behalf yet (P13-S6 will); the two agree.
+          raisedById: actor.id,
           notes: input.notes ?? null,
           ...issuedNow(self),
         })
@@ -1039,6 +1041,7 @@ export async function reviseQuotationAction(
           contactId: addressing.contactId,
           warehouseId: addressing.warehouseId,
           repId: actor.id,
+          raisedById: actor.id,
           notes: field(formData, "notes") ?? null,
           ...issuedNow(self),
         })

@@ -301,9 +301,9 @@ test("her figures are the whole desk's, not the first two hundred rows'", async 
       // Any store: this fixture is about how many rows the desk counts, not
       // about where they come from (SPEC §3, P12-9).
       `insert into quotations
-         (number, revision, company_id, project_id, rep_id, status, notes, warehouse_id,
-          created_at, updated_at)
-       select nextval('quotation_numbers')::int, 1, $1, $2, $3, 'requested', $4,
+         (number, revision, company_id, project_id, rep_id, raised_by_id, status, notes,
+          warehouse_id, created_at, updated_at)
+       select nextval('quotation_numbers')::int, 1, $1, $2, $3, $3, 'requested', $4,
               (select id from warehouses order by id limit 1), now(), now()
          from generate_series(1, $5::int)`,
       [home.companyId, home.projectId, home.repId, MARKER, OVER],
@@ -312,13 +312,17 @@ test("her figures are the whole desk's, not the first two hundred rows'", async 
       // Cash on delivery: this fixture is about how many rows the desk counts,
       // not how they are paid for, and the column refuses a pair that does not
       // go together (SPEC §3, P12-10).
+      // The customer and the job are the dispatch's own since P13 (0025), read
+      // from the paper it came from, which it matches exactly.
       `insert into dispatches
-         (number, quotation_id, rep_id, status, shipment_method_id, warehouse_id, destination,
-          payment_terms, payment_detail, created_at, updated_at)
-       select nextval('dispatch_numbers')::int, $1, $2, 'submitted', $3,
-              (select id from warehouses order by id limit 1), $4, 'cash', 'onDelivery',
-              now(), now()
-         from generate_series(1, $5::int)`,
+         (number, quotation_id, company_id, project_id, rep_id, raised_by_id, quotation_difference,
+          status, shipment_method_id, warehouse_id, destination, payment_terms, payment_detail,
+          created_at, updated_at)
+       select nextval('dispatch_numbers')::int, q.id, q.company_id, q.project_id, $2, $2, '[]'::jsonb,
+              'submitted', $3, (select id from warehouses order by id limit 1), $4, 'cash',
+              'onDelivery', now(), now()
+         from quotations q, generate_series(1, $5::int)
+        where q.id = $1::uuid`,
       [issued.id, issued.repId, method.id, MARKER, OVER],
     );
 

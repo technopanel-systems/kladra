@@ -65,10 +65,11 @@ export async function DispatchDrawer({
         paymentTerms: dispatch.paymentTerms,
         paymentDetail: dispatch.paymentDetail,
         paymentNote: dispatch.paymentNote,
-        sending: dispatch.items.map((item) => ({
-          quotationItemId: item.quotationItemId,
-          qty: item.qty,
-        })),
+        // Every line of a dispatch raised from a quotation points at one until
+        // P13-S3 lets a rep add his own; the edit form is keyed by that line.
+        sending: dispatch.items.flatMap((item) =>
+          item.quotationItemId ? [{ quotationItemId: item.quotationItemId, qty: item.qty }] : [],
+        ),
         // What the field opens on: the name it already says, or the word that
         // means everybody on the job (D148).
         creditTo:

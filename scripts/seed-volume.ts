@@ -91,8 +91,9 @@ function paidBy(n: number): {
         paymentNote: "تحويل بنكي خلال 30 يومًا من تاريخ التسليم",
       };
     default:
+      // Credit and tasaheel are one option (SPEC §3, P13); the words say which.
       return {
-        paymentTerms: "tasaheel",
+        paymentTerms: "credit",
         paymentDetail: null,
         paymentNote: "تمويل عبر تساهيل، الدفعة الأولى عند التوقيع",
       };
@@ -313,6 +314,7 @@ async function main(): Promise<void> {
         contactId: null,
         warehouseId: pick(warehouseIds),
         repId: project.repId,
+        raisedById: project.repId,
         status,
         // The ERP's own number, which is what the coordinator types: nothing to
         // do with ours, as on the demo floor. Counted up, not drawn at random:
@@ -394,7 +396,11 @@ async function main(): Promise<void> {
       .values({
         number,
         quotationId: source.id,
+        companyId: sql`(select company_id from quotations where id = ${source.id}::uuid)`,
+        projectId: sql`(select project_id from quotations where id = ${source.id}::uuid)`,
         repId: source.repId,
+        raisedById: source.repId,
+        quotationDifference: [],
         shipmentMethodId: pick(methodIds),
         warehouseId: pick(warehouseIds),
         destination: `${pick(["الرياض", "جدة", "الدمام"])} — موقع المشروع`,
@@ -445,11 +451,17 @@ async function main(): Promise<void> {
         : []),
     ]);
 
-    await db.insert(dispatchItems).values({
-      dispatchId: row.id,
-      quotationItemId: source.itemId,
-      qty: Math.max(1, Math.floor(source.qty / 4)),
-    });
+    // The load's own sheet, copied from the line it was asked from (P13-S0).
+    await db.execute(sql`
+      insert into dispatch_items
+        (dispatch_id, quotation_item_id, qty, position, colour_code, supplier_id, fire_rating_id,
+         class_id, thickness_id, width, length, price_per_sqm)
+      select ${row.id}::uuid, qi.id, ${Math.max(1, Math.floor(source.qty / 4))}::int, qi.position,
+             qi.colour_code, qi.supplier_id, qi.fire_rating_id, qi.class_id, qi.thickness_id,
+             qi.width, qi.length, qi.price_per_sqm
+        from quotation_items qi
+       where qi.id = ${source.itemId}::uuid
+    `);
   }
 
   // A seed that lies about its own output is the finding (D104): every
@@ -473,6 +485,10 @@ async function main(): Promise<void> {
     select 'dispatches raised before their quotation', count(*)::int
       from dispatches d join quotations q on q.id = d.quotation_id
      where d.created_at < q.created_at
+    union all
+    select 'dispatches at a company their quotation is not at', count(*)::int
+      from dispatches d join quotations q on q.id = d.quotation_id
+     where d.company_id <> q.company_id or d.project_id is distinct from q.project_id
   `);
   const broken = holes.rows.filter((h) => Number(h.n) > 0);
   if (broken.length > 0) {

@@ -49,6 +49,8 @@ import {
   WAREHOUSES,
   SUPPLIERS,
   THICKNESSES,
+  SERVICES,
+  OUTCOMES,
 } from "./seed/lookups";
 import { buildCountries } from "./seed/countries-iso";
 import {
@@ -122,6 +124,8 @@ const {
   quotations,
   shipmentMethods,
   warehouses,
+  services,
+  outcomes,
   suppliers,
   targets,
   thicknesses,
@@ -393,6 +397,15 @@ async function seedLookups(): Promise<Lookups> {
       )
       .returning({ id: warehouses.id, nameEn: warehouses.nameEn });
     const warehouseByName = new Map(insertedWarehouses.map((w) => [w.nameEn, w.id]));
+
+    // What Technopanel does to a panel besides selling it, and what came of a
+    // rep's visit or call (SPEC §3, P13) — both lists the admin edits.
+    await tx
+      .insert(services)
+      .values(SERVICES.map((s, i) => ({ nameEn: s.en, nameAr: s.ar, sortOrder: i, active: true })));
+    await tx
+      .insert(outcomes)
+      .values(OUTCOMES.map((o, i) => ({ nameEn: o.en, nameAr: o.ar, sortOrder: i, active: true })));
 
     const insertedShipment = await tx
       .insert(shipmentMethods)
@@ -966,6 +979,7 @@ async function seedQuotations(
               : (contactIds.get(q.company) ?? [])[q.contact] ?? null,
           warehouseId: must(lk.warehouseByName, q.warehouse ?? "Riyadh", "warehouse"),
           repId: him,
+          raisedById: him,
           status: q.status,
           notes: q.notes ?? null,
           smacNumber: q.smacNumber ?? null,
@@ -1033,6 +1047,33 @@ function warehouseOfQuotation(quotationKey: string, lk: Lookups): number {
   return must(lk.warehouseByName, parent.warehouse ?? "Riyadh", "warehouse");
 }
 
+/**
+ * A dispatch line is the load, with its own sheet (P13-S0): the seed copies the
+ * quotation line it was asked from, as the app does when a rep sends a line
+ * unchanged, in one statement so the sheet cannot be retyped wrong.
+ */
+async function copyLine(
+  tx: Pick<typeof db, "execute">,
+  line: { dispatchId: string; quotationItemId: string; qty: number; createdAt?: Date; updatedAt?: Date },
+): Promise<void> {
+  await tx.execute(sql`
+    insert into dispatch_items
+      (dispatch_id, quotation_item_id, qty, position, colour_code, supplier_id, fire_rating_id,
+       class_id, thickness_id, width, length, price_per_sqm, created_at, updated_at)
+    select ${line.dispatchId}::uuid, qi.id, ${line.qty}::int, qi.position, qi.colour_code, qi.supplier_id,
+           qi.fire_rating_id, qi.class_id, qi.thickness_id, qi.width, qi.length, qi.price_per_sqm,
+           ${line.createdAt ?? new Date()}, ${line.updatedAt ?? line.createdAt ?? new Date()}
+      from quotation_items qi
+     where qi.id = ${line.quotationItemId}::uuid
+  `);
+}
+
+/** The company and the job a dispatch prefilled from this quotation is for. */
+const paperCompany = (quotationId: string) =>
+  sql`(select company_id from quotations where id = ${quotationId}::uuid)`;
+const paperProject = (quotationId: string) =>
+  sql`(select project_id from quotations where id = ${quotationId}::uuid)`;
+
 async function seedDispatches(
   quotationIds: Map<string, string>,
   itemIds: Map<string, string[]>,
@@ -1079,7 +1120,11 @@ async function seedDispatches(
         .values({
           number,
           quotationId: must(quotationIds, d.quotation, "quotation"),
+          companyId: paperCompany(must(quotationIds, d.quotation, "quotation")),
+          projectId: paperProject(must(quotationIds, d.quotation, "quotation")),
           repId: must(userIds, d.rep, "user"),
+          raisedById: must(userIds, d.rep, "user"),
+          quotationDifference: [],
           status: d.status,
           shipmentMethodId: must(lk.shipmentByCode, d.shipmentMethod, "shipment method"),
           // The store the load leaves from. Absent means the quotation's own,
@@ -1144,17 +1189,12 @@ async function seedDispatches(
       ]);
 
       const parentItems = must(itemIds, d.quotation, "quotation");
-      const rows = await tx
-        .insert(dispatchItems)
-        .values(
-          d.items.map((it) => {
-            const quotationItemId = parentItems[it.item];
-            if (!quotationItemId) throw new Error(`dispatch ${d.key} names item ${it.item}, which does not exist`);
-            return { dispatchId: row.id, quotationItemId, qty: it.qty, createdAt: created, updatedAt: created };
-          }),
-        )
-        .returning({ id: dispatchItems.id });
-      itemCount += rows.length;
+      for (const it of d.items) {
+        const quotationItemId = parentItems[it.item];
+        if (!quotationItemId) throw new Error(`dispatch ${d.key} names item ${it.item}, which does not exist`);
+        await copyLine(tx, { dispatchId: row.id, quotationItemId, qty: it.qty, createdAt: created });
+        itemCount += 1;
+      }
     }
   });
   return itemCount;
@@ -1215,6 +1255,7 @@ async function seedHistory(
           contactId: null,
           warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           repId: him,
+          raisedById: him,
           status: "accepted" as const,
           smacNumber: String(smac),
           issuedAt: instant(on(18), 13, 5),
@@ -1263,7 +1304,11 @@ async function seedHistory(
         .values({
           number: dispatchNumber,
           quotationId: quotation.id,
+          companyId: paperCompany(quotation.id),
+          projectId: paperProject(quotation.id),
           repId: must(userIds, h.rep, "user"),
+          raisedById: must(userIds, h.rep, "user"),
+          quotationDifference: [],
           status: "approved" as const,
           shipmentMethodId: must(lk.shipmentByCode, "ct", "shipment method"),
           warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
@@ -1281,7 +1326,7 @@ async function seedHistory(
 
       await tx.insert(dispatchCredits).values({ dispatchId: dispatch.id, userId: him });
 
-      await tx.insert(dispatchItems).values({
+      await copyLine(tx, {
         dispatchId: dispatch.id,
         quotationItemId: item.id,
         qty: h.sheets,
@@ -1359,6 +1404,7 @@ async function seedHistory(
           contactId: null,
           warehouseId: must(lk.warehouseByName, "Riyadh", "warehouse"),
           repId: him,
+          raisedById: him,
           status: l.status,
           smacNumber: issued ? String(smac) : null,
           returnReason: l.status === "returned" ? (l.reason ?? null) : null,

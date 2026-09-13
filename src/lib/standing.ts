@@ -62,8 +62,6 @@ export function approvedSqmSql(scope: SQL): SQL<string> {
     select ${sql.raw(SUM_SQM)}::text
       from dispatches d
       join dispatch_items di on di.dispatch_id = d.id
-      join quotation_items qi on qi.id = di.quotation_item_id
-      join quotations q on q.id = d.quotation_id
      where d.status = 'approved'
        and ${scope}
   )`;
@@ -202,7 +200,7 @@ export async function companyStanding(companyId: string): Promise<CompanyStandin
   }>(sql`
     select
       ${pipelineSqmSql(sql`p.company_id = ${id}`)} as pipeline_sqm,
-      ${approvedSqmSql(sql`q.company_id = ${id}`)} as approved_sqm,
+      ${approvedSqmSql(sql`d.company_id = ${id}`)} as approved_sqm,
       ${openQuotationsSql(sql`q.company_id = ${id}`)} as open_quotations,
       (
         select to_char(max(a.happened_on), 'YYYY-MM-DD')
@@ -257,7 +255,7 @@ export async function projectStanding(projectId: string): Promise<ProjectStandin
               where later.number = q.number and later.revision > q.revision
            )
       ) as quoted_sqm,
-      ${approvedSqmSql(sql`q.project_id = ${id}`)} as approved_sqm,
+      ${approvedSqmSql(sql`d.project_id = ${id}`)} as approved_sqm,
       ${openQuotationsSql(sql`q.project_id = ${id}`)} as open_quotations,
       (
         select to_char(max(a.happened_on), 'YYYY-MM-DD')

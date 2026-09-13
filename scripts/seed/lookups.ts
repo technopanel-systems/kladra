@@ -89,6 +89,25 @@ export const WAREHOUSES: Bilingual[] = [
   { en: "Khamis Mushait", ar: "خميس مشيط" },
 ];
 
+// ---- services (SPEC §3, P13: CNC cutting, denting, fabrication) ----------------
+// Priced per m² on a quotation and a dispatch, in a section of their own.
+export const SERVICES: Bilingual[] = [
+  { en: "CNC cutting", ar: "قص CNC" },
+  { en: "Denting", ar: "تخديد" },
+  { en: "Fabrication", ar: "تصنيع" },
+];
+
+// ---- outcomes (SPEC §3, P13; D171) -------------------------------------------------
+// What came of something a rep did, six to start; the admin renames them.
+export const OUTCOMES: Bilingual[] = [
+  { en: "Reached", ar: "تم التواصل" },
+  { en: "No answer", ar: "لم يرد" },
+  { en: "Meeting set", ar: "تم تحديد موعد" },
+  { en: "Wants a quotation", ar: "يطلب عرض سعر" },
+  { en: "Not now", ar: "ليس الآن" },
+  { en: "Lost to someone else", ar: "ذهب لمنافس" },
+];
+
 // ---- contact positions (FACET had free text only; SPEC D21) -------------------
 export const POSITIONS: Bilingual[] = [
   { en: "Owner", ar: "المالك" },

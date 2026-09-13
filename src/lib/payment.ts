@@ -24,7 +24,7 @@
  * Next and does not know the alias.
  */
 
-export const PAYMENT_TERMS = ["bankTransfer", "cash", "credit", "tasaheel"] as const;
+export const PAYMENT_TERMS = ["bankTransfer", "cash", "credit"] as const;
 export type PaymentTerms = (typeof PAYMENT_TERMS)[number];
 
 export const PAYMENT_DETAILS = ["fullAmount", "partAmount", "onDelivery", "atOffice"] as const;
@@ -41,7 +41,6 @@ const DETAILS: Record<PaymentTerms, readonly PaymentDetail[]> = {
   bankTransfer: ["fullAmount", "partAmount"],
   cash: ["onDelivery", "atOffice"],
   credit: [],
-  tasaheel: [],
 };
 
 export function detailsFor(terms: PaymentTerms): readonly PaymentDetail[] {
@@ -55,7 +54,7 @@ export function detailsFor(terms: PaymentTerms): readonly PaymentDetail[] {
  * today and true by accident: a fifth way to pay that asked nothing and needed
  * no note would make that shortcut quietly wrong.
  */
-const NOTE_REQUIRED: readonly PaymentTerms[] = ["credit", "tasaheel"];
+const NOTE_REQUIRED: readonly PaymentTerms[] = ["credit"];
 
 export function needsNote(terms: PaymentTerms): boolean {
   return NOTE_REQUIRED.includes(terms);

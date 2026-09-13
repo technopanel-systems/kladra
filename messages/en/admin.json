@@ -90,7 +90,9 @@
     "classes": "Classes",
     "thicknesses": "Thicknesses",
     "shipmentMethods": "Shipment methods",
-    "warehouses": "Warehouses"
+    "warehouses": "Warehouses",
+    "services": "Services",
+    "outcomes": "Outcomes"
   },
   "kind": {
     "holiday": "Holiday",

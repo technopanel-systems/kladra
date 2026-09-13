@@ -62,7 +62,7 @@ export const families: [string, string[]][] = [
   // action guard says `t(refusalKey(error))` and no call site writes either
   // key, so without this family `signedOut` is a key the checks cannot see.
   ["common", union("src/lib/authz.ts", "REFUSAL_KEYS")],
-  ["common", union("src/db/schema.ts", "channelEnum")],
+  ["common", union("src/db/schema.ts", "CHANNELS")],
   ["common", union("src/lib/quotation-diff.ts", "LINE_FIELDS")],
   ["reports", tableKeys("src/lib/report-figures.ts")],
   // The moved line's labels (P11E): every count figure has a `<key>Label` plural

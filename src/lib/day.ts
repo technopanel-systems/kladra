@@ -142,9 +142,8 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
         since: dispatches.updatedAt,
       })
       .from(dispatches)
-      .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-      .innerJoin(companies, eq(companies.id, quotations.companyId))
-      .innerJoin(projects, eq(projects.id, quotations.projectId))
+      .innerJoin(companies, eq(companies.id, dispatches.companyId))
+      .leftJoin(projects, eq(projects.id, dispatches.projectId))
       .where(
         and(
           eq(companies.repId, repId),

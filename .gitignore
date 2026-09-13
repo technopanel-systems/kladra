@@ -61,3 +61,6 @@ yarn-error.log*
 
 # local overrides
 .claude/settings.local.json
+
+# Agent worktrees the session creates inside the repo (P13 Stage 2)
+.claude/worktrees/

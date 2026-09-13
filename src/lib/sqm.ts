@@ -1,34 +1,34 @@
 import { sql, type SQL } from "drizzle-orm";
-import { dispatchItems, quotationItems } from "@/db/schema";
+import { dispatchItems } from "@/db/schema";
 import { creditedParts, shareOf } from "@/lib/credit";
 
 /**
  * Square metres moved: the one formula (SPEC D38, D86; rules/data.md).
  *
- * Width × length × the quantity SENT — never the quotation line's own quantity,
- * which is the whole quoted amount — rounded once per line and once more over
- * the sum. It was retyped in six files and a test, every copy correct and none
- * of them checked against another; `scripts/one-figure.mts` fails the lint on
- * any copy outside this file now. The raw pair is for SQL written as text,
- * where the dispatch lines are `di` and the quotation lines `qi`; the Drizzle
- * pair is for a query that names the tables itself; `sqmOf` takes any quantity
- * expression, which is how "what is left to send" (standing.ts) shares the
- * sheet arithmetic without pretending to be the same figure. The specs keep
- * their own copy on purpose: a figure computed two ways is the point of those
- * tests.
+ * Width × length × the quantity SENT, rounded once per line and once more over
+ * the sum. Since P13 a dispatch line carries its own sheet — the rep edits the
+ * load — so its m² is the line's own generated column, `dispatch_items.sqm`, the
+ * same expression the quotation's lines generate, and nothing here multiplies a
+ * dispatched quantity by a quotation's sheet any more. `sqmOf` is the one place
+ * that still does, for "what is left to send" on a quotation line
+ * (standing.ts), which is a quotation's figure and says so. The raw pair is for
+ * SQL written as text with dispatch lines aliased `di`; the Drizzle pair is for
+ * a query that names the table itself. `scripts/one-figure.mts` fails the lint on
+ * any copy outside this file, and the specs keep their own copy on purpose: a
+ * figure computed two ways is the point of those tests.
  */
 
 /** The sheet, times any quantity expression, rounded once — for SQL written as text with quotation_items `qi`. */
 export const sqmOf = (qty: string): string => `round(qi.width * qi.length * ${qty}, 2)`;
 
-/** One dispatched line, in a query that aliases dispatch_items `di` and quotation_items `qi`. */
-export const LINE_SQM = sqmOf("di.qty");
+/** One dispatched line, in a query that aliases dispatch_items `di`. */
+export const LINE_SQM = "di.sqm";
 
 /** The sum of such lines, never null. */
 export const SUM_SQM = `round(coalesce(sum(${LINE_SQM}), 0), 2)`;
 
-/** One dispatched line, for a Drizzle query joining `dispatchItems` and `quotationItems`. */
-export const lineSqm: SQL<string> = sql`round(${quotationItems.width} * ${quotationItems.length} * ${dispatchItems.qty}, 2)`;
+/** One dispatched line, for a Drizzle query that reads `dispatchItems`. */
+export const lineSqm: SQL<string> = sql<string>`${dispatchItems.sqm}`;
 
 /** The sum of such lines, never null. */
 export const sumSqm: SQL<string> = sql`round(coalesce(sum(${lineSqm}), 0), 2)`;
@@ -57,13 +57,11 @@ export const CREDITED_METRES = `
          d.approved_at,
          d.company_id,
          ${shareOf("d.sqm", "c.parts", "c.part")} as sqm
-    from (select dd.id, dd.approved_at, qq.company_id, ${SUM_SQM} as sqm
+    from (select dd.id, dd.approved_at, dd.company_id, ${SUM_SQM} as sqm
             from dispatches dd
             join dispatch_items di on di.dispatch_id = dd.id
-            join quotation_items qi on qi.id = di.quotation_item_id
-            join quotations qq on qq.id = dd.quotation_id
            where dd.status = 'approved'
-           group by dd.id, qq.company_id) d
+           group by dd.id) d
     join (select dispatch_id, user_id, ${creditedParts("dispatch_id")}
             from dispatch_credits) c
       on c.dispatch_id = d.id`;

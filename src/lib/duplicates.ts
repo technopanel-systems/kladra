@@ -30,6 +30,7 @@ import {
   projects,
   quotations,
   users,
+  dispatches,
   NOTIFICATION_KINDS,
   type DuplicateFlagStatus,
 } from "@/db/schema";
@@ -191,8 +192,7 @@ export async function listOpenDuplicates(limit: number): Promise<DuplicatePair[]
       // Approved only: what actually moved is what makes a record worth keeping.
       dispatches: sql<number>`(
         select count(*)::int from dispatches di
-          join quotations qu on qu.id = di.quotation_id
-         where qu.company_id = ${t}.id and di.status = 'approved'
+         where di.company_id = ${t}.id and di.status = 'approved'
       )`,
     };
   };
@@ -345,6 +345,11 @@ export async function foldCompany(
     .update(quotations)
     .set({ companyId: survivorId })
     .where(eq(quotations.companyId, foldedId));
+  // A dispatch names its own company since P13 — a direct one has no quotation to follow.
+  await tx
+    .update(dispatches)
+    .set({ companyId: survivorId })
+    .where(eq(dispatches.companyId, foldedId));
 
   /*
    * A promise made to this customer does not vanish because two records became

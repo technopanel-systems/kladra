@@ -113,8 +113,7 @@ async function customersOf(
       : db
           .select({ id: dispatches.id, name: companies.name })
           .from(dispatches)
-          .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-          .innerJoin(companies, eq(companies.id, quotations.companyId))
+          .innerJoin(companies, eq(companies.id, dispatches.companyId))
           .where(inArray(dispatches.id, ids("dispatch"))),
     ids("company").length === 0
       ? []

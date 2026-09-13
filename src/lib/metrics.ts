@@ -152,8 +152,7 @@ export async function chainRatios(from: Day, repId: string | null): Promise<Chai
       -- raised in the window at all, which neither fraction says.
       (select count(*)::int
          from dispatches dd
-         join quotations qq on qq.id = dd.quotation_id
-         join companies c on c.id = qq.company_id
+         join companies c on c.id = dd.company_id
         where (dd.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
           and c.archived_at is null
           and ${creditedDispatch("dd", repId)}) as dispatches

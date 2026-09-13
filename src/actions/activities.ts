@@ -21,7 +21,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { activities, auditLog, companies, contacts, projects } from "@/db/schema";
+import { activities, auditLog, companies, contacts, projects, CHANNELS } from "@/db/schema";
 import { assertCompanyMine, assertProjectMine } from "@/lib/activities";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
@@ -64,7 +64,7 @@ const logSchema = z.object({
   projectId: z.uuid().optional(),
   contactId: z.uuid().optional(),
   text: z.string().trim().min(1).max(4000),
-  channel: z.enum(["visit", "call", "whatsapp", "other"]).default("visit"),
+  channel: z.enum(CHANNELS).default("visit"),
   happenedOn: dayString.optional(),
   nextFollowUp: dayString.optional(),
 });
@@ -233,7 +233,7 @@ export async function logActivityAction(
 const editSchema = z.object({
   activityId: z.uuid(),
   text: z.string().trim().min(1).max(4000),
-  channel: z.enum(["visit", "call", "whatsapp", "other"]),
+  channel: z.enum(CHANNELS),
   contactId: z.uuid().optional(),
   projectId: z.uuid().optional(),
 });

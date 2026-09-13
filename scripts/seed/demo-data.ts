@@ -1532,7 +1532,8 @@ export const DISPATCHES: DispatchSeed[] = [
     status: "approved",
     shipmentMethod: "ct",
     destination: "الرياض — طريق الخرج، موقع المعرض",
-    paymentTerms: "tasaheel",
+    // Credit and tasaheel are one option (SPEC §3, P13); the words say which.
+    paymentTerms: "credit",
     paymentNote: "تمويل عبر تساهيل، الدفعة الأولى عند التوقيع",
     smacDispatchNumber: "8879",
     approvedOnDayOfMonth: 5,

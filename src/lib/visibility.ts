@@ -104,12 +104,13 @@ export function mayKeepContacts(user: SessionUser, companyRepId: string, shared 
 export function mayRaiseFor(
   user: SessionUser,
   companyRepId: string,
-  projectRepId: string,
+  /** Null for a direct dispatch with no job under it (SPEC §3, P13): the company decides alone. */
+  projectRepId: string | null,
   onProject = false,
 ): boolean {
   if (!sells(user.role)) return false;
   if (mayWrite(user, companyRepId)) return true;
-  return mayWorkProject(user, projectRepId, onProject);
+  return projectRepId !== null && mayWorkProject(user, projectRepId, onProject);
 }
 
 /**

@@ -90,7 +90,9 @@
     "classes": "الفئات",
     "thicknesses": "السماكات",
     "shipmentMethods": "طرق الشحن",
-    "warehouses": "المستودعات"
+    "warehouses": "المستودعات",
+    "services": "الخدمات",
+    "outcomes": "النتائج"
   },
   "kind": {
     "holiday": "عطلة",

@@ -104,14 +104,15 @@ type Loaded = {
   number: number;
   label: string;
   status: DispatchStatus;
-  quotationId: string;
-  quotationLabel: string;
-  projectId: string;
+  /** Null on a direct dispatch (SPEC §3, P13), which has no paper and may have no job. */
+  quotationId: string | null;
+  quotationLabel: string | null;
+  projectId: string | null;
   companyId: string;
   /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
   companyRepId: string;
   /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
-  projectRepId: string;
+  projectRepId: string | null;
   shared: boolean;
   onProject: boolean;
 };
@@ -129,17 +130,18 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
       quotationId: dispatches.quotationId,
       quotationNumber: quotations.number,
       quotationRevision: quotations.revision,
-      projectId: quotations.projectId,
-      companyId: quotations.companyId,
+      projectId: dispatches.projectId,
+      companyId: dispatches.companyId,
       companyRepId: companies.repId,
       projectRepId: projects.repId,
       shared: onCompanySql(actor, sql`companies.id`).mapWith(Boolean),
-      onProject: onProjectSql(actor, sql`quotations.project_id`).mapWith(Boolean),
+      onProject: sql`coalesce(${onProjectSql(actor, sql`dispatches.project_id`)}, false)`.mapWith(Boolean),
     })
     .from(dispatches)
-    .innerJoin(quotations, eq(quotations.id, dispatches.quotationId))
-    .innerJoin(companies, eq(companies.id, quotations.companyId))
-    .innerJoin(projects, eq(projects.id, quotations.projectId))
+    // The company is the dispatch's own now (P13-S0): a direct one has no paper to read it through.
+    .innerJoin(companies, eq(companies.id, dispatches.companyId))
+    .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
+    .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .where(eq(dispatches.id, dispatchId))
     .limit(1);
 
@@ -152,7 +154,10 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
     label: dispatchLabel(row.number),
     status: row.status as DispatchStatus,
     quotationId: row.quotationId,
-    quotationLabel: quotationLabel(row.quotationNumber, row.quotationRevision),
+    quotationLabel:
+      row.quotationNumber === null || row.quotationRevision === null
+        ? null
+        : quotationLabel(row.quotationNumber, row.quotationRevision),
     projectId: row.projectId,
     companyId: row.companyId,
     companyRepId: row.companyRepId,
@@ -314,8 +319,37 @@ async function replaceItems(
   asked: { quotationItemId: string; qty: number }[],
 ): Promise<void> {
   await tx.delete(dispatchItems).where(eq(dispatchItems.dispatchId, dispatchId));
+  // A dispatch line carries its own sheet now (P13-S0), copied from the quotation
+  // line it was asked from, so the load is what the rows say even after the paper
+  // is revised. P13-S3 lets the rep change it and records what he changed.
+  const source = await tx
+    .select({
+      id: quotationItems.id,
+      position: quotationItems.position,
+      colourCode: quotationItems.colourCode,
+      supplierId: quotationItems.supplierId,
+      fireRatingId: quotationItems.fireRatingId,
+      classId: quotationItems.classId,
+      thicknessId: quotationItems.thicknessId,
+      width: quotationItems.width,
+      length: quotationItems.length,
+      pricePerSqm: quotationItems.pricePerSqm,
+    })
+    .from(quotationItems)
+    .where(
+      inArray(
+        quotationItems.id,
+        asked.map((item) => item.quotationItemId),
+      ),
+    );
+  const byId = new Map(source.map((line) => [line.id, line]));
   await tx.insert(dispatchItems).values(
-    asked.map((item) => ({ dispatchId, quotationItemId: item.quotationItemId, qty: item.qty })),
+    asked.flatMap((item) => {
+      const line = byId.get(item.quotationItemId);
+      if (!line) return [];
+      const { id, ...sheet } = line;
+      return [{ dispatchId, quotationItemId: id, qty: item.qty, ...sheet }];
+    }),
   );
 }
 
@@ -447,8 +481,13 @@ export async function requestDispatchAction(
         .insert(dispatches)
         .values({
           number: sql`nextval('dispatch_numbers')`,
+          companyId: quotation.companyId,
+          projectId: quotation.projectId,
           quotationId: quotation.id,
           repId: actor.id,
+          raisedById: actor.id,
+          // Copied line for line from the paper, so nothing differs yet (P13-S3 records what does).
+          quotationDifference: [],
           shipmentMethodId: parsed.data.shipmentMethodId,
           warehouseId: parsed.data.warehouseId,
           destination: parsed.data.destination,
@@ -622,7 +661,10 @@ export async function updateDispatchAction(
     // still waiting has moved nothing and earned nobody anything, so for as
     // long as a rep may correct its quantities he may correct who they count
     // for; the approval is what freezes both.
-    const credit = await resolveCredit(dispatch.projectId, actor.id, field(formData, "credit"));
+    // Resubmitting a direct dispatch is P13-S3's; until then every dispatch has a paper and a job.
+    const { quotationId, projectId } = dispatch;
+    if (!quotationId || !projectId) return { ok: false, error: td("notFound") };
+    const credit = await resolveCredit(projectId, actor.id, field(formData, "credit"));
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
     const failure = await db.transaction(async (tx) => {
@@ -633,12 +675,12 @@ export async function updateDispatchAction(
       // Null is a row that is not there any more, which is not his either.
       if (!held || !withTheRep(held)) return "answered";
       const cameBack = held === "refused";
-      const parent = await holdQuotation(tx, dispatch.quotationId);
+      const parent = await holdQuotation(tx, quotationId);
       // A refused request may have sat for a week, and the paper under it can
       // have been revised or withdrawn since (S34, S38).
       if (cameBack && !dispatchable(parent as QuotationStatus)) return "notDispatchable";
-      if (cameBack && !(await isLiveRevision(tx, dispatch.quotationId))) return "superseded";
-      const check = await checkQuantities(tx, dispatch.quotationId, asked, dispatch.id);
+      if (cameBack && !(await isLiveRevision(tx, quotationId))) return "superseded";
+      const check = await checkQuantities(tx, quotationId, asked, dispatch.id);
       if (check !== "ok") return check;
       await replaceItems(tx, dispatch.id, asked);
       await creditDispatch(tx, dispatch.id, credit);
@@ -758,7 +800,9 @@ export async function approveDispatchAction(
       // quotation revised while it sat in the queue could be approved on a
       // price the customer no longer holds.
       if ((await holdDispatch(tx, dispatch.id)) !== "submitted") return "answered" as const;
-      if (!(await isLiveRevision(tx, dispatch.quotationId))) return "superseded" as const;
+      // A direct dispatch has no paper to be superseded (SPEC §3, P13).
+      if (dispatch.quotationId && !(await isLiveRevision(tx, dispatch.quotationId)))
+        return "superseded" as const;
       await tx
         .update(dispatches)
         .set({

@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Ellipsis, HardHat, MapPin, MessageCircle, Phone, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +22,8 @@ import { ActivityActions } from "./activity-actions";
  * the client build of next-intl's hooks.
  */
 
-export type ActivityChannel = "visit" | "call" | "whatsapp" | "other";
+import type { ActivityChannel } from "@/lib/activities";
+export type { ActivityChannel };
 
 export type ActivityEntry = {
   id: string;
@@ -52,6 +53,8 @@ export type ActivityEntry = {
 
 const CHANNEL_ICON = {
   visit: MapPin,
+  siteVisit: HardHat,
+  meeting: Users,
   call: Phone,
   whatsapp: MessageCircle,
   other: Ellipsis,

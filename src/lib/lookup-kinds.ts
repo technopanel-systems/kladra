@@ -33,6 +33,8 @@ export const LOOKUP_KINDS = [
   // rows a quotation points at have to survive one closing — which is what
   // `active` is for on every list here.
   "warehouses",
+  "services",
+  "outcomes",
 ] as const;
 
 export type LookupKind = (typeof LOOKUP_KINDS)[number];
@@ -96,6 +98,14 @@ export const LOOKUP_FIELDS: Record<LookupKind, LookupField[]> = {
     { key: "en", column: "name_en", labelKey: "admin.inEnglish" },
     { key: "ar", column: "name_ar", labelKey: "admin.inArabic" },
   ],
+  services: [
+    { key: "en", column: "name_en", labelKey: "admin.inEnglish" },
+    { key: "ar", column: "name_ar", labelKey: "admin.inArabic" },
+  ],
+  outcomes: [
+    { key: "en", column: "name_en", labelKey: "admin.inEnglish" },
+    { key: "ar", column: "name_ar", labelKey: "admin.inArabic" },
+  ],
   fireRatings: [{ key: "value", column: "name", labelKey: "common.fireRating" }],
   classes: [{ key: "value", column: "name", labelKey: "common.class" }],
   thicknesses: [
@@ -141,6 +151,10 @@ export function tableName(kind: LookupKind): string {
       return "shipment_methods";
     case "warehouses":
       return "warehouses";
+    case "services":
+      return "services";
+    case "outcomes":
+      return "outcomes";
   }
 }
 

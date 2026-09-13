@@ -34,7 +34,7 @@ below by number.
             tree, each told the files and message namespaces it owns; none of them runs Playwright. The
             session runs each slice's specs one file at a time, integrates what several slices share (the
             spec3 registry, `common` messages, SPEC §4, DESIGN, §5), and runs the full suite once per group.
-            - [ ] G1 · S0 **Schema for the whole phase**, one migration set, and the least code that keeps the
+            - [x] G1 · S0 **Schema for the whole phase**, one migration set, and the least code that keeps the
                   gate green on it: a dispatch names its company and optionally its quotation and project, and
                   carries its own typed lines AND its own services — the same inputs as a quotation, each with a
                   nullable link to the quotation line or service it came from, so the difference flag compares
@@ -42,7 +42,12 @@ below by number.
                   terms merge credit and tasaheel; `raised_by_id` on quotations and dispatches; marketing sells and
                   carries metres (D168); a log entry takes an outcome from an admin lookup (D171), a kind from the
                   wider list, and an optional quotation or dispatch; `daily_reports` goes (D167); seed and
-                  `tests/schema.spec.ts` follow.
+                  `tests/schema.spec.ts` follow. **Done** as migration 0025: a dispatch is a load with its own company, raiser,
+                  typed sheet per line and services, a recorded difference exactly when it came from a paper;
+                  services and outcomes are admin lookups; channels gained site visit and meeting. Two parts
+                  moved to the slice that writes them, so no column lands without its writer (rules/data.md):
+                  `daily_reports` goes and `outcome_id` becomes required in S4 (D174), and marketing's seat on
+                  the floor is S5's. Service m² never counts (D173).
             - [ ] G1 · S1 **The identity** (founder, P13 approval). First the "before" set: `scripts/shots.ts`, one
                   manifest of every screen, dialog, drawer, board, dashboard, list, form and empty state, per
                   role, captured into `shots/` at 1366 and 375, en and ar, dark and light — the same manifest
@@ -123,8 +128,8 @@ below by number.
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
-everything it held is built or in S2. Stage 2 starts at G1 · S0. The dev database is seeded at volume
-(`seed:demo` then `seed:volume`); `seed:demo` alone puts it back. A dev server that has served a
+everything it held is built or in S2. G1 · S0 is done (0025). S1 continues on its branch, S2 and S4
+are with builders. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
 session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place

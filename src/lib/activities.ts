@@ -17,7 +17,7 @@
 import { and, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { activities, companies, contacts, countries, projects, users } from "@/db/schema";
+import { activities, companies, contacts, countries, projects, users, type Channel } from "@/db/schema";
 import { NotAllowed } from "@/lib/authz";
 import { personName } from "@/lib/people";
 import { mayOpen, mayWrite } from "@/lib/floor";
@@ -33,7 +33,8 @@ import {
   sharersOfCompany,
 } from "@/lib/visibility";
 
-export type ActivityChannel = "visit" | "call" | "whatsapp" | "other";
+/** One list of what can happen, the column's own (src/db/schema.ts). */
+export type ActivityChannel = Channel;
 
 /** One line of the Activity tab. Words only — the ids are for links. */
 export type ActivityRow = {

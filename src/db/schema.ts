@@ -30,10 +30,15 @@ import {
 // does not know the alias. types.ts imports nothing, so nothing follows it in.
 import { PAYMENT_DETAILS, PAYMENT_TERMS } from "../lib/payment";
 import { ROLES } from "../lib/types";
+import type { Difference } from "../lib/dispatch-difference";
 
 export const roleEnum = pgEnum("role", ROLES);
 export const nonWorkingKindEnum = pgEnum("non_working_kind", ["holiday", "leave"]);
-export const channelEnum = pgEnum("channel", ["visit", "call", "whatsapp", "other"]);
+// What happened, as the report's buttons name it (SPEC §3, P13): an office visit,
+// a visit to the site, a meeting, a call, a WhatsApp, or something else.
+export const CHANNELS = ["visit", "siteVisit", "meeting", "call", "whatsapp", "other"] as const;
+export type Channel = (typeof CHANNELS)[number];
+export const channelEnum = pgEnum("channel", CHANNELS);
 export const quotationStatusEnum = pgEnum("quotation_status", [
   "requested",
   "returned",
@@ -216,6 +221,35 @@ export const thicknesses = pgTable("thicknesses", {
  * code on a screen (§3).
  */
 export const warehouses = pgTable("warehouses", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  nameEn: text("name_en").notNull(),
+  nameAr: text("name_ar").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  ...stamps,
+});
+
+/**
+ * What Technopanel does to a panel besides selling it (SPEC §3, P13): CNC
+ * cutting, denting, fabrication. Each is priced per m² in a section of its own on
+ * a quotation and on a dispatch, subtotalled apart from the panels. A list the
+ * admin edits, like every other name the business may rename.
+ */
+export const services = pgTable("services", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  nameEn: text("name_en").notNull(),
+  nameAr: text("name_ar").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  ...stamps,
+});
+
+/**
+ * What came of something a rep did (SPEC §3, P13; D171): reached, no answer, a
+ * meeting set, and so on. The words are the business's and will change after a
+ * month of use, so they are a list the admin edits rather than an enum.
+ */
+export const outcomes = pgTable("outcomes", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   nameEn: text("name_en").notNull(),
   nameAr: text("name_ar").notNull(),
@@ -697,6 +731,22 @@ export const activities = pgTable(
     happenedOn: date("happened_on").notNull(),
     nextFollowUp: date("next_follow_up"),
     /**
+     * What came of it (SPEC §3, P13; D171). Nullable until the report popup that
+     * asks for it replaces the log dialog (P13-S4), which tightens it.
+     */
+    outcomeId: integer("outcome_id").references(() => outcomes.id),
+    /**
+     * The quotation or dispatch it was about, when it was about one (SPEC §3,
+     * P13: "optionally a project, quotation or dispatch"). Set null with the
+     * paper, like the project and the contact beside them.
+     */
+    quotationId: uuid("quotation_id").references((): AnyPgColumn => quotations.id, {
+      onDelete: "set null",
+    }),
+    dispatchId: uuid("dispatch_id").references((): AnyPgColumn => dispatches.id, {
+      onDelete: "set null",
+    }),
+    /**
      * Unfiled: the entry was written against the wrong customer, or was a
      * mistake (D70). Archived rather than deleted (S16) — the row stays, and
      * every query that counts the log excludes it. There is no "restore": a
@@ -716,6 +766,9 @@ export const activities = pgTable(
     // whole activities table once per project — the one plan that grew with the
     // data — while its twin by company already had an index.
     index("activities_project_happened_idx").on(t.projectId, t.happenedOn),
+    // A quotation's and a dispatch's drawer read what was written about them.
+    index("activities_quotation_idx").on(t.quotationId),
+    index("activities_dispatch_idx").on(t.dispatchId),
   ],
 );
 
@@ -781,6 +834,15 @@ export const quotations = pgTable(
     repId: uuid("rep_id")
       .notNull()
       .references(() => users.id),
+    /**
+     * Who pressed the button (SPEC §3, P13). `rep_id` is whom the paper counts
+     * for; the coordinator may raise one on a rep's behalf, and how often each rep
+     * relies on her is a question the manager asks — so the two are both kept, and
+     * they are the same person on everything a rep raised himself.
+     */
+    raisedById: uuid("raised_by_id")
+      .notNull()
+      .references(() => users.id),
     status: quotationStatusEnum("status").notNull().default("requested"),
     notes: text("notes"), // to the coordinator
     smacNumber: text("smac_number"),
@@ -843,6 +905,7 @@ export const quotations = pgTable(
     // rather than against the status, because a self-issued quotation can be
     // withdrawn or rejected later and what it says stays true: she issued it.
     check("quotations_self_issued_check", sql`not ${t.selfIssued} or ${t.issuedAt} is not null`),
+    index("quotations_raised_by_idx").on(t.raisedById),
   ],
 );
 
@@ -895,6 +958,36 @@ export const quotationItems = pgTable(
   ],
 );
 
+/**
+ * The services on a quotation (SPEC §3, P13): CNC cutting, denting, fabrication,
+ * each with the m² it is done over and a price per m², in a section of their own
+ * and subtotalled apart from the panels. The m² here is TYPED, not derived from a
+ * sheet, because the area a service covers is not a sheet's area; and it never
+ * counts toward a target, which measures panels (D173).
+ */
+export const quotationServices = pgTable(
+  "quotation_services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quotationId: uuid("quotation_id")
+      .notNull()
+      .references(() => quotations.id, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    serviceId: integer("service_id")
+      .notNull()
+      .references(() => services.id),
+    sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
+    pricePerSqm: numeric("price_per_sqm", { precision: 12, scale: 2 }).notNull(), // SAR
+    ...stamps,
+  },
+  (t) => [
+    index("quotation_services_quotation_idx").on(t.quotationId),
+    uniqueIndex("quotation_services_position_idx").on(t.quotationId, t.position),
+    check("quotation_services_sqm_check", sql`${t.sqm} > 0`),
+    check("quotation_services_price_check", sql`${t.pricePerSqm} >= 0`),
+  ],
+);
+
 // ---- dispatches -------------------------------------------------------------
 
 export const dispatches = pgTable(
@@ -902,12 +995,34 @@ export const dispatches = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     number: integer("number").notNull().unique(), // D-{number}
-    quotationId: uuid("quotation_id")
+    /**
+     * The customer the load goes to (SPEC §3, P13). A dispatch was always a
+     * quotation's, and its company was read through the paper; a dispatch may now
+     * be DIRECT, for a company with no quotation and no project, so the company is
+     * its own column and every reader asks it here.
+     */
+    companyId: uuid("company_id")
       .notNull()
-      .references(() => quotations.id),
+      .references(() => companies.id),
+    /** The job, when there is one — always, when there is a quotation (the check below). */
+    projectId: uuid("project_id").references(() => projects.id),
+    /** The paper it was prefilled from, or null for a direct dispatch. */
+    quotationId: uuid("quotation_id").references(() => quotations.id),
     repId: uuid("rep_id")
       .notNull()
       .references(() => users.id),
+    /** Who pressed the button, beside whom it counts for — as on a quotation. */
+    raisedById: uuid("raised_by_id")
+      .notNull()
+      .references(() => users.id),
+    /**
+     * How the dispatch differed from its quotation when it was raised (SPEC §3,
+     * P13): "any difference is flagged on the dispatch for Rawan and recorded for
+     * later analysis". Recorded, not recomputed: the quotation may be revised
+     * afterwards and the flag is about what the rep changed from what he was
+     * given. An empty list is a dispatch that matched; null is a direct one.
+     */
+    quotationDifference: jsonb("quotation_difference").$type<Difference[]>(),
     status: dispatchStatusEnum("status").notNull().default("submitted"),
     shipmentMethodId: integer("shipment_method_id")
       .notNull()
@@ -948,6 +1063,16 @@ export const dispatches = pgTable(
   },
   (t) => [
     index("dispatches_quotation_idx").on(t.quotationId),
+    index("dispatches_company_idx").on(t.companyId),
+    index("dispatches_project_idx").on(t.projectId),
+    index("dispatches_raised_by_idx").on(t.raisedById),
+    // A quotation is always for a job (S18), so a dispatch prefilled from one is too.
+    check("dispatches_project_check", sql`${t.quotationId} is null or ${t.projectId} is not null`),
+    // Recorded exactly when there was something to differ from.
+    check(
+      "dispatches_difference_check",
+      sql`(${t.quotationId} is null) = (${t.quotationDifference} is null)`,
+    ),
     index("dispatches_rep_status_idx").on(t.repId, t.status),
     index("dispatches_status_idx").on(t.status),
     index("dispatches_approved_idx").on(t.approvedAt),
@@ -982,11 +1107,11 @@ export const dispatches = pgTable(
             else ${t.paymentDetail} is null
           end`,
     ),
-    // "Credit and tasaheel — a note from the rep explaining the terms is
-    // mandatory, for finance to review" (SPEC §3).
+    // "Credit and tasaheel are one payment option with a mandatory note" (SPEC
+    // §3, P13) — for finance to review.
     check(
       "dispatches_payment_note_check",
-      sql`case when ${t.paymentTerms} in ('credit', 'tasaheel')
+      sql`case when ${t.paymentTerms} = 'credit'
             then ${t.paymentNote} is not null
             else true end`,
     ),
@@ -1013,6 +1138,14 @@ export const dispatches = pgTable(
   ],
 );
 
+/**
+ * A dispatch's lines (SPEC §3, P13): the same inputs as a quotation's, because the
+ * load is what goes and the rep edits it — a length changed on site, a colour the
+ * store is out of. Prefilled from the quotation and linked to the line each came
+ * from, so "what already went" on a quotation line is still the sum of the lines
+ * that point at it; a line the rep added, or a direct dispatch's, points nowhere.
+ * The m² is generated here, as on the quotation's own lines (rules/data.md).
+ */
 export const dispatchItems = pgTable(
   "dispatch_items",
   {
@@ -1020,18 +1153,66 @@ export const dispatchItems = pgTable(
     dispatchId: uuid("dispatch_id")
       .notNull()
       .references(() => dispatches.id, { onDelete: "cascade" }),
-    quotationItemId: uuid("quotation_item_id")
+    quotationItemId: uuid("quotation_item_id").references(() => quotationItems.id),
+    position: integer("position").notNull(),
+    colourCode: text("colour_code").notNull(),
+    supplierId: integer("supplier_id")
       .notNull()
-      .references(() => quotationItems.id),
+      .references(() => suppliers.id),
+    fireRatingId: integer("fire_rating_id")
+      .notNull()
+      .references(() => fireRatings.id),
+    classId: integer("class_id")
+      .notNull()
+      .references(() => classes.id),
     qty: integer("qty").notNull(),
+    thicknessId: integer("thickness_id")
+      .notNull()
+      .references(() => thicknesses.id),
+    width: numeric("width", { precision: 12, scale: 2 }).notNull(), // metres
+    length: numeric("length", { precision: 12, scale: 2 }).notNull(), // metres
+    pricePerSqm: numeric("price_per_sqm", { precision: 12, scale: 2 }).notNull(), // SAR
+    sqm: numeric("sqm", { precision: 12, scale: 2 }).generatedAlwaysAs(
+      sql`round(width * length * qty, 2)`,
+    ),
     ...stamps,
   },
   (t) => [
     index("dispatch_items_dispatch_idx").on(t.dispatchId),
     // One line of a quotation appears once on a dispatch. Twice would double the
-    // m2 it moved, in the one figure the whole month is measured by (S43).
+    // m² it moved, in the one figure the whole month is measured by (S43).
     uniqueIndex("dispatch_items_line_idx").on(t.dispatchId, t.quotationItemId),
+    uniqueIndex("dispatch_items_position_idx").on(t.dispatchId, t.position),
+    index("dispatch_items_quotation_item_idx").on(t.quotationItemId),
     check("dispatch_items_qty_check", sql`${t.qty} > 0`),
+    check("dispatch_items_width_check", sql`${t.width} > 0`),
+    check("dispatch_items_length_check", sql`${t.length} > 0`),
+    check("dispatch_items_price_check", sql`${t.pricePerSqm} >= 0`),
+  ],
+);
+
+/** A dispatch's services, as a quotation's (SPEC §3, P13), linked to where each came from. */
+export const dispatchServices = pgTable(
+  "dispatch_services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    dispatchId: uuid("dispatch_id")
+      .notNull()
+      .references(() => dispatches.id, { onDelete: "cascade" }),
+    quotationServiceId: uuid("quotation_service_id").references(() => quotationServices.id),
+    position: integer("position").notNull(),
+    serviceId: integer("service_id")
+      .notNull()
+      .references(() => services.id),
+    sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
+    pricePerSqm: numeric("price_per_sqm", { precision: 12, scale: 2 }).notNull(), // SAR
+    ...stamps,
+  },
+  (t) => [
+    index("dispatch_services_dispatch_idx").on(t.dispatchId),
+    uniqueIndex("dispatch_services_position_idx").on(t.dispatchId, t.position),
+    check("dispatch_services_sqm_check", sql`${t.sqm} > 0`),
+    check("dispatch_services_price_check", sql`${t.pricePerSqm} >= 0`),
   ],
 );
 
@@ -1369,7 +1550,16 @@ export const quotationsRelations = relations(quotations, ({ one, many }) => ({
   warehouse: one(warehouses, { fields: [quotations.warehouseId], references: [warehouses.id] }),
   rep: one(users, { fields: [quotations.repId], references: [users.id] }),
   items: many(quotationItems),
+  services: many(quotationServices),
   dispatches: many(dispatches),
+}));
+
+export const quotationServicesRelations = relations(quotationServices, ({ one }) => ({
+  quotation: one(quotations, {
+    fields: [quotationServices.quotationId],
+    references: [quotations.id],
+  }),
+  service: one(services, { fields: [quotationServices.serviceId], references: [services.id] }),
 }));
 
 export const quotationItemsRelations = relations(quotationItems, ({ one }) => ({
@@ -1384,6 +1574,8 @@ export const quotationItemsRelations = relations(quotationItems, ({ one }) => ({
 }));
 
 export const dispatchesRelations = relations(dispatches, ({ one, many }) => ({
+  company: one(companies, { fields: [dispatches.companyId], references: [companies.id] }),
+  project: one(projects, { fields: [dispatches.projectId], references: [projects.id] }),
   quotation: one(quotations, { fields: [dispatches.quotationId], references: [quotations.id] }),
   rep: one(users, { fields: [dispatches.repId], references: [users.id] }),
   shipmentMethod: one(shipmentMethods, {
@@ -1392,6 +1584,12 @@ export const dispatchesRelations = relations(dispatches, ({ one, many }) => ({
   }),
   warehouse: one(warehouses, { fields: [dispatches.warehouseId], references: [warehouses.id] }),
   items: many(dispatchItems),
+  services: many(dispatchServices),
+}));
+
+export const dispatchServicesRelations = relations(dispatchServices, ({ one }) => ({
+  dispatch: one(dispatches, { fields: [dispatchServices.dispatchId], references: [dispatches.id] }),
+  service: one(services, { fields: [dispatchServices.serviceId], references: [services.id] }),
 }));
 
 export const dispatchItemsRelations = relations(dispatchItems, ({ one }) => ({
