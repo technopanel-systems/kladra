@@ -247,10 +247,12 @@ test("two reps on one customer: a shared company, a shared project, and taking t
     await test.step("4 · Saad tries the work he has not been given: no project of his own, no log, no quotation", async () => {
       const drawer = dialogNamed(page, fixture.company);
 
-      // A company share carries reading and his own contacts, nothing else
-      // (D147) — the whole action row (Log, New project, Edit, Archive) is
-      // one group, gated by `mine`, and it is not there at all.
-      await expect(drawer.getByRole("group", { name: t("drawer.companyActions") })).toHaveCount(0);
+      // A company share carries reading, his own contacts and his own reports
+      // (D147, D176) — so the action row holds Add report and nothing that
+      // works the customer: no New project, no Edit, no Archive.
+      const actions = drawer.getByRole("group", { name: t("drawer.companyActions") });
+      await expect(actions.getByRole("button", { name: t("common.addReport") })).toBeVisible();
+      await expect(actions.getByRole("button")).toHaveCount(1);
 
       await drawer.getByRole("tab", { name: t("common.projects") }).click();
       await expect(

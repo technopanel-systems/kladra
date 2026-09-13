@@ -66,26 +66,38 @@ export function mayWrite(user: SessionUser, repId: string): boolean {
  *
  * `CARRIES_METRES` in src/lib/team.ts is this function, filtered over `ROLES`
  * and handed to the query — one sentence, not two, since a hand-written role
- * list beside a predicate is what D42 was. Marketing does not: it finds customers and hands
- * them on, and a target it can never meet would be a number that says the wrong
- * thing every month (P8.9).
+ * list beside a predicate is what D42 was.
  *
  * The coordinator does, since SPEC §3 — the founder's own words: she is "a
  * selling role too: department Internal Sales, her own m² target", which
  * overrules D15 and S9's "she does not own customer relationships". She was
  * the one person in the building selling without a number against her name.
+ *
+ * And marketing does, since SPEC §3 P13: "Marketing is a rep in everything,
+ * plus a Leads module", which overrules D44 and D50. It carried no target while
+ * it quoted nothing, because a number it could never meet would have read as a
+ * shortfall every month (P8.9). Now it quotes and dispatches like a rep, so its
+ * metres are a rep's metres: its own box on the targets page (D168 — a box left
+ * blank draws no pace line, D41), its row on the team table, its month on its
+ * day. Every role with a floor now carries metres, which is what `holdsFloor`
+ * also answers; the two stay two sentences, because "can a company sit here"
+ * and "is there a number against this name" are different questions that
+ * happen to agree today.
  */
 export function carriesMetres(role: Role): boolean {
-  return role === "rep" || role === "manager" || role === "coordinator";
+  return role === "rep" || role === "marketing" || role === "manager" || role === "coordinator";
 }
 
 /**
  * Who may put a price in front of a customer.
  *
- * Marketing owns companies and works them like a rep — logs, follow-ups,
- * projects — and stops there. Quoting is the sales conversation, and the person
- * who has it is the rep the lead was handed to (P8.9). The coordinator has that
- * conversation too now (SPEC §3), and hers ends differently: she does not ask
+ * Everybody with a month (SPEC §3 P13). Marketing used to own companies and
+ * stop at the price — quoting was the sales conversation, and the person who
+ * had it was the rep the lead went to (P8.9, D50). The founder's answer after
+ * two rounds of real use is that marketing IS a rep: it requests a quotation,
+ * revises it, records the customer's answer and raises the load — Direct
+ * included — on its own customers, exactly as Faisal does. The coordinator has
+ * that conversation too (SPEC §3), and hers ends differently: she does not ask
  * the desk for a price, because she IS the desk — see `issuesOwnQuotations`.
  */
 export function sells(role: Role): boolean {
@@ -111,12 +123,14 @@ export function issuesOwnQuotations(role: Role): boolean {
  *
  * "Marketing does not use the Add company form. Marketing has its own module
  * for bringing in a lead, and creating one there IS an assignment: it goes to a
- * chosen rep, or to a member of the marketing team."
+ * chosen rep, or to a member of the marketing team." P13 keeps the module when
+ * it makes marketing a rep in everything else: "plus a Leads module".
  *
- * Marketing, and only marketing. The manager reads every lead and files none,
- * for the reason he adds no company (S8): a customer belongs to whoever found
- * him, and a row the manager typed onto a rep's floor would put his own reading
- * of a phone call into somebody else's report.
+ * Marketing, and only marketing. The manager reads every lead, and assigns and
+ * reassigns them from his leads view (`mayHandOver`), but files none, for the
+ * reason he adds no company (S8): a customer belongs to whoever found him, and
+ * a row the manager typed onto a rep's floor would put his own reading of a
+ * phone call into somebody else's report.
  *
  * It stays a role question rather than a screen question because the two are
  * the same door: the form marketing is not offered is the action marketing must
@@ -133,6 +147,8 @@ export function filesLeads(role: Role): boolean {
  * the subtraction rather than as a fresh list of two, because that is the whole
  * change: marketing did not stop owning companies — a lead lands on its floor
  * like anybody else's — it stopped being the one who types the customer in.
+ * "A rep in everything" (P13) does not hand the form back: D156 stands, and the
+ * lead form stays marketing's way in because it asks what a lead has.
  */
 export function addsCompanies(role: Role): boolean {
   return ownsCompanies(role) && !filesLeads(role);
@@ -189,7 +205,7 @@ export function writesReports(role: Role): boolean {
  * one of them.
  */
 export const FLOOR_ROLES: Role[] = ["rep", "marketing", "coordinator"];
-export const SELLING_ROLES: Role[] = ["rep", "manager", "coordinator"];
+export const SELLING_ROLES: Role[] = ["rep", "marketing", "manager", "coordinator"];
 export const REPORTING_ROLES: Role[] = ["rep", "marketing", "coordinator"];
 export const ADD_COMPANY_ROLES: Role[] = ["rep", "coordinator"];
 export const LEAD_ROLES: Role[] = ["marketing"];
@@ -231,10 +247,9 @@ export function mayShare(user: SessionUser, ownerId: string): boolean {
  * existed a deactivated account took its companies out of sight for good.
  *
  * Marketing loses nothing it will keep: §3 replaces the Add-company-then-hand-
- * over path with a lead module where creating a lead IS the assignment, so the
- * role stops owning companies rather than stops being able to give them away.
- * That module is P12's box 7; between it and here, marketing hands a lead on by
- * asking the manager, which is what it did before Kladra existed.
+ * over path with a lead module where creating a lead IS the assignment. A lead
+ * that went to the wrong person is moved by the manager from his leads view
+ * (P13), and that is this permission, not a second one beside it.
  *
  * This is not the exception to D42 it looks like. A manager still writes
  * nothing ON a floor — no log, no edit, no follow-up, no archive — and the

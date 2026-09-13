@@ -48,17 +48,18 @@ export default async function DayPage({
   // follows a link here to his own home rather than to an empty screen (S8).
   if (!ownsCompanies(user.role)) redirect({ href: homeFor(user.role), locale });
 
-  // Marketing carries no target, so it gets no month card — an empty one would
-  // be a figure that says the wrong thing every month (D44, P8.9). The same
-  // sentence takes the waiting band off: everything that can wait on a person
-  // here is a quotation or a dispatch, and marketing raises neither, so the
-  // band would say "nothing waiting" every day for ever. Its day is the calls.
+  // Whoever carries a target gets the month card, and whoever raises papers the
+  // waiting band. Since SPEC §3 P13 marketing is a rep in everything (D168), so
+  // every role that owns companies has both today; the two questions stay
+  // separate because they are two sentences in floor.ts, and a role that one
+  // day holds customers without a number must not be shown a figure that says
+  // the wrong thing every month (D44).
   const hasMonth = carriesMetres(user.role);
   const hasChain = sells(user.role);
 
   // Two tabs here: what he can do something about today, and what is measured
-  // over a window (D151). Marketing carries no month and no chain, so it has
-  // nothing to measure and gets no second tab rather than an empty one.
+  // over a window (D151). A role with no month would have nothing to measure,
+  // and would get no second tab rather than an empty one.
   const TABS: Tab[] = hasMonth ? ["work", "metrics"] : ["work"];
 
   // Both of his choices in one read, after the redirect above: a rep who is not
@@ -90,8 +91,8 @@ export default async function DayPage({
     await Promise.all([
       getTranslations(),
       hasMonth && working ? repMonth(user.id) : null,
-      // Only where there is a target to read them against — marketing carries
-      // none, so six bars with no line on any of them would say nothing (D44).
+      // Only where there is a target to read them against: six bars with no
+      // line on any of them would say nothing (D44).
       measuring ? monthsBack(user.id) : null,
       // His own metres and his own chain, over the window he picked. The same
       // two cards the manager reads about the whole floor: one set of facts,

@@ -68,7 +68,9 @@ const reports: NavItem = {
 };
 
 /**
- * Marketing's own module, and the one screen no rep has (SPEC §3, P12-7).
+ * Marketing's own module, and the one screen no rep has (SPEC §3, P12-7, P13).
+ * A lead given to a rep reaches him on his day and in the band above his
+ * companies, not on a screen of its own.
  *
  * A telephone with an arrow coming in, because that is what a lead is: somebody
  * rang, and this is the list of who has been rung back.
@@ -154,15 +156,14 @@ export const ADMIN_PATHS: readonly string[] = adminItems.map((item) => item.href
 export function navFor(role: Role): NavGroup[] {
   switch (role) {
     case "marketing":
-      // Leads first, and therefore home (SPEC §3): filing one IS handing a
-      // customer to a rep, so the module the founder asked for is the screen
-      // this role opens Kladra to do. Its day and its floor come after — a lead
-      // filed onto its own floor is an ordinary customer from then on, with the
-      // follow-ups and the log any customer has.
-      //
-      // No quotations and no dispatches: marketing finds customers and hands
-      // them on, and a screen it can only read is a screen it stops opening.
-      return [{ items: [leads, reports, day, companies, projects] }];
+      // A rep's rail with the module in it (SPEC §3 P13: "a rep in everything,
+      // plus a Leads module"). Its day first and therefore home, as a rep's is:
+      // the day now carries its month, the paper waiting on it and the leads
+      // given to it. Leads third, right after Reports, so it is still on the
+      // phone's bottom bar — filing one is the other half of the job. Then the
+      // floor and both chain screens, since marketing quotes and dispatches on
+      // its own customers like anybody who sells (D168).
+      return [{ items: [day, reports, leads, companies, projects, quotations, dispatches] }];
     case "coordinator":
       // Her desk first, and her own floor after it. She is a selling role since
       // SPEC §3 — companies, projects and quotations of her own — and the queue

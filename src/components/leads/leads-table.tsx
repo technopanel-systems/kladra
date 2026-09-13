@@ -1,7 +1,10 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { ReassignLeadDialog } from "@/components/leads/reassign-lead-dialog";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { DayText } from "@/components/ui-ext/day-text";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import {
@@ -13,27 +16,33 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
-import { TONE_TEXT } from "@/lib/state-tone";
+import type { LeadStage } from "@/lib/leads";
+import type { PickerOption } from "@/lib/picker-option";
+import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
- * What marketing has brought in, and what happened to it (SPEC §3, P12-7).
+ * What has been brought in, and what became of it (SPEC §3, P12-7, P13).
  *
  * One row per lead, the ones nobody has picked up first and the oldest of those
- * at the top: this screen exists so that a customer who rang on Sunday and has
- * heard nothing by Wednesday is the first thing on it. A list newest-first
- * would bury exactly the row it was built to show.
+ * at the top: a customer who rang on Sunday and has heard nothing by Wednesday
+ * is the first thing here, red, with how many working days it has sat.
+ *
+ * The last column is the founder's question for marketing — "what became of
+ * each lead it passed: acknowledged, contacted, quoted, won" — as the furthest
+ * of those the company's own records show (`LEAD_STAGE` in src/lib/leads.ts),
+ * one word in the tone of the state (DESIGN §6) and never the tone alone.
+ *
+ * For the manager each row also carries Reassign, which is his (P13, `mayHandOver`),
+ * and the customer's name is a door to the drawer he may open (S8). Marketing's
+ * rows open nothing: a lead is on somebody else's floor the moment it is filed,
+ * and a list of doors that refuse the person looking is worse than plain rows.
  *
  * Two layouts, one data shape, like every list here: a table from `md` up and a
  * card per row below it, because the person who files a lead is often doing it
  * from a phone with the customer still on the line.
- *
- * No row opens anything. A lead sits on somebody else's floor the moment it is
- * filed, and marketing may not read that customer's drawer (S8) — a list of
- * doors that refuse most of the people looking at them is worse than a list of
- * plain rows (DESIGN §5). What the reader needs is here: who has it, what they
- * asked for, and whether it has been picked up.
  */
 
 export type LeadRow = {
@@ -41,45 +50,103 @@ export type LeadRow = {
   name: string;
   query: string;
   /** Who found it. Shown to management, whose screen covers everybody's. */
+  fromId: string;
   fromName: string;
   /** Whose floor it is on now. */
+  repId: string;
   repName: string;
   givenOn: Day;
   acknowledgedOn: Day | null;
+  stage: LeadStage;
   /** Working days it has been sitting, and whether that is too long. */
   waited: { days: number; late: boolean } | null;
   city: string;
 };
 
-/** Picked up, or still waiting — the one thing this screen is asked. */
-function State({ row }: { row: LeadRow }) {
+/** The tone a stage wears: amber while it waits, red once it is late, green once won. */
+function toneOf(row: LeadRow): StateTone {
+  switch (row.stage) {
+    case "waiting":
+      return row.waited?.late ? "bad" : "wait";
+    case "won":
+      return "good";
+    default:
+      return "open";
+  }
+}
+
+/** Where it got to — one word, and the day or the wait under it. */
+function Stage({ row }: { row: LeadRow }) {
   const t = useTranslations();
   const locale = useLocale();
+  const tone = toneOf(row);
 
-  if (row.acknowledgedOn) {
-    return (
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <StateBadge tone="good">{t("leads.acknowledged")}</StateBadge>
+  // Written out rather than computed, so every word is a key the message check
+  // can see (rules/words.md).
+  const word: Record<LeadStage, string> = {
+    waiting: t("leads.notAcknowledged"),
+    acknowledged: t("leads.acknowledged"),
+    contacted: t("leads.contacted"),
+    quoted: t("leads.quoted"),
+    won: t("leads.won"),
+  };
+
+  return (
+    <span data-slot="lead-stage" data-stage={row.stage} className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <StateBadge tone={tone}>{word[row.stage]}</StateBadge>
+      {row.stage === "waiting" ? (
+        <span className={cn("text-xs", row.waited?.late ? TONE_TEXT.bad : "text-muted-foreground")}>
+          {t("team.waitingDays", { count: row.waited?.days ?? 0 })}
+        </span>
+      ) : row.stage === "acknowledged" && row.acknowledgedOn ? (
         <span className="text-xs text-muted-foreground">
           <DayText day={row.acknowledgedOn} locale={locale} />
         </span>
-      </span>
-    );
-  }
-
-  return (
-    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      {/* Amber while somebody owes an answer, red once it is late — the two
-          tones the rest of the app uses for exactly this (DESIGN §6). */}
-      <StateBadge tone={row.waited?.late ? "bad" : "wait"}>{t("leads.notAcknowledged")}</StateBadge>
-      <span className={cn("text-xs", row.waited?.late ? TONE_TEXT.bad : "text-muted-foreground")}>
-        {t("team.waitingDays", { count: row.waited?.days ?? 0 })}
-      </span>
+      ) : null}
     </span>
   );
 }
 
-export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: boolean }) {
+/** The customer's name: a door for a reader who may open the drawer, words otherwise. */
+function CompanyName({ row, opens, wrap = false }: { row: LeadRow; opens: boolean; wrap?: boolean }) {
+  const t = useTranslations();
+  // A card on a phone has a line to itself for the name, so it wraps rather than
+  // cutting a long Arabic firm name down to its last two words.
+  const fit = wrap ? "min-w-0 break-words" : "min-w-0 truncate";
+  if (!opens) {
+    return (
+      <span className={cn(fit, "font-medium")}>
+        <bdi>{row.name}</bdi>
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={`/companies?open=${row.id}`}
+      aria-label={t("companies.openCompany", { name: row.name })}
+      className="flex min-w-0 items-center gap-1.5 font-medium underline-offset-2 hover:underline"
+    >
+      <span className={fit}>
+        <bdi>{row.name}</bdi>
+      </span>
+      <LinkPending />
+    </Link>
+  );
+}
+
+export function LeadsTable({
+  rows,
+  showFinder,
+  opens,
+  people,
+}: {
+  rows: LeadRow[];
+  showFinder: boolean;
+  /** The reader may open any company's drawer (S8). */
+  opens: boolean;
+  /** Everybody a lead may be given to, for a reader who may reassign; null otherwise. */
+  people: PickerOption[] | null;
+}) {
   const t = useTranslations();
   const locale = useLocale();
 
@@ -96,21 +163,33 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
               <TableHead>{t("leads.with")}</TableHead>
               <TableHead>{t("leads.givenOn")}</TableHead>
               <TableHead>{t("leads.state")}</TableHead>
+              {people ? (
+                <TableHead>
+                  <span className="sr-only">{t("leads.reassign")}</span>
+                </TableHead>
+              ) : null}
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="max-w-[16rem] font-medium">
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate">
-                      <bdi>{row.name}</bdi>
+              <TableRow key={row.id} data-lead={row.id} className="hover-tint">
+                <TableCell className="max-w-[16rem]">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Avatar
+                      id={row.id}
+                      name={row.name}
+                      kind="company"
+                      size="sm"
+                      ring={row.stage === "waiting" ? "wait" : undefined}
+                    />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <CompanyName row={row} opens={opens} />
+                      {row.city ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          <bdi>{row.city}</bdi>
+                        </span>
+                      ) : null}
                     </span>
-                    {row.city ? (
-                      <span className="truncate text-xs font-normal text-muted-foreground">
-                        <bdi>{row.city}</bdi>
-                      </span>
-                    ) : null}
                   </span>
                 </TableCell>
                 {/* The customer's own words, so they run their own way
@@ -121,22 +200,39 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
                 </TableCell>
                 {showFinder ? (
                   <TableCell className="max-w-[10rem]">
-                    <span className="block truncate">
-                      <bdi>{row.fromName}</bdi>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Avatar id={row.fromId} name={row.fromName} size="sm" />
+                      <span className="min-w-0 truncate">
+                        <bdi>{row.fromName}</bdi>
+                      </span>
                     </span>
                   </TableCell>
                 ) : null}
                 <TableCell className="max-w-[10rem]">
-                  <span className="block truncate">
-                    <bdi>{row.repName}</bdi>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <Avatar id={row.repId} name={row.repName} size="sm" />
+                    <span className="min-w-0 truncate">
+                      <bdi>{row.repName}</bdi>
+                    </span>
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <DayText day={row.givenOn} locale={locale} />
                 </TableCell>
                 <TableCell>
-                  <State row={row} />
+                  <Stage row={row} />
                 </TableCell>
+                {people ? (
+                  <TableCell className="text-end">
+                    <ReassignLeadDialog
+                      companyId={row.id}
+                      companyName={row.name}
+                      holderId={row.repId}
+                      people={people}
+                      reveal
+                    />
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))}
           </TableBody>
@@ -145,15 +241,29 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
 
       <ul aria-label={t("leads.listLabel")} className="flex flex-col gap-2 md:hidden">
         {rows.map((row) => (
-          <li key={row.id} className="card-face flex flex-col gap-1.5 px-3 py-3">
-            <div className="flex items-start justify-between gap-3">
-              <span className="min-w-0 flex-1 truncate font-medium">
-                <bdi>{row.name}</bdi>
-              </span>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                <span className="sr-only">{t("leads.givenOn")}</span>
-                <DayText day={row.givenOn} locale={locale} />
-              </span>
+          <li key={row.id} data-lead={row.id} className="card-face flex flex-col gap-2 p-3">
+            <div className="flex items-start gap-2">
+              <Avatar
+                id={row.id}
+                name={row.name}
+                kind="company"
+                size="md"
+                ring={row.stage === "waiting" ? "wait" : undefined}
+              />
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <div className="flex items-start justify-between gap-3">
+                  <CompanyName row={row} opens={opens} wrap />
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="sr-only">{t("leads.givenOn")}</span>
+                    <DayText day={row.givenOn} locale={locale} />
+                  </span>
+                </div>
+                {row.city ? (
+                  <span className="truncate text-xs text-muted-foreground">
+                    <bdi>{row.city}</bdi>
+                  </span>
+                ) : null}
+              </div>
             </div>
             <Prose line text={row.query} className="text-sm text-muted-foreground" />
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -177,7 +287,17 @@ export function LeadsTable({ rows, showFinder }: { rows: LeadRow[]; showFinder: 
                 </>
               ) : null}
             </div>
-            <State row={row} />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Stage row={row} />
+              {people ? (
+                <ReassignLeadDialog
+                  companyId={row.id}
+                  companyName={row.name}
+                  holderId={row.repId}
+                  people={people}
+                />
+              ) : null}
+            </div>
           </li>
         ))}
       </ul>

@@ -14,9 +14,10 @@ import type { PickerOption } from "@/lib/picker-option";
 /**
  * Give this customer to somebody else (P8.9).
  *
- * The move marketing exists for — it finds a company, works it, and hands it to
- * the rep who will price it — and the one the manager makes when somebody
- * leaves. It sits beside the rep's name rather than in the row of buttons
+ * The manager's move (SPEC §3): a customer going to the rep who will work it,
+ * or a floor surviving somebody who leaves. On a lead nobody has acknowledged
+ * yet the action treats it as reassigning the lead (SPEC §3 P13). It sits
+ * beside the rep's name rather than in the row of buttons
  * below, because it changes that name and nothing else on the screen.
  *
  * It is a confirmation with a question in it: the warning says what travels

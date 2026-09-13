@@ -96,10 +96,15 @@ below by number.
                   and the "Recorded by Kladra" lane; the manager's day and week, filters, drill-in and "written
                   nothing today" (D177); glossary Report / Reports. The quotation and dispatch drawers get their
                   Add report when S3 is merged.
-            - [ ] G3 · S5 **Leads and marketing** (13.7): the lead form as §3 states it; the rep's band of leads given
+            - [x] G3 · S5 **Leads and marketing** (13.7): the lead form as §3 states it; the rep's band of leads given
                   to him above his companies, newest first, highlighted until acknowledged; the manager's leads view
                   with assign and reassign and the unacknowledged; marketing's outcome per lead — acknowledged,
                   contacted, quoted, won — derived from the company's own records; marketing a rep everywhere else.
+                  **Done**: `carriesMetres` and `sells` include marketing, its home is the day and Leads third on
+                  its rail; the lead form's one note is the query, a phone required, the duplicate warnings; the
+                  band above a rep's companies with Acknowledge / استلام; the manager's leads view filters by who and
+                  by state and reassigns from the row, and a hand-over from the drawer of an unanswered lead is the
+                  same move (D181); the stage in SQL before the cap (D182). The seed has a lead at every stage.
             - [ ] G3 · S7 **Lists and boards** (13.3): "All" first and default on companies, quotations and dispatches;
                   the projects board, Open · Quoted · Dispatching · Won · Lost (D170); `StickyScroll` on every board
                   and wide table; the archive rebuilt from its question — who opens it and what they do there.
@@ -1125,3 +1130,4 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 216 A retry that retried everything except the press that failed. (P13-S3)
 - [x] 217 A row found by the text "Q-1" is also the row for Q-11, the day the seed grows past ten. (P13-S10)
 - [x] 218 A worktree made for a builder can start at an old commit, not at the branch it was made from. (P13 Stage 2)
+- [x] 219 A seed that mixes a fixed day of the month with working days back is honest on some days of the month only. (P13-S5)

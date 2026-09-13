@@ -21,11 +21,12 @@ import { isWeekend, workingDaysBetween, type NonWorking } from "@/lib/workdays";
  * only two requested quotations are both a few days old, so the test ages the
  * oldest of them itself, by SQL, rather than waiting for the seed to grow one.
  *
- * The second test is D97's other half: marketing's report card kept eight
- * figures though it can only ever move two of them (D50) — a card of six
- * noughts every day is a card nobody reads, and worse, a floor the manager
- * reads as having done nothing. The card is gone (P13-S4) and the same rule
- * holds for the lane of what Kladra recorded beside a person's reports.
+ * The second test is D97's other half: the lane of what Kladra recorded beside
+ * a person's reports carries what that person can move, and nothing else. It
+ * used to hold marketing's lane empty, because marketing raised no paper (D50);
+ * SPEC §3 P13 made marketing a rep in everything (P13-S5), so its lane now
+ * carries the load it raised exactly as a rep's carries his quotation — and the
+ * manager, drilling in, reads the same lane.
  */
 
 const COLD = { timeout: 30_000 };
@@ -180,20 +181,21 @@ test("a holiday before the first of the month is a day off on both desks", async
   }
 });
 
-test("marketing's recorded lane carries nothing it cannot move, and the manager reads the same lane", async ({
+test("marketing's recorded lane carries the load it raised, as a rep's does, and the manager reads the same lane", async ({
   page,
   locale,
   t,
 }) => {
   test.slow();
 
-  // A day on which each of them has something, read from the records rather
-  // than from the seed's calendar: marketing's newest report, and the newest
-  // day Faisal raised a quotation.
+  // A day on which each of them raised something, read from the records rather
+  // than from the seed's calendar: the FIRST day marketing raised a load (the
+  // seed's — a spec that raises one today and removes it again cannot move
+  // it), and the newest day Faisal raised a quotation.
   const marketing = await one<{ id: string; day: Day }>(
-    `select users.id, to_char(max(activities.happened_on), 'YYYY-MM-DD') as day
+    `select users.id, to_char(min((dispatches.created_at at time zone 'Asia/Riyadh')::date), 'YYYY-MM-DD') as day
        from users
-       join activities on activities.user_id = users.id and activities.archived_at is null
+       join dispatches on dispatches.rep_id = users.id
       where users.email = 'marketing@technopanel.com.sa'
       group by users.id`,
   );
@@ -206,16 +208,14 @@ test("marketing's recorded lane carries nothing it cannot move, and the manager 
 
   const lane = () => page.getByRole("complementary", { name: t("reports.recorded") }).first();
 
-  await test.step("marketing's own lane offers nothing of the chain", async () => {
+  await test.step("marketing's own lane carries the load it raised (SPEC §3 P13)", async () => {
     await login(page, locale, "marketing");
     await page.goto(`/${locale}/reports?day=${marketing.day}`);
     await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
 
-    // Marketing stops at the quotation and moves no metres (D50), so a lane of
-    // those figures would read as a floor that does nothing every single day.
     await expect(lane()).toBeVisible(COLD);
-    await expect(lane().locator("[data-figure]")).toHaveCount(0);
-    await expect(lane().getByText(t("reports.recordedNothing"))).toBeVisible();
+    await expect(lane().locator('[data-figure="dispatchRequests"]')).toHaveCount(1, COLD);
+    await expect(lane().getByText(t("reports.recordedNothing"))).toHaveCount(0);
   });
 
   await test.step("the manager, drilling into marketing, reads the same lane", async () => {
@@ -223,7 +223,7 @@ test("marketing's recorded lane carries nothing it cannot move, and the manager 
     await page.goto(`/${locale}/reports?person=${marketing.id}&day=${marketing.day}`);
     await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
     await expect(lane()).toBeVisible(COLD);
-    await expect(lane().locator("[data-figure]")).toHaveCount(0);
+    await expect(lane().locator('[data-figure="dispatchRequests"]')).toHaveCount(1, COLD);
   });
 
   await test.step("and a rep's lane carries the quotation he raised", async () => {

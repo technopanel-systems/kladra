@@ -53,6 +53,8 @@ Password for every demo account: the `SEED_PASSWORD` in `.env` (default `kladra2
 | Turki Al-Shammari | rep | turki@technopanel.com.sa |
 | Marketing | marketing | marketing@technopanel.com.sa |
 
+The seed also makes an eighth account, Hamad Al-Enezi (rep, `hamad@technopanel.com.sa`), deactivated: a rep who has left, kept so the earlier months on the targets screen still name him. Nobody signs in as him.
+
 ## On a phone
 
 Kladra installs. Open the tunnel address in Chrome (Android) or Safari (iOS) and choose

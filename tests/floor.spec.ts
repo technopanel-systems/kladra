@@ -102,13 +102,19 @@ test("reading a floor never implies writing on it", () => {
 });
 
 /**
- * The marketing role, which is defined entirely by what it may not do (D50).
+ * The marketing role is a rep in everything (SPEC §3 P13).
  *
- * Every sentence about it is one of these three functions, and every screen and
- * every action guard asks one of them rather than naming a role — so this is
- * where the role actually exists.
+ * Changed deliberately in P13-S5, and the reason written here as the charter
+ * asks: this test used to hold marketing to what it may NOT do — own companies
+ * but never price them, and carry no month (D44, D50). The founder's P13
+ * sentence overrules both: "Marketing is a rep in everything, plus a Leads
+ * module … marketing carries a target and metres, quotes and dispatches like a
+ * rep, and keeps its own module for passing leads." So it sells, it carries
+ * metres (and so a target, D168), and its own customers are ones it quotes and
+ * dispatches on. What still does not change
+ * is the door it comes in by — that is the next test, and D156 stands.
  */
-test("marketing owns companies, does not price them, and carries no month", () => {
+test("marketing is a rep in everything: it owns companies, prices them, and carries a month", () => {
   expect(ownsCompanies("marketing")).toBe(true);
   expect(ownsCompanies("rep")).toBe(true);
   // The manager adds none; one reaches him by handover (S8, D51).
@@ -118,20 +124,25 @@ test("marketing owns companies, does not price them, and carries no month", () =
   expect(ownsCompanies("coordinator")).toBe(true);
   expect(ownsCompanies("admin")).toBe(false);
 
-  expect(sells("marketing")).toBe(false);
+  expect(sells("marketing")).toBe(true);
   expect(sells("rep")).toBe(true);
   expect(sells("manager")).toBe(true);
   expect(sells("coordinator")).toBe(true);
+  expect(sells("admin")).toBe(false);
 
-  // No target, for the same reason: a role that never closes a sale would read
-  // as a permanent shortfall every month (D44).
-  expect(carriesMetres("marketing")).toBe(false);
+  // A target and a row on the team's month, like every rep (D168).
+  expect(carriesMetres("marketing")).toBe(true);
+  expect(carriesMetres("rep")).toBe(true);
+  expect(carriesMetres("admin")).toBe(false);
 
-  // Its own leads included: owning a company is not being allowed to price it.
+  // Its own customers — a lead it filed onto itself included — it quotes and
+  // dispatches on exactly as Faisal does on his, and nobody else's.
   const marketing = who("marketing", "marketing-id");
   expect(mayWrite(marketing, "marketing-id")).toBe(true);
-  expect(mayQuote(marketing, "marketing-id")).toBe(false);
+  expect(mayQuote(marketing, "marketing-id")).toBe(true);
+  expect(mayQuote(marketing, FAISAL)).toBe(false);
   expect(mayQuote(who("rep", FAISAL), FAISAL)).toBe(true);
+  expect(issuesOwnQuotations("marketing")).toBe(false);
 });
 
 /**
@@ -144,7 +155,9 @@ test("marketing owns companies, does not price them, and carries no month", () =
  *
  * Marketing still OWNS companies — a lead filed onto its own floor is one — and
  * that is the pair worth holding here, because it is the pair that would drift
- * if somebody ever read "does not add companies" as "has no floor".
+ * if somebody ever read "does not add companies" as "has no floor". SPEC §3 P13
+ * made marketing a rep in everything and kept this one door as it was (D156):
+ * it still brings a customer in through Leads, never through Add company.
  */
 test("marketing files leads and adds no company; everybody else with a floor does the opposite", () => {
   expect(filesLeads("marketing")).toBe(true);
@@ -240,7 +253,8 @@ test("who may move a company: the sales manager and the admin, and nobody else",
 
   // Not its owner — SPEC §3 says so in the founder's own words and overrules
   // D51 — and not marketing, which is named in that sentence because handing a
-  // lead on used to be the whole reason the role existed.
+  // lead on used to be the whole reason the role existed. Reassigning a lead
+  // from the leads view is this same move (SPEC §3 P13): the manager's.
   expect(mayHandOver(who("rep", FAISAL))).toBe(false);
   expect(mayHandOver(who("marketing", "marketing-id"))).toBe(false);
   expect(mayHandOver(who("coordinator", "rawan-id"))).toBe(false);

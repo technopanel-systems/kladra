@@ -4,6 +4,7 @@ import { AddCompanyDialog } from "@/components/companies/add-company-dialog";
 import { CompaniesTable } from "@/components/companies/companies-table";
 import { CompanyDrawer } from "@/components/companies/company-drawer";
 import { FollowUpStrip } from "@/components/companies/follow-up-strip";
+import { LeadsBand } from "@/components/leads/leads-band";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
@@ -106,10 +107,10 @@ export default async function CompaniesPage({
   const total = rows.length === LIST_LIMIT ? await countCompanies(narrowing) : rows.length;
 
   /*
-   * Whose floor this is, and whether that person quotes. Marketing owns
-   * companies and raises nothing, so two of the strip's three figures would be
-   * nought on every screen for ever — the same sentence that takes the month
-   * card off its day (D44). Its follow-up strip below is its own standing.
+   * Whose floor this is, and whether that person quotes. Everybody who owns
+   * companies sells since SPEC §3 P13 made marketing a rep (D168); the question
+   * is still asked, because a floor whose holder raises nothing would show two
+   * of the strip's three figures as nought for ever (D44).
    */
   const viewedRole: Role | null = repId ? (viewed?.role ?? null) : user.role;
   const standing =
@@ -135,6 +136,10 @@ export default async function CompaniesPage({
         </h1>
         {mayAdd ? <AddCompanyDialog /> : null}
       </div>
+
+      {/* The leads given to him and not yet acknowledged, apart from his own
+          companies and above them (SPEC §3 P13) — reads its own rows. */}
+      <LeadsBand rep={repId} />
 
       {viewedName ? (
         <div className="flex">

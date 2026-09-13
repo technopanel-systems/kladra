@@ -191,12 +191,6 @@ export function homeFor(role: Role): string {
   switch (role) {
     case "coordinator":
       return "/queue";
-    case "marketing":
-      // Its own module (SPEC §3, P12-7). It used to land on the day, which was
-      // right while marketing worked a floor like a rep's; the founder's answer
-      // is that it does not — it brings customers in and gives them away, and
-      // the screen where that happens is the first thing it should see.
-      return "/leads";
     case "manager":
     case "admin":
       return "/team";
@@ -205,6 +199,12 @@ export function homeFor(role: Role): string {
       // one press away and is still where he searches; what it never was is an
       // answer to "what do I do now", which is the question he opens the app
       // with.
+      //
+      // Marketing too, since SPEC §3 P13: "a rep in everything, plus a Leads
+      // module". P12-7 sent it to /leads while it quoted nothing and its day was
+      // only a call list; its day now carries a month, a pace line, the paper
+      // waiting on it and the leads given to it, which is the question a rep
+      // opens Kladra with. Leads is one press away, third in its rail.
       return "/day";
   }
 }

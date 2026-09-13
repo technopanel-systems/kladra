@@ -37,7 +37,8 @@ export function parseTab(value: unknown, allowed: readonly Tab[]): Tab | null {
  *
  * That last clause is not defensive padding. The day and the team remember
  * separately, but a screen can LOSE a tab between one visit and the next —
- * marketing carries no metrics, and a coordinator's day is not a manager's — so
+ * a role that carries no metrics has one tab, and a coordinator's day is not a
+ * manager's — so
  * a remembered word that this screen has no tab for is an ordinary Tuesday, not
  * a tampered URL.
  */

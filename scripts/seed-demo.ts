@@ -81,6 +81,8 @@ import {
   FIRST_TARGET_MONTHS_AGO,
   FORMER_REP,
   FORMER_REP_TARGET_MONTHS_AGO,
+  MARKETING_TARGET_LAST_MONTH,
+  MARKETING_TARGET_THIS_MONTH,
   REP_TARGET_THIS_MONTH,
   USERS,
   type DispatchSeed,
@@ -191,6 +193,15 @@ function workingDayBefore(day: Day): Day {
 }
 function workingDayAfter(day: Day): Day {
   return nextWorkingDay(addDays(day, 1));
+}
+
+/**
+ * The day a seeded lead was filed: working days back where the lead says so —
+ * the one whose point is the two-working-day line (P13) — and calendar days
+ * otherwise.
+ */
+function leadGivenOn(lead: { daysAgo?: number; back?: number }): Day {
+  return lead.back !== undefined ? back(lead.back) : addDays(TODAY, -(lead.daysAgo ?? 0));
 }
 
 /** The earlier of two days. */
@@ -501,7 +512,7 @@ async function seedCompanies(
             c.addedDaysAgo !== undefined
               ? instant(addDays(TODAY, -c.addedDaysAgo), 9, 40)
               : c.lead
-                ? instant(addDays(TODAY, -c.lead.daysAgo), 9, 15)
+                ? instant(leadGivenOn(c.lead), 9, 15)
                 : instant(addDays(TODAY, -(20 + i * 6)), 10, (i * 7) % 60);
           const code = c.country ?? "SA";
           return {
@@ -719,7 +730,9 @@ async function seedProjects(
           // was approved on.
           const created = p.fromMonthsBack
             ? instant(monthDay(p.fromMonthsBack, 3), 9, 30)
-            : instant(addDays(TODAY, -(15 + i * 4)), 11, (i * 5) % 60);
+            : p.daysAgo !== undefined
+              ? instant(addDays(TODAY, -p.daysAgo), 11, 0)
+              : instant(addDays(TODAY, -(15 + i * 4)), 11, (i * 5) % 60);
           return {
             companyId: must(companyIds, p.company, "company"),
             repId: must(userIds, companyRep(p.company), "user"),
@@ -1252,13 +1265,27 @@ async function seedDispatches(
        * "Requested". A dispatch is raised and THEN approved: where there is an
        * approval day, the day it was raised is no later than the working day
        * before it.
+       *
+       * And a load against a paper comes after the paper was answered. On Monday
+       * 14 September "approved on the 5th" fell three days before q10 was even
+       * asked for, and seed-volume's check said so (D104). Where the fixed day
+       * would put the load before its paper, the load moves forward — raised the
+       * working day after the answer, approved the working day after that, still
+       * this month and never past today.
        */
-      const approvedDay =
+      const paper = d.quotation === undefined ? undefined : QUOTATIONS.find((q) => q.key === d.quotation);
+      const answered =
+        paper === undefined ? null : back(paper.decidedBack ?? paper.issuedBack ?? paper.createdBack);
+      const fixedDay =
         d.approvedOnDayOfMonth === undefined ? null : dayOfThisMonth(d.approvedOnDayOfMonth);
-      const raised =
-        approvedDay === null
+      const onLadder =
+        fixedDay === null
           ? back(d.createdBack)
-          : earlier(back(d.createdBack), workingDayBefore(approvedDay));
+          : earlier(back(d.createdBack), workingDayBefore(fixedDay));
+      const raised =
+        answered !== null && onLadder <= answered ? earlier(workingDayAfter(answered), TODAY) : onLadder;
+      const approvedDay =
+        fixedDay === null || fixedDay > raised ? fixedDay : earlier(workingDayAfter(raised), TODAY);
       const created = instant(raised, 12, 15);
       const approvedAt = approvedDay === null ? null : instant(approvedDay, 14, 30);
       // Refused the morning after it was raised; nothing else ends a dispatch.
@@ -1675,13 +1702,15 @@ async function seedHistory(
 async function seedTargets(userIds: Map<string, string>): Promise<void> {
   const thisMonth = firstOfMonth(TODAY);
   /*
-   * Everybody who carries a month of their own: the five reps, and Rawan since
-   * SPEC §3 made the coordinator a selling role with a target of her own. Not
-   * the manager — SPEC §1's "no personal target above rep" — whose month is the
-   * company figure set beside these, and not marketing, which hands leads on
-   * and would carry a number it could never meet.
+   * Everybody who carries a month of their own: the reps, Rawan since SPEC §3
+   * made the coordinator a selling role with a target of her own, and marketing
+   * since §3 P13 made it a rep in everything (D168). Not the manager — SPEC
+   * §1's "no personal target above rep" — whose month is the company figure set
+   * beside these.
    */
-  const carrying = USERS.filter((u) => u.role === "rep" || u.role === "coordinator");
+  const carrying = USERS.filter(
+    (u) => u.role === "rep" || u.role === "coordinator" || u.role === "marketing",
+  );
 
   // Every month a bar is drawn for, not only this one and last: a month with
   // metres on it and no target is a bar with nothing to be measured against,
@@ -1711,9 +1740,13 @@ async function seedTargets(userIds: Map<string, string>): Promise<void> {
                 ? month === thisMonth
                   ? DESK_TARGET_THIS_MONTH
                   : DESK_TARGET_LAST_MONTH
-                : month === thisMonth
-                  ? REP_TARGET_THIS_MONTH
-                  : REP_TARGET_LAST_MONTH,
+                : u.role === "marketing"
+                  ? month === thisMonth
+                    ? MARKETING_TARGET_THIS_MONTH
+                    : MARKETING_TARGET_LAST_MONTH
+                  : month === thisMonth
+                    ? REP_TARGET_THIS_MONTH
+                    : REP_TARGET_LAST_MONTH,
           })),
       ),
     );
@@ -1828,7 +1861,7 @@ async function seedNotifications(
       const subject = { subjectType: "company" as const, subjectId: companyId };
 
       if (c.lead.acknowledgedDaysAgo === undefined) {
-        const at = instant(addDays(TODAY, -c.lead.daysAgo), 9, 20);
+        const at = instant(leadGivenOn(c.lead), 9, 20);
         return [
           {
             userId: holder,

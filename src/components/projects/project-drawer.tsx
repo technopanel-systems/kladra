@@ -108,9 +108,9 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
 
   // A lost project is finished work (S20): nothing new is raised against it,
   // so the button is not there rather than there and refusing (DESIGN §5).
-  // Marketing works a lead like a rep and stops at the price: quoting is the
-  // sales conversation, and it belongs to whoever the lead was handed to (P8.9).
-  // Two ways in (D147): the customer is his, or the job is one he was put on —
+  // Marketing quotes like a rep since SPEC §3 P13 (D168), so this is the one
+  // seller's sentence for everybody. Two ways in (D147): the customer is his,
+  // or the job is one he was put on —
   // the same sentence `requestQuotationAction` guards itself with.
   const mayRaise = mayRaiseFor(user, project.company.repId, project.repId, project.onProject);
   // She does not ask the desk for a price; she IS the desk (SPEC §3), so the

@@ -68,8 +68,10 @@ export type UserSeed = {
  * The seven from README.md. Rawan and marketing read Arabic; the rest English.
  *
  * Marketing is a role account rather than a person, because Jerom has not named
- * who holds it (SPEC §1, D50). It owns two leads and no target: what it exists
- * to do is find a customer and hand him to a rep.
+ * who holds it (SPEC §1, D50). Since SPEC §3 P13 it is a rep in everything plus
+ * the lead module: it keeps two customers of its own, with a target, a quotation
+ * and an approved load on one of them (D168), and it has passed a lead at every
+ * stage the founder named.
  */
 export const USERS: UserSeed[] = [
   // Both names on every account, because the Arabic screens name people too
@@ -201,8 +203,18 @@ export type CompanySeed = {
    * `acknowledgedDaysAgo` is missing on the ones nobody has answered. A lead
    * somebody filed onto his OWN floor is always answered — there is nobody to
    * tell — which is what `createLeadAction` writes and what these rows copy.
+   *
+   * `back` is WORKING days back, instead of `daysAgo`, for the one lead whose
+   * whole point is the two-working-day line (P13): three working days is past
+   * it on whatever weekday the demo is read, and a calendar count is not.
    */
-  lead?: { from: RepKey; query: string; daysAgo: number; acknowledgedDaysAgo?: number };
+  lead?: {
+    from: RepKey;
+    query: string;
+    daysAgo?: number;
+    back?: number;
+    acknowledgedDaysAgo?: number;
+  };
   /**
    * Opened this many days ago, instead of taking the spread the book gets
    * (P12-8).
@@ -530,12 +542,16 @@ export const COMPANIES: CompanySeed[] = [
   },
 
   /*
-   * ---- Marketing — what it brought in (2 of its own, 3 given away) ----------
+   * ---- Marketing — what it brought in (2 of its own, 6 given away) ----------
    *
    * Since SPEC §3 marketing files a LEAD rather than a company, and filing one
-   * IS the assignment. Its own two are leads it kept — "or to a member of the
-   * marketing team" — and are therefore answered the moment they are written:
-   * there is nobody to tell.
+   * IS the assignment. Its own two are leads it kept — "or to herself" (P13) —
+   * and are therefore answered the moment they are written: there is nobody to
+   * tell. And since P13 it sells them like a rep: m1 carries a job, an accepted
+   * quotation and a load approved this month, so its month card, its row on
+   * the manager's table and its pace line are figures rather than dashes (D168),
+   * and m2 carries a job with no paper yet, which is where a walk asks for a
+   * price.
    */
   {
     key: "m1",
@@ -544,7 +560,6 @@ export const COMPANIES: CompanySeed[] = [
     category: "Contractor",
     source: "Exhibition",
     city: "Riyadh",
-    notes: "من معرض البناء، طلبوا كتالوج وأسعار",
     lead: { from: "marketing", query: "واجهة مبنى إداري في العليا، طلبوا كتالوج وسعر تقريبي", daysAgo: 26 },
     contacts: [
       { name: "ريان الحربي", phone: "0553318890", position: "Procurement", email: "rayan@example.sa" },
@@ -559,23 +574,45 @@ export const COMPANIES: CompanySeed[] = [
     city: "Riyadh",
     // No activity anywhere below: this one is the "never contacted" band on
     // marketing's day, which is the habit S51 wants visible.
-    notes: "وصلت من الموقع، لم يتم التواصل بعد",
     lead: { from: "marketing", query: "استفسار من الموقع عن ألواح 4 مم لمشروع ديكور داخلي", daysAgo: 20 },
     contacts: [{ name: "ماجد الزهراني", phone: "0501129983", position: "Owner" }],
   },
 
   /*
-   * ---- Marketing — three it gave away, on each side of the line -------------
+   * ---- Marketing — six it gave away, one at every stage ---------------------
    *
-   * One nobody has answered in four working days (the manager's stuck list and
-   * the red badge), one that arrived yesterday (amber, not late), and one that
-   * was answered the day after it landed (green). Three rows because a band of
-   * three needs a row in each of the three, and because the rep's day, the
-   * leads screen and the stuck list all read the same three columns.
+   * The founder's stages for a lead marketing passed are "acknowledged,
+   * contacted, quoted, won" (§3 P13), and the rep's band and the manager's line
+   * need the two sides of "unacknowledged": so, in order, one given to Faisal
+   * TODAY (his band, amber), one given to Faisal three WORKING days ago and
+   * still unanswered (past the two-day line: red on the leads view and on the
+   * manager's stuck list), one that arrived yesterday on Saad's floor, one
+   * acknowledged and then rung (contacted), one with a quotation raised on it
+   * (quoted), and one whose quotation the customer accepted (won). Every stage
+   * is read from the company's own rows at read time, so each row below carries
+   * exactly the record that puts it there and nothing that would move it on.
    *
-   * No activity on any of them and no follow-up date: a lead is a customer
-   * nobody has spoken to yet, which is the whole reason somebody is waiting.
+   * No activity on the unanswered ones and no follow-up date: a lead is a
+   * customer nobody has spoken to yet, which is the whole reason somebody is
+   * waiting.
+   *
+   * A lead carries only the customer's question — no notes on the company or
+   * the contact (§3 P13: "the customer's query as the single note").
    */
+  {
+    key: "l0",
+    name: "مؤسسة سنا المشرق للمقاولات",
+    rep: "faisal",
+    category: "Contractor",
+    source: "WhatsApp",
+    city: "Riyadh",
+    lead: {
+      from: "marketing",
+      query: "واجهة فيلا في حي الياسمين، يسأل عن ألوان الخشب والسعر التقريبي",
+      daysAgo: 0,
+    },
+    contacts: [{ name: "بدر القرني", phone: "0559043318", position: "Owner" }],
+  },
   {
     key: "l1",
     name: "شركة الرواسي للمقاولات العامة",
@@ -583,11 +620,10 @@ export const COMPANIES: CompanySeed[] = [
     category: "Contractor",
     source: "Marketing",
     city: "Riyadh",
-    notes: "اتصلوا على رقم الشركة، تحويل إلى المبيعات",
     lead: {
       from: "marketing",
       query: "برج مكاتب من ستة أدوار في طريق الملك فهد، يريدون سعر كلادينج A2 خلال أسبوع",
-      daysAgo: 6,
+      back: 3,
     },
     contacts: [
       { name: "عبدالله الشمري", phone: "0554417702", position: "Procurement", email: "a.alshammari@example.sa" },
@@ -600,7 +636,6 @@ export const COMPANIES: CompanySeed[] = [
     category: "Other",
     source: "Exhibition",
     city: "Dammam",
-    notes: "من معرض الشرقية، أخذ كرت وطلب اتصال",
     lead: {
       from: "marketing",
       query: "محل عرض في الدمام، واجهة صغيرة، يسأل عن الألوان المتوفرة والسعر",
@@ -615,7 +650,8 @@ export const COMPANIES: CompanySeed[] = [
     category: "Contractor",
     source: "Marketing",
     city: "Buraydah",
-    notes: "طلب من الموقع، تم التواصل معه",
+    // Contacted: acknowledged a week ago and rung since (the report is under
+    // ACTIVITIES), and nothing priced yet.
     lead: {
       from: "marketing",
       query: "مبنى تجاري في بريدة، يسأل عن التوريد فقط بدون تركيب",
@@ -623,6 +659,38 @@ export const COMPANIES: CompanySeed[] = [
       acknowledgedDaysAgo: 7,
     },
     contacts: [{ name: "نواف العتيبي", phone: "0567719920", position: "General manager" }],
+  },
+  {
+    key: "l4",
+    name: "مؤسسة ركن الجزيرة للديكور",
+    rep: "turki",
+    category: "Workshop",
+    source: "Online",
+    city: "Al Khobar",
+    // Quoted: acknowledged, a job opened, and a quotation issued on it (q12).
+    lead: {
+      from: "marketing",
+      query: "واجهة محل في الخبر، مساحة صغيرة، يريد عرض سعر لونين",
+      daysAgo: 13,
+      acknowledgedDaysAgo: 12,
+    },
+    contacts: [{ name: "ماجد الغامدي", phone: "0538817264", position: "Owner" }],
+  },
+  {
+    key: "l5",
+    name: "شركة بوابة العارض للمقاولات",
+    rep: "faisal",
+    category: "Contractor",
+    source: "Referral",
+    city: "Riyadh",
+    // Won: the customer accepted the quotation on it (q13).
+    lead: {
+      from: "marketing",
+      query: "مجمع مكاتب في حي العارض، يطلب A2 ويسأل عن مدة التوريد",
+      daysAgo: 12,
+      acknowledgedDaysAgo: 11,
+    },
+    contacts: [{ name: "فهد السبيعي", phone: "0547731905", position: "Procurement" }],
   },
   // ---- Rawan — the desk that also sells (1) ---------------------------------
   /*
@@ -741,6 +809,12 @@ export type ProjectSeed = {
    * which counts what is still to come.
    */
   archivedMonthsBack?: number;
+  /**
+   * Opened this many calendar days ago, instead of taking the spread (P13). The
+   * jobs on a lead are younger than the lead, and the spread starts a fortnight
+   * back and runs for months, which would open a job before its customer.
+   */
+  daysAgo?: number;
 };
 
 export const PROJECTS: ProjectSeed[] = [
@@ -900,6 +974,15 @@ export const PROJECTS: ProjectSeed[] = [
   // whole of what a fold does and does not do: an item belongs to whoever made
   // it (D147).
   { key: "pd2", company: "d2", name: "واجهة برج مكتبي - طريق الملك عبدالعزيز", expectedSqm: "260.00" },
+  /*
+   * Marketing's own jobs (SPEC §3 P13, D168): one with paper and a load on it,
+   * and one with nothing yet, where a price is asked for.
+   */
+  { key: "pm1", company: "m1", name: "واجهة مبنى إداري - العليا", expectedSqm: "600.00", daysAgo: 24 },
+  { key: "pm2", company: "m2", name: "ديكور داخلي - معرض حي النرجس", expectedSqm: "180.00", daysAgo: 15 },
+  // The jobs on the two leads that got as far as a price (P13).
+  { key: "pl4", company: "l4", name: "واجهة محل - الخبر", expectedSqm: "90.00", daysAgo: 11 },
+  { key: "pl5", company: "l5", name: "مجمع مكاتب العارض", expectedSqm: "1400.00", daysAgo: 10 },
 ];
 
 // ---- reports ------------------------------------------------------------------
@@ -1034,6 +1117,10 @@ export const ACTIVITIES: ActivitySeed[] = [
   { company: "t4", contact: 0, channel: "whatsapp", outcome: "Not now", back: 8, text: "عميل شخصي، يبي يكسي واجهة استراحة" },
 
   { company: "t5", contact: 0, channel: "other", outcome: "Not now", back: 6, onWeekend: true, text: "Enquiry from the Cairo office, asked about export pricing" },
+
+  // The lead marketing passed him, rung after he acknowledged it: "contacted" on
+  // marketing's screen is this row and nothing else (SPEC §3 P13).
+  { company: "l3", contact: 0, channel: "call", outcome: "Reached", back: 3, text: "اتصلت بنواف بعد استلام الطلب، ينتظر اعتماد المخطط ليرسل الكميات" },
 
   // What Turki wrote before anybody knew this was Faisal's customer (P12-8).
   // The fold moves it onto the record that continues, with his name still on
@@ -1476,6 +1563,61 @@ export const QUOTATIONS: QuotationSeed[] = [
       { service: "Fabrication", sqm: "30.00", pricePerSqm: "60.00" },
     ],
   },
+  /*
+   * Marketing's own paper (SPEC §3 P13: "a rep in everything"): asked for, issued
+   * by the desk and accepted, with a load approved this month below it — so its
+   * metres are real metres on its day and on the manager's table (D168).
+   */
+  {
+    key: "qm1",
+    company: "m1",
+    project: "pm1",
+    rep: "marketing",
+    status: "accepted",
+    contact: 0,
+    createdBack: 9,
+    issuedBack: 8,
+    decidedBack: 6,
+    smacNumber: "4545",
+    items: [
+      { colourCode: "168", supplier: "N", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 50, width: "1.24", length: "5.8", pricePerSqm: "126.00" },
+    ],
+  },
+  /*
+   * The two leads that got to a price (SPEC §3 P13): one issued and waiting on
+   * the customer (quoted), one the customer accepted (won). Neither has a load
+   * yet, so neither moves anybody's month.
+   */
+  {
+    key: "q12",
+    company: "l4",
+    project: "pl4",
+    rep: "turki",
+    status: "issued",
+    contact: 0,
+    createdBack: 6,
+    issuedBack: 5,
+    smacNumber: "4548",
+    items: [
+      { colourCode: "RAL 9016", supplier: "K", fireRating: "Normal", className: "B", thickness: "4.0", qty: 14, width: "1.24", length: "3.2", pricePerSqm: "101.00" },
+      { colourCode: "7016", supplier: "K", fireRating: "Normal", className: "B", thickness: "4.0", qty: 8, width: "1.24", length: "3.2", pricePerSqm: "101.00" },
+    ],
+  },
+  {
+    key: "q13",
+    company: "l5",
+    project: "pl5",
+    rep: "faisal",
+    status: "accepted",
+    contact: 0,
+    createdBack: 7,
+    issuedBack: 6,
+    decidedBack: 3,
+    smacNumber: "4552",
+    items: [
+      { colourCode: "168", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 120, width: "1.24", length: "5.8", pricePerSqm: "132.00" },
+    ],
+  },
 ];
 
 // ---- dispatches ---------------------------------------------------------------
@@ -1710,6 +1852,24 @@ export const DISPATCHES: DispatchSeed[] = [
     ],
     services: [{ service: "CNC cutting", sqm: "12.00", pricePerSqm: "25.00" }],
   },
+  /*
+   * Marketing's load, approved this month (SPEC §3 P13, D168): thirty of fifty
+   * sheets of qm1, 215.76 m², counted to marketing exactly as a rep's would be.
+   */
+  {
+    key: "dm1",
+    quotation: "qm1",
+    rep: "marketing",
+    status: "approved",
+    shipmentMethod: "ct",
+    destination: "الرياض — العليا، موقع المبنى الإداري",
+    paymentTerms: "bankTransfer",
+    paymentDetail: "fullAmount",
+    smacDispatchNumber: "8886",
+    approvedOnDayOfMonth: 7,
+    createdBack: 4,
+    items: [{ item: 0, qty: 30 }],
+  },
 ];
 
 // ---- the months before this one ------------------------------------------------
@@ -1853,11 +2013,17 @@ export const REP_TARGET_LAST_MONTH = "1200.00";
 /*
  * And the coordinator's own, which SPEC §3 gave her: a fraction of a rep's,
  * because selling is the smaller half of her day and a target she could never
- * meet is a number that says the wrong thing every month (the same reasoning
- * that keeps marketing off this list entirely).
+ * meet is a number that says the wrong thing every month.
  */
 export const DESK_TARGET_THIS_MONTH = "400.00";
 export const DESK_TARGET_LAST_MONTH = "320.00";
+/*
+ * And marketing's, since SPEC §3 P13 made it a rep in everything (D168): its own
+ * box, a fraction of a rep's for the reason the desk's is — finding customers
+ * and handing them on is still most of its day.
+ */
+export const MARKETING_TARGET_THIS_MONTH = "500.00";
+export const MARKETING_TARGET_LAST_MONTH = "400.00";
 // Near what the floor actually approves, and not above all six months of it.
 // At 4,500 every finished month on the manager's card was the same red, so the
 // amber and the green bands existed in the code and nowhere a person could see

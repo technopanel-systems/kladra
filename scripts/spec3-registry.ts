@@ -229,7 +229,7 @@ export const SPEC3: Spec3Entry[] = [
   {
     says: "Roles may grow beyond the four if the business needs them",
     tests: [
-      "marketing works its floor and is offered no price anywhere",
+      "marketing is a rep in everything: its day carries a month, its rail the chain, and its own customer a price",
       "the role lists say exactly what the rules say",
     ],
   },
@@ -248,11 +248,11 @@ export const SPEC3: Spec3Entry[] = [
     says: "Marketing has its own module for bringing in a lead",
     tests: [
       // Filing IS the assignment: one Save and the customer is on the chosen
-      // floor with somebody to ring on him (P12-7).
-      "marketing files a lead and it is on the rep's floor when Save comes back",
-      // And the assignment is answered, which is what clears it on all three
-      // screens that count it.
-      "the rep answers the lead, and the answer is what clears it everywhere",
+      // floor with somebody to ring on him, and the rep answers it from the
+      // band above his companies, which clears it everywhere (P12-7, P13).
+      "marketing files a lead with a phone and the customer's query as its one note, and the rep acknowledges it from the band above his companies",
+      // "Or to herself": she has it, so there is nothing to acknowledge.
+      "a lead marketing files onto itself is acknowledged at once, and nobody is told",
       // The other half of the founder's sentence — "does not use the Add
       // company form" — asked of the rule rather than of a screen.
       "marketing files leads and adds no company; everybody else with a floor does the opposite",
@@ -365,7 +365,19 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "plus a Leads module",
-    owed: "P13-S5",
+    tests: [
+      // "Marketing is a rep in everything": the rule, then the screens.
+      "marketing is a rep in everything: it owns companies, prices them, and carries a month",
+      "marketing is a rep in everything: its day carries a month, its rail the chain, and its own customer a price",
+      "marketing requests a quotation and raises a dispatch on its own customer, and the metres count on its day",
+      "marketing's recorded lane carries the load it raised, as a rep's does, and the manager reads the same lane",
+      // "Plus a Leads module": the rep receives it apart and acknowledges it,
+      // the manager sees it at two working days and reassigns it, and
+      // marketing sees what became of each one.
+      "marketing files a lead with a phone and the customer's query as its one note, and the rep acknowledges it from the band above his companies",
+      "a lead nobody has acknowledged in two working days is on the manager's leads view, and he reassigns it to a rep who is told",
+      "marketing's leads screen says what became of each lead it passed, as the company's own records say",
+    ],
   },
   {
     says: "a slice or a bar opens the list behind it",
@@ -413,7 +425,9 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "the customer's query as the single note",
-    owed: "P13-S5",
+    tests: [
+      "marketing files a lead with a phone and the customer's query as its one note, and the rep acknowledges it from the band above his companies",
+    ],
   },
   {
     says: "Dropdowns must open in Microsoft Edge",

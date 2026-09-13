@@ -110,9 +110,10 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     // screens (D44).
     await expect(page.getByRole("link", { name: rawan.name, exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: jerom.name, exact: true })).toHaveCount(0);
-    // Nor marketing, which owns companies and closes none of them: a target it
-    // could never meet would read as a shortfall every month (D44, D50).
-    await expect(page.getByRole("link", { name: marketing.name, exact: true })).toHaveCount(0);
+    // And marketing IS a row since SPEC §3 P13 made it a rep in everything —
+    // a target, metres, quotations and dispatches of its own (D168). It read
+    // `toHaveCount(0)` here on the strength of D44 and D50, which P13 overrules.
+    await expect(page.getByRole("link", { name: marketing.name, exact: true })).toBeVisible();
   });
 
   await test.step("3 · the Stuck list names what has stopped moving", async () => {

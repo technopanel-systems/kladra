@@ -402,8 +402,8 @@ test("a person is named in the reader's script, not the account's", async ({ pag
 
   await test.step("1 · the manager's team table names his reps in Arabic", async () => {
     const table = page.getByRole("table").first();
-    // The rows are the reps (manager.spec: the coordinator, the admin and
-    // marketing have none), so those are the people this asserts for — by
+    // The reps have rows (manager.spec — the coordinator and marketing do too
+    // since SPEC §3, the admin does not), so the reps are the people this asserts for — by
     // role, decided here, not by whether a name happened to render. The old
     // `if (count > 0)` passed with nobody on the screen at all (P11A-16, D103).
     const onTable = translated.filter((person) => person.role === "rep");

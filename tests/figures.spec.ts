@@ -25,9 +25,10 @@ test("away today excuses today, whether he has been quiet a week or has never op
 
 /**
  * What Kladra recorded beside a person's reports is what that person can move
- * (SPEC §3 P13, D97, D50). Marketing never raises a quotation or a dispatch, so
- * its lane has nothing of that chain in it — six noughts it cannot change would
- * read as a floor that did nothing — and anybody's lane shows only what moved.
+ * (SPEC §3 P13, D97). A role that sells nothing — the admin, since P13 made
+ * marketing a rep in everything and overruled D50 — has nothing of that chain
+ * in its lane, because six noughts it cannot change would read as a floor that
+ * did nothing; and anybody's lane shows only what moved.
  */
 const recorded: Recorded = {
   sells: true,
@@ -39,7 +40,7 @@ const recorded: Recorded = {
   sqmMoved: "0",
 };
 
-test("the recorded lane carries the chain for a seller and nothing for marketing", () => {
+test("the recorded lane carries the chain for a seller and nothing for a role that sells nothing", () => {
   expect(figuresOf(recorded).map((figure) => figure.key)).toEqual([
     "quotationRequests",
     "sentBack",

@@ -299,11 +299,14 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         person who has just been handed him needs to read, and it stops being
         prominent the moment he says he has it: amber with a button while it is
         unanswered, a quiet line afterwards. It stays on the drawer for good —
-        what the customer originally asked for is the one thing about him
-        nobody can reconstruct later.
+        "once acknowledged, the lead is a normal company owned by the rep,
+        keeping its origin" (§3 P13): who filed it, the source it was filed
+        under, and what the customer originally asked for, which is the one
+        thing about him nobody can reconstruct later.
       */}
       {company.lead ? (
         <div
+          data-slot="lead-origin"
           className={cn(
             "mx-4 mt-3 flex flex-col gap-2 rounded-lg px-3 py-2.5",
             company.lead.acknowledged ? "bg-surface-2" : TONE_CLASS.wait,
@@ -311,7 +314,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs font-medium">
-              {t("leads.fromPerson", { name: company.lead.fromName })}
+              {t("leads.origin", { name: company.lead.fromName, source: company.leadSourceName })}
             </span>
             {company.lead.acknowledged ? null : company.lead.mine ? (
               <AcknowledgeLeadButton companyId={company.id} />
@@ -547,9 +550,9 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         </TabsContent>
 
         <TabsContent value="quotations" className="flex flex-col gap-3">
-          {/* Quoting is the sales conversation: marketing works the lead and
-              hands it on, so it owns this company and does not price it (P8.9).
-              The list already carries that answer per job (D147), so a rep put
+          {/* Whoever may quote on this customer's jobs — marketing too since
+              SPEC §3 P13 made it a rep (D168). The list already carries that
+              answer per job (D147), so a rep put
               on one project of somebody else's customer gets the button here
               too, with only that job in its picker. */}
           {quotationProjects.length > 0 ? (

@@ -22,7 +22,7 @@ import { and, eq, gte, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { db } from "@/db";
+import { db, type Tx } from "@/db";
 import {
   auditLog,
   cities,
@@ -372,17 +372,26 @@ export async function createCompanyAction(
  * table and nothing else. `src/lib/leads.ts` says why there is no second table.
  */
 
+/**
+ * The lead form, as §3 P13 states it: the company, a contact with a phone,
+ * where it came from, the customer's query as the single note, and who takes
+ * it. No notes on the company and none on the contact — "no other note fields"
+ * — so the schema has nowhere to put one, and a notes field posted anyway is
+ * never read.
+ */
 const leadSchema = z.object({
-  ...companyFields,
+  name: companyFields.name,
+  categoryId: companyFields.categoryId,
+  leadSourceId: companyFields.leadSourceId,
+  countryId: companyFields.countryId,
+  cityId: companyFields.cityId,
+  cityText: companyFields.cityText,
   /** Whose floor it lands on. The whole point of the form. */
   repId: z.uuid(),
-  /** What the customer asked for, in the finder's own words. */
+  /** What the customer asked for, in the finder's own words — the one note. */
   query: z.string().trim().min(1).max(4000),
   contactName: z.string().trim().min(1).max(200),
   contactPhone: z.string().trim().min(1).max(40),
-  contactPosition: z.string().trim().max(120).optional(),
-  contactEmail: z.string().trim().max(200).optional(),
-  contactNotes: z.string().trim().max(4000).optional(),
 });
 
 /**
@@ -414,14 +423,10 @@ export async function createLeadAction(
       countryId: field(formData, "countryId"),
       cityId: field(formData, "cityId"),
       cityText: field(formData, "cityText"),
-      notes: field(formData, "notes"),
       repId: field(formData, "repId"),
       query: field(formData, "query"),
       contactName: field(formData, "contactName"),
       contactPhone: field(formData, "contactPhone"),
-      contactPosition: field(formData, "contactPosition"),
-      contactEmail: field(formData, "contactEmail"),
-      contactNotes: field(formData, "contactNotes"),
     });
     if (!parsed.success) {
       return {
@@ -468,13 +473,6 @@ export async function createLeadAction(
       const sentence = t(isSaudi(place.country) ? "phoneInvalid" : "phoneInvalidAbroad");
       return { ok: false, error: sentence, fieldErrors: { contactPhone: sentence } };
     }
-    if (input.contactEmail && !z.email().safeParse(input.contactEmail).success) {
-      return {
-        ok: false,
-        error: t("emailInvalid"),
-        fieldErrors: { contactEmail: t("emailInvalid") },
-      };
-    }
 
     // Pressed twice is one lead (D134), the same rule Add company follows and
     // for the same reason: the wire can lose the answer after the row has
@@ -490,7 +488,6 @@ export async function createLeadAction(
         countryId: companies.countryId,
         cityId: companies.cityId,
         cityText: companies.cityText,
-        notes: companies.notes,
         repId: companies.repId,
         query: companies.leadQuery,
       })
@@ -512,8 +509,7 @@ export async function createLeadAction(
       sameField(input.leadSourceId, twin.leadSourceId) &&
       sameField(input.countryId, twin.countryId) &&
       sameField(place.cityId, twin.cityId) &&
-      sameField(place.cityText, twin.cityText) &&
-      sameField(input.notes, twin.notes)
+      sameField(place.cityText, twin.cityText)
     ) {
       const [contact] = await db
         .select({ id: contacts.id })
@@ -540,7 +536,9 @@ export async function createLeadAction(
           countryId: input.countryId,
           cityId: place.cityId,
           cityText: place.cityText,
-          notes: input.notes ?? null,
+          // The query is the note (§3 P13); the company's own notes start empty
+          // and are the holder's to write.
+          notes: null,
           repId: input.repId,
           leadFromId: actor.id,
           leadQuery: input.query,
@@ -558,9 +556,11 @@ export async function createLeadAction(
         name: input.contactName,
         phone: input.contactPhone,
         phoneNormalized,
-        position: input.contactPosition ?? null,
-        email: input.contactEmail ?? null,
-        notes: input.contactNotes ?? null,
+        // A name and a number (§3 P13: "a contact with a phone"); the rep who
+        // rings him adds the rest.
+        position: null,
+        email: null,
+        notes: null,
         isMain: true,
       });
 
@@ -680,6 +680,139 @@ export async function acknowledgeLeadAction(companyId: unknown): Promise<ActionR
 
     revalidateFloor();
     revalidatePath("/[locale]/leads", "page");
+    return { ok: true };
+  });
+}
+
+/**
+ * Give a lead to somebody else — the manager's assign and reassign (SPEC §3
+ * P13: "The manager's leads view assigns and reassigns").
+ *
+ * A lead is a company (D157), so this is a hand-over: the same permission
+ * (`mayHandOver`, the sales manager and the admin behind him, D156), the same
+ * picker of people a company can sit with, and the same statements
+ * (`moveCustomer`) carrying the old holder's contacts and jobs with it. What it
+ * adds is the half that makes it a LEAD arriving rather than a customer moving:
+ *
+ * - **It is his to acknowledge again.** The day somebody else said "I have him"
+ *   is not the new holder saying it, so the stamp goes, the row lands in his
+ *   band highlighted, and his bell rings with the lead notice — which is work,
+ *   cleared by his Acknowledge (D79). The old holder's notice is gone in the
+ *   same transaction, because the work it named is no longer his.
+ * - **Given back to the person who filed it, it is acknowledged at once**, the
+ *   rule filing follows (D157): she has it, and a row waiting for her to confirm
+ *   her own lead is the figure that is always wrong.
+ *
+ * The row is held before anything is decided (rules/data.md): two managers
+ * pressing at once would each read the old holder and each "move" the lead from
+ * him, and the second audit row would name a holder the customer had already
+ * left.
+ */
+export async function reassignLeadAction(
+  companyId: unknown,
+  toUserId: unknown,
+): Promise<ActionResult> {
+  return guard(async (actor) => {
+    const tc = await getTranslations("common");
+    const t = await getTranslations("errors");
+
+    const id = z.uuid().safeParse(companyId);
+    if (!id.success) return { ok: false, error: tc("invalid") };
+    if (!mayHandOver(actor)) throw new NotAllowed();
+    // "You have not said who" is the refusal a person actually hits: the confirm
+    // is live before the picker is touched (DESIGN §5). Said at the picker.
+    const to = z.uuid().safeParse(toUserId);
+    if (!to.success) {
+      const sentence = t("leadNeedsAFloor");
+      return { ok: false, error: sentence, fieldErrors: { to: sentence } };
+    }
+
+    // Active, and somebody a company can sit with — asked of the database rather
+    // than trusted from the picker, which is the courtesy (DESIGN §5).
+    const [target] = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(and(eq(users.id, to.data), eq(users.active, true)))
+      .limit(1);
+    if (!target || !holdsFloor(target.role)) {
+      const sentence = t("leadNeedsAFloor");
+      return { ok: false, error: sentence, fieldErrors: { to: sentence } };
+    }
+
+    const outcome = await db.transaction(async (tx) => {
+      const [lead] = await tx
+        .select({
+          name: companies.name,
+          repId: companies.repId,
+          fromId: companies.leadFromId,
+        })
+        .from(companies)
+        .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
+        .for("update");
+      if (!lead || !lead.fromId) return "gone" as const;
+      if (lead.repId === target.id) return "same" as const;
+
+      const from = lead.repId;
+      const hers = target.id === lead.fromId;
+      await moveCustomer(tx, id.data, from, target.id);
+      await tx
+        .update(companies)
+        .set({ leadAcknowledgedAt: hers ? new Date() : null })
+        .where(eq(companies.id, id.data));
+
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "lead.reassign",
+        recordType: "company",
+        recordId: id.data,
+        details: { name: lead.name, from, to: target.id },
+      });
+
+      // The old holder's notice named work that is no longer his.
+      await clearNotifications(tx, { type: "company", id: id.data }, ["leadAssigned"]);
+
+      if (target.id !== actor.id) {
+        await createNotification(
+          tx,
+          hers
+            ? {
+                // Back with the person who found it: nothing to acknowledge, so
+                // the notice is the news of it, cleared by reading.
+                userId: target.id,
+                kind: "companyHandedOver",
+                params: { label: lead.name, repId: actor.id },
+                link: `/companies?open=${id.data}`,
+                subject: { type: "company", id: id.data },
+              }
+            : {
+                userId: target.id,
+                kind: "leadAssigned",
+                params: { repId: actor.id },
+                link: `/companies?open=${id.data}`,
+                subject: { type: "company", id: id.data },
+              },
+        );
+      }
+
+      const audience = new Set([
+        ...(await liveAudienceForCompany(id.data, actor.id)),
+        from,
+        target.id,
+        lead.fromId,
+      ]);
+      await notifyLive(tx, [...audience], { type: "company", id: id.data });
+      return "moved" as const;
+    });
+
+    if (outcome === "gone") return { ok: false, error: t("companyNotFound") };
+    if (outcome === "same") {
+      const sentence = t("handOverSame");
+      return { ok: false, error: sentence, fieldErrors: { to: sentence } };
+    }
+
+    revalidateFloor();
+    revalidatePath("/[locale]/leads", "page");
+    revalidatePath("/[locale]/team", "page");
     return { ok: true };
   });
 }
@@ -807,10 +940,66 @@ export async function setCompanyFollowUpAction(
 }
 
 /**
+ * Put a customer, and what was the old holder's under him, on another floor.
+ *
+ * One definition for the two acts that move a customer between people: the
+ * manager's hand-over from the drawer, and his reassignment of a lead from the
+ * leads view (SPEC §3 P13). A lead IS a company (D157), so moving one is moving
+ * a company, and two copies of these statements would be two ideas of what
+ * travels with a customer.
+ */
+async function moveCustomer(tx: Tx, companyId: string, from: string, to: string): Promise<void> {
+  await tx.update(companies).set({ repId: to }).where(eq(companies.id, companyId));
+
+  // What was his under this customer goes with it. D51 said the whole floor
+  // travels because everything was read through `companies.rep_id`; since
+  // P12 a project and a contact say whose they are (D147), so moving the
+  // company alone would leave the man who left still holding the jobs and
+  // the new owner unable to touch them. Only HIS rows move: on a shared
+  // company a third rep's project stays his, because a handover is not a
+  // way to take somebody else's work.
+  const moved = await tx
+    .update(projects)
+    .set({ repId: to })
+    .where(and(eq(projects.companyId, companyId), eq(projects.repId, from)))
+    .returning({ id: projects.id });
+
+  // A contact belongs to a rep since P12, so the man receiving the company
+  // may already hold his OWN row for the same person on it — which is the
+  // case sharing exists for, and not a duplicate (D147). Moving the
+  // departing rep's row onto him would break two unique indexes at once:
+  // one number per rep per company, and one main contact per rep per
+  // company. It reached the manager as "something went wrong" and the
+  // hand-over quietly did not happen (#159).
+  //
+  // The rule is D153's and it is written once, in `moveContacts`: a fold
+  // (P12-8) lands rows on somebody's list the same way and would otherwise
+  // have needed the same forty lines a second time.
+  await moveContacts(tx, { companyId, repId: from }, { companyId, repId: to });
+
+  // And he is not left sharing what he now owns — the company, and every
+  // job under it that has just become his.
+  await tx
+    .delete(companyShares)
+    .where(and(eq(companyShares.companyId, companyId), eq(companyShares.userId, to)));
+  if (moved.length > 0) {
+    await tx.delete(projectShares).where(
+      and(
+        inArray(
+          projectShares.projectId,
+          moved.map((row) => row.id),
+        ),
+        eq(projectShares.userId, to),
+      ),
+    );
+  }
+}
+
+/**
  * Hand this company to somebody else (P8.9).
  *
- * The action marketing exists for: it finds a customer, works him, and passes
- * him to the rep who will quote. It is also how a floor survives a person —
+ * The manager's answer to whose customer this is (SPEC §3, which overrules
+ * D51). It is also how a floor survives a person —
  * before this, deactivating an account took its companies out of sight for
  * good, because every list is scoped by `companies.rep_id`.
  *
@@ -849,12 +1038,27 @@ export async function handOverCompanyAction(
     // a company off the floor has no floor to move to, and restoring it is the
     // admin's own action (S16).
     const [company] = await db
-      .select({ id: companies.id, name: companies.name, repId: companies.repId })
+      .select({
+        id: companies.id,
+        name: companies.name,
+        repId: companies.repId,
+        leadFromId: companies.leadFromId,
+        leadAcknowledgedAt: companies.leadAcknowledgedAt,
+      })
       .from(companies)
       .where(and(eq(companies.id, input.companyId), isNull(companies.archivedAt)))
       .limit(1);
     if (!company) return { ok: false, error: t("companyNotFound") };
     if (!mayHandOver(actor)) throw new NotAllowed();
+
+    // A lead nobody has picked up yet is not a customer changing hands but a
+    // lead going to somebody else (SPEC §3 P13): the old holder's notice goes,
+    // the new one is told to acknowledge it, and his two working days start
+    // now. That act is written once, in `reassignLeadAction`; handing it over
+    // from the drawer is the same act.
+    if (company.leadFromId !== null && company.leadAcknowledgedAt === null) {
+      return reassignLeadAction(input.companyId, input.toUserId);
+    }
 
     // Active, and somebody a company can sit with. A deactivated account would
     // take the company back out of sight the moment it landed there, and the
@@ -870,59 +1074,7 @@ export async function handOverCompanyAction(
 
     const from = company.repId;
     await db.transaction(async (tx) => {
-      await tx
-        .update(companies)
-        .set({ repId: target.id })
-        .where(eq(companies.id, company.id));
-
-      // What was his under this customer goes with it. D51 said the whole floor
-      // travels because everything was read through `companies.rep_id`; since
-      // P12 a project and a contact say whose they are (D147), so moving the
-      // company alone would leave the man who left still holding the jobs and
-      // the new owner unable to touch them. Only HIS rows move: on a shared
-      // company a third rep's project stays his, because a handover is not a
-      // way to take somebody else's work.
-      const moved = await tx
-        .update(projects)
-        .set({ repId: target.id })
-        .where(and(eq(projects.companyId, company.id), eq(projects.repId, from)))
-        .returning({ id: projects.id });
-
-      // A contact belongs to a rep since P12, so the man receiving the company
-      // may already hold his OWN row for the same person on it — which is the
-      // case sharing exists for, and not a duplicate (D147). Moving the
-      // departing rep's row onto him would break two unique indexes at once:
-      // one number per rep per company, and one main contact per rep per
-      // company. It reached the manager as "something went wrong" and the
-      // hand-over quietly did not happen (#159).
-      //
-      // The rule is D153's and it is written once, in `moveContacts`: a fold
-      // (P12-8) lands rows on somebody's list the same way and would otherwise
-      // have needed the same forty lines a second time.
-      await moveContacts(
-        tx,
-        { companyId: company.id, repId: from },
-        { companyId: company.id, repId: target.id },
-      );
-
-      // And he is not left sharing what he now owns — the company, and every
-      // job under it that has just become his.
-      await tx
-        .delete(companyShares)
-        .where(and(eq(companyShares.companyId, company.id), eq(companyShares.userId, target.id)));
-      if (moved.length > 0) {
-        await tx
-          .delete(projectShares)
-          .where(
-            and(
-              inArray(
-                projectShares.projectId,
-                moved.map((row) => row.id),
-              ),
-              eq(projectShares.userId, target.id),
-            ),
-          );
-      }
+      await moveCustomer(tx, company.id, from, target.id);
 
       await tx.insert(auditLog).values({
         userId: actor.id,

@@ -155,13 +155,14 @@ export function SearchCommand({ role }: { role: Role }) {
         {/* The long sentence is what the input under it is for; on the button
             it only appears where the button is wide enough to hold it whole.
             At 768 it used to be cut off mid-word in both languages — a label
-            that stops in the middle reads as a fault, not as an abbreviation. */}
-        <span data-slot="search-label" className="flex-1 truncate text-start text-[13px] lg:hidden">
+            that stops in the middle reads as a fault, not as an abbreviation —
+            and at 1024 again once Add report joined the bar (P13-S4). */}
+        <span data-slot="search-label" className="flex-1 truncate text-start text-[13px] xl:hidden">
           {t("common.search")}
         </span>
         <span
           data-slot="search-label"
-          className="hidden flex-1 truncate text-start text-[13px] lg:inline"
+          className="hidden flex-1 truncate text-start text-[13px] xl:inline"
         >
           {t("common.searchPlaceholder")}
         </span>

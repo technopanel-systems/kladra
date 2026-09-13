@@ -126,6 +126,12 @@ function paceFor(today: Day, nonWorking: NonWorking[], userId?: string): Pace {
  * selling role with her own m² target, so her row carries figures rather than
  * the dashes it would have carried before she had companies of her own.
  *
+ * And marketing is here since SPEC §3 P13 — "a rep in everything", which
+ * overrules D44 and D50: it quotes and dispatches, so its row carries the same
+ * figures a rep's does, and a month with no target set is a dash and no pace
+ * line rather than a zero (D168, D41). This constant did not change for it; the
+ * sentence it is derived from did, which is the whole reason it is derived.
+ *
  * And it is not a second list any more. This was a hand-written `role in
  * ('rep', 'manager')` beside `carriesMetres` in src/lib/floor.ts, which is the
  * shape of D42: two copies of one sentence, and the day §3 moved it only one of

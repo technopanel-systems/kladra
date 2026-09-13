@@ -133,14 +133,30 @@ const NOTES = [
   "ينتظر اعتماد الاستشاري",
   "يريد عينات 4 مم",
 ];
+/** What a customer asked marketing for — a lead's one note (SPEC §3 P13). */
+const QUERIES = [
+  "واجهة مبنى تجاري، يطلب سعرًا تقريبيًا وكتالوج الألوان",
+  "استفسار من الموقع عن ألواح A2 لمشروع مكاتب",
+  "فيلا سكنية، يسأل عن ألوان الخشب ومدة التوريد",
+  "معرض سيارات على طريق رئيسي، يريد عرض سعر خلال أسبوع",
+  "توريد فقط بدون تركيب، يسأل عن الكميات المتوفرة",
+];
+
+/** One lead in this many companies is marketing's (SPEC §3 P13). */
+const LEAD_EVERY = 8;
+/** And one in this many of those is still waiting on whoever it was given to. */
+const UNANSWERED_EVERY = 10;
 
 async function main(): Promise<void> {
   const today = todayRiyadh();
 
+  // Everybody who works a floor of customers like a rep: the reps, and
+  // marketing, which is a rep in everything since SPEC §3 P13 (D168).
   const reps = await db
-    .select({ id: users.id })
+    .select({ id: users.id, role: users.role })
     .from(users)
-    .where(sql`${users.role} = 'rep' and ${users.active} = true`);
+    .where(sql`${users.role} in ('rep', 'marketing') and ${users.active} = true`);
+  const marketing = reps.find((person) => person.role === "marketing") ?? null;
   const [desk] = await db
     .select({ id: users.id })
     .from(users)
@@ -188,12 +204,24 @@ async function main(): Promise<void> {
   console.log(`seed-volume — ${COMPANY_COUNT} companies`);
   const companyIds: { id: string; repId: string }[] = [];
   for (let i = 0; i < COMPANY_COUNT; i += 1) {
-    const created = back(between(20, 420));
+    /*
+     * Marketing's leads (SPEC §3 P13): one company in eight was brought in by
+     * marketing and given to somebody — itself included — and most of those
+     * were acknowledged within a couple of days. One in ten of them is recent
+     * and still unanswered, so the rep's band, the manager's leads view and
+     * his stuck list have rows on both sides of the two-working-day line at
+     * volume. Filed onto marketing's own floor it is answered at birth.
+     */
+    const lead = marketing !== null && i % LEAD_EVERY === 0;
+    const waiting = lead && (i / LEAD_EVERY) % UNANSWERED_EVERY === 0;
+    const created = waiting ? back(between(0, 6)) : back(between(20, 420));
     // A fifth of the floor is due or overdue, a quarter is ahead of itself, and
     // the rest has no next step at all — the shape the five days found (D63).
+    // A lead nobody has picked up has no next step yet.
     const step = rand();
-    const followUp =
-      step < 0.12
+    const followUp = waiting
+      ? null
+      : step < 0.12
         ? back(between(1, 30))
         : step < 0.2
           ? today
@@ -202,6 +230,7 @@ async function main(): Promise<void> {
             : null;
 
     const repId = pick(reps).id;
+    const answered = lead && (!waiting || repId === marketing?.id);
     const [row] = await db
       .insert(companies)
       .values({
@@ -212,6 +241,11 @@ async function main(): Promise<void> {
         categoryId: pick(categoryIds),
         leadSourceId: pick(sourceIds),
         nextFollowUp: followUp,
+        leadFromId: lead ? marketing?.id : null,
+        leadQuery: lead ? pick(QUERIES) : null,
+        leadAcknowledgedAt: answered
+          ? at(repId === marketing?.id ? created : capped(addDays(created, between(0, 2))))
+          : null,
         createdAt: at(created),
         updatedAt: at(created),
       })
@@ -228,8 +262,9 @@ async function main(): Promise<void> {
       isMain: true,
     });
 
-    // Two thirds have been spoken to; the rest are the never-contacted band.
-    if (rand() < 0.66) {
+    // Two thirds have been spoken to; the rest are the never-contacted band. A
+    // lead still waiting on somebody has been spoken to by nobody.
+    if (rand() < 0.66 && !waiting) {
       const when = back(between(1, 120));
       const [logged] = await db
         .insert(activities)
