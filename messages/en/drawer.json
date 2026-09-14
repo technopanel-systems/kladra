@@ -1,5 +1,5 @@
 {
-  "aboutCompany": "Activity, contacts and projects for this company.",
+  "aboutCompany": "Reports, contacts and projects for this company.",
   "loadingCompany": "Opening the company",
   "companyGone": "This company is no longer available.",
   "companyActions": "Company actions",
@@ -37,7 +37,7 @@
   "quoted": "Quoted",
   "handOver": "Hand over",
   "handOverTitle": "Hand {name} to somebody else?",
-  "handOverWarning": "Their projects, open quotations and dispatches move with the company. What was already approved stays counted in the month of the person who raised it, and the reports stay as they were written.",
+  "handOverWarning": "Their projects, open quotations and dispatches move with the company. What was already approved stays counted in the month of the person it was requested for, and the reports stay as they were written.",
   "handOverTo": "Who takes it",
   "handOverPick": "Choose a person",
   "handOverSearch": "Search people",
@@ -52,7 +52,7 @@
     "companyNobody": "Nobody else is on this company.",
     "companyWho": "Who else sees it",
     "projectTitle": "The other people on this project",
-    "projectMeans": "Everyone here works the project: writes reports on it, and raises quotations and dispatches on it. What they raise stays theirs, and the project itself belongs to whoever added it.",
+    "projectMeans": "Everyone here works the project: writes reports on it, and requests quotations and dispatches on it. What they request stays theirs, and the project itself belongs to whoever added it.",
     "projectNobody": "Nobody else is on this project.",
     "projectWho": "Who else works it",
     "nobodyLeft": "No one else can be added.",
@@ -72,7 +72,7 @@
   },
   "unfile": "Unfile",
   "unfileTitle": "Unfile this report?",
-  "unfileWarning": "It leaves this customer’s history and every count that included it. Nothing is deleted, and there is no putting it back — write the report where it belongs.",
+  "unfileWarning": "It leaves this company’s history and every count that included it. Nothing is deleted, and there is no putting it back — write the report where it belongs.",
   "unfiled": "Report unfiled.",
   "correct": "Correct"
 }

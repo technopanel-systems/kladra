@@ -67,7 +67,8 @@ export async function RelianceCard({ from }: { from: Day }) {
                   {t("common.percent", { percent: row.percent })}
                 </span>
               ) : null}
-              {row.word === "habit" ? (
+              {/* Nothing in the window already says it: no word beside it. */}
+              {row.total === 0 ? null : row.word === "habit" ? (
                 <StateBadge tone="wait" className="shrink-0">
                   {t(`team.reliance.word.${row.word}`)}
                 </StateBadge>

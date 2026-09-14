@@ -272,7 +272,9 @@ test("there is a month before this one, and it says which way it went", async ({
     // Against the month before it, never against this one — this one is a few
     // days old and would read as a collapse on the third of every month.
     const card = page.locator("[data-month]").first().locator("xpath=ancestor::section[1]");
-    await expect(card).toContainText(/%/);
+    // In Arabic it is said in words: a sign beside an isolated figure settles
+    // against the paragraph and reads «%17» (words.md).
+    await expect(card).toContainText(/%|بالمئة/);
   });
 });
 

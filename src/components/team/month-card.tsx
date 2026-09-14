@@ -104,7 +104,7 @@ export async function MonthCard({
         <div className="flex flex-col gap-1.5">
           <div
             role="img"
-            aria-label={t("team.ofTarget", { percent })}
+            aria-label={t.markup("team.ofTarget", { percent, num: (chunks) => chunks })}
             className="relative h-2 w-full overflow-hidden rounded-full bg-surface-2"
           >
             <div
@@ -128,7 +128,14 @@ export async function MonthCard({
             )}
           </div>
           <span className="text-xs text-muted-foreground">
-            {t("team.ofTarget", { percent })}
+            {t.rich("team.ofTarget", {
+              percent,
+              num: (chunks) => (
+                <span dir="ltr" className="num">
+                  {chunks}
+                </span>
+              ),
+            })}
           </span>
         </div>
       )}

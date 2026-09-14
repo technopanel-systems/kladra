@@ -479,9 +479,9 @@ test("credit is refused until the rep says what was agreed, and the desk reads i
     // And the second question is asked in the words of the answer it belongs
     // to: an amount for a transfer, a moment for cash.
     await pressChip(form, t("dispatches.payment.bankTransfer"));
-    await expect(form.getByText(t("dispatches.payment.amount"))).toBeVisible();
+    await expect(form.getByText(t("dispatches.payment.amount"), { exact: true })).toBeVisible();
     await pressChip(form, t("dispatches.payment.cash"));
-    await expect(form.getByText(t("dispatches.payment.when"))).toBeVisible();
+    await expect(form.getByText(t("dispatches.payment.when"), { exact: true })).toBeVisible();
 
     await pressChip(form, t("dispatches.payment.credit"));
     await expect(form.getByRole("radio", { name: t("dispatches.payment.onDelivery") })).toHaveCount(0);

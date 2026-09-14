@@ -1,6 +1,6 @@
 {
   "title": "Leads",
-  "new": "New lead",
+  "new": "Add lead",
   "newHint": "Filing a lead gives it to someone. It is waiting for them the moment you save.",
   "listLabel": "Leads brought in",
   "empty": "Nothing has come in yet.",
@@ -23,7 +23,7 @@
   "contacted": "Contacted",
   "quoted": "Quoted",
   "won": "Won",
-  "acknowledgedToast": "Acknowledged. The customer is yours.",
+  "acknowledgedToast": "Acknowledged. The company is yours.",
   "bandTitle": "Leads given to you",
   "fromPersonShort": "From {name}",
   "origin": "A lead from {name} · {source}",

@@ -343,7 +343,16 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           <TabsTrigger value="activity">{t("drawer.activity")}</TabsTrigger>
           <TabsTrigger value="contacts">{t("common.contacts")}</TabsTrigger>
           <TabsTrigger value="projects">{t("common.projects")}</TabsTrigger>
-          <TabsTrigger value="quotations">{t("common.quotations")}</TabsTrigger>
+          {/* The short word below `sm`: four tabs share a phone's width, and
+              «عروض الأسعار» was cut at its edge. The name stays the full one. */}
+          <TabsTrigger value="quotations" aria-label={t("common.quotations")}>
+            <span aria-hidden="true" className="sm:hidden">
+              {t("shell.shortQuotations")}
+            </span>
+            <span aria-hidden="true" className="hidden sm:inline">
+              {t("common.quotations")}
+            </span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="activity">

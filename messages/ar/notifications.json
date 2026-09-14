@@ -10,14 +10,14 @@
   "dispatchRefused": "رُفض التوريد {label} لدى {company}.",
   "companyHandedOver": "سلّمك {rep} {label}.",
   "leadAssigned": "أسند إليك {rep} عميلًا محتملًا: {company}.",
-  "leadAcknowledged": "أكّد {rep} استلام العميل المحتمل {company}.",
+  "leadAcknowledged": "استلم {rep} العميل المحتمل {company}.",
   "unreadMark": "غير مقروء",
   "companyShared": "شاركك {rep} {label}.",
   "projectShared": "أضافك {rep} إلى {label}.",
   "companyFolded": "دُمج {company} في سجل {rep} للعميل نفسه.",
   "companyAbsorbed": "دمج {rep} سجلًا ثانيًا لـ{company} في سجلك.",
   "raisedFor": {
-    "quotationIssued": "صدر عرض السعر {label} لدى {company} لصالحك بواسطة {rep} برقم سماك {smacNumber}.",
-    "dispatchRequested": "قُدِّم طلب التوريد {label} لدى {company} لصالحك بواسطة {rep}."
+    "quotationIssued": "أُصدِر عرض السعر {label} لدى {company} لصالحك بواسطة {rep}، برقم سماك {smacNumber}.",
+    "dispatchRequested": "طُلب التوريد {label} لدى {company} لصالحك بواسطة {rep}."
   }
 }

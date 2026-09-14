@@ -1,5 +1,5 @@
 {
-  "onLeave": "You are on leave today. Anything due is on the manager’s screen until you are back on {day}.",
+  "onLeave": "You are on leave today. Anything due is on the sales manager’s screen until you are back on {day}.",
   "title": "Your day",
   "myMonth": "This month",
   "waitingOnYou": "Waiting on you",
@@ -11,7 +11,7 @@
   "withCustomer": "With the customer",
   "sentBackCount": "{count, plural, =0 {none sent back} other {# sent back}}",
   "refusedCount": "{count, plural, =0 {none refused} other {# refused}}",
-  "withCustomerCount": "{count, plural, =0 {none with a customer} other {# with the customer}}",
+  "withCustomerCount": "{count, plural, =0 {none with the customer} other {# with the customer}}",
   "whoToCall": "Calls due",
   "nobodyToCall": "Nobody is owed a call today."
 }

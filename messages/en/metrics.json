@@ -1,10 +1,10 @@
 {
   "rest": "{count, plural, one {One more} other {# more}}",
-  "title": "Break a figure down",
+  "title": "Metrics by breakdown",
   "question": "{measure} · {by} · {period}",
   "window": "{from} to {to}",
   "compareWindow": "{from} to {to}, against {lastFrom} to {lastTo}",
-  "measureLabel": "Figure",
+  "measureLabel": "Metric",
   "byLabel": "By",
   "compare": "This month against last",
   "lastMonth": "Last month",
@@ -15,7 +15,7 @@
     "accepted": "Quotations accepted",
     "approved": "Dispatches approved",
     "reports": "Reports written",
-    "leads": "Leads passed"
+    "leads": "Leads given"
   },
   "by": {
     "rep": "Person",
@@ -27,11 +27,11 @@
   "means": {
     "metres": "Approved m², for whoever each dispatch counts for — the figure every month card reads.",
     "raised": "Quotations requested in the window, each revision its own. A quotation two people share counts once for each of them, and once in the total.",
-    "issued": "Of the quotations requested in the window, the ones that reached a customer. A quotation two people share counts once for each of them, and once in the total.",
+    "issued": "Of the quotations requested in the window, the ones that were issued. A quotation two people share counts once for each of them, and once in the total.",
     "accepted": "Of the quotations requested in the window, the ones the customer accepted. A quotation two people share counts once for each of them, and once in the total.",
     "approved": "Dispatches approved in the window. A dispatch two people share counts once for each of them, and once in the total.",
     "reports": "Reports written in the window, by the person who wrote them.",
-    "leads": "Leads filed in the window, by the person who passed them, and how many of them are won."
+    "leads": "Leads given in the window, by the person who gave them, and how many of them are won."
   },
   "total": "Total",
   "noCity": "No city",

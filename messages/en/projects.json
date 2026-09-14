@@ -49,7 +49,7 @@
     "quiet": "Company stopped replying",
     "other": "Other"
   },
-  "emptyActivity": "Nothing logged on this project yet — log the first visit or call.",
+  "emptyActivity": "No reports on this project yet — add the first visit or call.",
   "editProject": "Edit project",
   "editProjectHint": "The project’s own details, as they stand now."
 }
