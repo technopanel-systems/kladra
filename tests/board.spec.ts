@@ -309,6 +309,8 @@ test("on a phone the board is one column at a time, under a picker that names ev
     await regions.first().getByRole("link").first().click();
     const drawer = page.getByRole("dialog");
     await expect(drawer).toBeVisible(COLD);
+    // The record itself, not its loading frame: Escape is pressed on what was opened.
+    await expect(drawer.locator("[aria-busy='true']")).toHaveCount(0, COLD);
     await expect(page).toHaveURL(/[?&]stage=issued\b/);
     await page.keyboard.press("Escape");
     await expect(drawer).toBeHidden(COLD);

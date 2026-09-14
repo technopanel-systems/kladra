@@ -13,6 +13,7 @@ import {
 import { useArrived, useLanded } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
@@ -65,20 +66,6 @@ type RowProps = {
   current: boolean;
 };
 
-/**
- * A name that has to fit its row, cut at its OWN end (S12.1, `Clip` in the
- * palette). A truncating box around a `<bdi>` keeps the page's direction, so an
- * Arabic company on an English row lost its first word; this box takes the
- * name's direction and is never wider than its text, so only the ellipsis moves.
- */
-function Name({ text }: { text: string }) {
-  return (
-    <span dir="auto" className="min-w-0 truncate">
-      {text}
-    </span>
-  );
-}
-
 /** The follow-up's word and tone, read once for the row. */
 function useFollowUp(row: CompanyRow) {
   const t = useTranslations();
@@ -114,7 +101,7 @@ function DeskRow({ row, href, current }: RowProps) {
         >
           <span className="flex min-w-0 items-center gap-2">
             <Avatar id={row.id} name={row.name} kind="company" size="sm" ring={followUp.ring} />
-            <Name text={row.name} />
+            <Clip text={row.name} />
             <LinkPending />
           </span>
         </Link>
@@ -127,7 +114,7 @@ function DeskRow({ row, href, current }: RowProps) {
           // items-start: a stretched column would make the name's own box as
           // wide as the cell, and an Arabic name would sit at its far side.
           <span className="flex min-w-0 flex-col items-start gap-1">
-            <Name text={row.contactName ?? "—"} />
+            <Clip text={row.contactName ?? "—"} />
             {row.contactPhone ? (
               <PhoneLinks name={row.contactName ?? row.name} phone={row.contactPhone} />
             ) : null}
@@ -183,7 +170,7 @@ function CardRow({ row, href, current }: RowProps) {
             aria-label={t("companies.openCompany", { name: row.name })}
             className="flex min-w-0 items-center gap-2 font-medium"
           >
-            <Name text={row.name} />
+            <Clip text={row.name} />
             <LinkPending />
           </Link>
           <span className={cn("shrink-0 text-xs font-medium", followUp.textClass)}>
@@ -212,7 +199,7 @@ function CardRow({ row, href, current }: RowProps) {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           {row.contactName || row.contactPhone ? (
             <>
-              <Name text={row.contactName ?? "—"} />
+              <Clip text={row.contactName ?? "—"} />
               {row.contactPhone ? (
                 <PhoneLinks name={row.contactName ?? row.name} phone={row.contactPhone} />
               ) : null}

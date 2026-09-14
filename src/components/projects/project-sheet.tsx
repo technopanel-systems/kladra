@@ -452,8 +452,11 @@ export function ProjectSheet({
  */
 export function ProjectSheetSkeleton() {
   const t = useTranslations();
+  const close = useCloseDrawer();
   return (
-    <Sheet open>
+  // Closable while it loads: a drawer somebody opened by mistake is closed at
+  // once, not after the record arrives and opens anyway.
+    <Sheet open onOpenChange={(next) => (next ? undefined : close())}>
       <RecordPanel showCloseButton={false} aria-busy="true">
         <SheetHeader className="gap-4 border-b border-line p-4">
           <SheetTitle className="sr-only">{t("common.loading")}</SheetTitle>

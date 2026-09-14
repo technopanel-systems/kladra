@@ -182,10 +182,18 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
       .first()
       .locator('a:not([href^="tel:"]):not([href^="https://wa.me/"])')
       .filter({ visible: true })
-      .allInnerTexts();
+      // What the link SAYS, without the company's avatar: its initial is drawn
+      // beside the name for the eye and hidden from a reader (P13-G6 S12.2).
+      .evaluateAll((links) =>
+        links.map((link) => {
+          const copy = link.cloneNode(true) as HTMLElement;
+          copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+          return copy.textContent ?? "";
+        }),
+      );
     const names = new Set(mine.map((row) => row.name));
     for (const text of shown) {
-      const first = text.split("\n")[0].trim();
+      const first = text.trim();
       expect(names.has(first), `${JSON.stringify(first)} is not one of Faisal's companies`).toBe(
         true,
       );

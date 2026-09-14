@@ -261,7 +261,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
 
       <Suspense
         key={openDispatch ?? "closed-dispatch"}
-        fallback={openDispatch ? <DispatchSheetSkeleton /> : null}
+        fallback={openDispatch ? <DispatchSheetSkeleton param="dispatch" /> : null}
       >
         <DispatchDrawer dispatchId={openDispatch} param="dispatch" />
       </Suspense>

@@ -1071,10 +1071,13 @@ function Reason({ title, text }: { title: string; text: string }) {
 }
 
 /** Never a blank panel while the query runs (DESIGN §2). */
-export function DispatchSheetSkeleton() {
+export function DispatchSheetSkeleton({ param = "open" }: { param?: string }) {
   const t = useTranslations();
+  const close = useCloseDrawer(param);
   return (
-    <Sheet open>
+  // Closable while it loads: a drawer somebody opened by mistake is closed at
+  // once, not after the record arrives and opens anyway.
+    <Sheet open onOpenChange={(next) => (next ? undefined : close())}>
       <RecordPanel className="scroller">
         <div aria-busy="true" className="flex flex-col gap-4 p-4">
           <SheetTitle className="sr-only">{t("dispatches.loading")}</SheetTitle>

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { AcknowledgeLeadButton } from "@/components/leads/acknowledge-lead-button";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Prose } from "@/components/ui-ext/prose";
@@ -92,10 +93,7 @@ async function Band() {
                     aria-label={t("companies.openCompany", { name: lead.name })}
                     className="flex min-w-0 items-center gap-2 font-medium"
                   >
-                    {/* Cut at the name's own end, not the page's (S12.1). */}
-                    <span dir="auto" className="min-w-0 truncate">
-                      {lead.name}
-                    </span>
+                    <Clip text={lead.name} />
                     <LinkPending />
                   </Link>
                   <StateBadge tone="wait">{t("leads.notAcknowledged")}</StateBadge>
