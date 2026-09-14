@@ -20,20 +20,19 @@ import { test, expect } from "./helpers/i18n";
 const COLD = { timeout: 30_000 };
 
 /**
- * A card in one of the admin's lists, by the text in it — and, where two rows
- * could share a name (a contact's card also names its company), by the kind
- * BADGE on the row.
+ * A row in the archive, by the text in it — and, where two rows could share a
+ * name (a contact's row also names its company), inside the GROUP for its kind.
  *
- * The badge is matched on its exact text, not with `hasText`, which is a
- * substring: in Arabic the word for company is «شركة» and most Saudi companies
- * are called «شركة …», so "a listitem naming this company and containing the
- * word company" is every contact card on the customer as well as the company's
- * own. It resolved to whichever the archive list drew first, which is a test
- * that passes on the order of a list nobody promised an order for.
+ * The archive is grouped by kind since P13-S7, a region headed by the plural
+ * («Companies», «Contacts»), so the kind is where the row is rather than a word
+ * on it. Matching the word on the row with `hasText` was the trap before: in
+ * Arabic «شركة» is in most Saudi company names, so "a row naming this company
+ * and containing the word company" was every contact at the customer as well
+ * as the company's own.
  */
-function card(page: Page, name: string, kind?: string): Locator {
-  const byName = page.getByRole("listitem").filter({ hasText: name });
-  return (kind ? byName.filter({ has: page.getByText(kind, { exact: true }) }) : byName).first();
+function card(page: Page, name: string, group?: string): Locator {
+  const scope = group ? page.getByRole("region", { name: new RegExp(`^${group}`) }) : page;
+  return scope.getByRole("listitem").filter({ hasText: name }).first();
 }
 
 async function openAdmin(page: Page, locale: string, path: string, heading: string) {
@@ -167,8 +166,8 @@ test("a child under an archived company gets a sentence, not a button; the compa
     await login(page, locale, "jerom");
     await openAdmin(page, locale, "archive", t("admin.archive"));
 
-    const companyCard = card(page, target.companyName, t("admin.kind.company"));
-    const contactCard = card(page, target.contactName, t("admin.kind.contact"));
+    const companyCard = card(page, target.companyName, t("common.companies"));
+    const contactCard = card(page, target.contactName, t("common.contacts"));
 
     await test.step("the company's card shows the reason; the contact's shows the sentence, not a button", async () => {
       await expect(companyCard).toBeVisible(COLD);
@@ -183,11 +182,8 @@ test("a child under an archived company gets a sentence, not a button; the compa
     });
 
     await test.step("restoring the company does not drag the contact back with it", async () => {
+      // One press: restoring takes nothing away, so it asks nothing (P13-S7).
       await companyCard.getByRole("button", { name: t("admin.restore") }).click();
-      await page
-        .getByRole("dialog", { name: t("admin.restoreTitle", { name: target.companyName }) })
-        .getByRole("button", { name: t("admin.restore") })
-        .click();
       await expect(
         page.getByText(t("admin.restored", { name: target.companyName })),
       ).toBeVisible(COLD);
@@ -212,7 +208,7 @@ test("a child under an archived company gets a sentence, not a button; the compa
 
     await test.step("after a reload the contact has its own button back, and its own restore", async () => {
       await reload(page);
-      const contactCardAfter = card(page, target.contactName, t("admin.kind.contact"));
+      const contactCardAfter = card(page, target.contactName, t("common.contacts"));
       const restoreButton = contactCardAfter.getByRole("button", { name: t("admin.restore") });
       await expect(
         restoreButton,
@@ -220,10 +216,6 @@ test("a child under an archived company gets a sentence, not a button; the compa
       ).toBeVisible(COLD);
 
       await restoreButton.click();
-      await page
-        .getByRole("dialog", { name: t("admin.restoreTitle", { name: target.contactName }) })
-        .getByRole("button", { name: t("admin.restore") })
-        .click();
       await expect(
         page.getByText(t("admin.restored", { name: target.contactName })),
       ).toBeVisible(COLD);

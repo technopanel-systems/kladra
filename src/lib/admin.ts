@@ -337,10 +337,25 @@ export type ArchivedRow = {
   id: string;
   kind: ArchiveKind;
   name: string;
-  /** The company it belongs to; the same name again for a company. */
+  /** The company it is on; for a company, itself. */
+  companyId: string;
   companyName: string;
+  /** Whose it was: the company's rep, or the contact's or the project's own (D147). */
   repName: string;
+  /** A contact's position as typed, and its number as stored (E.164); null for the rest. */
+  position: string | null;
+  phone: string | null;
+  /** A project's own estimate; null for the rest. */
+  expectedSqm: string | null;
   archivedOn: Day;
+  /**
+   * Who took it off the floor, from the audit line the archive wrote (D87) — or,
+   * for a record folded into another, the manager who ruled the pair one
+   * customer (P12-8). Null where no line says: a contact archived by a fold, or a
+   * row older than its audit trail.
+   */
+  archivedById: string | null;
+  archivedByName: string | null;
   /** Why, in the archiver's words — a company carries one (D87); the rest none. */
   reason: string | null;
   /** Its company is archived too, so it cannot come back before the company does (D92). */
@@ -354,71 +369,149 @@ export type ArchivedRow = {
    * floor beside the customer it IS would be the duplicate all over again.
    */
   mergedIntoName: string | null;
+  /** How many archived things of this kind match, counted before the cap (D80). */
+  inKind: number;
 };
 
+/** `%` and `_` are ILIKE wildcards; somebody typing them means the characters. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => "\\" + match);
+}
+
 /**
- * Everything that has been taken off the floor, newest first (D24, S16).
+ * Everything taken off the floor, newest first (D24, S16) — the archive's one
+ * read, built for the job the screen is for (P13-S7): somebody archived the
+ * wrong thing, and the admin has to find it, be sure it is the one, and put it
+ * back.
  *
- * Archiving is not deleting: the row stays, its history stays, and it comes
- * back from here. This screen is the "admin restores" half of that promise —
- * without it, archive IS delete with extra steps.
+ * So it is searched by name — the thing's own or its company's, because "the
+ * contact at Anmaa" is how the request arrives — and it answers the three things
+ * he checks before pressing Restore: what it was and on which company, who took
+ * it off and when, and why. The who is the audit line the archive wrote (D87);
+ * the company's reason is its own column, which lives exactly as long as the
+ * archive does.
+ *
+ * Narrowed and counted in SQL, before the cap: the counts over each group are a
+ * window over every match, so "Contacts 3" is three even when two hundred rows
+ * of companies came first (rules/data.md, D80). Plain SQL because every table
+ * here is aliased by hand, and a Drizzle column in a template with no join
+ * renders bare (rules/data.md).
  */
-export async function listArchived(): Promise<ArchivedRow[]> {
-  const locale = await getLocale();
+export async function listArchived(input: {
+  q?: string;
+  locale: string;
+  limit: number;
+}): Promise<ArchivedRow[]> {
+  const { locale } = input;
+  const term = (input.q ?? "").trim();
+  const anywhere = `%${escapeLike(term)}%`;
+  const matches = term
+    ? sql`where (archived.name ilike ${anywhere} or archived.company_name ilike ${anywhere})`
+    : sql``;
+
   const result = await db.execute<{
     id: string;
     kind: ArchiveKind;
     name: string;
+    company_id: string;
     company_name: string;
     rep_name: string;
+    position: string | null;
+    phone: string | null;
+    expected_sqm: string | null;
     archived_on: string;
+    archived_by_id: string | null;
+    archived_by_name: string | null;
     reason: string | null;
     company_archived: boolean;
     merged_into_name: string | null;
+    in_kind: number;
   }>(sql`
-    select companies.id::text as id, 'company' as kind, companies.name as name,
-           companies.name as company_name, ${personNameOf("u", locale)} as rep_name,
-           to_char((companies.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
-           companies.archive_reason as reason,
-           false as company_archived,
-           (select m.name from companies m where m.id = companies.merged_into_id) as merged_into_name
-      from companies
-      join users u on u.id = companies.rep_id
-     where companies.archived_at is not null
-    union all
-    select contacts.id::text as id, 'contact' as kind, contacts.name as name,
-           c.name as company_name, ${personNameOf("u", locale)} as rep_name,
-           to_char((contacts.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
-           null::text as reason,
-           (c.archived_at is not null) as company_archived,
-           null::text as merged_into_name
-      from contacts
-      join companies c on c.id = contacts.company_id
-      join users u on u.id = c.rep_id
-     where contacts.archived_at is not null
-    union all
-    select projects.id::text as id, 'project' as kind, projects.name as name,
-           c.name as company_name, ${personNameOf("u", locale)} as rep_name,
-           to_char((projects.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
-           null::text as reason,
-           (c.archived_at is not null) as company_archived,
-           null::text as merged_into_name
-      from projects
-      join companies c on c.id = projects.company_id
-      join users u on u.id = c.rep_id
-     where projects.archived_at is not null
-     order by archived_on desc
+    select archived.*,
+           who.id::text as archived_by_id,
+           ${personNameOf("who", locale)} as archived_by_name,
+           to_char((archived.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
+           (count(*) over (partition by archived.kind))::int as in_kind
+      from (
+        select c.id::text as id, 'company' as kind, c.name as name,
+               c.id::text as company_id, c.name as company_name,
+               ${personNameOf("owner", locale)} as rep_name,
+               null::text as position, null::text as phone, null::text as expected_sqm,
+               c.archived_at,
+               coalesce(
+                 (select a.user_id from audit_log a
+                   where a.record_type = 'company' and a.record_id = c.id::text
+                     and a.action = 'company.archive'
+                   order by a.at desc limit 1),
+                 (select f.ruled_by from duplicate_flags f
+                   where c.merged_into_id is not null
+                     and f.survivor_id = c.merged_into_id
+                     and c.id in (f.company_id, f.other_id)
+                   order by f.ruled_at desc nulls last limit 1)
+               ) as archived_by,
+               c.archive_reason as reason,
+               false as company_archived,
+               (select m.name from companies m where m.id = c.merged_into_id) as merged_into_name
+          from companies c
+          join users owner on owner.id = c.rep_id
+         where c.archived_at is not null
+        union all
+        select ct.id::text, 'contact', ct.name,
+               cc.id::text, cc.name,
+               ${personNameOf("owner", locale)},
+               ct.position, ct.phone_normalized, null::text,
+               ct.archived_at,
+               (select a.user_id from audit_log a
+                 where a.record_type = 'contact' and a.record_id = ct.id::text
+                   and a.action = 'contact.archive'
+                 order by a.at desc limit 1),
+               null::text,
+               (cc.archived_at is not null),
+               null::text
+          from contacts ct
+          join companies cc on cc.id = ct.company_id
+          join users owner on owner.id = ct.rep_id
+         where ct.archived_at is not null
+        union all
+        select pj.id::text, 'project', pj.name,
+               pc.id::text, pc.name,
+               ${personNameOf("owner", locale)},
+               null::text, null::text, pj.expected_sqm::text,
+               pj.archived_at,
+               (select a.user_id from audit_log a
+                 where a.record_type = 'project' and a.record_id = pj.id::text
+                   and a.action = 'project.archive'
+                 order by a.at desc limit 1),
+               null::text,
+               (pc.archived_at is not null),
+               null::text
+          from projects pj
+          join companies pc on pc.id = pj.company_id
+          join users owner on owner.id = pj.rep_id
+         where pj.archived_at is not null
+      ) archived
+      left join users who on who.id = archived.archived_by
+      ${matches}
+     order by archived.archived_at desc, archived.name
+     limit ${input.limit}::int
   `);
 
   return result.rows.map((row) => ({
     id: row.id,
     kind: row.kind,
     name: row.name,
+    companyId: row.company_id,
     companyName: row.company_name,
     repName: row.rep_name,
+    position: row.position,
+    phone: row.phone,
+    expectedSqm: row.expected_sqm,
     archivedOn: row.archived_on,
+    archivedById: row.archived_by_id,
+    archivedByName: row.archived_by_id ? row.archived_by_name : null,
     reason: row.reason,
     companyArchived: row.company_archived,
     mergedIntoName: row.merged_into_name,
+    inKind: Number(row.in_kind ?? 0),
   }));
 }

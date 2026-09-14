@@ -325,8 +325,8 @@ export function QuotationsTable({
               ))}
             </div>
 
-            <div className="card-face hidden md:block">
-              <Table>
+            <div className="card-face hidden overflow-clip md:block">
+              <Table label={t("common.quotations")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="p-3">{t("common.quotation")}</TableHead>

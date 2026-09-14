@@ -47,6 +47,7 @@ import {
   followUpStateSql,
   goneQuietCompanySql,
   neverContactedCompanySql,
+  waitingLeadSql,
 } from "@/lib/followups";
 import { personName, personNameOf } from "@/lib/people";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
@@ -300,10 +301,15 @@ function narrowTo(input: ListCompaniesInput): (SQL | undefined)[] {
   const term = (input.q ?? "").trim();
   const effective = effectiveFollowUpSql();
 
+  const mine = ownedBy(user);
   const conditions: (SQL | undefined)[] = [
     isNull(companies.archivedAt),
-    ownedBy(user),
+    mine,
     input.repId ? eq(companies.repId, input.repId) : undefined,
+    // One floor is read — his own, or the manager's drill-down into it — so a
+    // lead nobody has acknowledged is not one of its companies yet: it waits
+    // in his band and on the manager's leads view (`waitingLeadSql`, D185).
+    mine !== undefined || input.repId ? sql`not ${waitingLeadSql()}` : undefined,
   ];
 
   if (term) {

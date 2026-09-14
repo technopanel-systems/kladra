@@ -12,9 +12,9 @@
  * Approval is the only event that counts (S41). Not the request, not the
  * number, not the day the truck left: the rep's month moves when she presses
  * Approve, and if something goes wrong afterwards a new dispatch is raised
- * rather than this one edited. That is also the moment the project is won
- * (S21), which nothing here writes down — `projectIsWonSql` asks the question
- * instead of storing an answer that could go stale.
+ * rather than this one edited. It is also what moves a job along the projects
+ * board (D170), which nothing here writes down — `src/lib/project-stage.ts`
+ * asks the question instead of storing an answer that could go stale.
  *
  * Since P13 a dispatch is a LOAD rather than a selection of quotation lines
  * (SPEC §3): it opens prefilled with the quotation's lines and services, all

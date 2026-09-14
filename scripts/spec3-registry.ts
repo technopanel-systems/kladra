@@ -397,15 +397,24 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "is the first and default view",
-    owed: "P13-S7",
+    tests: [
+      "companies, quotations and dispatches each open on All, with All the first chip",
+      "a fresh visit after choosing a status still opens on All",
+    ],
   },
   {
     says: "Its columns come from the project's real life",
-    owed: "P13-S7",
+    tests: [
+      "the projects board puts every project in the column its own papers decide, and a card opens its drawer",
+      "lost beats every other fact, and every stage is reachable",
+    ],
   },
   {
     says: "horizontal scrollbar is visible without scrolling down",
-    owed: "P13-S7",
+    tests: [
+      "a board's scrollbar is on screen before any vertical scroll, and scrolling it moves the board",
+      "a table wider than its card has its scrollbar on screen, and it stops under the top bar as the list scrolls",
+    ],
   },
   {
     says: "for the item table plus the services section",

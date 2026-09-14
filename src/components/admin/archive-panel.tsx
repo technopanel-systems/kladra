@@ -1,129 +1,222 @@
 "use client";
 
-import { useCallback } from "react";
+import { useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { restoreAction } from "@/actions/admin";
-import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
-import { DayText } from "@/components/ui-ext/day-text";
+import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { Avatar } from "@/components/ui-ext/avatar";
+import { Empty } from "@/components/ui-ext/empty";
+import { Sqm } from "@/components/ui-ext/figures";
+import { LinkPending } from "@/components/ui-ext/link-pending";
+import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import { Prose } from "@/components/ui-ext/prose";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "@/i18n/navigation";
-import type { ArchivedRow } from "@/lib/admin";
-import type { ActionResult } from "@/lib/types";
+import { Link, useRouter } from "@/i18n/navigation";
+import type { ArchiveKind, ArchivedRow } from "@/lib/admin";
+import { formatDay } from "@/lib/dates";
+import { storedE164 } from "@/lib/phone";
 
 /**
- * Everything taken off the floor, and the way back (SPEC S16, D24).
+ * Everything taken off the floor, and the way back (SPEC S16, D24, P13-S7).
  *
  * This screen is what makes "archive, never delete" true. Without it archiving
  * IS deleting with extra steps, which is the promise D24 makes to a rep who
- * presses Archive on the wrong row.
+ * presses Archive on the wrong row — and that rep's mistake is what the admin
+ * opens it for. So each row answers what he checks before putting a thing back:
+ * what it was and on which company (the company's avatar leads every row, a
+ * contact's and a project's included), who took it off the floor and when, and
+ * the reason where one was given. Then one press.
+ *
+ * One press and not a confirmation, because restoring takes nothing away: the
+ * thing goes back where it was with its history, and a restore nobody wanted is
+ * archived again. The confirmation was a second question about the one act on
+ * this screen that cannot hurt anybody.
  *
  * A contact or a project comes back onto its company, and only if the company
  * is on the floor: restored under an archived company it would sit on a row
- * that appears on no list, which is the same disappearance by another route.
- * It used to drag the company back with it instead — a company archived on
- * purpose was on the floor again because of a stray contact (D92). Such a row
- * shows the sentence and no button: no work a screen offers that the action
- * would refuse (DESIGN §5).
+ * that appears on no list, which is the same disappearance by another route
+ * (D92). Such a row, and a record folded into another (P12-8), shows the
+ * sentence and no button: no work a screen offers that the action would refuse
+ * (DESIGN §5).
  */
-export function ArchivePanel({ rows }: { rows: ArchivedRow[] }) {
+
+/** The group headings, in the reader's plural — literal, so both locales are held to each. */
+const GROUP_KEYS: Record<ArchiveKind, string> = {
+  company: "common.companies",
+  contact: "common.contacts",
+  project: "common.projects",
+};
+
+/**
+ * The groups in `ARCHIVE_KINDS` order, read off the map above: that list lives
+ * beside the database in `@/lib/admin`, and a value from there would carry the
+ * database into the browser (rules/data.md). The Record keeps this exhaustive.
+ */
+const KINDS = Object.keys(GROUP_KEYS) as ArchiveKind[];
+
+/** Where the thing it was can be read: a company's drawer, or the project's own. */
+function recordHref(row: ArchivedRow): string {
+  return row.kind === "project" ? `/projects?open=${row.id}` : `/companies?open=${row.companyId}`;
+}
+
+export function ArchivePanel({ rows, q }: { rows: ArchivedRow[]; q: string }) {
   const t = useTranslations();
-  const locale = useLocale();
-  const router = useRouter();
-  const refresh = useCallback(() => router.refresh(), [router]);
 
   if (rows.length === 0) {
-    return (
-      <p className="card-face px-6 py-10 text-center text-sm text-muted-foreground">
-        {t("admin.emptyArchive")}
-      </p>
+    return q ? (
+      <Empty
+        action={
+          <Button asChild variant="outline">
+            <Link href="/admin/archive">{t("common.clear")}</Link>
+          </Button>
+        }
+      >
+        {t("admin.archiveEmptySearch", { q })}
+      </Empty>
+    ) : (
+      <Empty>{t("admin.emptyArchive")}</Empty>
     );
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {rows.map((row) => (
-        <li
-          key={`${row.kind}-${row.id}`}
-          className="card-face flex flex-wrap items-start gap-3 p-3"
-        >
-          <Badge variant="secondary">{t(`admin.kind.${row.kind}`)}</Badge>
-          {/* Wide enough to read a name and its reason on a phone: below ten
-              rems the date and the button wrap under it rather than squeeze it. */}
-          <div className="flex min-w-[10rem] flex-1 flex-col">
-            <span className="font-medium">{row.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {/* Two names either side of a neutral separator: <bdi> keeps each
-                  one's direction to itself, so an English project under an
-                  Arabic company does not drag the · across (D46). */}
-              {row.kind === "company" ? (
-                row.repName
-              ) : (
-                <>
-                  <bdi>{row.companyName}</bdi> · <bdi>{row.repName}</bdi>
-                </>
-              )}
-            </span>
-            {/* Why, in the words of whoever did it (S16, D87) — typed text, so
-                it takes its own direction; under the name, where it is read. */}
-            {row.reason ? (
-              <Prose line text={row.reason} className="text-xs text-muted-foreground" />
-            ) : null}
-            {/* A tombstone says what it became instead of why it left: nobody
-                gave this customer up, and there is no reason column that could
-                say so in the reader's language anyway (P12-8, D13). */}
-            {row.mergedIntoName ? (
-              <span className="text-xs text-muted-foreground">
-                {t("duplicates.foldedIntoShort", { name: row.mergedIntoName })}
+    <div className="flex flex-col gap-6">
+      {KINDS.map((kind) => {
+        const group = rows.filter((row) => row.kind === kind);
+        if (group.length === 0) return null;
+        const headingId = `archive-${kind}`;
+        return (
+          <section key={kind} aria-labelledby={headingId} data-kind={kind} className="flex flex-col gap-2">
+            <h2 id={headingId} className="flex items-center gap-2 text-sm font-medium">
+              {t(GROUP_KEYS[kind])}
+              <span dir="ltr" className="num rounded-full bg-surface-2 px-1.5 text-xs text-muted-foreground">
+                {group[0].inKind}
               </span>
-            ) : null}
-          </div>
-          <span className="flex flex-col text-xs text-muted-foreground">
-            {t("admin.archivedOn")}
-            <DayText day={row.archivedOn} locale={locale} />
-          </span>
-          {/* No work a screen offers that the action would refuse (DESIGN §5):
-              a tombstone cannot be restored, so it carries the sentence and no
-              button, exactly as a child under an archived company does. */}
-          {row.mergedIntoName ? (
-            <span className="text-xs text-muted-foreground">{t("admin.restoreMerged")}</span>
-          ) : row.companyArchived ? (
-            <span className="text-xs text-muted-foreground">
-              {row.kind === "contact"
-                ? t("admin.restoreCompanyFirstContact")
-                : t("admin.restoreCompanyFirstProject")}
-            </span>
-          ) : (
-            <ConfirmDialog
-              trigger={
-                <Button variant="outline" size="sm">
-                  {t("admin.restore")}
-                </Button>
-              }
-              title={t("admin.restoreTitle", { name: row.name })}
-              description={
-                row.kind === "company"
-                  ? t("admin.restoreHint")
-                  : row.kind === "contact"
-                    ? t("admin.restoreHintContact")
-                    : t("admin.restoreHintProject")
-              }
-              confirmLabel={t("admin.restore")}
-              successMessage={t("admin.restored", { name: row.name })}
-              onConfirm={() => send({ kind: row.kind, id: row.id })}
-              onDone={refresh}
-            />
-          )}
-        </li>
-      ))}
-    </ul>
+            </h2>
+            <ul className="card-face flex flex-col">
+              {group.map((row) => (
+                <ArchivedItem key={`${row.kind}-${row.id}`} row={row} />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
-function send(values: Record<string, string>): Promise<ActionResult<unknown>> {
-  const form = new FormData();
-  for (const [key, value] of Object.entries(values)) form.set(key, value);
-  return restoreAction(null, form);
+function ArchivedItem({ row }: { row: ArchivedRow }) {
+  const t = useTranslations();
+  const locale = useLocale();
+  const day = formatDay(row.archivedOn, locale);
+  const kindWord = t(`admin.kind.${row.kind}`);
+
+  return (
+    <li className="hover-tint flex flex-wrap items-start gap-3 border-b border-line px-4 py-3 last:border-0">
+      <Avatar id={row.companyId} name={row.companyName} kind="company" />
+
+      {/* Wide enough to read a name and its reason on a phone: below twelve
+          rems the Restore button wraps under it rather than squeezing it. */}
+      <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
+        <Link href={recordHref(row)} className="flex items-center gap-1.5 font-medium hover:underline">
+          <span className="min-w-0 truncate">
+            <bdi>{row.name}</bdi>
+          </span>
+          <LinkPending />
+        </Link>
+
+        {/* What it was, and where: a company is on somebody's floor, a contact
+            or a project is at a company. */}
+        <span className="text-xs text-muted-foreground">
+          {row.kind === "company"
+            ? t("admin.archivedFloor", { kind: kindWord, name: row.repName })
+            : t("admin.archivedAt", { kind: kindWord, company: row.companyName })}
+        </span>
+
+        {row.kind === "contact" && (row.position || row.phone) ? (
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            {row.position ? (
+              <span>
+                <bdi>{row.position}</bdi>
+              </span>
+            ) : null}
+            {row.phone ? <PhoneLinks name={row.name} phone={storedE164(row.phone)} /> : null}
+          </span>
+        ) : null}
+
+        {row.kind === "project" && row.expectedSqm ? (
+          <Sqm value={row.expectedSqm} className="text-xs text-muted-foreground" />
+        ) : null}
+
+        {/* Why, in the words of whoever did it (S16, D87) — typed text, so it
+            takes its own direction; under the name, where it is read. */}
+        {row.reason ? (
+          <Prose line text={row.reason} className="text-xs text-foreground" />
+        ) : null}
+
+        {/* A tombstone says what it became instead of why it left (P12-8, D13). */}
+        {row.mergedIntoName ? (
+          <span className="text-xs text-muted-foreground">
+            {t("duplicates.foldedIntoShort", { name: row.mergedIntoName })}
+          </span>
+        ) : null}
+
+        <span data-slot="archived-by" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {row.archivedById && row.archivedByName ? (
+            <>
+              <Avatar id={row.archivedById} name={row.archivedByName} size="sm" />
+              {t("admin.archivedBy", { name: row.archivedByName, date: day })}
+            </>
+          ) : (
+            t("admin.archivedOnDay", { date: day })
+          )}
+        </span>
+      </div>
+
+      <div className="flex shrink-0 items-center">
+        {row.mergedIntoName ? (
+          <span className="max-w-[16rem] text-xs text-muted-foreground">{t("admin.restoreMerged")}</span>
+        ) : row.companyArchived ? (
+          <span className="max-w-[16rem] text-xs text-muted-foreground">
+            {row.kind === "contact"
+              ? t("admin.restoreCompanyFirstContact")
+              : t("admin.restoreCompanyFirstProject")}
+          </span>
+        ) : (
+          <RestoreButton row={row} />
+        )}
+      </div>
+    </li>
+  );
 }
 
+function RestoreButton({ row }: { row: ArchivedRow }) {
+  const t = useTranslations();
+  const router = useRouter();
+  const guarded = useWireGuard();
+  const [pending, startTransition] = useTransition();
+
+  function restore() {
+    // A second press while the first is on its way would only be refused as
+    // "not there any more"; it is simply not sent.
+    if (pending) return;
+    startTransition(async () => {
+      const form = new FormData();
+      form.set("kind", row.kind);
+      form.set("id", row.id);
+      const outcome = await guarded(restoreAction)(null, form);
+      if (!outcome.ok) {
+        toast.error(outcome.error);
+        return;
+      }
+      toast.success(t("admin.restored", { name: row.name }));
+      router.refresh();
+    });
+  }
+
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={restore} aria-busy={pending}>
+      {t("admin.restore")}
+    </Button>
+  );
+}

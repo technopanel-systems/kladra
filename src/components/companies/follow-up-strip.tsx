@@ -103,6 +103,26 @@ export async function FollowUpStrip({
         {t("common.followUps")}
       </span>
 
+      {/* All first (SPEC §3 P13): the choice the list opens on, where the eye
+          starts, and never behind the pills it undoes. Only where there is a
+          pill to undo — a strip that says nothing is due has nothing to
+          choose between. */}
+      {nothingDue && filter === null ? null : (
+        <Link
+          href={href(null)}
+          aria-current={filter === null ? "true" : undefined}
+          className={cn(
+            PILL,
+            filter === null
+              ? "border-line-strong bg-surface-2 text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {t("common.all")}
+          <LinkPending />
+        </Link>
+      )}
+
       {nothingDue ? (
         <span className="text-xs text-faint">{t("companies.nothingDue")}</span>
       ) : (
@@ -119,21 +139,6 @@ export async function FollowUpStrip({
         </>
       )}
 
-      {nothingDue && filter === null ? null : (
-        <Link
-          href={href(null)}
-          aria-current={filter === null ? "true" : undefined}
-          className={cn(
-            PILL,
-            filter === null
-              ? "border-line-strong bg-surface-2 text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {t("common.all")}
-          <LinkPending />
-        </Link>
-      )}
     </div>
   );
 }

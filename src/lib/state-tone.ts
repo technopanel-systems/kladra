@@ -21,6 +21,7 @@
  */
 import type { DispatchStatus } from "@/lib/dispatches";
 import type { FollowUpState } from "@/lib/followups";
+import type { ProjectStage } from "@/lib/project-stage";
 import type { QuotationStatus } from "@/lib/quotations";
 
 export type StateTone = "wait" | "open" | "good" | "bad" | "over";
@@ -108,6 +109,29 @@ export function dispatchTone(status: DispatchStatus): StateTone {
        * kind of event, and this is that sentence in the palette.
        */
       return "wait";
+  }
+}
+
+/**
+ * A project's stage on the board (D170, `src/lib/project-stage.ts`).
+ *
+ * Open is amber because the rep owes the customer a price — nothing has gone
+ * out, and the next move is his. Quoted and Dispatching are both blue for the
+ * reason Issued is: the work is out in the world, with the customer or on the
+ * road, and nobody owes an answer today. Won is green and Lost is red, as an
+ * accepted and a rejected paper are. The word is always on the column heading.
+ */
+export function projectStageTone(stage: ProjectStage): StateTone {
+  switch (stage) {
+    case "open":
+      return "wait";
+    case "quoted":
+    case "dispatching":
+      return "open";
+    case "won":
+      return "good";
+    case "lost":
+      return "bad";
   }
 }
 

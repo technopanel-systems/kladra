@@ -189,8 +189,8 @@ export function CompaniesTable({
 
   return (
     <>
-      <div className="card-face hidden md:block">
-        <Table>
+      <div className="card-face hidden overflow-clip md:block">
+        <Table label={t("companies.listLabel")}>
           <TableCaption className="sr-only">{t("companies.listLabel")}</TableCaption>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

@@ -154,13 +154,13 @@ const RULES: Rule[] = [
   },
   {
     // 13. A wide surface shows its scrollbar where the reader is (P13-S1, 13.3).
-    //     The kit's Table keeps its own scroller until each list moves into
-    //     StickyScroll in G6; the page tabs are a row of links, not a surface.
+    //     The kit's Table renders inside StickyScroll since P13-S7, so every list
+    //     table has the proxy bar and no scroller of its own; the page tabs are a
+    //     row of links, not a surface.
     name: "a wide surface scrolls in StickyScroll",
     pattern: /overflow-x-auto/,
     allow: [
       "src/components/ui-ext/sticky-scroll.tsx",
-      "src/components/ui/table.tsx",
       "src/components/ui-ext/page-tabs.tsx",
     ],
     fix: "wrap it in <StickyScroll label={…}> from @/components/ui-ext/sticky-scroll",

@@ -22,7 +22,7 @@ import { personName } from "@/lib/people";
 import { cities, companies, projects, users } from "@/db/schema";
 import { type ActivityRow, listActivitiesForProject } from "@/lib/activities";
 import { NotAllowed } from "@/lib/authz";
-import type { Day } from "@/lib/dates";
+import { riyadhDay, type Day } from "@/lib/dates";
 import {
   type FollowUpFilter,
   type FollowUpState,
@@ -31,6 +31,7 @@ import {
   neverContactedProjectSql,
 } from "@/lib/followups";
 import { LIST_LIMIT } from "@/lib/list-size";
+import { projectStageSql, stageSinceSql, type ProjectStage } from "@/lib/project-stage";
 import type { SessionUser } from "@/lib/types";
 import {
   maySeeCompany,
@@ -49,6 +50,8 @@ export type ProjectRow = {
   lostAt: Date | null;
   lostReason: string | null;
   followUpState: FollowUpState | null;
+  /** Where it stands in its own life, read off its papers (D170). */
+  stage: ProjectStage;
 };
 
 export type ListProjectsInput = {
@@ -101,6 +104,7 @@ export async function listProjects(input: ListProjectsInput): Promise<ProjectRow
       lostAt: projects.lostAt,
       lostReason: projects.lostReason,
       followUpState: followUpStateSql(pending),
+      stage: projectStageSql(),
     })
     .from(projects)
     .innerJoin(companies, eq(companies.id, projects.companyId))
@@ -123,6 +127,7 @@ export async function listProjects(input: ListProjectsInput): Promise<ProjectRow
     lostAt: row.lostAt ?? null,
     lostReason: row.lostReason ?? null,
     followUpState: row.followUpState ?? null,
+    stage: row.stage,
   }));
 }
 
@@ -187,6 +192,81 @@ export async function projectFollowUpCounts(
   return { overdue: Number(row?.overdue ?? 0), today: Number(row?.today ?? 0) };
 }
 
+// ---- the board (D170) --------------------------------------------------------
+
+export type ProjectCard = {
+  id: string;
+  name: string;
+  companyName: string;
+  expectedSqm: string | null;
+  stage: ProjectStage;
+  /** The Riyadh day it entered its stage (`stageSinceSql`). */
+  since: Day | null;
+  /** Whose job it is (D147), in the reader's script (D68). */
+  repId: string;
+  repName: string;
+  /** How many projects are in this card's column altogether, counted before the cap. */
+  inStage: number;
+};
+
+export type ProjectBoardInput = {
+  user: SessionUser;
+  q?: string;
+  locale: string;
+  limit?: number;
+};
+
+/**
+ * Every project this reader sees, each in the one column its papers put it in
+ * (SPEC §3 P13, D170).
+ *
+ * The stage and the day it began are resolved here, in the query, and so is
+ * each column's count — a window over the whole narrowed set, evaluated before
+ * the limit — so a column heading never counts only the cards that survived the
+ * cap (rules/data.md, D80). Newest into its column first: what just moved is
+ * what the board is read for, and what has sat longest is at the bottom of its
+ * column where its date says so.
+ *
+ * The narrowing is the list's own (`narrowTo`), without the follow-up filter:
+ * a board of stages is every project, the way the quotations board is every
+ * status.
+ */
+export async function listProjectBoard(input: ProjectBoardInput): Promise<ProjectCard[]> {
+  const stage = projectStageSql();
+  const since = stageSinceSql(stage);
+
+  const rows = await db
+    .select({
+      id: projects.id,
+      name: projects.name,
+      companyName: companies.name,
+      expectedSqm: projects.expectedSqm,
+      stage,
+      since: riyadhDay(since),
+      repId: projects.repId,
+      repName: personName(input.locale),
+      inStage: sql<number>`(count(*) over (partition by ${stage}))::int`,
+    })
+    .from(projects)
+    .innerJoin(companies, eq(companies.id, projects.companyId))
+    .innerJoin(users, eq(users.id, projects.repId))
+    .where(and(...narrowTo({ user: input.user, q: input.q, locale: input.locale })))
+    .orderBy(sql`${since} desc nulls last`, asc(projects.name))
+    .limit(input.limit ?? LIST_LIMIT);
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    companyName: row.companyName,
+    expectedSqm: row.expectedSqm ?? null,
+    stage: row.stage,
+    since: (row.since as Day | null) ?? null,
+    repId: row.repId,
+    repName: row.repName,
+    inStage: Number(row.inStage ?? 0),
+  }));
+}
+
 export type ProjectDetail = ProjectRow & {
   notes: string | null;
   archivedAt: Date | null;
@@ -232,6 +312,7 @@ export async function getProject(
       lostAt: projects.lostAt,
       lostReason: projects.lostReason,
       followUpState: followUpStateSql(pendingFollowUpSql()),
+      stage: projectStageSql(),
       notes: projects.notes,
       archivedAt: projects.archivedAt,
       createdAt: projects.createdAt,
@@ -267,6 +348,7 @@ export async function getProject(
     lostAt: row.lostAt ?? null,
     lostReason: row.lostReason ?? null,
     followUpState: row.followUpState ?? null,
+    stage: row.stage,
     notes: row.notes ?? null,
     archivedAt: row.archivedAt ?? null,
     createdAt: row.createdAt,

@@ -210,21 +210,6 @@ export function committedQtySql(quotationItemId: SQL): SQL<number> {
 }
 
 /**
- * True when a dispatch against this project has been approved (S21).
- *
- * Won is never typed by anybody; this is the whole of it. Named outright for
- * the reason above.
- */
-export function projectIsWonSql(projectId: SQL): SQL<boolean> {
-  return sql`exists (
-    select 1
-      from dispatches d
-     where d.project_id = ${projectId}
-       and d.status = 'approved'
-  )`;
-}
-
-/**
  * The shared column list, now a function of the reader's language: a person's
  * name is one of its columns and Arabic screens name people in Arabic (D68).
  * The same shape `shipmentName(locale)` already had beside it.

@@ -88,7 +88,7 @@ export async function UsePanel({ use }: { use: Use }) {
       </div>
 
       <div className="card-face hidden md:block">
-        <Table>
+        <Table label={t("admin.use")}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="p-3">{t("admin.person")}</TableHead>

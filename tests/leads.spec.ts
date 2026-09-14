@@ -241,6 +241,12 @@ test("marketing files a lead with a phone and the customer's query as its one no
     await expect(first.getByText(askedFor)).toBeVisible();
     await expect(first.getByText(t("leads.fromPersonShort", { name: finder }))).toBeVisible();
 
+    // Apart: the band's is the only door to it on the page, because the list
+    // below does not carry a lead until he has it (D185).
+    await expect(
+      page.getByRole("link", { name: t("companies.openCompany", { name }) }).filter({ visible: true }),
+    ).toHaveCount(1);
+
     await first.getByRole("button", { name: t("leads.acknowledge") }).click();
     await expect(page.getByText(t("leads.acknowledgedToast"))).toBeVisible(COLD);
   });

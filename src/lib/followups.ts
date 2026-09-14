@@ -154,6 +154,22 @@ export function goneQuietCompanySql(followUp: SQL): SQL {
 }
 
 /**
+ * A lead the person holding it has not yet said he has (SPEC §3 P13, D157).
+ *
+ * "The rep receives it apart from his own companies … highlighted until he
+ * acknowledges": until then it waits in the band above his list, and is not
+ * in the list, its strip or his day's bands — a customer shown twice on one
+ * page is two things to do where there is one. Wherever ONE floor is read it
+ * is left out: his own, and the manager's drill-down into it and the team row,
+ * which must agree with his strip (D14) — the manager has those leads on his
+ * leads view and his stuck list. The manager's list of every company keeps
+ * it, because nobody may lose a company to a default (§3 P13). D185.
+ */
+export function waitingLeadSql(): SQL {
+  return sql`(companies.lead_from_id is not null and companies.lead_acknowledged_at is null)`;
+}
+
+/**
  * "Never contacted": no log entry at all, and added long enough ago that the
  * silence is a habit rather than a fresh row (S51).
  *
@@ -211,7 +227,8 @@ export type FollowUpCounts = {
  * archived company or project never appears anywhere.
  */
 export async function followUpCounts(user: SessionUser): Promise<FollowUpCounts> {
-  return countsWhere(seesCompany(user) ?? sql`true`);
+  const mine = seesCompany(user);
+  return countsWhere(mine === undefined ? sql`true` : sql`${mine} and not ${waitingLeadSql()}`);
 }
 
 /**
@@ -220,7 +237,7 @@ export async function followUpCounts(user: SessionUser): Promise<FollowUpCounts>
  * disagree; only the WHERE differs.
  */
 export async function followUpCountsForRep(repId: string): Promise<FollowUpCounts> {
-  return countsWhere(sql`companies.rep_id = ${repId}::uuid`);
+  return countsWhere(sql`companies.rep_id = ${repId}::uuid and not ${waitingLeadSql()}`);
 }
 
 async function countsWhere(mine: SQL): Promise<FollowUpCounts> {

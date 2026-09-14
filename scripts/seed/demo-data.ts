@@ -160,6 +160,14 @@ export type ContactSeed = {
   position: string;
   email?: string;
   notes?: string;
+  /**
+   * Taken off the company this many days ago, by the rep who holds the company
+   * — somebody who left the customer (P13-S7). The archive screen is read for
+   * who took a thing off the floor and when, and a contact is the kind nobody
+   * had seeded, so the group and its Restore button were a branch nobody had
+   * seen (rules/data.md).
+   */
+  archived?: { daysAgo: number };
 };
 
 export type CompanySeed = {
@@ -303,6 +311,9 @@ export const COMPANIES: CompanySeed[] = [
     contacts: [
       { name: "عبدالله الشهري", phone: "0555018834", position: "Project manager" },
       { name: "تركي الدوسري", phone: "0501187740", position: "Accountant" },
+      // Moved to another contractor; Faisal archived him last week. On a live
+      // company, so the archive offers him back in one press (D92).
+      { name: "خالد المالكي", phone: "0540073316", position: "Site engineer", archived: { daysAgo: 6 } },
     ],
   },
   {
@@ -758,9 +769,11 @@ export const COMPANIES: CompanySeed[] = [
   },
 
   // ---- Off the floor (1) -------------------------------------------------------
-  // Saad's, archived six weeks ago with the reason he gave. It is on the admin's
-  // archive screen and nowhere else; its contact stays as it was, the way the
-  // app leaves a company's people when the company goes (D87).
+  // Saad's, archived six weeks ago with the reason he gave — by Saad, because
+  // only the rep who holds a company archives it (`archiveCompanyAction`), and
+  // the archive screen names who did. It is on that screen and nowhere else;
+  // its contact stays as it was, the way the app leaves a company's people when
+  // the company goes (D87).
   {
     key: "x1",
     name: "مؤسسة الرواد للألمنيوم",
@@ -806,7 +819,8 @@ export type ProjectSeed = {
    * Delivered, or given up on. Kladra has no "finished" state for a project and
    * §3 refuses to add one, so archived is what a rep does with a job nobody
    * works any more (S16) — and it keeps a delivered job out of the pipeline,
-   * which counts what is still to come.
+   * which counts what is still to come. Archived by the project's own rep, with
+   * the audit line the action writes, so the archive says who (P13-S7).
    */
   archivedMonthsBack?: number;
   /**
@@ -817,6 +831,23 @@ export type ProjectSeed = {
   daysAgo?: number;
 };
 
+/*
+ * Every column of the projects board has a job in it (D170, rules/data.md), and
+ * none of them was put there: the stage is read off the papers below, so these
+ * are the rows that land each one.
+ *
+ * - Open — p12 and pd2 (nothing asked for), p19 (its only request sent back),
+ *   p9 (its only price rejected), h5 (a request sent back months ago).
+ * - Quoted — p3 (q7 issued today), p4 (q3 issued, its revision on the desk),
+ *   p7 (q11 accepted, its first load still waiting), h4 (issued, never answered).
+ * - Dispatching — p1, p2, p8 and p18: a load approved, sheets still to go.
+ * - Won — p5, p6 and p10 (their months went out whole), p11 (its accepted paper
+ *   went out whole, a second price since issued and not taken).
+ * - Lost — p13 to p17.
+ *
+ * `tests/project-board.spec.ts` reads every one of these back off the screen
+ * against the stage it works out for itself.
+ */
 export const PROJECTS: ProjectSeed[] = [
   { key: "p1", company: "f1", name: "واجهة مبنى الإدارة", expectedSqm: "480.00" },
   {

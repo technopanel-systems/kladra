@@ -101,7 +101,7 @@ export function UsersPanel({ users, meId }: { users: AdminUser[]; meId: string }
       </div>
 
       <div className="card-face hidden md:block">
-        <Table>
+        <Table label={t("common.users")}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="p-3">{t("common.name")}</TableHead>

@@ -12,10 +12,16 @@ import type { ReactNode } from "react";
  *
  * The rule, in one place: what changes the SHAPE of a list is not one of the
  * filters that change what is IN it, and below the phone line it takes its own
- * row (D128). The divider between them is a mark on a line, so it is drawn only
- * where there is a line to mark and only when there is something to separate;
- * the one before «All» stays wherever the chips go, because "no filter" is a
- * peer of the filters and not another group.
+ * row (D128). The divider in front of the chips is a mark on a line, so it is
+ * drawn only where there is a line to mark and only when there is something to
+ * separate.
+ *
+ * «All» is the FIRST chip (SPEC §3 P13): "Nobody should be able to forget a
+ * company because the default hid it." It sat last, after a divider, as "the
+ * absence of a filter" — which put the one choice that shows everything at the
+ * far end of the row from where the eye starts, in both directions. First, it
+ * is the choice a screen opens on and the one a reader finds without looking;
+ * the divider after it keeps it a peer of the filters rather than one of them.
  */
 export function FilterRow({
   lead,
@@ -26,7 +32,7 @@ export function FilterRow({
   lead?: ReactNode;
   /** The chips. Null on a view they do not belong to, which hides their group. */
   children?: ReactNode;
-  /** "All", which is the absence of a filter: last, and after a divider. */
+  /** "All", which is the absence of a filter: first, and before a divider. */
   all?: ReactNode;
 }) {
   return (
@@ -45,13 +51,13 @@ export function FilterRow({
 
       {children ? (
         <div className="flex flex-wrap items-center gap-2">
-          {children}
           {all ? (
             <>
-              <span aria-hidden="true" className="h-4 w-px bg-line" />
               {all}
+              <span aria-hidden="true" className="h-4 w-px bg-line" />
             </>
           ) : null}
+          {children}
         </div>
       ) : null}
     </div>

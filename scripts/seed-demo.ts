@@ -554,15 +554,16 @@ async function seedCompanies(
       companyIds.set(c.key, row.id);
     }
 
-    // An archive is a write somebody made (D104): the admin's row in the trail,
-    // as the archive screen and the company's history read it.
+    // An archive is a write somebody made (D104): the row in the trail the
+    // archive screen reads "who" from. The rep's, because only the rep who holds
+    // a company may archive it (`archiveCompanyAction`, P13-S7).
     const archived = COMPANIES.filter((c) => c.archived);
     if (archived.length > 0) {
       await tx.insert(auditLog).values(
         archived.map((c) => {
           const when = instant(addDays(TODAY, -c.archived!.daysAgo), 16, 20);
           return {
-            userId: must(userIds, "jerom", "user"),
+            userId: must(userIds, c.rep, "user"),
             action: "company.archive",
             recordType: "company" as const,
             recordId: companyIds.get(c.key)!,
@@ -588,6 +589,8 @@ async function seedCompanies(
         notes: p.notes ?? null,
         // The first contact added is the main contact (SPEC D18).
         isMain: i === 0,
+        // Somebody who left the customer (P13-S7): off the company, never main.
+        archivedAt: p.archived ? instant(addDays(TODAY, -p.archived.daysAgo), 15, 10) : null,
       })),
     );
     const insertedContacts = await tx
@@ -604,6 +607,29 @@ async function seedCompanies(
           );
           if (!row) throw new Error(`contact ${p.name} did not come back from the insert`);
           return row.id;
+        }),
+      );
+    }
+
+    // And the line `archiveContactAction` writes for each one taken off, by the
+    // rep who holds the company, so the archive can say who and when.
+    const gone = COMPANIES.flatMap((c) =>
+      c.contacts.flatMap((p, i) => (p.archived ? [{ c, p, id: contactIds.get(c.key)![i] }] : [])),
+    );
+    if (gone.length > 0) {
+      await tx.insert(auditLog).values(
+        gone.map(({ c, p, id }) => {
+          const when = instant(addDays(TODAY, -p.archived!.daysAgo), 15, 10);
+          return {
+            userId: must(userIds, c.rep, "user"),
+            action: "contact.archive",
+            recordType: "contact" as const,
+            recordId: id,
+            details: { companyId: companyIds.get(c.key)! },
+            at: when,
+            createdAt: when,
+            updatedAt: when,
+          };
         }),
       );
     }
@@ -759,6 +785,28 @@ async function seedProjects(
       const row = rows.find((r) => r.name === p.name);
       if (!row) throw new Error(`project ${p.name} did not come back from the insert`);
       projectIds.set(p.key, row.id);
+    }
+
+    // The line `archiveProjectAction` writes, by the project's own rep: the
+    // archive screen names who took a job off the floor, and a seeded archive
+    // with no line behind it is one nobody made (D104, P13-S7).
+    const archived = PROJECTS.filter((p) => p.archivedMonthsBack);
+    if (archived.length > 0) {
+      await tx.insert(auditLog).values(
+        archived.map((p) => {
+          const when = instant(monthDay(p.archivedMonthsBack!, 27), 16, 0);
+          return {
+            userId: must(userIds, companyRep(p.company), "user"),
+            action: "project.archive",
+            recordType: "project" as const,
+            recordId: must(projectIds, p.key, "project"),
+            details: { companyId: must(companyIds, p.company, "company") },
+            at: when,
+            createdAt: when,
+            updatedAt: when,
+          };
+        }),
+      );
     }
   });
   return projectIds;

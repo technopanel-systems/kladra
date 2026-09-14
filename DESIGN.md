@@ -1067,13 +1067,16 @@ carrying meaning on their own.
 view only when three things are true at once: its records have **states** worth making columns
 of; the daily question about them is **where work has piled up**, not what comes next; and it is
 opened often enough for the choice to be worth remembering. Quotations and dispatches pass all
-three, so they get a **board of states** beside their list, every column carrying its count and
-every card its age — without those two a board is decoration. Everything else fails one of the
-three, and which one is worth writing down, because each has been asked for at least once:
+three, and since §3 P13 so do projects, so they get a **board of states** beside their list, every
+column carrying its count and every card its age — without those two a board is decoration.
+Everything else fails one of the three, and which one is worth writing down, because each has been
+asked for at least once:
 
 - **Queue** — one state by definition. A board of it is one column, and one column is a list.
-- **Projects** — no states to make columns of: a project is live until it is lost, and "lost" is
-  a filter, not a lane.
+- **Projects** — ruled out here in P12-14 ("live until it is lost"), and overruled by the founder
+  in P13: a job does have a life, read off its own papers — Open · Quoted · Dispatching · Won ·
+  Lost (D170) — and nobody types it. A card moves because a price went out, a load was approved
+  or the rep marked it lost, never because it was dragged.
 - **Companies** — read for "who do I call today", which is a date order, not a state. A card grid
   shows a third as many rows and hides the column being scanned. This is how FACET grew.
 - **Day and Team** — one column on purpose, in the order the work is done; a dashboard answers
@@ -1095,7 +1098,7 @@ one.
 | Screen | Who opens it | The question | The view, and why |
 |---|---|---|---|
 | Companies | rep; manager drilling in | Who do I call today, and where is this company standing? | A follow-up strip of doors over a list sorted by the date the call is owed, a drawer for the record. A grid shows a third as many rows and hides the date column. |
-| Projects | rep | What is live, what is it worth, what is due on it? | The same strip and list, projects as rows, a drawer. One view: a project has no states to make columns of. |
+| Projects | rep | What is live, what is it worth, what is due on it? — and: where has each job got to? | The same strip and list, projects as rows, a drawer; and the board of the job's life (D170), each column counted, each card carrying the day it entered the column. |
 | Quotations | rep, coordinator, manager | Where is each paper, mine oldest first? — and: what is stuck, and for how long? | Two: the list for the first question, the board of states for the second, with a count on every column and the arrival day on every card. |
 | Dispatches | the same | The same two questions, one step later | The same two views, for the same reasons; the choice is remembered per screen, not shared. |
 | Queue | coordinator | What is on my desk, oldest first, and how late is it? | Two lists under one strip — requests and dispatches — each row wearing its wait in working days. No board: a desk has one state, and one column is a list. |

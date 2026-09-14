@@ -327,8 +327,8 @@ export function DispatchesTable({
               ))}
             </div>
 
-            <div className="card-face hidden md:block">
-              <Table>
+            <div className="card-face hidden overflow-clip md:block">
+              <Table label={t("common.dispatches")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="p-3">{t("common.dispatch")}</TableHead>

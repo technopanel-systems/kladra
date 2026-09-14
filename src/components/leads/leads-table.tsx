@@ -153,7 +153,7 @@ export function LeadsTable({
   return (
     <>
       <div className="card-face hidden md:block">
-        <Table>
+        <Table label={t("leads.title")}>
           <TableCaption className="sr-only">{t("leads.listLabel")}</TableCaption>
           <TableHeader>
             <TableRow className="hover:bg-transparent">

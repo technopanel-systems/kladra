@@ -1,21 +1,35 @@
 "use client"
 
 import * as React from "react"
+import { useTranslations } from "next-intl"
 
+import { StickyScroll } from "@/components/ui-ext/sticky-scroll"
 import { cn } from "@/lib/utils"
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+/**
+ * The kit's table, inside `StickyScroll` (P13-S7, DESIGN §1b): a table wider
+ * than its card scrolls sideways with its scrollbar at the top, where the reader
+ * is, instead of under the fortieth row. It kept its own `overflow-x-auto` until
+ * this slice, and that is the scroller one-look rule 13 now refuses anywhere but
+ * `StickyScroll` itself.
+ *
+ * `label` names the scroller for a reader moving by landmarks — the list it is,
+ * from the caller; a table nobody named is called a table.
+ */
+function Table({
+  className,
+  label,
+  ...props
+}: React.ComponentProps<"table"> & { label?: string }) {
+  const t = useTranslations("common")
   return (
-    <div
-      data-slot="table-container"
-      className="relative w-full overflow-x-auto"
-    >
+    <StickyScroll label={label ?? t("table")} className="w-full bg-inherit">
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}
         {...props}
       />
-    </div>
+    </StickyScroll>
   )
 }
 

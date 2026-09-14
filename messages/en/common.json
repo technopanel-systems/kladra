@@ -118,6 +118,7 @@
   "viewList": "List",
   "viewBoard": "Board",
   "boardEmpty": "Nothing here.",
+  "table": "Table",
   "goneQuiet": "Gone quiet",
   "quietMeans": "{days, plural, one {Contacted before, no next step, and no activity for # day} other {Contacted before, no next step, and no activity for # days}}",
   "andMore": "{count, plural, one {and # more} other {and # more}}",

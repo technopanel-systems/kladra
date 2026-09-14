@@ -105,9 +105,14 @@ below by number.
                   band above a rep's companies with Acknowledge / استلام; the manager's leads view filters by who and
                   by state and reassigns from the row, and a hand-over from the drawer of an unanswered lead is the
                   same move (D181); the stage in SQL before the cap (D182). The seed has a lead at every stage.
-            - [ ] G3 · S7 **Lists and boards** (13.3): "All" first and default on companies, quotations and dispatches;
+            - [x] G3 · S7 **Lists and boards** (13.3): "All" first and default on companies, quotations and dispatches;
                   the projects board, Open · Quoted · Dispatching · Won · Lost (D170); `StickyScroll` on every board
                   and wide table; the archive rebuilt from its question — who opens it and what they do there.
+                  **Done**: nothing remembered a narrowing filter, so All moved to the front of every chip row
+                  (D184); the projects board from `src/lib/project-stage.ts`, one rule and its SQL twin (D170); the
+                  kit's `Table` sits in `StickyScroll`, whose bar sticks under the top bar where the page scrolls
+                  it, and rule 13 allows no other scroller; the archive is a search with one-press Restore (D183).
+                  A lead nobody has acknowledged left the rep's list and strip (D185).
             - [x] G3 · S10 **Targets** (13.2): the current month only, editable where the admin sets it, history
                   read-only beneath. **Done**: no month to move to; the action refuses another month; earlier months
                   in a read-only table in `StickyScroll` (D180). Nothing else navigated months.
@@ -1131,3 +1136,4 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 217 A row found by the text "Q-1" is also the row for Q-11, the day the seed grows past ten. (P13-S10)
 - [x] 218 A worktree made for a builder can start at an old commit, not at the branch it was made from. (P13 Stage 2)
 - [x] 219 A seed that mixes a fixed day of the month with working days back is honest on some days of the month only. (P13-S5)
+- [x] 220 A sticky bar inside a card that hides its overflow sticks to the card, not to the page. (P13-S7)

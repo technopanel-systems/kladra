@@ -15,6 +15,7 @@ import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog } from "@/components/projects/mark-lost-dialog";
 import { lossReasonLabel } from "@/lib/loss-reason";
 import { Sqm } from "@/components/ui-ext/figures";
+import { Board, type BoardColumn } from "@/components/ui-ext/board";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { LinkPending } from "@/components/ui-ext/link-pending";
@@ -22,6 +23,7 @@ import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { NoteBlock } from "@/components/ui-ext/note-block";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { ViewSwitch } from "@/components/ui-ext/view-switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,9 +49,11 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { formatDay } from "@/lib/dates";
 import type { FollowUpFilter, FollowUpState } from "@/lib/followups";
-import type { ProjectRow } from "@/lib/projects";
+import type { ProjectCard as ProjectBoardCard, ProjectRow } from "@/lib/projects";
+import { PROJECT_STAGES, type ProjectStage } from "@/lib/project-stage";
 import type { ProjectStanding } from "@/lib/standing";
-import { TONE_TEXT } from "@/lib/state-tone";
+import { projectStageTone, TONE_TEXT } from "@/lib/state-tone";
+import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
 
 /**
@@ -74,14 +78,35 @@ const WAITING_TEXT: Record<FollowUpState, string> = {
   future: "text-faint",
 };
 
-function listHref(q: string, filter: FollowUpFilter | null, open?: string | null): string {
+function listHref(
+  q: string,
+  filter: FollowUpFilter | null,
+  open?: string | null,
+  view?: ListView,
+): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (filter) params.set("filter", filter);
   if (open) params.set("open", open);
+  // Written whenever a caller names one, "list" included: without it the
+  // remembered board would come straight back (the same rule as quotations).
+  if (view) params.set("view", view);
   const query = params.toString();
   return query ? `/projects?${query}` : "/projects";
 }
+
+/**
+ * The five words of a project's life (D170), literal so both locales are held
+ * to each. The same word on the board's column and in the list's status cell,
+ * so "Open" is one thing on one screen (rules/words.md).
+ */
+const STAGE_KEYS: Record<ProjectStage, string> = {
+  open: "projects.stageOpen",
+  quoted: "projects.stageQuoted",
+  dispatching: "projects.stageDispatching",
+  won: "projects.stageWon",
+  lost: "projects.stageLost",
+};
 
 /** A stored reason is one of the nine codes, or the rep's own words for "Other". */
 function useLossReasonLabel(): (stored: string | null) => string | null {
@@ -95,15 +120,19 @@ function FollowUp({ day, state }: { day: string | null; state: FollowUpState | n
   return <DayText day={day} locale={locale} className={WAITING_TEXT[state]} />;
 }
 
-/** A word, never a colour alone (DESIGN §1) — and the reason travels with it. */
-function StateCell({ lostAt, lostReason }: { lostAt: Date | null; lostReason: string | null }) {
+/**
+ * Where the job stands, in the board's word and tone (D170) — never a colour
+ * alone (DESIGN §1), and a lost one carries its reason with it.
+ */
+function StateCell({ stage, lostReason }: { stage: ProjectStage; lostReason: string | null }) {
   const t = useTranslations();
   const label = useLossReasonLabel();
-  if (!lostAt) return <span className="text-faint">{t("projects.open")}</span>;
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      <Badge variant="destructive">{t("projects.lost")}</Badge>
-      <span className="truncate text-xs text-muted-foreground">{label(lostReason)}</span>
+      <StateBadge tone={projectStageTone(stage)}>{t(STAGE_KEYS[stage])}</StateBadge>
+      {stage === "lost" ? (
+        <span className="truncate text-xs text-muted-foreground">{label(lostReason)}</span>
+      ) : null}
     </span>
   );
 }
@@ -143,7 +172,7 @@ function ProjectTableRow({
         <FollowUp day={row.nextFollowUp} state={row.followUpState} />
       </TableCell>
       <TableCell className="p-3">
-        <StateCell lostAt={row.lostAt} lostReason={row.lostReason} />
+        <StateCell stage={row.stage} lostReason={row.lostReason} />
       </TableCell>
     </TableRow>
   );
@@ -162,7 +191,7 @@ function ProjectCard({ row, href }: { row: ProjectRow; href: string }) {
           <span className="truncate">{row.name}</span>
           <LinkPending />
         </span>
-        <StateCell lostAt={row.lostAt} lostReason={row.lostReason} />
+        <StateCell stage={row.stage} lostReason={row.lostReason} />
       </div>
       <span className="text-xs text-muted-foreground">{row.companyName}</span>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs">
@@ -178,16 +207,24 @@ function ProjectCard({ row, href }: { row: ProjectRow; href: string }) {
 
 export function ProjectsTable({
   rows,
+  cards,
   counts,
   q,
   filter,
   openId,
+  view,
+  remembered,
 }: {
   rows: ProjectRow[];
+  /** The board's cards, each already in its stage — empty on the list. */
+  cards: ProjectBoardCard[];
   counts: FollowUpStripCounts;
   q: string;
   filter: FollowUpFilter | null;
   openId: string | null;
+  view: ListView;
+  /** What this person had remembered when the page was drawn (D164). */
+  remembered?: string;
 }) {
   const t = useTranslations();
   // The rows are on screen: whatever arrived while the refresh was in flight
@@ -205,45 +242,88 @@ export function ProjectsTable({
   // The box is `ListSearch` now; what is left here is the way OUT of a search
   // from the empty list, which is a navigation and not a second search box.
   function clearTerm() {
-    go(listHref("", filter));
+    go(view === "board" ? listHref("", null, null, "board") : listHref("", filter));
   }
 
   /** Clicking the chip you are already on takes the filter off again. */
   const chip = (value: FollowUpFilter) =>
     listHref(q, filter === value ? null : value);
 
+  const board = view === "board";
+
+  /**
+   * The five columns, in the order a job lives them. The stage was decided in
+   * the query, before the cap; this only puts each card under its word, and a
+   * column's count is the one the query counted (D80).
+   */
+  const columns: BoardColumn[] = PROJECT_STAGES.map((stage) => {
+    const inStage = cards.filter((card) => card.stage === stage);
+    return {
+      key: stage,
+      label: t(STAGE_KEYS[stage]),
+      tone: projectStageTone(stage),
+      total: inStage[0]?.inStage ?? 0,
+      cards: inStage.map((card) => ({
+        id: card.id,
+        href: listHref(q, null, card.id, "board"),
+        title: card.name,
+        subtitle: card.companyName,
+        sqm: card.expectedSqm,
+        day: card.since,
+        person: { id: card.repId, name: card.repName },
+        current: openId === card.id,
+      })),
+    };
+  });
+
   return (
     <div className="flex flex-col gap-4">
-      {/* What is late, what is due, then the list (SPEC D9). */}
+      {/* What is late, what is due, then the list (SPEC D9). On the board the
+          chips step aside: a board of stages is every project. */}
       <FilterRow
+        lead={
+          <ViewSwitch
+            screen="projects"
+            view={view}
+            remembered={remembered}
+            listHref={listHref(q, filter, null, "list")}
+            boardHref={listHref(q, null, null, "board")}
+          />
+        }
         all={
-          <FilterChip href={listHref(q, null)} active={filter === null}>
-            {t("common.all")}
-          </FilterChip>
+          board ? null : (
+            <FilterChip href={listHref(q, null)} active={filter === null}>
+              {t("common.all")}
+            </FilterChip>
+          )
         }
       >
-        <FilterChip href={chip("followups")} active={filter === "followups"}>
-          {t("common.followUps")}
-        </FilterChip>
-        <FilterChip
-          href={chip("overdue")}
-          active={filter === "overdue"}
-          tone={counts.overdue > 0 ? "bad" : undefined}
-        >
-          {t("projects.overdueChip", { count: counts.overdue })}
-        </FilterChip>
-        <FilterChip
-          href={chip("today")}
-          active={filter === "today"}
-          tone={counts.today > 0 ? "wait" : undefined}
-        >
-          {t("projects.todayChip", { count: counts.today })}
-        </FilterChip>
+        {board ? null : (
+          <>
+            <FilterChip href={chip("followups")} active={filter === "followups"}>
+              {t("common.followUps")}
+            </FilterChip>
+            <FilterChip
+              href={chip("overdue")}
+              active={filter === "overdue"}
+              tone={counts.overdue > 0 ? "bad" : undefined}
+            >
+              {t("projects.overdueChip", { count: counts.overdue })}
+            </FilterChip>
+            <FilterChip
+              href={chip("today")}
+              active={filter === "today"}
+              tone={counts.today > 0 ? "wait" : undefined}
+            >
+              {t("projects.todayChip", { count: counts.today })}
+            </FilterChip>
+          </>
+        )}
       </FilterRow>
 
       <ListSearch
         q={q}
-        keep={{ filter }}
+        keep={{ filter: board ? null : filter, view: board ? "board" : null }}
         label={t("projects.searchLabel")}
         placeholder={t("projects.searchPlaceholder")}
         clearLabel={t("common.clear")}
@@ -251,7 +331,14 @@ export function ProjectsTable({
       />
 
       <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
-        {rows.length === 0 ? (
+        {board ? (
+          cards.length === 0 ? (
+            // Before the board: five empty columns say nothing about why (P11G).
+            <EmptyProjects q={q} filter={null} onClear={clearTerm} />
+          ) : (
+            <Board columns={columns} />
+          )
+        ) : rows.length === 0 ? (
           <EmptyProjects q={q} filter={filter} onClear={clearTerm} />
         ) : (
           <>
@@ -262,8 +349,11 @@ export function ProjectsTable({
               ))}
             </div>
 
-            <div className="card-face hidden md:block">
-              <Table>
+            {/* Clipped, not hidden: a card that hides its overflow is what
+                `sticky` sticks to, so the table's scrollbar would ride the card
+                instead of stopping under the top bar (StickyScroll). */}
+            <div className="card-face hidden overflow-clip md:block">
+              <Table label={t("common.projects")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="p-3">{t("common.project")}</TableHead>

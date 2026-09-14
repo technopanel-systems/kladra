@@ -141,7 +141,7 @@ export async function TeamTable({ members }: { members: TeamMember[] }) {
       </div>
 
       <div className="card-face hidden md:block">
-        <Table>
+        <Table label={t("shell.team")}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="p-3">{t("team.member")}</TableHead>

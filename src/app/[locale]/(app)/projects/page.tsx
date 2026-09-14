@@ -10,8 +10,15 @@ import { requireUser } from "@/lib/authz";
 import { ownsCompanies } from "@/lib/floor";
 import { parseFollowUpFilter } from "@/lib/followups";
 import { companyOptions } from "@/lib/pickers";
-import { countProjects, listProjects, projectFollowUpCounts } from "@/lib/projects";
+import {
+  countProjects,
+  listProjectBoard,
+  listProjects,
+  projectFollowUpCounts,
+} from "@/lib/projects";
 import { LIST_LIMIT } from "@/lib/list-size";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
+import { viewFor } from "@/lib/view";
 
 /**
  * My projects, in the shape of the rep's home: the follow-up strip, a search
@@ -30,9 +37,15 @@ import { LIST_LIMIT } from "@/lib/list-size";
  * never a button whose dropdown would be empty — and somebody who does not own
  * companies at all is offered neither, because "add a company first" is not a
  * step the manager reading this list can take (P8.9).
+ *
+ * And a board (SPEC §3 P13, D170): the same projects in five columns their own
+ * papers put them in — Open, Quoted, Dispatching, Won, Lost — beside the list,
+ * behind the same switch and remembered per person the way the quotations and
+ * dispatches boards are (D164). The board is every project; the follow-up chips
+ * narrow the list and step aside for it, as the status chips do on quotations.
  */
 
-type Search = { q?: string; filter?: string; open?: string };
+type Search = { q?: string; filter?: string; open?: string; view?: string };
 
 export default async function ProjectsPage({
   searchParams,
@@ -44,12 +57,23 @@ export default async function ProjectsPage({
   const q = (params.q ?? "").trim();
   const filter = parseFollowUpFilter(params.filter);
   const open = params.open?.trim() || null;
+  // The URL wins, the person remembers, the list is the default (src/lib/view.ts).
+  const stored = chosen(await rememberedChoices(user.id), "view", "projects");
+  const view = viewFor(params.view, stored);
 
-  const narrowing = { user, q: q || undefined, filter, locale };
+  const narrowing = {
+    user,
+    q: q || undefined,
+    filter: view === "board" ? undefined : filter,
+    locale,
+  };
 
-  const [t, rows, counts, companies] = await Promise.all([
+  const [t, rows, cards, counts, companies] = await Promise.all([
     getTranslations(),
-    listProjects({ ...narrowing, limit: LIST_LIMIT }),
+    view === "board" ? Promise.resolve([]) : listProjects({ ...narrowing, limit: LIST_LIMIT }),
+    view === "board"
+      ? listProjectBoard({ user, q: q || undefined, locale, limit: LIST_LIMIT })
+      : Promise.resolve([]),
     // The chips count what this list shows — projects — not the home strip's
     // companies (D108).
     projectFollowUpCounts(user),
@@ -57,8 +81,16 @@ export default async function ProjectsPage({
   ]);
 
   // Only when the list came back full: on a floor this size the count is a
-  // query nobody needs to run (D80).
-  const total = rows.length === LIST_LIMIT ? await countProjects(narrowing) : rows.length;
+  // query nobody needs to run (D80). The board counted its own, in the query.
+  const shown = view === "board" ? cards.length : rows.length;
+  const total =
+    view === "board"
+      ? shown === LIST_LIMIT
+        ? await countProjects({ ...narrowing, filter: undefined })
+        : shown
+      : shown === LIST_LIMIT
+        ? await countProjects(narrowing)
+        : shown;
 
   return (
     <div className="flex flex-col gap-6">
@@ -74,9 +106,18 @@ export default async function ProjectsPage({
         )}
       </div>
 
-      <ProjectsTable rows={rows} counts={counts} q={q} filter={filter ?? null} openId={open} />
+      <ProjectsTable
+        rows={rows}
+        cards={cards}
+        counts={counts}
+        q={q}
+        filter={filter ?? null}
+        openId={open}
+        view={view}
+        remembered={stored}
+      />
 
-      <ListTail shown={rows.length} total={total} />
+      <ListTail shown={shown} total={total} />
 
       <Suspense key={open ?? "closed"} fallback={open ? <ProjectSheetSkeleton /> : null}>
         <ProjectDrawer projectId={open} />

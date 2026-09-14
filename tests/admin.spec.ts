@@ -419,11 +419,8 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await expect(card(page, target.name)).toBeVisible(COLD);
     await expect(card(page, target.name)).toContainText("Merged into another account");
 
+    // One press: restoring takes nothing away, so it asks nothing (P13-S7).
     await card(page, target.name).getByRole("button", { name: t("admin.restore") }).click();
-    await page
-      .getByRole("dialog", { name: t("admin.restoreTitle", { name: target.name }) })
-      .getByRole("button", { name: t("admin.restore") })
-      .click();
     await expect(page.getByText(t("admin.restored", { name: target.name }))).toBeVisible(COLD);
 
     const back = await one<{ archived_at: string | null }>(
