@@ -1,7 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { NotificationsList } from "@/components/shell/notifications-list";
+import { Empty } from "@/components/ui-ext/empty";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { requireUser } from "@/lib/authz";
-import { listNotifications } from "@/lib/notifications";
+import { countNotifications, listNotifications } from "@/lib/notifications";
 
 /**
  * What Kladra told this person (SPEC S53).
@@ -14,7 +16,11 @@ import { listNotifications } from "@/lib/notifications";
  */
 export default async function NotificationsPage() {
   const user = await requireUser();
-  const [t, rows] = await Promise.all([getTranslations(), listNotifications(user.id)]);
+  const [t, rows, total] = await Promise.all([
+    getTranslations(),
+    listNotifications(user.id),
+    countNotifications(user.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -22,14 +28,21 @@ export default async function NotificationsPage() {
 
       {rows.length === 0 ? (
         // No action: an empty list has nothing to mark read, and offering
-        // "Mark all read" under "everything is read" argues with itself.
-        <div className="card-face flex flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-          <p className="max-w-prose text-sm text-muted-foreground">
-            {t("shell.emptyNotifications")}
-          </p>
-        </div>
+        // "Mark all read" under "everything is read" argues with itself. The
+        // kit's empty, not a card: a card is a thing at rest, and this is the
+        // space where notices will be (P13-G6).
+        <Empty>{t("shell.emptyNotifications")}</Empty>
       ) : (
-        <NotificationsList rows={rows} canWrite={!user.viewedBy} />
+        <>
+          <NotificationsList rows={rows} canWrite={!user.viewedBy} />
+          {/* The list is capped, and a capped list says so (D80). There is no
+              search here, so the sentence says where the rest went instead. */}
+          <ListTail
+            shown={rows.length}
+            total={total}
+            hint={t("notifications.olderNotShown", { shown: rows.length, total })}
+          />
+        </>
       )}
     </div>
   );

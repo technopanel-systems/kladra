@@ -13,6 +13,7 @@
   "leadAcknowledged": "{rep} acknowledged {company}.",
   "unreadMark": "Unread",
   "markingRead": "Marking all read…",
+  "olderNotShown": "The latest {shown} of {total} are here. What an older one pointed at is still on its own screen.",
   "allMarkedRead": "All notifications are marked read.",
   "companyShared": "{rep} shared {label} with you.",
   "projectShared": "{rep} put you on {label}.",

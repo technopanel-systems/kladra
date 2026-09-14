@@ -558,6 +558,43 @@
 }
 
 /*
+ * A toast's two buttons, for the failure that stays until it is closed (DESIGN
+ * §8): Try again and Close. sonner injects its own sheet after this one and draws
+ * them from another kit — the action a 24 px pill in the text colour at 12 px
+ * with a 400 ms fade, the cancel a grey wash. Held to this kit instead: the
+ * action is `secondary` at `sm`, the cancel is `ghost`, on the type and radius
+ * scale, colour in 100 ms. One attribute more specific than sonner's own rules,
+ * because its sheet comes later and its dark-theme cancel already has five.
+ */
+[data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-styled="true"] [data-button] {
+  block-size: 1.75rem;
+  padding-inline: 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  transition:
+    background-color 100ms ease-out,
+    box-shadow 100ms ease-out;
+}
+[data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-styled="true"] [data-button]:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+[data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-styled="true"] [data-button][data-cancel] {
+  color: var(--popover-foreground);
+  background: transparent;
+}
+@media (hover: hover) {
+  [data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-styled="true"] [data-button]:hover {
+    background: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
+  }
+  [data-sonner-toaster][data-sonner-theme] [data-sonner-toast][data-styled="true"] [data-button][data-cancel]:hover {
+    background: var(--muted);
+  }
+}
+
+/*
  * Motion is a preference the operating system already knows. Sheets slide in
  * from an edge and dialogs zoom; that movement is what triggers vestibular
  * symptoms, and a rep who has asked for less of it should not have to ask us
@@ -632,6 +669,20 @@
    */
   .row-arrived {
     animation: row-arrived 2s ease-out 1 !important;
+  }
+
+  /*
+   * And these two, for the reason the floating surfaces keep their fade: a
+   * row's tint under the pointer and the control a row reveals change colour
+   * and opacity, and nothing travels. Snapped to nothing they flickered as the
+   * pointer crossed a list, which is more jolt than the 100 and 150 ms they
+   * take for everybody else (DESIGN §1b).
+   */
+  .hover-tint {
+    transition-duration: 100ms !important;
+  }
+  .reveal {
+    transition-duration: 150ms !important;
   }
 }
 

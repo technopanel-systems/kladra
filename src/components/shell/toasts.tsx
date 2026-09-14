@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Toaster } from "@/components/ui/sonner";
 import { useIsPhone } from "@/hooks/use-is-phone";
 
@@ -25,9 +26,18 @@ import { useIsPhone } from "@/hooks/use-is-phone";
 const ABOVE_THE_BAR = { bottom: "calc(4.5rem + env(safe-area-inset-bottom))" };
 
 export function Toasts({ dir }: { dir: "ltr" | "rtl" }) {
+  const t = useTranslations();
   const phone = useIsPhone();
   const lift = phone ? ABOVE_THE_BAR : undefined;
   return (
-    <Toaster position={dir === "rtl" ? "bottom-left" : "bottom-right"} offset={lift} mobileOffset={lift} />
+    <Toaster
+      position={dir === "rtl" ? "bottom-left" : "bottom-right"}
+      offset={lift}
+      mobileOffset={lift}
+      // The kit names the toast region "Notifications" and a toast's close mark
+      // "Close toast", in English on an Arabic screen too. The reader's words.
+      containerAriaLabel={t("common.notifications")}
+      toastOptions={{ closeButtonAriaLabel: t("common.close") }}
+    />
   );
 }

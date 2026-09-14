@@ -35,6 +35,15 @@ export type NotificationRow = {
   day: string;
 };
 
+/** How many notices one person has, so the list can say what its cap left out (D80). */
+export async function countNotifications(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(notifications)
+    .where(eq(notifications.userId, userId));
+  return row?.n ?? 0;
+}
+
 /**
  * The most recent notices for one person, read and unread together.
  *

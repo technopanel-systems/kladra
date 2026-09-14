@@ -13,6 +13,7 @@
   "leadAcknowledged": "استلم {rep} العميل المحتمل {company}.",
   "unreadMark": "غير مقروء",
   "markingRead": "جارٍ تمييز الكل كمقروء…",
+  "olderNotShown": "هنا آخر {shown} من أصل {total}. وما يشير إليه أي إشعار أقدم ما زال موجودًا في شاشته.",
   "allMarkedRead": "تم تمييز كل الإشعارات كمقروءة.",
   "companyShared": "شاركك {rep} {label}.",
   "projectShared": "أضافك {rep} إلى {label}.",
