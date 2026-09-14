@@ -30,6 +30,13 @@ import { cn } from "@/lib/utils";
  * enough that the longest English label — OPEN QUOTATIONS — was clipped to
  * "OPEN QUOTATIO…", which says less than nothing. Two short lines of label above
  * a whole figure is the right way round: the figure is what the eye came for.
+ *
+ * And the label is a word in a sentence's case, not an eyebrow (P13-G6, DESIGN
+ * §8). It was set in capitals, letter-spaced, at a size of its own — the PDF
+ * identity §8 refuses, and in Arabic, which has no capitals, the spacing did the
+ * one thing that is not allowed to happen to it: it pulled the joins between
+ * letters apart. It reads now as the month card on the coordinator's day reads
+ * its "Achieved · Target · Pace": `text-xs`, muted, and nothing else.
  */
 /** Written out, because Tailwind reads class names and not expressions. */
 const COLUMNS: Record<1 | 2 | 3 | 4 | 5, string> = {
@@ -58,7 +65,7 @@ export function StandingStrip({
     <dl
       data-slot="standing"
       className={cn(
-        "grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-line bg-surface-2 px-3 py-2.5",
+        "grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl border border-line bg-surface-2 p-3",
         // As many columns as there are figures, up to four. It was always four,
         // so a strip of two sat in the left half of a full-width card with the
         // right half bare — which reads as two tiles that failed to load rather
@@ -87,7 +94,7 @@ export function StandingStrip({
         >
           <dt
             data-slot="figure-label"
-            className="text-[0.6875rem] leading-tight font-medium tracking-wide text-balance text-muted-foreground uppercase"
+            className="text-xs leading-tight text-balance text-muted-foreground"
           >
             {item.label}
           </dt>

@@ -34,6 +34,16 @@ function DialogClose({
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />
 }
 
+/**
+ * The shade over the page while a dialog is open (P13-G6, S12.K).
+ *
+ * The kit's was a 10% black with a 4px frost behind it — the glass S1 took off
+ * every card, back again under every dialog, drawer, sheet and the search
+ * palette, and a ground that changed with whatever the page happened to show.
+ * DESIGN §1: a floating surface is solid and never blurred. So the page goes
+ * down under a flat `--scrim`, defined for both themes like every other token,
+ * and the surface on top is what separates itself.
+ */
 function DialogOverlay({
   className,
   ...props
@@ -42,7 +52,7 @@ function DialogOverlay({
     <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/10 duration-150 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "motion-overlay fixed inset-0 isolate z-50 bg-scrim data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
         className
       )}
       {...props}
@@ -67,7 +77,9 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 start-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-line bg-popover p-4 text-sm text-popover-foreground shadow-(--shadow) duration-150 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // `motion-overlay`: in 200 ms, out 150 (globals.css). The zoom is the
+          // only travel, and it goes for a person who asked for less motion.
+          "motion-overlay fixed top-1/2 start-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 rtl:translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-line bg-popover p-4 text-sm text-popover-foreground shadow-(--shadow) outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className
         )}
         {...props}

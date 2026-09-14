@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type HTMLAttributes,
+  type ReactNode,
+} from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,9 +31,9 @@ import { cn } from "@/lib/utils";
  * one to the other is correct in either direction. What WOULD break is giving
  * the proxy a `dir` of its own.
  *
- * Nothing is drawn when nothing overflows — a phone showing one column at a
- * time still overflows, and gets the bar; a desk wide enough for every column
- * does not, and gets nothing.
+ * Nothing is drawn when nothing overflows — a wide table on a narrow window
+ * gets the bar; a desk wide enough for every column, and a phone board showing
+ * its one chosen column (board.tsx), get nothing.
  *
  * **It takes no room (P13-S7 review).** Whether the surface overflows is known
  * only once it has been measured in the browser, so the bar appears after the
@@ -158,6 +165,133 @@ export function StickyScroll({
           "overflow-x-auto overscroll-x-contain",
           overflows && "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** How far the fade reaches in from an edge that has more behind it. */
+const FADE = "2rem";
+
+/**
+ * One line of things wider than its room, which scrolls and says so (P13-G6,
+ * D145) — the chips over a list, and a board's stages on a phone.
+ *
+ * A row of chips that runs out of width has two ways to go, and the kit's
+ * `flex-wrap` took the wrong one: the admin's eleven lookups came round onto a
+ * second line at 1366 and onto four at 375, a wall of words that pushed the
+ * list off the phone's first screen and read as two groups where there was one.
+ * A line keeps its order and its one reading; what does not fit is behind the
+ * edge, and the edge fades where — and only where — there is more.
+ *
+ * It is not a `StickyScroll`, and deliberately: that one is for a SURFACE, a
+ * board or a table whose scrollbar has to be found forty rows up. A line is one
+ * row tall, so its own thin bar is where the reader already is — and on a phone,
+ * where a finger swipes it, there is no bar to draw at all.
+ *
+ * Three details that are each a defect when missed:
+ *
+ * - **The focus ring.** A scroller clips what spills out of it, and a chip's
+ *   ring spills 3px. The line is padded by 4 and pulled back by the same, so
+ *   it takes no more room than the chips and cuts none of their rings.
+ * - **The fade is measured, not assumed.** The start edge fades only once the
+ *   line has been scrolled, the end edge only while something is still behind
+ *   it — a line that fits has no fade at all, and one scrolled to its end stops
+ *   hinting at more. Distance is taken as an absolute value, so an Arabic line,
+ *   whose `scrollLeft` counts the other way, needs no arithmetic of its own; the
+ *   gradient turns round with `dir`.
+ * - **The chosen thing is on screen.** A reader who opened the eleventh lookup
+ *   on a phone found the line at its start and no chip marked. When the chosen
+ *   element changes and is not fully in view, the line moves it to the middle —
+ *   sideways only, so the page does not jump — and leaves a line the reader
+ *   has scrolled himself alone.
+ */
+export function ScrollLine({
+  children,
+  className,
+  track,
+}: {
+  children: ReactNode;
+  className?: string;
+  /**
+   * The line itself, where it is one thing a reader moves through — a tablist
+   * carries its role and its name here, on the parent of its tabs.
+   */
+  track?: HTMLAttributes<HTMLDivElement>;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const shownRef = useRef<Element | null>(null);
+  const [more, setMore] = useState({ start: false, end: false });
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const line = lineRef.current;
+    if (!scroller || !line) return;
+    const measure = () => {
+      const along = Math.abs(scroller.scrollLeft);
+      const room = scroller.scrollWidth - scroller.clientWidth;
+      const start = along > 1;
+      const end = room - along > 1;
+      setMore((was) => (was.start === start && was.end === end ? was : { start, end }));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroller);
+    observer.observe(line);
+    scroller.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      observer.disconnect();
+      scroller.removeEventListener("scroll", measure);
+    };
+  }, []);
+
+  // After every render, and cheap: it acts only when the chosen element is a
+  // different one from last time and is not already wholly in view.
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    const chosen = scroller?.querySelector('[aria-current="true"], [aria-selected="true"]') ?? null;
+    if (!scroller || !chosen || chosen === shownRef.current) return;
+    shownRef.current = chosen;
+    const box = scroller.getBoundingClientRect();
+    const it = chosen.getBoundingClientRect();
+    if (it.left >= box.left && it.right <= box.right) return;
+    // The same delta is right in both directions: a larger `scrollLeft` shows
+    // what is further right whichever way the line counts.
+    scroller.scrollLeft += it.left + it.width / 2 - (box.left + box.width / 2);
+  });
+
+  return (
+    <div
+      ref={scrollerRef}
+      data-slot="scroll-line"
+      data-more-start={more.start ? "true" : undefined}
+      data-more-end={more.end ? "true" : undefined}
+      style={
+        {
+          "--line-fade-start": more.start ? FADE : "0px",
+          "--line-fade-end": more.end ? FADE : "0px",
+        } as CSSProperties
+      }
+      // `relative`, which is not decoration: a scroller clips only what it is
+      // the containing block of, and each chip carries an absolutely placed
+      // live region (LinkPending). Without it those escaped the line, stood
+      // off both ends of it, and gave the whole page a sideways scroll — an
+      // Arabic phone opened scrolled to its far side and showed nothing.
+      className={cn(
+        "relative -m-1 overflow-x-auto overflow-y-hidden overscroll-x-contain p-1 scroll-px-8 [scrollbar-width:thin]",
+        "[--line-fade-to:to_right] rtl:[--line-fade-to:to_left]",
+        "[mask-image:linear-gradient(var(--line-fade-to),transparent,#000_var(--line-fade-start),#000_calc(100%_-_var(--line-fade-end)),transparent)]",
+        className,
+      )}
+    >
+      <div
+        {...track}
+        ref={lineRef}
+        data-slot="scroll-line-track"
+        className={cn("flex w-max items-center gap-2", track?.className)}
       >
         {children}
       </div>

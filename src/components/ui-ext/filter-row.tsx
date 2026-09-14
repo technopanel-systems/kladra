@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ScrollLine } from "@/components/ui-ext/sticky-scroll";
 
 /**
  * The chips over a list, and whatever changes the list's shape in front of them
@@ -15,6 +16,12 @@ import type { ReactNode } from "react";
  * row (D128). The divider in front of the chips is a mark on a line, so it is
  * drawn only where there is a line to mark and only when there is something to
  * separate.
+ *
+ * **And the chips are one line, at every width** (P13-G6). The group used to
+ * wrap, so the admin's eleven lookups stood in two lines at 1366 and four at
+ * 375 — a wall, and the list under it pushed off a phone's first screen. They
+ * are a `ScrollLine` now: one line in the order they were given, which scrolls
+ * sideways when it has to and fades at the edge that has more.
  *
  * «All» is the FIRST chip (SPEC §3 P13): "Nobody should be able to forget a
  * company because the default hid it." It sat last, after a divider, as "the
@@ -38,10 +45,10 @@ export function FilterRow({
   return (
     <div
       data-slot="filter-row"
-      className="flex flex-col items-start gap-2 md:flex-row md:flex-wrap md:items-center"
+      className="flex flex-col items-start gap-2 md:flex-row md:items-center"
     >
       {lead ? (
-        <div data-slot="filter-lead" className="flex items-center gap-2">
+        <div data-slot="filter-lead" className="flex shrink-0 items-center gap-2">
           {lead}
           {children ? (
             <span aria-hidden="true" className="hidden h-4 w-px bg-line md:inline-block" />
@@ -50,15 +57,18 @@ export function FilterRow({
       ) : null}
 
       {children ? (
-        <div className="flex flex-wrap items-center gap-2">
+        // Stretched on a phone, where the row is a column; the rest of the
+        // line at a desk. `min-w-0` so the line can be narrower than its chips,
+        // which is what lets it scroll rather than widen the page.
+        <ScrollLine className="min-w-0 self-stretch md:flex-1 md:self-auto">
           {all ? (
             <>
               {all}
-              <span aria-hidden="true" className="h-4 w-px bg-line" />
+              <span aria-hidden="true" className="h-4 w-px shrink-0 bg-line" />
             </>
           ) : null}
           {children}
-        </div>
+        </ScrollLine>
       ) : null}
     </div>
   );

@@ -20,6 +20,11 @@
  * locales are one voice, not a large one and a small one.
  */
 @theme {
+  /* The one step below `text-xs` (P13-G6, S12.K): a count inside a badge and
+     the bottom bar's labels, and nothing else. Not a caption, not a label — a
+     reader who has to squint at a word is a reader the word has failed. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
   --text-xs: 0.78125rem;
   --text-sm: 0.90625rem;
   --text-base: 0.96875rem;
@@ -57,6 +62,7 @@
   --color-surface-2: var(--surface-2);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
+  --color-scrim: var(--scrim);
   --color-faint: var(--text-faint);
   --color-brand: var(--brand);
   --color-brand-ink: var(--brand-ink);
@@ -136,6 +142,14 @@
   --surface-2-solid: #efe8de;
   /* The shade under a scroll hint, dark on a light ground (D80). */
   --scroll-shadow: rgba(60, 40, 20, 0.16);
+  /*
+   * What lies over the page while a dialog, a drawer or a sheet is open (P13-G6,
+   * S12.K). A flat, warm shade and never a blur: the kit shipped a 4px frost,
+   * which is the glass S1 took out by another name — a surface whose ground
+   * depends on whatever happened to be behind it. The page stays legible
+   * enough to say where you were; the solid surface over it is what you read.
+   */
+  --scrim: rgba(37, 27, 18, 0.32);
   --line: rgba(70, 45, 20, 0.1);
   --line-strong: rgba(70, 45, 20, 0.19);
 
@@ -229,6 +243,9 @@
    * the edge is a faint light one.
    */
   --scroll-shadow: rgba(255, 240, 225, 0.14);
+  /* Deeper than the light one: a surface a step above a brown-black canvas is
+     told apart only if the page under it goes down a long way. */
+  --scrim: rgba(8, 5, 3, 0.64);
   --line: rgba(255, 238, 220, 0.08);
   --line-strong: rgba(255, 238, 220, 0.14);
 
@@ -477,17 +494,67 @@
   }
 }
 
-/* vaul slides a bottom sheet in 500 ms; DESIGN §2's band for a drawer is
-   150–250 ms (D123), and every form on a phone is one of these now (D129).
-   The library injects its own stylesheet and writes the drag-release
-   transition inline, so this is the one place `!important` is the honest
-   tool. 250, the top of the band: a sheet travels the height of the screen.
-   Before the reduced-motion block on purpose: that block names the sheet
-   too, and among equals the later rule wins. */
+/*
+ * How a surface that floats over the page arrives and leaves (DESIGN §1b, §8;
+ * P13-G6, S12.K). Two of them, because a menu is not a dialog.
+ *
+ * `motion-overlay` is a dialog, a drawer, a sheet and the scrim under each: in
+ * 200 ms easing out, gone in 150 ms easing in. `motion-float` is what appears
+ * under the pointer for a moment — a tooltip, a menu, a popover, a select's
+ * list: in 150, out 100. An exit is faster than its entrance because the person
+ * has already decided; a panel that lingers on its way out is a panel standing
+ * between him and the page he asked for.
+ *
+ * They set the duration the kit's `animate-in` / `animate-out` read, so a
+ * surface says `motion-overlay` and names no duration of its own. What travels
+ * (a zoom, a slide) stays on the surface; what happens to the travel when a
+ * person has asked for less motion is in the reduced-motion block below.
+ */
+@utility motion-overlay {
+  --tw-duration: 200ms;
+  --tw-ease: ease-out;
+  &[data-state="closed"] {
+    --tw-duration: 150ms;
+    --tw-ease: ease-in;
+  }
+}
+@utility motion-float {
+  --tw-duration: 150ms;
+  --tw-ease: ease-out;
+  &[data-state="closed"] {
+    --tw-duration: 100ms;
+    --tw-ease: ease-in;
+  }
+}
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes overlay-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* vaul slides a bottom sheet in 500 ms, and every form on a phone is one of
+   these (D129). The library injects its own stylesheet and writes the
+   drag-release transition inline, so this is the one place `!important` is the
+   honest tool. Held to `motion-overlay`'s numbers — 200 in, 150 out — which
+   were 250 both ways until G6 put an exit under its entrance and every
+   duration inside 100 / 150 / 200. Before the reduced-motion block on purpose:
+   that block names the sheet too, and among equals the later rule wins. */
 [data-vaul-drawer],
 [data-vaul-overlay] {
-  animation-duration: 250ms !important;
-  transition-duration: 250ms !important;
+  animation-duration: 200ms !important;
+  animation-timing-function: ease-out !important;
+  transition-duration: 200ms !important;
+  transition-timing-function: ease-out !important;
+}
+[data-vaul-drawer][data-state="closed"],
+[data-vaul-overlay][data-state="closed"] {
+  animation-duration: 150ms !important;
+  animation-timing-function: ease-in !important;
 }
 
 /*
@@ -505,13 +572,56 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  /* The sheet is held to 250 ms above by an attribute selector, which
-     outranks the `*` here whatever the source order, both being important;
-     named again, later, so "less motion" is less motion on a phone as well. */
+  /*
+   * A floating surface still arrives and leaves; it only stops travelling
+   * (DESIGN §1b, §8; P13-G6). Zeroing its animation made a dialog blink into
+   * being — a change with no transition at all is its own small jolt, and the
+   * fade is not what anybody asked the operating system to take away. So the
+   * zoom and the slide are set to nothing and the durations are put back: a
+   * dialog fades in over 200 ms and a menu over 150, exactly as long as they
+   * take for everybody else, and nothing moves.
+   *
+   * The kit's travel is four variables its keyframes read; they are undone here
+   * rather than at each surface, so a surface that adds a slide cannot forget
+   * the other half. More specific than the `*` above, and both important.
+   */
+  .motion-overlay,
+  .motion-float {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-enter-scale: 1 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+    --tw-exit-scale: 1 !important;
+  }
+  .motion-overlay {
+    animation-duration: 200ms !important;
+  }
+  .motion-overlay[data-state="closed"] {
+    animation-duration: 150ms !important;
+  }
+  .motion-float {
+    animation-duration: 150ms !important;
+  }
+  .motion-float[data-state="closed"] {
+    animation-duration: 100ms !important;
+  }
+  /* vaul's own keyframes are a slide, so its sheet takes a fade instead; the
+     overlay already fades. Named again, later than the band above, so that
+     among equals this is the rule that wins. */
   [data-vaul-drawer],
   [data-vaul-overlay] {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    animation-duration: 200ms !important;
+  }
+  [data-vaul-drawer][data-state="open"] {
+    animation-name: overlay-fade-in !important;
+  }
+  [data-vaul-drawer][data-state="closed"] {
+    animation-name: overlay-fade-out !important;
+  }
+  [data-vaul-drawer][data-state="closed"],
+  [data-vaul-overlay][data-state="closed"] {
+    animation-duration: 150ms !important;
   }
 
   /*
