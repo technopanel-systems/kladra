@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { createProjectAction } from "@/actions/projects";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import {
   BLANK_PROJECT,
   ProjectFields,
   type ProjectDraft,
 } from "@/components/projects/project-fields";
+import { useFlashProject } from "@/components/projects/project-flash";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
+import { FieldError } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import type { PickerOption } from "@/lib/picker-option";
@@ -32,6 +35,11 @@ import type { PickerOption } from "@/lib/picker-option";
  * customer and the button lived on the customer; Jerom stood on that screen and
  * went hunting. A create dialog that needs a parent asks for the parent
  * (SPEC §3, P8), and the two callers are otherwise the same dialog.
+ *
+ * A refused save names every field it refused and puts the caret on the first
+ * (DESIGN §8); a refusal that is about the save and not a field — the server
+ * out of reach — is written in the footer, with everything typed still there.
+ * A saved one lights its row on the list behind the drawer it opens.
  */
 
 export function NewProjectDialog({
@@ -54,18 +62,25 @@ export function NewProjectDialog({
   const [form, setForm] = useState<ProjectDraft>(BLANK_PROJECT);
   const [chosen, setChosen] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<object | null>(null);
   const [pending, startTransition] = useTransition();
   const guarded = useWireGuard();
+  const flash = useFlashProject();
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusFirstError(formRef, answer);
 
   const asks = companyId === undefined;
   const company = companyId ?? chosen;
 
   function onOpenChange(next: boolean) {
+    if (pending) return;
     setOpen(next);
     if (!next) {
       setForm(BLANK_PROJECT);
       setChosen("");
       setErrors({});
+      setRefusal(null);
     }
   }
 
@@ -85,8 +100,10 @@ export function NewProjectDialog({
     const refused: Record<string, string> = {};
     if (!company) refused.companyId = t("common.required");
     if (!name) refused.name = t("common.required");
+    setRefusal(null);
     if (Object.keys(refused).length > 0) {
       setErrors(refused);
+      setAnswer({});
       return;
     }
 
@@ -106,16 +123,26 @@ export function NewProjectDialog({
       const outcome = await guarded(createProjectAction)(null, fields);
 
       if (!outcome.ok) {
-        setErrors(outcome.fieldErrors ?? {});
-        toast.error(outcome.error);
+        const atFields = outcome.fieldErrors ?? {};
+        setErrors(atFields);
+        // A sentence with no field to stand under — the company archived since
+        // the dialog opened, the wire down — is the footer's.
+        setRefusal(Object.values(atFields).some(Boolean) ? null : outcome.error);
+        setAnswer({});
         return;
       }
 
       toast.success(t("projects.created"));
-      onOpenChange(false);
-      // The drawer lives in the URL, so the new project opens by navigating.
-      if (outcome.data?.projectId) router.push(`/projects?open=${outcome.data.projectId}`);
-      else router.refresh();
+      setOpen(false);
+      setForm(BLANK_PROJECT);
+      setChosen("");
+      setErrors({});
+      // The drawer lives in the URL, so the new project opens by navigating,
+      // and its row behind the drawer takes the flash.
+      if (outcome.data?.projectId) {
+        flash(outcome.data.projectId);
+        router.push(`/projects?open=${outcome.data.projectId}`);
+      } else router.refresh();
     });
   }
 
@@ -131,6 +158,7 @@ export function NewProjectDialog({
     >
       {/* A form, so Enter in the name saves it (D114). */}
       <form
+        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -141,7 +169,7 @@ export function NewProjectDialog({
       >
         <FormBody>
           {asks ? (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label id="project-company-label">{t("common.company")}</Label>
               <SearchableSelect
                 aria-labelledby="project-company-label"
@@ -158,11 +186,7 @@ export function NewProjectDialog({
                 searchPlaceholder={t("forms.searchList")}
                 emptyText={t("projects.noCompanies")}
               />
-              {errors.companyId ? (
-                <p id="project-company-error" role="alert" className="text-xs text-destructive">
-                  {errors.companyId}
-                </p>
-              ) : null}
+              <FieldError id="project-company-error">{errors.companyId}</FieldError>
             </div>
           ) : null}
 
@@ -175,7 +199,7 @@ export function NewProjectDialog({
           />
 
         </FormBody>
-        <FormFooter pending={pending} onCancel={() => onOpenChange(false)} />
+        <FormFooter error={refusal} pending={pending} onCancel={() => onOpenChange(false)} />
       </form>
     </ResponsiveDialog>
   );

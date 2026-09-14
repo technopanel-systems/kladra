@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { query, userId } from "./helpers/db";
+import { one, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 
 /**
@@ -291,4 +291,89 @@ test("every record opens in the same panel, on the edge the language reads from"
     expect(one.borders[0], "no line on the edge facing the list").not.toBe("0px");
     expect(one.borders[1], "a line on the edge nothing can see").toBe("0px");
   }
+});
+
+/**
+ * The project drawer has a hierarchy (DESIGN §6, P13-G6 S12.3).
+ *
+ * Mark lost stood in the drawer's row at the weight of Edit, a finger's width
+ * from Add report, and it is the act that ends a job (S20). Now one action is in
+ * sight — Add report, the brand — and the rest are in the menu at the row's end,
+ * with the act that takes the job away last, apart, in the tint. And the head
+ * names the company with its face: a 40px square, as a company is drawn (§1b).
+ *
+ * A dialog a menu item opens is hosted by the drawer, so the proof that it
+ * works is pressing it, and the proof that it hands back is where focus lands.
+ */
+test("the project drawer shows Add report, keeps the rest in its menu, and puts Mark lost last", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const project = await one<{ id: string; name: string }>(
+    `select p.id, p.name
+       from projects p
+       join companies c on c.id = p.company_id
+      where p.rep_id = $1::uuid and c.rep_id = $1::uuid
+        and p.lost_at is null and p.archived_at is null and c.archived_at is null
+      order by p.created_at
+      limit 1`,
+    [faisal],
+  );
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/projects?view=list&open=${project.id}`);
+  const drawer = page.getByRole("dialog", { name: project.name });
+  await expect(drawer).toBeVisible({ timeout: 30_000 });
+
+  await test.step("the head names the company with its 40px square", async () => {
+    const avatar = drawer.locator("[data-slot='avatar']").first();
+    await expect(avatar).toBeVisible();
+    const box = await avatar.boundingBox();
+    expect(Math.round(box?.width ?? 0)).toBe(40);
+    // A circle's radius is half its width or more; a company's corners are rounded.
+    const radius = await avatar.evaluate((node) => parseFloat(getComputedStyle(node).borderTopLeftRadius));
+    expect(radius, "a company's avatar is drawn as a circle").toBeLessThan(20);
+  });
+
+  const actions = drawer.getByRole("group", { name: t("projects.projectActions") });
+  const more = actions.getByRole("button", { name: t("projects.moreFor", { name: project.name }) });
+
+  await test.step("one action in sight, and the menu beside it", async () => {
+    const report = actions.getByRole("button", { name: t("common.addReport"), exact: true });
+    await expect(report).toHaveAttribute("data-variant", "brand");
+    await expect(more).toBeVisible();
+    await expect(actions.getByRole("button")).toHaveCount(2);
+    for (const label of ["common.edit", "common.markLost", "drawer.archive", "drawer.share.action"]) {
+      await expect(
+        drawer.getByRole("button", { name: t(label), exact: true }),
+        `${t(label)} still stands in the drawer as a button`,
+      ).toHaveCount(0);
+    }
+  });
+
+  await test.step("the menu: what changes the record, then — apart, in the tint — Mark lost", async () => {
+    await more.click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      t("common.edit"),
+      t("drawer.share.action"),
+      t("drawer.archive"),
+      t("common.markLost"),
+    ]);
+    await expect(menu.getByRole("menuitem").last()).toHaveAttribute("data-variant", "destructive");
+    await expect(menu.getByRole("separator")).toHaveCount(1);
+  });
+
+  await test.step("Edit opens from the menu, and closing it gives focus back to the menu's button", async () => {
+    await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
+    const form = page.getByRole("dialog", { name: t("projects.editProject") });
+    await expect(form).toBeVisible();
+    await expect(form.getByLabel(t("common.name"), { exact: true })).toHaveValue(project.name);
+    await page.keyboard.press("Escape");
+    await expect(form).toBeHidden();
+    await expect(more).toBeFocused();
+  });
 });

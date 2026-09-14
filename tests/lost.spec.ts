@@ -116,6 +116,58 @@ test("the company drawer says why it was lost, not the code we stored", async ({
   await expect(drawer.getByText(lost.reason, { exact: true })).toHaveCount(0);
 });
 
+/**
+ * Mark lost, from the last place in the drawer's menu (P13-G6 S12.3), refuses a
+ * job given up with no reason — at the reason, with the caret put there — and
+ * writes nothing. A lost project with no reason is a closed job nobody can
+ * learn from (S20, D87); the refusal is the app's own sentence, not the
+ * browser's, and Escape hands the keyboard back to the menu it came from.
+ */
+test("marking a project lost with no reason is refused at the reason, and nothing is written", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const project = await one<{ id: string; name: string }>(
+    `select p.id, p.name
+       from projects p
+       join companies c on c.id = p.company_id
+       join users u on u.id = p.rep_id
+      where u.email = 'faisal@technopanel.com.sa' and c.rep_id = u.id
+        and p.lost_at is null and p.archived_at is null and c.archived_at is null
+      order by p.created_at
+      limit 1`,
+  );
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/projects?view=list&open=${project.id}`);
+  const drawer = page.getByRole("dialog", { name: project.name });
+  await expect(drawer).toBeVisible(COLD);
+
+  const more = drawer.getByRole("button", { name: t("projects.moreFor", { name: project.name }) });
+  await more.click();
+  await page.getByRole("menuitem", { name: t("common.markLost"), exact: true }).click();
+
+  const ask = page.getByRole("dialog", { name: t("projects.markLostTitle") });
+  await expect(ask).toBeVisible(COLD);
+  await ask.getByRole("button", { name: t("common.markLost"), exact: true }).click();
+
+  await expect(ask.getByRole("alert")).toHaveText(t("projects.lossReasonRequired"));
+  const reason = ask.getByRole("combobox", { name: t("projects.lossReasonLabel") });
+  await expect(reason).toHaveAttribute("aria-invalid", "true");
+  await expect(reason, "the caret was not put on the reason it refused").toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(ask).toBeHidden();
+  await expect(more).toBeFocused();
+
+  const after = await one<{ lost: boolean }>(
+    "select lost_at is not null as lost from projects where id = $1::uuid",
+    [project.id],
+  );
+  expect(after.lost, "a project was marked lost with no reason").toBe(false);
+});
+
 test("a company found in the palette opens something for the coordinator", async ({
   page,
   locale,

@@ -320,7 +320,9 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
       .getByRole("link", { name: t("projects.openProject", { name: fixture.project }) })
       .click();
     const sheet = dialogNamed(page, fixture.project);
-    await sheet.getByRole("button", { name: t("common.edit"), exact: true }).click();
+    // Edit is in the drawer's menu since P13-G6 S12.3, with Add report the one button in sight.
+    await sheet.getByRole("button", { name: t("projects.moreFor", { name: fixture.project }) }).click();
+    await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
     const projectForm = dialogNamed(page, t("projects.editProject"));
     // numeric(12,2) comes back "1200.00"; the rep typed 1200 and should see it.
     await expect(projectForm.getByLabel(t("common.expectedSqm"))).toHaveValue(
@@ -377,9 +379,10 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
       .click();
     const sheet = dialogNamed(page, fixture.project);
 
-    // Both are offered, and they say different things.
-    await expect(sheet.getByRole("button", { name: t("common.markLost") })).toBeVisible();
-    await sheet.getByRole("button", { name: t("drawer.archive") }).click();
+    // Both are offered, in the drawer's menu, and they say different things.
+    await sheet.getByRole("button", { name: t("projects.moreFor", { name: fixture.project }) }).click();
+    await expect(page.getByRole("menuitem", { name: t("common.markLost"), exact: true })).toBeVisible();
+    await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
     await confirmArchive(page, t, fixture.project);
     await expect(page.getByText(t("drawer.archived", { name: fixture.project }))).toBeVisible();
 
@@ -512,6 +515,12 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
         `${label} is on a project that is not his`,
       ).toHaveCount(0);
     }
+    // Edit, Archive and Mark lost live in the drawer's menu since P13-G6, so the
+    // buttons above are absent for everybody. The menu itself must be absent too.
+    await expect(
+      sheet.locator('[data-slot="row-menu"]'),
+      "a menu of changes is on a project that is not his",
+    ).toHaveCount(0);
   });
 });
 

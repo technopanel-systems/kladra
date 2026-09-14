@@ -1,9 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList } from "@/components/activities/activity-list";
-import { ProjectSheet } from "@/components/projects/projects-table";
-import { ShareProjectDialog } from "@/components/projects/share-project-dialog";
+import { ProjectSheet } from "@/components/projects/project-sheet";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
+import { Empty } from "@/components/ui-ext/empty";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { mayReportOn } from "@/lib/activities";
@@ -25,9 +25,9 @@ import { listQuotationsForProject } from "@/lib/quotations";
  * reopens exactly this.
  *
  * Everything interactive — closing back to the list, the follow-up picker, Add
- * report and Mark lost — lives in `ProjectSheet`, the client half in
- * projects-table.tsx, beside the rest of this screen's URL handling. This file
- * only reads and hands over. The report popup reads the company's people and
+ * report and the menu with Edit, Sharing, Archive and Mark lost — lives in
+ * `ProjectSheet`, the client half in project-sheet.tsx. This file only reads
+ * and hands over. The report popup reads the company's people and
  * papers itself when it opens, so nothing about them is read here.
  */
 
@@ -146,6 +146,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       companyName={project.companyName}
       cityName={project.company.cityName}
       expectedSqm={project.expectedSqm}
+      stage={project.stage}
       standing={standing}
       nextFollowUp={project.nextFollowUp}
       followUpState={project.followUpState}
@@ -155,37 +156,11 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       mine={mine}
       reports={reports}
       owns={owns}
-      // Who else is on it, in words for every reader, with the control that
-      // changes it beside the fact it is about (DESIGN §5). The dialog draws
-      // nothing at all for a reader who neither grants a share nor is on one.
-      sharing={
-        sharers.length > 0 || shareWith ? (
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            {sharers.length > 0 ? (
-              <p className="min-w-0 text-xs text-muted-foreground">
-                {t("drawer.share.onProject")}:{" "}
-                {sharers.map((person, index) => (
-                  <span key={person.id}>
-                    {index > 0 ? (
-                      <span aria-hidden="true" className="text-faint">
-                        {" · "}
-                      </span>
-                    ) : null}
-                    <bdi>{person.name}</bdi>
-                  </span>
-                ))}
-              </p>
-            ) : null}
-            <ShareProjectDialog
-              projectId={project.id}
-              projectName={project.name}
-              sharers={sharers}
-              people={shareWith}
-              me={user.id}
-            />
-          </div>
-        ) : null
-      }
+      // Who else is on it, in words for every reader; Sharing, in the sheet's
+      // menu, is offered to whoever grants a share or is on one (D147).
+      sharers={sharers}
+      shareWith={shareWith}
+      me={user.id}
       // The request button is in ONE position, whatever the list under it says.
       // Rendered inside the empty branch it was destroyed by the save that
       // filled the list, and the dialog's success handler — the toast, and the
@@ -194,11 +169,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
         <div className="flex flex-col gap-3">
           {requestTrigger ? <div className="flex">{requestTrigger}</div> : null}
           {quotations.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-              <p className="max-w-prose text-sm text-muted-foreground">
-                {t("quotations.emptyForProject")}
-              </p>
-            </div>
+            <Empty size="panel">{t("quotations.emptyForProject")}</Empty>
           ) : (
             <QuotationMiniList rows={quotations} />
           )}
@@ -212,13 +183,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
           // The same corrections as the company drawer, on the same entries
           // (D70). The project is preselected because that is where he is.
           correct
-          empty={
-            <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-              <p className="max-w-prose text-sm text-muted-foreground">
-                {t("projects.emptyActivity")}
-              </p>
-            </div>
-          }
+          empty={<Empty size="panel">{t("projects.emptyActivity")}</Empty>}
         />
       }
     />

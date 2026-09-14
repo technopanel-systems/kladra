@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
-import { query } from "./helpers/db";
+import { one, query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { PROJECT_STAGES, projectStage, type ProjectStage, type StageFacts } from "@/lib/project-stage";
@@ -221,5 +221,96 @@ test("a column cut short by its cap still counts every project in it, and the ot
     );
   } finally {
     await query("delete from projects where id = any($1::uuid[])", [inserted.map((row) => row.id)]);
+  }
+});
+
+/**
+ * A board whose search leaves columns empty says so in each one (S12.3,
+ * standards.md: an empty column is a finished state, not a failure to load).
+ * One job matches, so its column holds one card and the other four count nought
+ * and carry the sentence, rather than standing as four blank lanes.
+ */
+test("a search that leaves columns empty draws each one with its nought and its sentence", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // A job whose name is found in no other job's name and no other company's.
+  const only = await one<{ id: string; name: string }>(`
+    select p.id::text as id, p.name
+      from projects p
+      join companies c on c.id = p.company_id
+     where p.archived_at is null and c.archived_at is null
+       and not exists (
+         select 1 from projects p2
+           join companies c2 on c2.id = p2.company_id
+          where p2.archived_at is null and c2.archived_at is null and p2.id <> p.id
+            and (p2.name ilike '%' || p.name || '%' or c2.name ilike '%' || p.name || '%'))
+     order by p.created_at
+     limit 1`);
+  const facts = (await projectFacts()).find((project) => project.id === only.id);
+  expect(facts, "the job this walk searches for is not on the floor").toBeDefined();
+  const home = t(STAGE_KEYS[projectStage(facts as Facts)]);
+
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/projects?view=board&q=${encodeURIComponent(only.name)}`);
+  const columns = await board(page);
+  const regions = page.locator("[data-slot='board']").getByRole("region");
+
+  expect(columns.map((column) => column.name)).toEqual(PROJECT_STAGES.map((stage) => t(STAGE_KEYS[stage])));
+  expect(columns.find((column) => column.name === home)?.ids).toEqual([only.id]);
+  const empty = columns.filter((column) => column.name !== home);
+  expect(empty.map((column) => column.count)).toEqual([0, 0, 0, 0]);
+  for (const column of empty) {
+    await expect(
+      regions.filter({ has: page.getByRole("heading", { name: column.name, exact: true }) }).getByRole("status"),
+      `${column.name} is a blank lane, not an empty column`,
+    ).toHaveText(t("common.boardEmpty"));
+  }
+});
+
+/**
+ * A chip that hides every project says how many it hides, and how to show them
+ * (S12.3, DESIGN §8: filtered out is its own kind of empty). "Nothing is due
+ * today" over a floor of a dozen jobs read like a floor of none.
+ */
+test("a chip that hides every project says how many, and shows them all", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // Nothing on the floor is due today while this runs; whatever was is put back.
+  const moved = await query<{ id: string }>(
+    `update projects set next_follow_up = next_follow_up + 1
+      where next_follow_up = (now() at time zone 'Asia/Riyadh')::date
+      returning id::text as id`,
+  );
+
+  try {
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/projects?view=list`);
+    const rows = page.locator("table tbody tr");
+    await expect(rows.first()).toBeVisible(COLD);
+    const all = await rows.count();
+    expect(all, "his list came back capped, so its rows are not all of his projects").toBeLessThan(
+      LIST_LIMIT,
+    );
+
+    const zero = t("projects.todayChip", { count: 0 });
+    await page.goto(`/${locale}/projects?view=list&filter=today`);
+    const empty = page
+      .getByRole("status")
+      .filter({ hasText: t("projects.hiddenByFilter", { count: all }) });
+    await expect(empty).toBeVisible(COLD);
+    await expect(empty).toContainText(t("projects.emptyToday"));
+    await expect(page.getByRole("link", { name: zero })).toHaveAttribute("aria-current", "true");
+
+    await empty.getByRole("link", { name: t("projects.showAll") }).click();
+    await expect(page).not.toHaveURL(/filter=/, COLD);
+    await expect(rows).toHaveCount(all, COLD);
+  } finally {
+    await query("update projects set next_follow_up = next_follow_up - 1 where id = any($1::uuid[])", [
+      moved.map((row) => row.id),
+    ]);
   }
 });

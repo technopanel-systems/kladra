@@ -1,15 +1,15 @@
 "use client";
 
 import { LOSS_REASON_CODES } from "@/lib/loss-reason";
-import { useState, useTransition } from "react";
-import type { ReactNode } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { markProjectLostAction } from "@/actions/projects";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
-import { Button } from "@/components/ui/button";
+import { useFlashProject } from "@/components/projects/project-flash";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -23,33 +23,56 @@ import { useRouter } from "@/i18n/navigation";
 
 /**
  * "Mark lost (reason)" — SPEC §3. Lost is the rep's judgement (S20): it closes
- * the project and takes it off the active list, and a rejected quotation is
- * never the same thing (D11), which is why the dialog says so out loud.
+ * the project, and a rejected quotation is never the same thing (D11), which is
+ * why the dialog says so out loud.
  *
  * The reason is required and picked from a list, because a free-text field
  * produces nine spellings of "price" and answers nobody's question a year
  * later. "Other" is the only one that takes a written detail, and then it is
  * required — that written line is how the list grows.
+ *
+ * Opened from the drawer's menu, last and in the tint (P13-G6): the act that
+ * ends a job does not stand in the row beside the one a rep presses every day.
+ * The drawer hosts it and gives focus back to the menu's button. A blank reason
+ * is refused at the field with the caret put there; a refusal that is not about
+ * a field — the server out of reach — is written in the footer, and the choice
+ * stays as it was.
  */
 
-export function MarkLostDialog({ projectId, trigger }: { projectId: string; trigger?: ReactNode }) {
+export function MarkLostDialog({
+  projectId,
+  projectName,
+  open,
+  onOpenChange,
+}: {
+  projectId: string;
+  projectName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const t = useTranslations();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const flash = useFlashProject();
   const [reason, setReason] = useState<string>("");
   const [detail, setDetail] = useState("");
   const [errors, setErrors] = useState<{ reason?: string; detail?: string }>({});
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<object | null>(null);
   const [pending, startTransition] = useTransition();
   const guarded = useWireGuard();
+  const formRef = useRef<HTMLFormElement>(null);
+  useFocusFirstError(formRef, answer);
 
   const needsDetail = reason === "other";
 
-  function onOpenChange(next: boolean) {
-    setOpen(next);
+  function change(next: boolean) {
+    if (pending) return;
+    onOpenChange(next);
     if (!next) {
       setReason("");
       setDetail("");
       setErrors({});
+      setRefusal(null);
     }
   }
 
@@ -59,7 +82,11 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
     if (!reason) found.reason = t("projects.lossReasonRequired");
     if (reason === "other" && !trimmed) found.detail = t("projects.lossDetailRequired");
     setErrors(found);
-    if (found.reason || found.detail) return;
+    setRefusal(null);
+    if (found.reason || found.detail) {
+      setAnswer({});
+      return;
+    }
 
     startTransition(async () => {
       // One text column holds the answer (`projects.lost_reason`): the code for
@@ -67,14 +94,19 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
       // a known code is translated, anything else is shown verbatim.
       const outcome = await guarded(markProjectLostAction)(projectId, needsDetail ? trimmed : reason);
       if (!outcome.ok) {
-        setErrors({ reason: outcome.fieldErrors?.reason });
-        toast.error(outcome.error);
+        const atField = outcome.fieldErrors?.reason;
+        setErrors({ reason: atField });
+        setRefusal(atField ? null : outcome.error);
+        setAnswer({});
         return;
       }
-      toast.success(t("projects.markedLost"));
+      toast.success(t("projects.markedLost", { name: projectName }));
       onOpenChange(false);
-      // The drawer stays open and re-renders as closed-with-its-reason; the
-      // list behind it drops the row, because lost leaves the active list.
+      setReason("");
+      setDetail("");
+      flash(projectId);
+      // The drawer stays open and re-renders as lost, with its reason; the row
+      // behind it goes to the foot of the list, where lost projects sit.
       router.refresh();
     });
   }
@@ -82,14 +114,15 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={onOpenChange}
-      trigger={trigger ?? <Button variant="destructive">{t("common.markLost")}</Button>}
+      onOpenChange={change}
       title={t("projects.markLostTitle")}
+      context={projectName}
       description={t("projects.markLostDescription")}
     >
       {/* A form, so the written detail can be confirmed from the keyboard
           (D114): Enter stays a new line in the box, Ctrl/Cmd+Enter marks it. */}
       <form
+        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -136,7 +169,9 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
                 <Textarea
                   id="loss-detail"
                   rows={3}
+                  dir="auto"
                   value={detail}
+                  readOnly={pending}
                   aria-invalid={errors.detail ? true : undefined}
                   aria-describedby={errors.detail ? "loss-detail-error" : undefined}
                   onChange={(event) => {
@@ -150,16 +185,21 @@ export function MarkLostDialog({ projectId, trigger }: { projectId: string; trig
                     }
                   }}
                 />
-                <FieldDescription>{t("projects.lossDetailRequired")}</FieldDescription>
-                <FieldError id="loss-detail-error">{errors.detail}</FieldError>
+                {/* The same sentence either way: said once, as a hint until it
+                    is the refusal. */}
+                {errors.detail ? (
+                  <FieldError id="loss-detail-error">{errors.detail}</FieldError>
+                ) : (
+                  <FieldDescription>{t("projects.lossDetailRequired")}</FieldDescription>
+                )}
               </Field>
             ) : null}
           </FieldGroup>
-
         </FormBody>
         <FormFooter
+          error={refusal}
           pending={pending}
-          onCancel={() => onOpenChange(false)}
+          onCancel={() => change(false)}
           confirmLabel={t("common.markLost")}
           confirmVariant="destructive"
         />

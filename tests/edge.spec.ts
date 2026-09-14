@@ -72,7 +72,8 @@ const TRIGGER: Record<Kind, string> = {
 
 /** What to press inside the popup to choose. A Select takes a DIFFERENT value, the path that broke. */
 const CHOICE: Record<Kind, string> = {
-  menu: '[role="menuitemradio"][aria-checked="true"]',
+  // The account menu's chosen theme, or a row menu's first item (RowMenu has no radios).
+  menu: '[role="menuitemradio"][aria-checked="true"], [role="menuitem"]',
   select: '[role="option"]:not([data-state="checked"]):not([data-disabled])',
   picker: '[role="option"]:not([data-disabled="true"])',
   date: '[role="gridcell"]:not([data-disabled]) button:not([disabled])',
@@ -315,10 +316,19 @@ for (const locale of LOCALES) {
       expect(await everyKind(page, company, false)).toContain("date");
       if (await share(company).isVisible()) await dialog(page, share(company), ["picker"]);
 
-      const markLost = (drawer: Locator) => drawer.getByRole("button", { name: t("common.markLost"), exact: true });
-      const project = await recordWith(page, t, locale, "/projects", markLost);
+      // Mark lost is the last item in the project drawer's menu since P13-G6 S12.3,
+      // and the dialog it opens is hosted by the drawer, so it is opened from the menu.
+      const more = (drawer: Locator) => drawer.locator('[data-slot="row-menu"]');
+      const project = await recordWith(page, t, locale, "/projects", more);
       expect(await everyKind(page, project, false)).toContain("date");
-      await dialog(page, markLost(project), ["select"]);
+      await more(project).click();
+      await page.getByRole("menuitem", { name: t("common.markLost"), exact: true }).click();
+      const lost = newestDialog(page);
+      await expect(lost).toBeVisible();
+      await expect(lost).toBeInViewport();
+      expect(await everyKind(page, lost, true)).toContain("select");
+      await page.keyboard.press("Escape");
+      await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
 
       await open(page, t, locale, "/quotations");
       await dialog(page, page.getByRole("button", { name: t("quotations.request"), exact: true }).first(), ["picker"]);

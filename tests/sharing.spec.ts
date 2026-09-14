@@ -276,7 +276,9 @@ test("two reps on one customer: a shared company, a shared project, and taking t
       const project = dialogNamed(page, fixture.project);
       await expect(project).toBeVisible(COLD);
 
-      await project.getByRole("button", { name: t("drawer.share.action") }).click();
+      // Sharing is in the project drawer's menu since P13-G6 S12.3.
+      await project.getByRole("button", { name: t("projects.moreFor", { name: fixture.project }) }).click();
+      await page.getByRole("menuitem", { name: t("drawer.share.action"), exact: true }).click();
       const share = page.getByRole("dialog", { name: t("drawer.share.projectTitle") });
       await pickPerson(page, share.getByRole("combobox", { name: t("drawer.share.projectWho") }), saadName);
       await share.getByRole("button", { name: t("drawer.share.add") }).click();

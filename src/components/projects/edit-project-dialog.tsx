@@ -1,15 +1,15 @@
 "use client";
 
-import { Pencil } from "lucide-react";
-import { useState, useTransition, type ReactNode } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { updateProjectAction } from "@/actions/projects";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { ProjectFields, type ProjectDraft } from "@/components/projects/project-fields";
+import { useFlashProject } from "@/components/projects/project-flash";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 
 /**
@@ -18,6 +18,10 @@ import { useRouter } from "@/i18n/navigation";
  * The company is not among them. A project is a job AT a customer (S18); moving
  * one to a different company would take its whole log with it and leave the
  * first customer's history missing a visit that happened.
+ *
+ * Hosted by the drawer (P13-G6): Edit is an item in the drawer's menu, and an
+ * item is gone the moment the menu closes, so it cannot own a trigger. The
+ * drawer passes `open` and hands focus back to its menu button (`useOpener`).
  */
 
 export type ProjectEditable = {
@@ -42,26 +46,35 @@ function draftOf(project: ProjectEditable): ProjectDraft {
 
 export function EditProjectDialog({
   project,
-  trigger,
+  open,
+  onOpenChange,
 }: {
   project: ProjectEditable;
-  trigger?: ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const flash = useFlashProject();
   const [form, setForm] = useState<ProjectDraft>(() => draftOf(project));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const [answer, setAnswer] = useState<object | null>(null);
   const [pending, startTransition] = useTransition();
   const guarded = useWireGuard();
+  const formRef = useRef<HTMLFormElement>(null);
+  // A refused save puts the caret on the first field it names (DESIGN §8).
+  useFocusFirstError(formRef, answer);
 
-  function onOpenChange(next: boolean) {
-    setOpen(next);
-    // Re-opening starts from what the project holds now, not from an abandoned
-    // edit — the drawer behind may have been refreshed since.
-    if (next) {
+  // Re-opening starts from what the project holds now, not from an abandoned
+  // edit — the drawer behind may have been refreshed since.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
       setForm(draftOf(project));
       setErrors({});
+      setRefusal(null);
     }
   }
 
@@ -78,8 +91,10 @@ export function EditProjectDialog({
 
   function submit() {
     const name = form.name.trim();
+    setRefusal(null);
     if (!name) {
       setErrors({ name: t("common.required") });
+      setAnswer({});
       return;
     }
 
@@ -93,13 +108,19 @@ export function EditProjectDialog({
 
       const outcome = await guarded(updateProjectAction)(null, fields);
       if (!outcome.ok) {
-        setErrors(outcome.fieldErrors ?? {});
-        toast.error(outcome.error);
+        // At the field when a field was refused; in the footer when the whole
+        // save was — the server out of reach says so where the eye already is,
+        // and what he typed stays (DESIGN §8).
+        const atFields = outcome.fieldErrors ?? {};
+        setErrors(atFields);
+        setRefusal(Object.values(atFields).some(Boolean) ? null : outcome.error);
+        setAnswer({});
         return;
       }
 
       toast.success(t("forms.saved", { name }));
-      setOpen(false);
+      onOpenChange(false);
+      flash(project.id);
       router.refresh();
     });
   }
@@ -107,20 +128,16 @@ export function EditProjectDialog({
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={onOpenChange}
-      trigger={
-        trigger ?? (
-          <Button variant="outline">
-            <Pencil aria-hidden="true" />
-            {t("common.edit")}
-          </Button>
-        )
-      }
+      onOpenChange={(next) => {
+        if (!pending) onOpenChange(next);
+      }}
       title={t("projects.editProject")}
+      context={project.name}
       description={t("projects.editProjectHint")}
     >
       {/* A form, so Enter in a field saves it (D114). */}
       <form
+        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
           event.stopPropagation();
@@ -137,9 +154,8 @@ export function EditProjectDialog({
             errors={errors}
             disabled={pending}
           />
-
         </FormBody>
-        <FormFooter pending={pending} onCancel={() => onOpenChange(false)} />
+        <FormFooter error={refusal} pending={pending} onCancel={() => onOpenChange(false)} />
       </form>
     </ResponsiveDialog>
   );

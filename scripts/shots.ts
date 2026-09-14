@@ -169,6 +169,19 @@ function textVisible(key: string, params?: Record<string, string | number>): Wai
   };
 }
 
+/** The same, among what is drawn at this width only: a board names each stage
+ *  twice — the phone's picker and the desk's column heading — and the first of
+ *  the two in the document is hidden at 1366. */
+function visibleText(key: string, params?: Record<string, string | number>): Wait {
+  return async (page, T) => {
+    await page
+      .getByText(T(key, params), { exact: true })
+      .filter({ visible: true })
+      .first()
+      .waitFor({ state: "visible" });
+  };
+}
+
 /** A dialog or drawer (both render through Radix's Dialog primitive, so both
  *  answer to `role="dialog"`) carrying this exact translated text somewhere
  *  inside it — proof the async lookups it opened on have already resolved. */
@@ -276,6 +289,32 @@ function holdServerActions(): Step {
 /** The wire cut under the next server action: what a lobby with no signal does. */
 function cutServerActions(): Step {
   return (page) => serverActions(page, "cut");
+}
+
+/**
+ * The network of a lobby with one bar (S12.3): an answer that comes back a
+ * trickle at a time, so a screen that streams in is caught while it is still
+ * standing in for itself — its skeleton on the screen, the rest on the way.
+ * Chromium's own throttle; nothing is refused and nothing is written.
+ */
+function slowNetwork(): Step {
+  return async (page) => {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Network.enable");
+    await cdp.send("Network.emulateNetworkConditions", {
+      offline: false,
+      latency: 1500,
+      downloadThroughput: 4_000,
+      uploadThroughput: -1,
+    });
+  };
+}
+
+/** From the open project drawer, its menu, and one item in it. */
+function projectMenuItem(key: string): Step {
+  return chain(clickButtonByPrefix("projects.moreFor"), async (page, T) => {
+    await page.getByRole("menuitem", { name: T(key), exact: true }).click();
+  });
 }
 
 function typeInPalette(term: string): Step {
@@ -412,7 +451,7 @@ const MANIFEST: StateDef[] = [
     key: "projects-board",
     identity: "rep",
     path: "/projects?view=board",
-    waitFor: textVisible("projects.stageDispatching"),
+    waitFor: visibleText("projects.stageDispatching"),
   },
   {
     role: "rep",
@@ -429,6 +468,106 @@ const MANIFEST: StateDef[] = [
     path: "/projects",
     steps: clickButton("projects.newProject"),
     waitFor: dialogWithText("common.pickCompany"),
+  },
+  /* The projects states S12.3 drew (P13-G6): both skeletons caught on a slow
+     line, a chip hiding every project, a board with empty columns, the drawer's
+     menu, a refused Add project, a refused Mark lost and Edit. Nothing is saved:
+     the two refusals press the button on an empty form, which is refused before
+     any action is asked. */
+  {
+    role: "rep",
+    key: "projects-loading",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(slowNetwork(), async (page, T) => {
+      await page.getByRole("link", { name: T("common.projects"), exact: true }).filter({ visible: true }).first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('main [role="status"][aria-busy="true"]').first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "project-drawer-loading",
+    identity: "rep",
+    path: "/projects?view=list",
+    steps: chain(slowNetwork(), openFirstRow("open")),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="sheet-content"][aria-busy="true"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "projects-filtered-out",
+    identity: "rep",
+    // Nothing of his is due today on the demo floor, so the chip hides it all.
+    path: "/projects?view=list&filter=today",
+    waitFor: textVisible("projects.showAll"),
+  },
+  {
+    role: "rep",
+    key: "projects-board-empty-column",
+    identity: "rep",
+    // One job matches, so four columns are empty; a phone opens on one of them.
+    path: "/projects?view=board&q=Delta&stage=won",
+    waitFor: async (page, T) => {
+      await page
+        .getByText(T("common.boardEmpty"), { exact: true })
+        .filter({ visible: true })
+        .first()
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "project-menu",
+    identity: "rep",
+    path: "/projects?view=list",
+    steps: chain(openFirstRow("open"), clickButtonByPrefix("projects.moreFor")),
+    waitFor: menuVisible(),
+  },
+  {
+    role: "rep",
+    key: "project-new-refused",
+    identity: "rep",
+    path: "/projects?view=list",
+    steps: chain(clickButton("projects.newProject"), async (page, T) => {
+      await page.getByRole("dialog").getByRole("button", { name: T("common.save"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "project-mark-lost-refused",
+    identity: "rep",
+    path: "/projects?view=list",
+    steps: chain(openFirstRow("open"), projectMenuItem("common.markLost"), async (page, T) => {
+      await page
+        .getByRole("dialog", { name: T("projects.markLostTitle"), exact: true })
+        .getByRole("button", { name: T("common.markLost"), exact: true })
+        .click();
+    }),
+    waitFor: async (page, T) => {
+      await page
+        .getByRole("dialog", { name: T("projects.markLostTitle"), exact: true })
+        .getByRole("alert")
+        .first()
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "project-edit",
+    identity: "rep",
+    path: "/projects?view=list",
+    steps: chain(openFirstRow("open"), projectMenuItem("common.edit")),
+    waitFor: async (page, T) => {
+      await page
+        .getByRole("dialog", { name: T("projects.editProject"), exact: true })
+        .waitFor({ state: "visible" });
+    },
   },
   {
     role: "rep",

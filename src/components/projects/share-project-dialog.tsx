@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useId, useState } from "react";
-import { UsersRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { shareProjectAction, unshareProjectAction } from "@/actions/shares";
@@ -38,6 +37,9 @@ import type { ActionResult } from "@/lib/types";
  * The second, smaller shape is the company dialog's: a person who was PUT on a
  * job may always take himself off it (D147) and may do nothing else about the
  * list, so what he opens is a confirmation rather than a panel.
+ *
+ * Both are opened from "Sharing" in the drawer's menu (P13-G6), which hosts
+ * them and gives focus back to the menu's button.
  */
 export function ShareProjectDialog({
   projectId,
@@ -45,6 +47,8 @@ export function ShareProjectDialog({
   sharers,
   people,
   me,
+  open,
+  onOpenChange,
 }: {
   projectId: string;
   projectName: string;
@@ -58,25 +62,21 @@ export function ShareProjectDialog({
   people: PickerOption[] | null;
   /** The reader, so the row that is his own knows that it is. */
   me: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
 
-  const trigger = (
-    <Button type="button" variant="ghost" size="sm" className="ms-auto text-muted-foreground">
-      <UsersRound aria-hidden="true" />
-      {t("drawer.share.action")}
-    </Button>
-  );
+  // Neither grants nor is on it: the drawer says who is, in words, and there is
+  // nothing here to open.
+  if (!shareProjectOffered(sharers, people, me)) return null;
 
   if (people === null) {
-    // Neither grants nor is on it: the drawer says who is, in words, and there
-    // is nothing here to press.
-    if (!sharers.some((person) => person.id === me)) return null;
     return (
       <ConfirmDialog
-        trigger={trigger}
+        open={open}
+        onOpenChange={onOpenChange}
         title={t("drawer.share.leaveTitle", { name: projectName })}
         description={t("drawer.share.leaveProjectWarning")}
         confirmLabel={t("drawer.share.leave")}
@@ -90,8 +90,7 @@ export function ShareProjectDialog({
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={setOpen}
-      trigger={trigger}
+      onOpenChange={onOpenChange}
       title={t("drawer.share.projectTitle")}
       context={projectName}
       description={t("drawer.share.projectMeans")}
@@ -101,10 +100,23 @@ export function ShareProjectDialog({
         projectName={projectName}
         sharers={sharers}
         people={people}
-        onClose={() => setOpen(false)}
+        onClose={() => onOpenChange(false)}
       />
     </ResponsiveDialog>
   );
+}
+
+/**
+ * Whether this reader is offered Sharing at all: he grants a share, or he is on
+ * the job and may take himself off it. The same question the dialog asks before
+ * it draws either shape, so the menu never offers an item that opens nothing.
+ */
+export function shareProjectOffered(
+  sharers: Sharer[],
+  people: PickerOption[] | null,
+  me: string,
+): boolean {
+  return people !== null || sharers.some((person) => person.id === me);
 }
 
 function ShareProjectBody({
@@ -192,7 +204,7 @@ function ShareProjectBody({
           </ul>
         )}
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label id={`${ids}-who`}>{t("drawer.share.projectWho")}</Label>
           <SearchableSelect
             aria-labelledby={`${ids}-who`}

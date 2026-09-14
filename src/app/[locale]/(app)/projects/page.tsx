@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { ProjectDrawer } from "@/components/projects/project-drawer";
-import { ProjectSheetSkeleton, ProjectsTable } from "@/components/projects/projects-table";
+import { ProjectFlash } from "@/components/projects/project-flash";
+import { ProjectSheetSkeleton } from "@/components/projects/project-sheet";
+import { ProjectsTable } from "@/components/projects/projects-table";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -94,38 +96,51 @@ export default async function ProjectsPage({
         ? await countProjects(narrowing)
         : shown;
 
+  // A chip that hides every row says how many it hides (DESIGN §8, filtered
+  // out): asked only then, of the same narrowing without the chip.
+  const hidden =
+    view === "list" && filter && !q && rows.length === 0
+      ? await countProjects({ ...narrowing, filter: undefined })
+      : 0;
+
+  // The sentence the action asks (`mayWrite`): an admin viewing as a rep is
+  // reading, and is offered neither door (P8.8, DESIGN §5).
+  const canAdd = ownsCompanies(user.role) && mayWrite(user, user.id);
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t("common.projects")}</h1>
-        {/* The brand gradient lives on the primary button and nowhere else. */}
-        {/* The sentence the action asks (`mayWrite`): an admin viewing as a rep
-            is reading, and is offered neither door (P8.8, DESIGN §5). */}
-        {!ownsCompanies(user.role) || !mayWrite(user, user.id) ? null : companies.length > 0 ? (
-          <NewProjectDialog companies={companies} />
-        ) : (
-          <Button asChild variant="brand">
-            <Link href="/companies">{t("projects.openCompanies")}</Link>
-          </Button>
-        )}
+    <ProjectFlash>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">{t("common.projects")}</h1>
+          {/* The brand gradient lives on the primary button and nowhere else. */}
+          {!canAdd ? null : companies.length > 0 ? (
+            <NewProjectDialog companies={companies} />
+          ) : (
+            <Button asChild variant="brand">
+              <Link href="/companies">{t("projects.openCompanies")}</Link>
+            </Button>
+          )}
+        </div>
+
+        <ProjectsTable
+          rows={rows}
+          cards={cards}
+          counts={counts}
+          q={q}
+          filter={filter ?? null}
+          hidden={hidden}
+          canAdd={canAdd}
+          openId={open}
+          view={view}
+          remembered={stored}
+        />
+
+        <ListTail shown={shown} total={total} />
+
+        <Suspense key={open ?? "closed"} fallback={open ? <ProjectSheetSkeleton /> : null}>
+          <ProjectDrawer projectId={open} />
+        </Suspense>
       </div>
-
-      <ProjectsTable
-        rows={rows}
-        cards={cards}
-        counts={counts}
-        q={q}
-        filter={filter ?? null}
-        openId={open}
-        view={view}
-        remembered={stored}
-      />
-
-      <ListTail shown={shown} total={total} />
-
-      <Suspense key={open ?? "closed"} fallback={open ? <ProjectSheetSkeleton /> : null}>
-        <ProjectDrawer projectId={open} />
-      </Suspense>
-    </div>
+    </ProjectFlash>
   );
 }
