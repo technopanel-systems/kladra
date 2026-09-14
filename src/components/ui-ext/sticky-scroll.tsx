@@ -28,24 +28,31 @@ import { cn } from "@/lib/utils";
  * time still overflows, and gets the bar; a desk wide enough for every column
  * does not, and gets nothing.
  *
- * **Where it sticks, and the trap under it (P13-S7).** `sticky` sticks inside the
- * nearest ancestor that scrolls or CLIPS — `overflow: hidden` counts — so the
- * same `top` means two different things:
+ * **It takes no room (P13-S7 review).** Whether the surface overflows is known
+ * only once it has been measured in the browser, so the bar appears after the
+ * first paint — and when it was a block of its own, everything under it (the
+ * whole table, the whole board) moved down by its height the moment it did, on
+ * every visit. So the sticky element is a shelf of no height and the bar hangs
+ * from it, laid over the surface's top edge: appearing moves nothing, and the
+ * space it covers is the header row's padding or the board's top gutter.
+ *
+ * **Where it sticks.** `sticky` sticks inside the nearest ancestor that SCROLLS —
+ * `overflow: hidden` makes one, `clip` does not — so the same `top` can mean two
+ * different things:
  *
  * - When the page is what scrolls, the bar has to stop under the app's sticky top
  *   bar (`top-bar.tsx`: 3.5rem and its 1px border). At `top: 0` it slid behind
  *   the header and was on screen only in the sense that it was painted there.
- * - Inside a card with `overflow: hidden` (`card-face`), the card is what it
- *   sticks to and the card never scrolls, so that same 3.5rem pushed the bar
- *   3.5rem DOWN into the card, over the table it belonged to.
+ * - Inside something that scrolls or hides its overflow, that thing is what it
+ *   sticks to, and the same 3.5rem pushed the bar 3.5rem DOWN into it, over the
+ *   table it belonged to. The kit's card used to be that thing; `card-face`
+ *   clips now, for exactly this reason.
  *
  * So the bar is told nothing and finds out: on mount it walks up from the
- * surface, and if nothing between it and the page scrolls or clips, it sits
+ * surface, and if nothing between it and the page scrolls or hides, it sits
  * under the top bar; otherwise it sits at the top of whatever holds it. A caller
  * that knows better still says so with `barClassName`. The surface itself clips
- * rather than hides, which rounds a card's corners the same and is not a
- * scroller — so a card drawn ON this component (`className="card-face"`) does
- * not trap its own bar.
+ * rather than hides, for the same reason the card does.
  */
 
 /** The top bar's height and its border, which is where a page-scrolled bar stops. */
@@ -65,6 +72,7 @@ export function StickyScroll({
   barClassName?: string;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
+  const shelfRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const [inner, setInner] = useState(0);
   const [overflows, setOverflows] = useState(false);
@@ -83,23 +91,23 @@ export function StickyScroll({
     return () => observer.disconnect();
   }, []);
 
-  // Where the bar stops: under the top bar when the page scrolls it, at the top
-  // of its holder when something closer does. Written to the element, not to
-  // state — it is decided once and nothing on the screen redraws for it.
+  // Where the shelf stops: under the top bar when the page scrolls it, at the
+  // top of its holder when something closer does. Written to the element, not
+  // to state — it is decided once and nothing on the screen redraws for it.
   useEffect(() => {
-    const bar = barRef.current;
-    if (!bar || barClassName) return;
+    const shelf = shelfRef.current;
+    if (!shelf || barClassName) return;
     let held = false;
-    // From the surface's own box up: `overflow-clip` above makes it a clipper
-    // and not a scroller, but a caller's class that won the cascade would not.
-    for (let node = bar.parentElement; node && node !== document.body; node = node.parentElement) {
+    // From the surface's own box up. A clipper is not a scroller, so `clip` is
+    // not asked about; a caller's class that hides would be.
+    for (let node = shelf.parentElement; node && node !== document.body; node = node.parentElement) {
       const style = getComputedStyle(node);
       if (/auto|scroll|hidden/.test(`${style.overflowX} ${style.overflowY}`)) {
         held = true;
         break;
       }
     }
-    bar.style.insetBlockStart = held ? "0px" : UNDER_TOP_BAR;
+    shelf.style.insetBlockStart = held ? "0px" : UNDER_TOP_BAR;
   }, [barClassName]);
 
   useEffect(() => {
@@ -125,17 +133,20 @@ export function StickyScroll({
 
   return (
     <div data-slot="sticky-scroll" className={cn("relative", className, "overflow-clip")}>
+      {/* The shelf: sticky, and no height, so showing it moves nothing below. */}
       <div
-        ref={barRef}
-        aria-hidden="true"
-        data-slot="sticky-scroll-bar"
+        ref={shelfRef}
         hidden={!overflows}
-        className={cn(
-          "sticky top-0 z-10 overflow-x-auto overflow-y-hidden bg-inherit [scrollbar-width:thin]",
-          barClassName,
-        )}
+        className={cn("sticky top-0 z-10 h-0 bg-inherit", barClassName)}
       >
-        <div style={{ inlineSize: inner, blockSize: 1 }} />
+        <div
+          ref={barRef}
+          aria-hidden="true"
+          data-slot="sticky-scroll-bar"
+          className="absolute inset-x-0 top-0 overflow-x-auto overflow-y-hidden bg-inherit [scrollbar-width:thin]"
+        >
+          <div style={{ inlineSize: inner, blockSize: 1 }} />
+        </div>
       </div>
       <div
         ref={bodyRef}

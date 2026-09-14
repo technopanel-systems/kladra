@@ -609,6 +609,14 @@ export async function createLeadAction(
  * stray click answers nobody. Only the person holding it, because it is his
  * answer to give; and pressed twice it is still the first press, because the
  * second would move the day he picked it up.
+ *
+ * The row is held before anything is decided (rules/data.md: a write holds its
+ * row before it decides). Asked of an unlocked read, "is it his?" could be true
+ * of a lead the manager was moving to Saad in the same instant, and the press
+ * would then stamp Saad's lead, take the notice off Saad's bell and tell
+ * marketing that Faisal had it. Held, the press waits for the move and reads
+ * the holder the move wrote — and two tabs pressed at once read the stamp the
+ * first one wrote, so marketing's bell rings once.
  */
 export async function acknowledgeLeadAction(companyId: unknown): Promise<ActionResult> {
   return guard(async (actor) => {
@@ -618,35 +626,29 @@ export async function acknowledgeLeadAction(companyId: unknown): Promise<ActionR
     const id = z.uuid().safeParse(companyId);
     if (!id.success) return { ok: false, error: tc("invalid") };
 
-    const [lead] = await db
-      .select({
-        repId: companies.repId,
-        fromId: companies.leadFromId,
-        acknowledgedAt: companies.leadAcknowledgedAt,
-      })
-      .from(companies)
-      .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
-      .limit(1);
-    if (!lead || !lead.fromId) return { ok: false, error: t("companyNotFound") };
-    if (!mayWrite(actor, lead.repId)) throw new NotAllowed();
-    // Answered already — by him, in the other tab, a moment ago. Not an error:
-    // what he asked for is the case.
-    if (lead.acknowledgedAt) return { ok: true };
+    const outcome = await db.transaction(async (tx) => {
+      const [lead] = await tx
+        .select({
+          repId: companies.repId,
+          fromId: companies.leadFromId,
+          acknowledgedAt: companies.leadAcknowledgedAt,
+        })
+        .from(companies)
+        .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
+        .for("update");
+      if (!lead || !lead.fromId) return "gone" as const;
+      // Thrown inside the transaction, which has written nothing yet: `guard`
+      // turns it into the refusal every other action gives.
+      if (!mayWrite(actor, lead.repId)) throw new NotAllowed();
+      // Answered already — by him, in the other tab, a moment ago. Not an error:
+      // what he asked for is the case.
+      if (lead.acknowledgedAt) return "answered" as const;
 
-    const fromId = lead.fromId;
-    await db.transaction(async (tx) => {
-      // The condition is on the UPDATE and the rest hangs off what it wrote.
-      // Two tabs pressed at once both read "not answered yet" a moment ago —
-      // one of them writes the day and the other writes nothing, and it is the
-      // returned row, not the earlier read, that says which is which. Hung off
-      // the read instead, the loser would still have rung marketing's bell a
-      // second time about a lead it had already been told about.
-      const answered = await tx
+      const fromId = lead.fromId;
+      await tx
         .update(companies)
         .set({ leadAcknowledgedAt: new Date() })
-        .where(and(eq(companies.id, id.data), isNull(companies.leadAcknowledgedAt)))
-        .returning({ id: companies.id });
-      if (answered.length === 0) return;
+        .where(eq(companies.id, id.data));
 
       await tx.insert(auditLog).values({
         userId: actor.id,
@@ -676,10 +678,14 @@ export async function acknowledgeLeadAction(companyId: unknown): Promise<ActionR
         type: "company",
         id: id.data,
       });
+      return "acknowledged" as const;
     });
 
-    revalidateFloor();
-    revalidatePath("/[locale]/leads", "page");
+    if (outcome === "gone") return { ok: false, error: t("companyNotFound") };
+    if (outcome === "acknowledged") {
+      revalidateFloor();
+      revalidatePath("/[locale]/leads", "page");
+    }
     return { ok: true };
   });
 }
@@ -690,23 +696,14 @@ export async function acknowledgeLeadAction(companyId: unknown): Promise<ActionR
  *
  * A lead is a company (D157), so this is a hand-over: the same permission
  * (`mayHandOver`, the sales manager and the admin behind him, D156), the same
- * picker of people a company can sit with, and the same statements
- * (`moveCustomer`) carrying the old holder's contacts and jobs with it. What it
- * adds is the half that makes it a LEAD arriving rather than a customer moving:
+ * picker of people a company can sit with, and the same move the drawer's Hand
+ * over makes (`handCompanyTo`). Whether that move is a lead arriving or a
+ * customer changing hands is decided there, under the row's lock, from what the
+ * row says at that instant — so the two doors onto it cannot do two things.
  *
- * - **It is his to acknowledge again.** The day somebody else said "I have him"
- *   is not the new holder saying it, so the stamp goes, the row lands in his
- *   band highlighted, and his bell rings with the lead notice — which is work,
- *   cleared by his Acknowledge (D79). The old holder's notice is gone in the
- *   same transaction, because the work it named is no longer his.
- * - **Given back to the person who filed it, it is acknowledged at once**, the
- *   rule filing follows (D157): she has it, and a row waiting for her to confirm
- *   her own lead is the figure that is always wrong.
- *
- * The row is held before anything is decided (rules/data.md): two managers
- * pressing at once would each read the old holder and each "move" the lead from
- * him, and the second audit row would name a holder the customer had already
- * left.
+ * What this door adds is that it moves leads only: a company nobody filed as a
+ * lead is not on the leads view, and an id that names one is answered as not
+ * found rather than handed over from a screen that never showed it.
  */
 export async function reassignLeadAction(
   companyId: unknown,
@@ -722,97 +719,18 @@ export async function reassignLeadAction(
     // "You have not said who" is the refusal a person actually hits: the confirm
     // is live before the picker is touched (DESIGN §5). Said at the picker.
     const to = z.uuid().safeParse(toUserId);
-    if (!to.success) {
+    const target = to.success ? await floorHolder(to.data) : null;
+    if (!target) {
       const sentence = t("leadNeedsAFloor");
       return { ok: false, error: sentence, fieldErrors: { to: sentence } };
     }
 
-    // Active, and somebody a company can sit with — asked of the database rather
-    // than trusted from the picker, which is the courtesy (DESIGN §5).
-    const [target] = await db
-      .select({ id: users.id, role: users.role })
-      .from(users)
-      .where(and(eq(users.id, to.data), eq(users.active, true)))
-      .limit(1);
-    if (!target || !holdsFloor(target.role)) {
-      const sentence = t("leadNeedsAFloor");
-      return { ok: false, error: sentence, fieldErrors: { to: sentence } };
-    }
-
-    const outcome = await db.transaction(async (tx) => {
-      const [lead] = await tx
-        .select({
-          name: companies.name,
-          repId: companies.repId,
-          fromId: companies.leadFromId,
-        })
-        .from(companies)
-        .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
-        .for("update");
-      if (!lead || !lead.fromId) return "gone" as const;
-      if (lead.repId === target.id) return "same" as const;
-
-      const from = lead.repId;
-      const hers = target.id === lead.fromId;
-      await moveCustomer(tx, id.data, from, target.id);
-      await tx
-        .update(companies)
-        .set({ leadAcknowledgedAt: hers ? new Date() : null })
-        .where(eq(companies.id, id.data));
-
-      await tx.insert(auditLog).values({
-        userId: actor.id,
-        action: "lead.reassign",
-        recordType: "company",
-        recordId: id.data,
-        details: { name: lead.name, from, to: target.id },
-      });
-
-      // The old holder's notice named work that is no longer his.
-      await clearNotifications(tx, { type: "company", id: id.data }, ["leadAssigned"]);
-
-      if (target.id !== actor.id) {
-        await createNotification(
-          tx,
-          hers
-            ? {
-                // Back with the person who found it: nothing to acknowledge, so
-                // the notice is the news of it, cleared by reading.
-                userId: target.id,
-                kind: "companyHandedOver",
-                params: { label: lead.name, repId: actor.id },
-                link: `/companies?open=${id.data}`,
-                subject: { type: "company", id: id.data },
-              }
-            : {
-                userId: target.id,
-                kind: "leadAssigned",
-                params: { repId: actor.id },
-                link: `/companies?open=${id.data}`,
-                subject: { type: "company", id: id.data },
-              },
-        );
-      }
-
-      const audience = new Set([
-        ...(await liveAudienceForCompany(id.data, actor.id)),
-        from,
-        target.id,
-        lead.fromId,
-      ]);
-      await notifyLive(tx, [...audience], { type: "company", id: id.data });
-      return "moved" as const;
-    });
-
+    const outcome = await handCompanyTo(actor, id.data, target, { leadsOnly: true });
     if (outcome === "gone") return { ok: false, error: t("companyNotFound") };
     if (outcome === "same") {
       const sentence = t("handOverSame");
       return { ok: false, error: sentence, fieldErrors: { to: sentence } };
     }
-
-    revalidateFloor();
-    revalidatePath("/[locale]/leads", "page");
-    revalidatePath("/[locale]/team", "page");
     return { ok: true };
   });
 }
@@ -996,24 +914,157 @@ async function moveCustomer(tx: Tx, companyId: string, from: string, to: string)
 }
 
 /**
+ * Somebody a company can be put with: an active account whose role holds a
+ * floor. Asked of the database rather than trusted from the picker, which is
+ * the courtesy (DESIGN §5). A deactivated account would take the company back
+ * out of sight the moment it landed there, and the admin has no floor at all.
+ */
+async function floorHolder(userId: string): Promise<{ id: string } | null> {
+  const [person] = await db
+    .select({ id: users.id, role: users.role })
+    .from(users)
+    .where(and(eq(users.id, userId), eq(users.active, true)))
+    .limit(1);
+  return person && holdsFloor(person.role) ? { id: person.id } : null;
+}
+
+/**
+ * Put a company on another floor — the one move behind both doors onto it: the
+ * drawer's Hand over and the leads view's Reassign (SPEC §3 P13, D181).
+ *
+ * The row is held first and everything after reads what the row says NOW
+ * (rules/data.md: a write holds its row before it decides). Two managers
+ * pressing at once would otherwise each read the old holder and each "move" the
+ * customer from him; and a lead acknowledged a moment before the manager's press
+ * would be moved as a lead still waiting, taking the stamp off a customer his
+ * rep had already rung.
+ *
+ * Which act it is, is that row's to say:
+ *
+ * - **A lead nobody has acknowledged** is a lead arriving (D181). It is his to
+ *   acknowledge: it lands in his band highlighted, his two working days start
+ *   from this move (`lead.reassign`, which `GIVEN_AT` reads), his bell rings
+ *   with the lead notice — work, cleared by his Acknowledge (D79) — and the old
+ *   holder's notice goes, because the work it named is no longer his. Given back
+ *   to the person who filed it, it is acknowledged at once, the rule filing
+ *   follows (D157): a row waiting for her to confirm her own lead is the figure
+ *   that is always wrong.
+ * - **Anything else — a lead somebody has acknowledged included** — is a customer
+ *   changing hands (`company.handOver`). "Once acknowledged, the lead is a normal
+ *   company owned by the rep, keeping its origin" (§3 P13): the day somebody
+ *   said "I have him" stays on it, it does not go back into anybody's band or
+ *   onto the stuck list, and the new holder is told as any hand-over tells him.
+ *
+ * What travels is the customer and the work under him (`moveCustomer`). The
+ * quotations, the dispatches and the achieved metres do NOT travel — they are
+ * read by who raised them (D86) — and neither does the log, because an activity
+ * records who did it and rewriting that would be rewriting the report (S27).
+ * Both floors are told live, and so is whoever filed a lead, whose screen names
+ * who has it; the audit row carries both names, for the six-months-later
+ * question (S55).
+ */
+async function handCompanyTo(
+  actor: SessionUser,
+  companyId: string,
+  target: { id: string },
+  { leadsOnly }: { leadsOnly: boolean },
+): Promise<"gone" | "same" | "moved"> {
+  const outcome = await db.transaction(async (tx) => {
+    // Archived is not there: a company off the floor has no floor to move to,
+    // and restoring it is the admin's own action (S16).
+    const [company] = await tx
+      .select({
+        name: companies.name,
+        repId: companies.repId,
+        fromId: companies.leadFromId,
+        acknowledgedAt: companies.leadAcknowledgedAt,
+      })
+      .from(companies)
+      .where(and(eq(companies.id, companyId), isNull(companies.archivedAt)))
+      .for("update");
+    if (!company || (leadsOnly && !company.fromId)) return "gone" as const;
+    if (company.repId === target.id) return "same" as const;
+
+    const from = company.repId;
+    const arriving = company.fromId !== null && company.acknowledgedAt === null;
+    const hers = arriving && target.id === company.fromId;
+    await moveCustomer(tx, companyId, from, target.id);
+    if (hers) {
+      await tx
+        .update(companies)
+        .set({ leadAcknowledgedAt: new Date() })
+        .where(eq(companies.id, companyId));
+    }
+
+    await tx.insert(auditLog).values({
+      userId: actor.id,
+      action: arriving ? "lead.reassign" : "company.handOver",
+      recordType: "company",
+      recordId: companyId,
+      details: { name: company.name, from, to: target.id },
+    });
+
+    // The old holder's notice named work that is no longer his.
+    if (arriving) {
+      await clearNotifications(tx, { type: "company", id: companyId }, ["leadAssigned"]);
+    }
+
+    // Not to himself: a manager who hands a company to himself knows he did.
+    if (target.id !== actor.id) {
+      await createNotification(
+        tx,
+        arriving && !hers
+          ? {
+              userId: target.id,
+              kind: "leadAssigned",
+              params: { repId: actor.id },
+              link: `/companies?open=${companyId}`,
+              subject: { type: "company", id: companyId },
+            }
+          : {
+              // A customer, or a lead back with the person who found it:
+              // nothing to acknowledge, so the notice is the news of it,
+              // cleared by reading.
+              userId: target.id,
+              kind: "companyHandedOver",
+              params: { label: company.name, repId: actor.id },
+              link: `/companies?open=${companyId}`,
+              subject: { type: "company", id: companyId },
+            },
+      );
+    }
+
+    // Both floors changed, so both are told, and so is everybody who reads the
+    // team screen — and the person who filed a lead, whose list says who has it.
+    const audience = new Set([
+      ...(await liveAudienceForCompany(companyId, actor.id)),
+      from,
+      target.id,
+      ...(company.fromId ? [company.fromId] : []),
+    ]);
+    await notifyLive(tx, [...audience], { type: "company", id: companyId });
+    return "moved" as const;
+  });
+
+  if (outcome === "moved") {
+    revalidateFloor();
+    revalidatePath("/[locale]/leads", "page");
+    revalidatePath("/[locale]/team", "page");
+  }
+  return outcome;
+}
+
+/**
  * Hand this company to somebody else (P8.9).
  *
  * The manager's answer to whose customer this is (SPEC §3, which overrules
- * D51). It is also how a floor survives a person —
- * before this, deactivating an account took its companies out of sight for
- * good, because every list is scoped by `companies.rep_id`.
+ * D51). It is also how a floor survives a person — before this, deactivating an
+ * account took its companies out of sight for good, because every list is
+ * scoped by `companies.rep_id`.
  *
- * What travels is the customer and the work under him: the company, and since
- * P12 the departing rep's projects and contacts as well, because those now say
- * whose they are (D147) and a company that arrives without its people is a
- * customer the new owner cannot phone. The quotations, the dispatches and the
- * achieved metres do NOT travel — they are read by who raised them (D86, the
- * note on `achievedByRep`) — and neither does the log, because an activity
- * records who did it and rewriting that would be rewriting the report (S27).
- *
- * Both sides are told. The new owner gets a notification, because a company
- * appearing on his floor with a follow-up already on it is news; the audit row
- * carries both names, for the six-months-later question (S55).
+ * The move itself is `handCompanyTo`, which the leads view's Reassign makes too:
+ * a lead nobody has picked up goes to the new holder as a lead, and everything
+ * else — an acknowledged lead included — moves as a customer.
  */
 export async function handOverCompanyAction(
   companyId: unknown,
@@ -1029,87 +1080,16 @@ export async function handOverCompanyAction(
     // the way every control in the app is (DESIGN §5).
     const id = z.uuid().safeParse(companyId);
     if (!id.success) return { ok: false, error: tc("invalid") };
-    const to = z.uuid().safeParse(toUserId);
-    if (!to.success) return { ok: false, error: t("handOverWho") };
-    const input = { companyId: id.data, toUserId: to.data };
-
     // Not `assertCompanyMine`: the manager writes nothing on a floor and still
-    // decides whose floor it is (D42, `mayHandOver`). Archived is not there:
-    // a company off the floor has no floor to move to, and restoring it is the
-    // admin's own action (S16).
-    const [company] = await db
-      .select({
-        id: companies.id,
-        name: companies.name,
-        repId: companies.repId,
-        leadFromId: companies.leadFromId,
-        leadAcknowledgedAt: companies.leadAcknowledgedAt,
-      })
-      .from(companies)
-      .where(and(eq(companies.id, input.companyId), isNull(companies.archivedAt)))
-      .limit(1);
-    if (!company) return { ok: false, error: t("companyNotFound") };
+    // decides whose floor it is (D42, `mayHandOver`).
     if (!mayHandOver(actor)) throw new NotAllowed();
+    const to = z.uuid().safeParse(toUserId);
+    const target = to.success ? await floorHolder(to.data) : null;
+    if (!target) return { ok: false, error: t("handOverWho") };
 
-    // A lead nobody has picked up yet is not a customer changing hands but a
-    // lead going to somebody else (SPEC §3 P13): the old holder's notice goes,
-    // the new one is told to acknowledge it, and his two working days start
-    // now. That act is written once, in `reassignLeadAction`; handing it over
-    // from the drawer is the same act.
-    if (company.leadFromId !== null && company.leadAcknowledgedAt === null) {
-      return reassignLeadAction(input.companyId, input.toUserId);
-    }
-
-    // Active, and somebody a company can sit with. A deactivated account would
-    // take the company back out of sight the moment it landed there, and the
-    // coordinator has no floor at all (D15).
-    const [target] = await db
-      // The name is not shown; only the role and the id decide anything here.
-      .select({ id: users.id, name: users.name, role: users.role })
-      .from(users)
-      .where(and(eq(users.id, input.toUserId), eq(users.active, true)))
-      .limit(1);
-    if (!target || !holdsFloor(target.role)) return { ok: false, error: t("handOverWho") };
-    if (target.id === company.repId) return { ok: false, error: t("handOverSame") };
-
-    const from = company.repId;
-    await db.transaction(async (tx) => {
-      await moveCustomer(tx, company.id, from, target.id);
-
-      await tx.insert(auditLog).values({
-        userId: actor.id,
-        action: "company.handOver",
-        recordType: "company",
-        recordId: company.id,
-        details: { name: company.name, from, to: target.id },
-      });
-
-      // Not to himself: a rep who hands a company on knows he did.
-      if (target.id !== actor.id) {
-        await createNotification(tx, {
-          userId: target.id,
-          kind: "companyHandedOver",
-          params: { label: company.name, repId: actor.id },
-          link: `/companies?open=${company.id}`,
-          subject: { type: "company", id: company.id },
-        });
-      }
-
-      // Both floors changed, so both are told, and so is everybody who reads
-      // the team screen.
-      const audience = new Set([
-        ...(await liveAudienceForCompany(company.id, actor.id)),
-        from,
-        target.id,
-      ]);
-      await notifyLive(tx, [...audience], {
-        type: "company",
-        id: company.id,
-      });
-    });
-
-    revalidateFloor();
-    revalidatePath("/[locale]/team", "page");
+    const outcome = await handCompanyTo(actor, id.data, target, { leadsOnly: false });
+    if (outcome === "gone") return { ok: false, error: t("companyNotFound") };
+    if (outcome === "same") return { ok: false, error: t("handOverSame") };
     return { ok: true };
   });
 }

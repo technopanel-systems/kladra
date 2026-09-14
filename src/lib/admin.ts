@@ -20,6 +20,7 @@ import {
 } from "@/db/schema";
 import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { LOOKUP_FIELDS, tableName, type LookupKind, type LookupRow } from "@/lib/lookup-kinds";
+import { LIST_LIMIT } from "@/lib/list-size";
 import { CARRIES_METRES } from "@/lib/team";
 import type { Role } from "@/lib/types";
 
@@ -333,6 +334,13 @@ export async function listNonWorking(from: Day): Promise<NonWorkingRow[]> {
 export const ARCHIVE_KINDS = ["company", "contact", "project"] as const;
 export type ArchiveKind = (typeof ARCHIVE_KINDS)[number];
 
+/**
+ * How many rows one group of the archive draws (D80): a share of what a list
+ * screen draws, so the three groups together are never heavier than one list.
+ * The search is how the rest are found, and the tail line says so.
+ */
+const ARCHIVE_KIND_LIMIT = Math.floor(LIST_LIMIT / ARCHIVE_KINDS.length);
+
 export type ArchivedRow = {
   id: string;
   kind: ArchiveKind;
@@ -391,16 +399,20 @@ function escapeLike(value: string): string {
  * the company's reason is its own column, which lives exactly as long as the
  * archive does.
  *
- * Narrowed and counted in SQL, before the cap: the counts over each group are a
- * window over every match, so "Contacts 3" is three even when two hundred rows
- * of companies came first (rules/data.md, D80). Plain SQL because every table
- * here is aliased by hand, and a Drizzle column in a template with no join
- * renders bare (rules/data.md).
+ * Narrowed, counted AND capped per kind, in SQL. One cap across the three
+ * groups, newest first, let two hundred newer companies push every archived
+ * contact off the screen — the Contacts group vanished and the total under it
+ * left them out. So each group keeps its own first `perKind` rows by its own
+ * newest-first place, and its count is a window over every match of that kind,
+ * so "Contacts 3" is three whatever the companies did (rules/data.md, D80).
+ * Plain SQL because every table here is aliased by hand, and a Drizzle column in
+ * a template with no join renders bare (rules/data.md).
  */
 export async function listArchived(input: {
   q?: string;
   locale: string;
-  limit: number;
+  /** Rows drawn per group; the count on each is every match of its kind. */
+  perKind?: number;
 }): Promise<ArchivedRow[]> {
   const { locale } = input;
   const term = (input.q ?? "").trim();
@@ -427,11 +439,17 @@ export async function listArchived(input: {
     merged_into_name: string | null;
     in_kind: number;
   }>(sql`
+    select placed.*
+      from (
     select archived.*,
            who.id::text as archived_by_id,
            ${personNameOf("who", locale)} as archived_by_name,
            to_char((archived.archived_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as archived_on,
-           (count(*) over (partition by archived.kind))::int as in_kind
+           (count(*) over (partition by archived.kind))::int as in_kind,
+           row_number() over (
+             partition by archived.kind
+             order by archived.archived_at desc, archived.name, archived.id
+           ) as place
       from (
         select c.id::text as id, 'company' as kind, c.name as name,
                c.id::text as company_id, c.name as company_name,
@@ -492,8 +510,9 @@ export async function listArchived(input: {
       ) archived
       left join users who on who.id = archived.archived_by
       ${matches}
-     order by archived.archived_at desc, archived.name
-     limit ${input.limit}::int
+      ) placed
+     where placed.place <= ${input.perKind ?? ARCHIVE_KIND_LIMIT}::int
+     order by placed.archived_at desc, placed.name, placed.id
   `);
 
   return result.rows.map((row) => ({

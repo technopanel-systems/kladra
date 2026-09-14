@@ -2,6 +2,7 @@ import { login } from "./helpers/auth";
 import { one, personName, query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
 import { formatDay, type Day } from "@/lib/dates";
+import { LIST_LIMIT } from "@/lib/list-size";
 
 /**
  * The archive, rebuilt from its question (P13-S7): somebody archived the wrong
@@ -112,5 +113,74 @@ test("the archive finds a thing by name, says who archived it and why, and resto
           and at >= $2::timestamptz`,
       [target.id, start],
     );
+  }
+});
+
+test("a crowd of newly archived companies does not push the archived contacts and projects off the archive", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  // More companies than a list screen draws, archived a moment ago and so the
+  // newest thing in the archive. One cap across the three groups, newest first,
+  // was all companies: the Contacts group vanished and the total under it left
+  // the contacts out (D80). Copied from a live company so every column the
+  // table asks for is one it already accepts; removed afterwards.
+  const crowd = `Crowd ${locale} ${Date.now()}`;
+  const inserted = await query<{ id: string }>(
+    `insert into companies
+       (name, category_id, lead_source_id, country_id, city_id, city_text, rep_id, archived_at, archive_reason)
+     select $1::text || ' ' || g, c.category_id, c.lead_source_id, c.country_id, c.city_id, c.city_text,
+            c.rep_id, now(), 'crowd'
+       from (select * from companies
+              where archived_at is null and lead_from_id is null
+              order by name limit 1) c
+      cross join generate_series(1, $2::int) g
+     returning id`,
+    [crowd, LIST_LIMIT + 1],
+  );
+
+  try {
+    const counts = await one<{ company: number; contact: number; project: number }>(
+      `select (select count(*) from companies where archived_at is not null)::int as company,
+              (select count(*) from contacts where archived_at is not null)::int as contact,
+              (select count(*) from projects where archived_at is not null)::int as project`,
+    );
+    // Something of every kind is archived, or the groups below prove nothing.
+    expect(counts.contact, "the seed archives no contact").toBeGreaterThan(0);
+    expect(counts.project, "the seed archives no project").toBeGreaterThan(0);
+
+    await login(page, locale, "jerom");
+    await page.goto(`/${locale}/admin/archive`);
+    await expect(page.getByRole("heading", { name: t("admin.archive") })).toBeVisible(COLD);
+
+    const groups = [
+      { kind: "company", heading: t("common.companies"), total: counts.company },
+      { kind: "contact", heading: t("common.contacts"), total: counts.contact },
+      { kind: "project", heading: t("common.projects"), total: counts.project },
+    ];
+    let drawn = 0;
+    for (const group of groups) {
+      const region = page.getByRole("region", { name: new RegExp(`^${group.heading}`) });
+      await expect(region, `the ${group.kind} group is gone`).toBeVisible(COLD);
+      // Its heading counts every archived thing of its kind, however many are drawn.
+      await expect(region.getByRole("heading").locator("span")).toHaveText(String(group.total));
+      const rows = await region.getByRole("listitem").count();
+      expect(rows).toBeGreaterThan(0);
+      expect(rows).toBeLessThanOrEqual(group.total);
+      drawn += rows;
+    }
+    expect(drawn, "the companies group was not cut short").toBeLessThan(
+      counts.company + counts.contact + counts.project,
+    );
+
+    // And the line under it adds every group, the contacts included.
+    await expect(page.locator('[data-slot="list-tail"]')).toHaveText(
+      t("common.showingFirst", { shown: drawn, total: counts.company + counts.contact + counts.project }),
+    );
+  } finally {
+    await query("delete from companies where id = any($1::uuid[])", [inserted.map((row) => row.id)]);
   }
 });

@@ -128,6 +128,60 @@ test("a table wider than its card has its scrollbar on screen, and it stops unde
     .toBe(Math.round(banner!.y + banner!.height));
 });
 
+test("the bar takes no room: the surface under it starts where the bar does, so nothing moves when it appears", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // The bar is shown only once the browser has measured the surface, after the
+  // first paint. When it was a block of its own, the whole board or table moved
+  // down by its height the moment it arrived, on every visit. So the surface's
+  // own top must be the top of the component, with the bar laid over it.
+  await page.setViewportSize(DESK);
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/projects?view=board`);
+
+  const { bar, surface } = wide(page, t("common.viewBoard"));
+  const outer = page.locator('[data-slot="sticky-scroll"]').filter({ has: surface });
+  await expect(bar, "five columns and more fit at 1366 — nothing to prove").toBeVisible(COLD);
+
+  const [shell, region, proxy] = await Promise.all([
+    outer.boundingBox(),
+    surface.boundingBox(),
+    bar.boundingBox(),
+  ]);
+  expect(Math.abs(region!.y - shell!.y), "the board starts below the bar, so the bar pushed it down").toBeLessThan(0.5);
+  expect(Math.abs(proxy!.y - shell!.y), "the bar is not at the top of the board").toBeLessThan(0.5);
+});
+
+test("inside the kit's card, the leads table's bar still stops under the top bar as the page scrolls", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // The card clips and does not hide (`card-face`): a card that hid its
+  // overflow was the thing `sticky` stuck to, so the bar rode the card up and
+  // off the screen with the rows. The manager's leads table runs past its card
+  // at 1024, and a short window gives the page somewhere to scroll.
+  await page.setViewportSize({ width: 1024, height: 480 });
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/leads`);
+
+  const { bar, surface } = wide(page, t("leads.title"));
+  await expect(bar, "the leads table fits at 1024 — nothing to prove").toBeVisible(COLD);
+  const card = surface.locator("xpath=ancestor::*[contains(concat(' ', normalize-space(@class), ' '), ' card-face ')][1]");
+  await expect(card, "the leads table is no longer in a card").toHaveCount(1);
+  expect(await card.evaluate((node) => getComputedStyle(node).overflowY)).toBe("clip");
+
+  await page.evaluate(() => window.scrollBy(0, 900));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  const banner = await page.getByRole("banner").boundingBox();
+  expect(banner, "no top bar").not.toBeNull();
+  await expect
+    .poll(async () => Math.round((await bar.boundingBox())!.y), { message: "the bar is not under the top bar" })
+    .toBe(Math.round(banner!.y + banner!.height));
+});
+
 test("a table that fits its card draws no scrollbar of its own", async ({ page, locale, t }) => {
   await page.setViewportSize(DESK);
   await login(page, locale, "faisal");

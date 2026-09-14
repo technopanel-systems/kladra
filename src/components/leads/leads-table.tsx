@@ -228,6 +228,8 @@ export function LeadsTable({
                       companyId={row.id}
                       companyName={row.name}
                       holderId={row.repId}
+                      fromId={row.fromId}
+                      acknowledged={row.acknowledgedOn !== null}
                       people={people}
                       reveal
                     />
@@ -294,6 +296,8 @@ export function LeadsTable({
                   companyId={row.id}
                   companyName={row.name}
                   holderId={row.repId}
+                  fromId={row.fromId}
+                  acknowledged={row.acknowledgedOn !== null}
                   people={people}
                 />
               ) : null}

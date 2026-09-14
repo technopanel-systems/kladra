@@ -29,5 +29,8 @@
   "origin": "A lead from {name} · {source}",
   "reassign": "Reassign",
   "reassignTitle": "Reassign {name}",
-  "reassignWarning": "The customer moves to the person you choose, with the contacts and jobs its current holder had on it. They are told, and it waits for them to acknowledge it."
+  "reassignWarning": "It moves to the person you choose, with the contacts and projects its current holder had on it.",
+  "reassignWaits": "It waits for {name} to acknowledge it.",
+  "reassignBack": "{name} filed it, so it counts as acknowledged at once.",
+  "reassignKeeps": "It has already been acknowledged, and stays acknowledged with {name}."
 }

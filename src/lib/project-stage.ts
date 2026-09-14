@@ -79,17 +79,24 @@ export function projectStage(facts: StageFacts): ProjectStage {
  * correlated subquery a bare column resolves inside the inner table and the
  * condition is silently never true (rules/data.md). The outer query reads
  * `projects`, by that name.
+ *
+ * The first two fragments are exported, and only those two: they are what
+ * "a priced standing paper" means, and a lead is Quoted by exactly that
+ * sentence asked of its company instead of a job (D182, `LEAD_STAGE` in
+ * src/lib/leads.ts). A copy there would be the second definition that drifts
+ * the day a status is added (rules/data.md). Each reads a quotation under the
+ * alias `q`, which the caller's own `from quotations q` supplies.
  */
 
 /** `q` is the live revision of its number and still in play. */
-const STANDING = `q.status in ('requested', 'returned', 'issued', 'accepted')
+export const STANDING = `q.status in ('requested', 'returned', 'issued', 'accepted')
        and not exists (
          select 1 from quotations later
           where later.number = q.number and later.revision > q.revision
        )`;
 
 /** Some revision of `q`'s number has been issued. */
-const PRICED = `exists (
+export const PRICED = `exists (
          select 1 from quotations was
           where was.number = q.number and was.issued_at is not null
        )`;

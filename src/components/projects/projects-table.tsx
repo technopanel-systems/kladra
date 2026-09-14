@@ -349,10 +349,7 @@ export function ProjectsTable({
               ))}
             </div>
 
-            {/* Clipped, not hidden: a card that hides its overflow is what
-                `sticky` sticks to, so the table's scrollbar would ride the card
-                instead of stopping under the top bar (StickyScroll). */}
-            <div className="card-face hidden overflow-clip md:block">
+            <div className="card-face hidden md:block">
               <Table label={t("common.projects")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">

@@ -39,6 +39,7 @@ import { db } from "@/db";
 import { cities, companies, users } from "@/db/schema";
 import type { LeadQuery } from "@/components/leads/lead-view";
 import { riyadhDay, type Day } from "@/lib/dates";
+import { PRICED, STANDING } from "@/lib/project-stage";
 import { seesAllRoles } from "@/lib/floor";
 import { personNameOf } from "@/lib/people";
 import type { SessionUser } from "@/lib/types";
@@ -58,16 +59,25 @@ export const LEAD_STAGES = ["waiting", "acknowledged", "contacted", "quoted", "w
 export type LeadStage = (typeof LEAD_STAGES)[number];
 
 /**
- * What became of a lead, derived in SQL from the company's own records.
+ * What became of a lead, derived in SQL from the company's own records (D182).
  *
- * The furthest of four facts, each asked of the table that holds it:
+ * First the one fact that outranks the rest, then the furthest of four, each
+ * asked of the table that holds it:
  *
- * - **won** — a quotation on it the customer accepted, or a load to it the desk
- *   approved. Either is the customer saying yes (S41: approved is the event that
- *   counts), and a direct dispatch with no paper behind it is a yes too.
- * - **quoted** — a quotation raised on it that the rep did not take back. A
- *   request still at the desk counts: the price has been asked for, which is
- *   the step marketing is watching for; a cancelled one never happened (D32).
+ * - **waiting** — nobody has said he has it. Whatever else is on the company —
+ *   a paper, a load — the question marketing and the manager are asking of this
+ *   row is still "has anybody picked it up?", and a row badged Quoted under the
+ *   Not acknowledged chip, with no age beside it, answers neither.
+ * - **won** — the customer has bought: a load to the company the desk approved,
+ *   on a paper or direct (S41: approved is the event that counts). On the
+ *   projects board such a job ordinarily reads Dispatching or Won, and the two
+ *   words part on purpose: the board asks where the job has got to, a lead asks
+ *   whether the customer bought. An accepted paper with nothing gone out is a
+ *   yes nobody has loaded yet: Quoted.
+ * - **quoted** — a priced paper stands on the company: the board's own "priced
+ *   standing paper" (`STANDING` and `PRICED` from src/lib/project-stage.ts, the
+ *   one definition, asked of the company instead of the job). A request still
+ *   on the desk is not a quote; a withdrawn or rejected one stands for nothing.
  * - **contacted** — a report written on it since it was acknowledged (S4's
  *   entries, unfiled ones excluded, D70). Before that day it was not his.
  * - **acknowledged** — the column itself.
@@ -79,22 +89,20 @@ export type LeadStage = (typeof LEAD_STAGES)[number];
  * this file does.
  */
 export const LEAD_STAGE: SQL<LeadStage> = sql<LeadStage>`(case
+  when companies.lead_acknowledged_at is null then 'waiting'
   when exists (
-         select 1 from quotations won_q
-          where won_q.company_id = companies.id and won_q.status = 'accepted'
-       )
-    or exists (
          select 1 from dispatches won_d
           where won_d.company_id = companies.id and won_d.status = 'approved'
        )
     then 'won'
   when exists (
-         select 1 from quotations quoted_q
-          where quoted_q.company_id = companies.id and quoted_q.status <> 'cancelled'
+         select 1 from quotations q
+          where q.company_id = companies.id
+            and ${sql.raw(STANDING)}
+            and ${sql.raw(PRICED)}
        )
     then 'quoted'
-  when companies.lead_acknowledged_at is not null
-   and exists (
+  when exists (
          select 1 from activities contact_a
           where contact_a.company_id = companies.id
             and contact_a.archived_at is null
@@ -102,8 +110,7 @@ export const LEAD_STAGE: SQL<LeadStage> = sql<LeadStage>`(case
                 >= (companies.lead_acknowledged_at at time zone 'Asia/Riyadh')::date
        )
     then 'contacted'
-  when companies.lead_acknowledged_at is not null then 'acknowledged'
-  else 'waiting'
+  else 'acknowledged'
 end)`;
 
 /**

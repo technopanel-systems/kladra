@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { query } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
+import { LIST_LIMIT } from "@/lib/list-size";
 import { PROJECT_STAGES, projectStage, type ProjectStage, type StageFacts } from "@/lib/project-stage";
 
 /**
@@ -167,5 +168,58 @@ test("in Arabic the projects board starts at the right, with Open first", async 
   );
   for (let i = 1; i < rights.length; i += 1) {
     expect(rights[i], `column ${i} is not to the left of column ${i - 1}`).toBeLessThan(rights[i - 1]);
+  }
+});
+
+test("a column cut short by its cap still counts every project in it, and the other columns keep theirs", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  // More new jobs than a list screen draws, on one company and all Open —
+  // nothing asked for on any of them. Whatever a column's own cap is, it is no
+  // more than a list's, so this cuts the Open column short. They are also the
+  // newest cards on the board, so one cap shared across the columns would push
+  // the older jobs of the other four off it: the long Dispatching ones first,
+  // leaving "0" over a column that holds five (D80).
+  const crowd = `Crowd ${locale} ${Date.now()}`;
+  const inserted = await query<{ id: string }>(
+    `insert into projects (company_id, rep_id, name)
+     select c.id, c.rep_id, $1::text || ' ' || g
+       from (select id, rep_id from companies where archived_at is null order by name limit 1) c
+      cross join generate_series(1, $2::int) g
+     returning id`,
+    [crowd, LIST_LIMIT + 1],
+  );
+
+  try {
+    const floor = await projectFacts();
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/projects?view=board`);
+    const columns = await board(page);
+
+    const open = columns.find((column) => column.name === t(STAGE_KEYS.open))!;
+    const openCount = floor.filter((project) => projectStage(project) === "open").length;
+    expect(openCount).toBeGreaterThan(LIST_LIMIT);
+    expect(open.count, "the Open heading does not count what is in its column").toBe(openCount);
+    expect(open.ids.length, "the Open column was not cut short").toBeLessThan(openCount);
+    expect(open.ids.length).toBeGreaterThan(0);
+
+    for (const stage of PROJECT_STAGES.filter((one) => one !== "open")) {
+      const column = columns.find((one) => one.name === t(STAGE_KEYS[stage]))!;
+      const expected = floor.filter((project) => projectStage(project) === stage).length;
+      expect(column.count, `${column.name} counts ${column.count}`).toBe(expected);
+      expect(column.ids.length, `${column.name} lost its cards to the crowd in Open`).toBe(expected);
+    }
+
+    // And the line under the board says how many are drawn of how many in all.
+    const drawn = columns.reduce((sum, column) => sum + column.ids.length, 0);
+    await expect(page.locator('[data-slot="list-tail"]')).toHaveText(
+      t("common.showingFirst", { shown: drawn, total: floor.length }),
+    );
+  } finally {
+    await query("delete from projects where id = any($1::uuid[])", [inserted.map((row) => row.id)]);
   }
 });

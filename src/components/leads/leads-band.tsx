@@ -126,7 +126,7 @@ async function Band() {
               // Lifted over the row's door, so pressing it acknowledges rather
               // than opening the drawer (globals.css, row-door).
               <div className="relative z-10 flex shrink-0 justify-end">
-                <AcknowledgeLeadButton companyId={lead.id} />
+                <AcknowledgeLeadButton companyId={lead.id} companyName={lead.name} />
               </div>
             ) : null}
           </li>

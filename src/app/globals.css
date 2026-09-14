@@ -397,7 +397,16 @@
    and one that is only read says nothing. */
 @utility card-face {
   position: relative;
-  overflow: hidden;
+  /* Clipped, not hidden (P13-S7 review). `hidden` makes the card a scroll
+     container, and a sticky thing sticks to its nearest scroll container: the
+     table's scrollbar inside every card rode the card, which never scrolls,
+     instead of stopping under the top bar. `clip` rounds and cuts the same and
+     scrolls nothing. The two minimums keep what `hidden` also did to a card
+     inside a flex row or a grid — it may shrink below its content, so a
+     truncated name still truncates. */
+  overflow: clip;
+  min-width: 0;
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 4px);
   background-color: var(--surface);

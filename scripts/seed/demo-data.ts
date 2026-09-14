@@ -598,8 +598,10 @@ export const COMPANIES: CompanySeed[] = [
    * TODAY (his band, amber), one given to Faisal three WORKING days ago and
    * still unanswered (past the two-day line: red on the leads view and on the
    * manager's stuck list), one that arrived yesterday on Saad's floor, one
-   * acknowledged and then rung (contacted), one with a quotation raised on it
-   * (quoted), and one whose quotation the customer accepted (won). Every stage
+   * acknowledged and then rung (contacted), one with a quotation issued on it
+   * (quoted), and one whose quotation the customer accepted and nothing has
+   * been loaded yet — still quoted, because a lead is won when a load to the
+   * customer is approved (D182); marketing's own m1 carries the won one. Every stage
    * is read from the company's own rows at read time, so each row below carries
    * exactly the record that puts it there and nothing that would move it on.
    *
@@ -694,7 +696,8 @@ export const COMPANIES: CompanySeed[] = [
     category: "Contractor",
     source: "Referral",
     city: "Riyadh",
-    // Won: the customer accepted the quotation on it (q13).
+    // Quoted still: the customer accepted the quotation on it (q13) and no load
+    // has been approved, and a lead is won when one is (D182).
     lead: {
       from: "marketing",
       query: "مجمع مكاتب في حي العارض، يطلب A2 ويسأل عن مدة التوريد",
@@ -1616,8 +1619,8 @@ export const QUOTATIONS: QuotationSeed[] = [
   },
   /*
    * The two leads that got to a price (SPEC §3 P13): one issued and waiting on
-   * the customer (quoted), one the customer accepted (won). Neither has a load
-   * yet, so neither moves anybody's month.
+   * the customer, one the customer accepted. Neither has a load yet, so neither
+   * moves anybody's month, and both read Quoted (D182).
    */
   {
     key: "q12",

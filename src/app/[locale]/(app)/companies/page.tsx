@@ -12,7 +12,7 @@ import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
 import { PersonStrip } from "@/components/team/person-strip";
 import { requireUser, seesAll } from "@/lib/authz";
-import { addsCompanies, ownsCompanies, sells } from "@/lib/floor";
+import { addsCompanies, mayWrite, ownsCompanies, sells } from "@/lib/floor";
 import { countCompanies, listCompanies } from "@/lib/companies";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { todayRiyadh } from "@/lib/dates";
@@ -77,8 +77,12 @@ export default async function CompaniesPage({
    * still HOLDS companies — a lead filed onto its own floor is one — so this
    * screen is still its floor and still its search; what has gone is the way
    * in, which is now New lead and asks the two questions a lead has.
+   *
+   * And the sentence the action asks besides the role (`mayWrite`): an admin
+   * viewing as a rep is reading his screen, and `requireActor` refuses every
+   * write while he does (P8.8, DESIGN §5).
    */
-  const mayAdd = addsCompanies(user.role);
+  const mayAdd = addsCompanies(user.role) && mayWrite(user, user.id);
 
   const narrowing = { user, q: q || undefined, filter, repId: repId ?? undefined, locale };
 

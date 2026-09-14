@@ -4,7 +4,6 @@ import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { requireAdmin } from "@/lib/authz";
 import { ARCHIVE_KINDS, listArchived } from "@/lib/admin";
-import { LIST_LIMIT } from "@/lib/list-size";
 
 /**
  * The archive, and the way back out of it (SPEC S16, D24) — rebuilt from its
@@ -39,7 +38,7 @@ export default async function AdminArchivePage({
 
   const [t, rows] = await Promise.all([
     getTranslations(),
-    listArchived({ q: q || undefined, locale, limit: LIST_LIMIT }),
+    listArchived({ q: q || undefined, locale }),
   ]);
 
   // Every group's own count came back on its rows, counted before the cap, so

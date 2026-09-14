@@ -31,7 +31,12 @@ import {
   neverContactedProjectSql,
 } from "@/lib/followups";
 import { LIST_LIMIT } from "@/lib/list-size";
-import { projectStageSql, stageSinceSql, type ProjectStage } from "@/lib/project-stage";
+import {
+  PROJECT_STAGES,
+  projectStageSql,
+  stageSinceSql,
+  type ProjectStage,
+} from "@/lib/project-stage";
 import type { SessionUser } from "@/lib/types";
 import {
   maySeeCompany,
@@ -194,6 +199,16 @@ export async function projectFollowUpCounts(
 
 // ---- the board (D170) --------------------------------------------------------
 
+/**
+ * How many cards one column of the board draws (D80).
+ *
+ * A share of what a list screen draws, so the whole board is never heavier than
+ * the list beside it. Per column and not across the board: one shared cap,
+ * ordered newest first, cut the OLDEST cards first — which are the long
+ * Dispatching jobs — and a column holding fifteen jobs read "0 · Nothing here".
+ */
+export const BOARD_COLUMN_LIMIT = Math.floor(LIST_LIMIT / PROJECT_STAGES.length);
+
 export type ProjectCard = {
   id: string;
   name: string;
@@ -213,7 +228,8 @@ export type ProjectBoardInput = {
   user: SessionUser;
   q?: string;
   locale: string;
-  limit?: number;
+  /** Cards drawn per column; the count on each is every project in it. */
+  perColumn?: number;
 };
 
 /**
@@ -221,11 +237,14 @@ export type ProjectBoardInput = {
  * (SPEC §3 P13, D170).
  *
  * The stage and the day it began are resolved here, in the query, and so is
- * each column's count — a window over the whole narrowed set, evaluated before
- * the limit — so a column heading never counts only the cards that survived the
- * cap (rules/data.md, D80). Newest into its column first: what just moved is
- * what the board is read for, and what has sat longest is at the bottom of its
- * column where its date says so.
+ * each column's count — a window over the whole narrowed set — and so is the
+ * cap, which is each column's own: the first `perColumn` cards of every stage by
+ * their place in that stage, never the first two hundred of the board. The
+ * count and the cut are two windows over the same partition in one inner query,
+ * and the outer one keeps what the cut allows, so a heading counts every job in
+ * its column however many of them were drawn (rules/data.md, D80). Newest into
+ * its column first: what just moved is what the board is read for, and what has
+ * sat longest is at the bottom of its column where its date says so.
  *
  * The narrowing is the list's own (`narrowTo`), without the follow-up filter:
  * a board of stages is every project, the way the quotations board is every
@@ -235,24 +254,45 @@ export async function listProjectBoard(input: ProjectBoardInput): Promise<Projec
   const stage = projectStageSql();
   const since = stageSinceSql(stage);
 
-  const rows = await db
+  // Every field aliased: the outer query reads them by name, and two tables
+  // here both have a `name`.
+  const staged = db
     .select({
       id: projects.id,
       name: projects.name,
-      companyName: companies.name,
+      companyName: sql<string>`${companies.name}`.as("company_name"),
       expectedSqm: projects.expectedSqm,
-      stage,
-      since: riyadhDay(since),
+      stage: sql<ProjectStage>`${stage}`.as("stage"),
+      sinceAt: sql<Date | null>`${since}`.as("since_at"),
       repId: projects.repId,
-      repName: personName(input.locale),
-      inStage: sql<number>`(count(*) over (partition by ${stage}))::int`,
+      repName: sql<string>`${personName(input.locale)}`.as("rep_name"),
+      inStage: sql<number>`(count(*) over (partition by ${stage}))::int`.as("in_stage"),
+      place: sql<number>`(row_number() over (
+        partition by ${stage}
+        order by ${since} desc nulls last, ${projects.name} asc, ${projects.id} asc
+      ))::int`.as("place"),
     })
     .from(projects)
     .innerJoin(companies, eq(companies.id, projects.companyId))
     .innerJoin(users, eq(users.id, projects.repId))
     .where(and(...narrowTo({ user: input.user, q: input.q, locale: input.locale })))
-    .orderBy(sql`${since} desc nulls last`, asc(projects.name))
-    .limit(input.limit ?? LIST_LIMIT);
+    .as("staged");
+
+  const rows = await db
+    .select({
+      id: staged.id,
+      name: staged.name,
+      companyName: staged.companyName,
+      expectedSqm: staged.expectedSqm,
+      stage: staged.stage,
+      since: riyadhDay(sql`${staged.sinceAt}`),
+      repId: staged.repId,
+      repName: staged.repName,
+      inStage: staged.inStage,
+    })
+    .from(staged)
+    .where(sql`${staged.place} <= ${input.perColumn ?? BOARD_COLUMN_LIMIT}::int`)
+    .orderBy(sql`${staged.sinceAt} desc nulls last`, asc(staged.name), asc(staged.id));
 
   return rows.map((row) => ({
     id: row.id,

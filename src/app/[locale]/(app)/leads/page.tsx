@@ -10,7 +10,7 @@ import { Link, redirect } from "@/i18n/navigation";
 import { homeFor, requireUser } from "@/lib/authz";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { firstOfMonth, todayRiyadh } from "@/lib/dates";
-import { filesLeads, mayHandOver, seesAllRoles } from "@/lib/floor";
+import { filesLeads, mayHandOver, mayWrite, seesAllRoles } from "@/lib/floor";
 import { ageLeads, countLeads, listLeads } from "@/lib/leads";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { floorHolderOptions } from "@/lib/pickers";
@@ -36,9 +36,13 @@ export default async function LeadsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [user, locale, raw] = await Promise.all([requireUser(), getLocale(), searchParams]);
-  const mayFile = filesLeads(user.role);
+  const readsOwn = filesLeads(user.role);
   const readsAll = seesAllRoles(user.role);
-  if (!mayFile && !readsAll) redirect({ href: homeFor(user.role), locale });
+  if (!readsOwn && !readsAll) redirect({ href: homeFor(user.role), locale });
+  // Filing is a write, so it asks what the action asks besides the role: an
+  // admin viewing as marketing reads marketing's leads and files none (P8.8,
+  // `requireActor`), and is not offered a New lead the server would refuse.
+  const mayFile = readsOwn && mayWrite(user, user.id);
 
   const query = parseLeadQuery(raw);
   const filtered = query.with !== null || query.state !== null;
@@ -116,7 +120,7 @@ export default async function LeadsPage({
           /* The sentence alone: New lead is already in the heading row above,
              and an empty list that repeats its own primary action puts two brand
              gradients on one screen (DESIGN §2, D31, D35). */
-          <Empty>{mayFile ? t("leads.empty") : t("common.nothingYet")}</Empty>
+          <Empty>{readsOwn ? t("leads.empty") : t("common.nothingYet")}</Empty>
         )
       ) : (
         // Who found it is only worth a column on a screen that reads more than

@@ -1,7 +1,8 @@
-import { login } from "./helpers/auth";
+import { login, type Persona } from "./helpers/auth";
 import { floorOfCompany, one, personName, query, restoreCompanyFloor, userId } from "./helpers/db";
 import { choose, pickFirst } from "./helpers/pick";
-import { test, expect, type Locale } from "./helpers/i18n";
+import type { Page } from "@playwright/test";
+import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 import type { Day } from "@/lib/dates";
 import type { LeadStage } from "@/lib/leads";
 import { waitedSince } from "@/lib/waiting";
@@ -73,6 +74,11 @@ type Waiting = { id: string; name: string; rep_email: string; given: Day; days: 
  * because "late" is one definition and a second copy of it is the drift trap.
  */
 async function lateLeads(): Promise<Waiting[]> {
+  return (await waitingLeads()).filter((row) => row.late);
+}
+
+/** Every lead nobody has acknowledged, oldest first, with how long it has sat. */
+async function waitingLeads(): Promise<(Waiting & { late: boolean })[]> {
   const today = todayRiyadh();
   const rows = await query<Omit<Waiting, "days">>(
     `select c.id, c.name, u.email as rep_email,
@@ -95,10 +101,10 @@ async function lateLeads(): Promise<Waiting[]> {
     [rows[0].given, today],
   );
   const nonWorking: NonWorking[] = holidays.map((row) => ({ day: row.day, userId: null }));
-  return rows
-    .map((row) => ({ ...row, waited: waitedSince(row.given, today, nonWorking) }))
-    .filter((row) => row.waited.late)
-    .map(({ waited, ...row }) => ({ ...row, days: waited.days }));
+  return rows.map((row) => {
+    const waited = waitedSince(row.given, today, nonWorking);
+    return { ...row, days: waited.days, late: waited.late };
+  });
 }
 
 /** The one source that names marketing's own work, in the reader's language. */
@@ -247,7 +253,11 @@ test("marketing files a lead with a phone and the customer's query as its one no
       page.getByRole("link", { name: t("companies.openCompany", { name }) }).filter({ visible: true }),
     ).toHaveCount(1);
 
-    await first.getByRole("button", { name: t("leads.acknowledge") }).click();
+    // Its button says whose lead it answers, as Reassign does: a band of five
+    // buttons all called "Acknowledge" cannot be told apart by ear.
+    await band
+      .getByRole("button", { name: `${t("leads.acknowledge")} ${name}`, exact: true })
+      .click();
     await expect(page.getByText(t("leads.acknowledgedToast"))).toBeVisible(COLD);
   });
 
@@ -407,6 +417,16 @@ test("a lead nobody has acknowledged in two working days is on the manager's lea
   };
   const holder = await personName(late.rep_email, locale);
   const manager = await personName("abdulrahman@technopanel.com.sa", locale);
+  // Whoever filed it: given back to her, it is hers at once (D157).
+  const finder = await personName(
+    (
+      await one<{ email: string }>(
+        "select f.email from companies c join users f on f.id = c.lead_from_id where c.id = $1::uuid",
+        [late.id],
+      )
+    ).email,
+    locale,
+  );
 
   // Everything the move changes, as it stood, put back whatever happens: the
   // Arabic run finds this very lead still late on the floor it was on.
@@ -447,13 +467,25 @@ test("a lead nobody has acknowledged in two working days is on the manager's lea
       await expect(row.getByText(t("team.waitingDays", { count: late.days }))).toBeVisible();
     });
 
-    await test.step("3 · he gives it to Saad from the row", async () => {
+    await test.step("3 · he gives it to Saad from the row, told what will happen to it with whoever he picks", async () => {
       const row = page.getByRole("row").filter({ hasText: late.name }).first();
       await row.getByRole("button", { name: t("leads.reassign") }).click();
 
       const ask = page.getByRole("dialog", { name: t("leads.reassignTitle", { name: late.name }) });
       await expect(ask).toBeVisible(COLD);
-      await choose(page, ask.getByRole("combobox", { name: t("leads.giveTo") }), saad.name);
+      // Before anybody is picked, only what is true whoever it goes to.
+      await expect(ask).toContainText(t("leads.reassignWarning"));
+      await expect(ask).not.toContainText(t("leads.reassignWaits", { name: saad.name }));
+
+      // Back to the person who filed it, it would be hers at once — so that is
+      // what the dialog says while she is the one picked.
+      const giveTo = ask.getByRole("combobox", { name: t("leads.giveTo") });
+      await choose(page, giveTo, finder);
+      await expect(ask).toContainText(t("leads.reassignBack", { name: finder }));
+      await expect(ask).not.toContainText(t("leads.reassignWaits", { name: finder }));
+
+      await choose(page, giveTo, saad.name);
+      await expect(ask).toContainText(t("leads.reassignWaits", { name: saad.name }));
       await ask.getByRole("button", { name: t("leads.reassign") }).click();
       await expect(page.getByText(t("leads.filed", { name: late.name, rep: saad.name }))).toBeVisible(
         COLD,
@@ -607,30 +639,223 @@ test("the manager handing an unanswered lead over from the drawer is the same mo
   }
 });
 
+test("reassigning a lead somebody has acknowledged moves a customer: it stays acknowledged and the move is a hand-over", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  // An acknowledged lead of marketing's on somebody else's floor, not Saad's —
+  // the contacted one the seed carries is this. Every fact the move changes is
+  // captured first and put back, because the Arabic run reads the same row.
+  const lead = await one<{ id: string; name: string; ack: string }>(
+    `select c.id, c.name, c.lead_acknowledged_at::text as ack
+       from companies c
+       join users f on f.id = c.lead_from_id
+       join users u on u.id = c.rep_id
+      where f.email = $1::text and c.archived_at is null
+        and c.rep_id <> c.lead_from_id
+        and c.lead_acknowledged_at is not null
+        and u.email <> 'saad@technopanel.com.sa'
+        and c.name not like 'شركة أفنان للمقاولات%'
+      order by c.name
+      limit 1`,
+    [MARKETING],
+  );
+  const saad = {
+    id: await userId("saad@technopanel.com.sa"),
+    name: await personName("saad@technopanel.com.sa", locale),
+  };
+  const started = new Date();
+  const floor = await floorOfCompany(lead.id);
+  const notices = await noticesOn(lead.id);
+
+  try {
+    await test.step("1 · the manager is told it stays acknowledged, and moves it to Saad", async () => {
+      await login(page, locale, "abdulrahman");
+      await page.goto(`/${locale}/leads`);
+      await expect(page.getByRole("heading", { name: t("leads.title") })).toBeVisible(COLD);
+
+      const row = page.getByRole("row").filter({ hasText: lead.name }).first();
+      await row.getByRole("button", { name: t("leads.reassign") }).click();
+      const ask = page.getByRole("dialog", { name: t("leads.reassignTitle", { name: lead.name }) });
+      await expect(ask).toBeVisible(COLD);
+
+      await choose(page, ask.getByRole("combobox", { name: t("leads.giveTo") }), saad.name);
+      await expect(ask).toContainText(t("leads.reassignKeeps", { name: saad.name }));
+      // Not the sentence for a lead still waiting, which would be untrue of it.
+      await expect(ask).not.toContainText(t("leads.reassignWaits", { name: saad.name }));
+
+      await ask.getByRole("button", { name: t("leads.reassign") }).click();
+      await expect(page.getByText(t("leads.filed", { name: lead.name, rep: saad.name }))).toBeVisible(
+        COLD,
+      );
+    });
+
+    await test.step("2 · Saad's customer, acknowledged on the day it was, and the record says hand-over", async () => {
+      await expect
+        .poll(
+          async () =>
+            (await one<{ rep_id: string }>("select rep_id from companies where id = $1::uuid", [lead.id]))
+              .rep_id,
+          { timeout: 15_000 },
+        )
+        .toBe(saad.id);
+
+      const after = await one<{ same: boolean }>(
+        `select lead_acknowledged_at = $2::timestamptz as same from companies where id = $1::uuid`,
+        [lead.id, lead.ack],
+      );
+      expect(after.same, "the move took the stamp off a customer his rep had already rung").toBe(true);
+
+      const audit = await query<{ action: string; to: string }>(
+        `select action, details->>'to' as "to" from audit_log
+          where record_type = 'company' and record_id = $1::text
+            and action in ('lead.reassign', 'company.handOver') and at >= $2::timestamptz`,
+        [lead.id, started],
+      );
+      expect(audit).toEqual([{ action: "company.handOver", to: saad.id }]);
+
+      // Told as a hand-over tells him — news, not a lead to pick up.
+      const bells = await query<{ kind: string; user_id: string }>(
+        `select kind, user_id from notifications
+          where subject_type = 'company' and subject_id = $1::uuid and created_at >= $2::timestamptz`,
+        [lead.id, started],
+      );
+      expect(bells).toEqual([{ kind: "companyHandedOver", user_id: saad.id }]);
+    });
+
+    await test.step("3 · it is not in Saad's band: it is one of his companies", async () => {
+      await login(page, locale, "saad");
+      await page.goto(`/${locale}/companies`);
+      await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
+      await expect(
+        page.getByRole("region", { name: t("leads.bandTitle") }).getByRole("listitem").filter({ hasText: lead.name }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: t("companies.openCompany", { name: lead.name }) }).filter({ visible: true }),
+      ).toHaveCount(1, COLD);
+    });
+  } finally {
+    await restoreCompanyFloor(floor);
+    await query("update companies set lead_acknowledged_at = $2::timestamptz where id = $1::uuid", [
+      lead.id,
+      lead.ack,
+    ]);
+    await query(
+      `delete from audit_log
+        where record_type = 'company' and record_id = $1::text and at >= $2::timestamptz`,
+      [lead.id, started],
+    );
+    await putNoticesBack(lead.id, notices);
+  }
+});
+
+test("a lead nobody has acknowledged stays on the list of a rep it is shared with, and off its holder's", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // A waiting lead on somebody else's floor, shared with Saad. The band above
+  // Saad's companies carries only what is waiting on HIM, so if his list left
+  // it out too, it would be on no screen of his at all (D185).
+  const late = new Set((await lateLeads()).map((lead) => lead.id));
+  const lead = (
+    await query<{ id: string; name: string; rep_email: string }>(
+      `select c.id, c.name, u.email as rep_email from companies c
+         join users u on u.id = c.rep_id
+        where c.lead_from_id is not null and c.lead_acknowledged_at is null
+          and c.archived_at is null and u.email <> 'saad@technopanel.com.sa'
+          and c.name not like 'شركة أفنان للمقاولات%'
+          and not exists (
+            select 1 from company_shares s
+              join users su on su.id = s.user_id
+             where s.company_id = c.id and su.email = 'saad@technopanel.com.sa'
+          )
+        order by c.created_at desc`,
+    )
+  ).find((row) => !late.has(row.id));
+  expect(lead, "the seed has no unanswered lead to share").toBeTruthy();
+  if (!lead) return;
+
+  const saad = await userId("saad@technopanel.com.sa");
+  const manager = await userId("abdulrahman@technopanel.com.sa");
+  await query(
+    `insert into company_shares (company_id, user_id, granted_by)
+          values ($1::uuid, $2::uuid, $3::uuid)`,
+    [lead.id, saad, manager],
+  );
+
+  try {
+    await test.step("1 · on Saad's list, and not in his band", async () => {
+      await login(page, locale, "saad");
+      await page.goto(`/${locale}/companies`);
+      await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
+      await expect(
+        page.getByRole("link", { name: t("companies.openCompany", { name: lead.name }) }).filter({ visible: true }),
+      ).toHaveCount(1, COLD);
+      await expect(
+        page.getByRole("region", { name: t("leads.bandTitle") }).getByRole("listitem").filter({ hasText: lead.name }),
+      ).toHaveCount(0);
+    });
+
+    await test.step("2 · on its holder's screen it is in the band, and only there", async () => {
+      const holder = lead.rep_email.split("@")[0] as Persona;
+      await login(page, locale, holder);
+      await page.goto(`/${locale}/companies`);
+      const band = page.getByRole("region", { name: t("leads.bandTitle") });
+      await expect(band.getByRole("listitem").filter({ hasText: lead.name })).toHaveCount(1, COLD);
+      await expect(
+        page.getByRole("link", { name: t("companies.openCompany", { name: lead.name }) }).filter({ visible: true }),
+      ).toHaveCount(1);
+    });
+  } finally {
+    await query("delete from company_shares where company_id = $1::uuid and user_id = $2::uuid", [
+      lead.id,
+      saad,
+    ]);
+  }
+});
+
 /**
  * What became of each lead marketing passed, asked of the database a second way.
  *
  * The app derives the stage with correlated `exists` subqueries (`LEAD_STAGE`,
- * src/lib/leads.ts); this reads the same records through grouped joins, so the
- * two can only agree by both being right about the rule: won from an accepted
- * quotation or an approved load, quoted from any quotation not withdrawn,
- * contacted from a report on the company on or after the day it was
- * acknowledged, acknowledged from the lead row, and otherwise still waiting.
+ * src/lib/leads.ts, over the board's `STANDING` and `PRICED`); this reads the
+ * same records through grouped joins, so the two can only agree by both being
+ * right about the rule (D182):
+ *
+ * - not acknowledged, whatever else is on the company, is still waiting;
+ * - won is an approved load on the company, on a paper or direct;
+ * - quoted is a priced paper standing on it — a quotation number whose newest
+ *   revision is still requested, sent back, issued or accepted, and some
+ *   revision of which was issued. A request on the desk that was never priced
+ *   is not a quote;
+ * - contacted is a report on the company on or after the day it was
+ *   acknowledged, and otherwise it is acknowledged.
  */
-async function stagesInSql(): Promise<{ name: string; stage: LeadStage }[]> {
-  return query<{ name: string; stage: LeadStage }>(
+async function stagesInSql(): Promise<{ id: string; name: string; stage: LeadStage }[]> {
+  return query<{ id: string; name: string; stage: LeadStage }>(
     `with passed as (
        select c.id, c.name, c.lead_acknowledged_at as ack
          from companies c
          join users f on f.id = c.lead_from_id
         where f.email = $1::text and c.archived_at is null
      ),
-     paper as (
-       select q.company_id,
-              bool_or(q.status = 'accepted') as accepted,
-              bool_or(q.status <> 'cancelled') as live
+     numbers as (
+       select (array_agg(q.company_id order by q.revision desc))[1] as company_id,
+              (array_agg(q.status::text order by q.revision desc))[1] as newest,
+              bool_or(q.issued_at is not null) as issued
          from quotations q
-        group by q.company_id
+        group by q.number
+     ),
+     paper as (
+       select numbers.company_id,
+              bool_or(numbers.issued
+                      and numbers.newest in ('requested', 'returned', 'issued', 'accepted')) as priced
+         from numbers
+        group by numbers.company_id
      ),
      loads as (
        select d.company_id, bool_or(d.status = 'approved') as approved
@@ -646,13 +871,13 @@ async function stagesInSql(): Promise<{ name: string; stage: LeadStage }[]> {
           and a.happened_on >= (p.ack at time zone 'Asia/Riyadh')::date
         group by p.id
      )
-     select p.name,
+     select p.id::text as id, p.name,
             case
-              when coalesce(paper.accepted, false) or coalesce(loads.approved, false) then 'won'
-              when coalesce(paper.live, false) then 'quoted'
+              when p.ack is null then 'waiting'
+              when coalesce(loads.approved, false) then 'won'
+              when coalesce(paper.priced, false) then 'quoted'
               when coalesce(calls.n, 0) > 0 then 'contacted'
-              when p.ack is not null then 'acknowledged'
-              else 'waiting'
+              else 'acknowledged'
             end as stage
        from passed p
        left join paper on paper.company_id = p.id
@@ -661,6 +886,17 @@ async function stagesInSql(): Promise<{ name: string; stage: LeadStage }[]> {
       order by p.name`,
     [MARKETING],
   );
+}
+
+/** The stage word the leads screen draws for each stage, in the reader's language. */
+function stageWords(t: (key: string) => string): Record<LeadStage, string> {
+  return {
+    waiting: t("leads.notAcknowledged"),
+    acknowledged: t("leads.acknowledged"),
+    contacted: t("leads.contacted"),
+    quoted: t("leads.quoted"),
+    won: t("leads.won"),
+  };
 }
 
 test("marketing's leads screen says what became of each lead it passed, as the company's own records say", async ({
@@ -677,13 +913,7 @@ test("marketing's leads screen says what became of each lead it passed, as the c
     expect(seen.has(stage), `no lead of marketing's is ${stage}`).toBe(true);
   }
 
-  const word: Record<LeadStage, string> = {
-    waiting: t("leads.notAcknowledged"),
-    acknowledged: t("leads.acknowledged"),
-    contacted: t("leads.contacted"),
-    quoted: t("leads.quoted"),
-    won: t("leads.won"),
-  };
+  const word = stageWords(t);
 
   await login(page, locale, "marketing");
   await page.goto(`/${locale}/leads`);
@@ -698,6 +928,106 @@ test("marketing's leads screen says what became of each lead it passed, as the c
       lead.stage,
     );
     await expect(stage.getByText(word[lead.stage], { exact: true })).toBeVisible();
+  }
+});
+
+/** One lead's row on marketing's own leads screen, read for its stage. */
+async function expectStage(page: Page, t: Translate, name: string, stage: LeadStage): Promise<void> {
+  await page.reload();
+  const row = page.getByRole("row").filter({ hasText: name }).first();
+  await expect(row, `${name} is missing`).toBeVisible(COLD);
+  const cell = row.locator('[data-slot="lead-stage"]');
+  await expect(cell, `${name} reads the wrong stage`).toHaveAttribute("data-stage", stage, COLD);
+  await expect(cell.getByText(stageWords(t)[stage], { exact: true })).toBeVisible();
+}
+
+test("a request still on the desk is not a quote, and a lead nobody has acknowledged reads so whatever paper is on it", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // A lead of marketing's that somebody acknowledged, with exactly one
+  // quotation on it — issued, the customer holding the price — and no load. The
+  // seed's quoted lead is this (scripts/seed/demo-data.ts); asked for by shape,
+  // not by name, and every change below is put back.
+  const lead = await one<{
+    id: string;
+    name: string;
+    ack: string;
+    quotation: string;
+    issued_at: string;
+    smac: string;
+  }>(
+    `select c.id, c.name, c.lead_acknowledged_at::text as ack,
+            q.id as quotation, q.issued_at::text as issued_at, q.smac_number as smac
+       from companies c
+       join users f on f.id = c.lead_from_id
+       join quotations q on q.company_id = c.id
+      where f.email = $1::text and c.archived_at is null
+        and c.rep_id <> c.lead_from_id
+        and c.lead_acknowledged_at is not null
+        and q.status = 'issued' and q.revision = 1 and not q.self_issued
+        and (select count(*) from quotations every_q where every_q.company_id = c.id) = 1
+        and not exists (
+          select 1 from dispatches d where d.company_id = c.id and d.status = 'approved'
+        )
+      order by c.name
+      limit 1`,
+    [MARKETING],
+  );
+  const twin = async () => (await stagesInSql()).find((row) => row.id === lead.id)?.stage;
+
+  await login(page, locale, "marketing");
+  await page.goto(`/${locale}/leads`);
+  await expect(page.getByRole("heading", { name: t("leads.title") })).toBeVisible(COLD);
+
+  try {
+    await test.step("1 · a priced paper standing on it: Quoted", async () => {
+      expect(await twin()).toBe("quoted");
+      await expectStage(page, t, lead.name, "quoted");
+    });
+
+    await test.step("2 · the same paper back on the desk, never priced: not a quote", async () => {
+      await query(
+        `update quotations set status = 'requested', issued_at = null, smac_number = null
+          where id = $1::uuid`,
+        [lead.quotation],
+      );
+      const stage = await twin();
+      expect(stage, "a request on the desk read as a quote").not.toBe("quoted");
+      expect(["acknowledged", "contacted"]).toContain(stage);
+      await expectStage(page, t, lead.name, stage!);
+    });
+
+    await test.step("3 · priced again but nobody has acknowledged it: Not acknowledged, with its age", async () => {
+      await query(
+        `update quotations set status = 'issued', issued_at = $2::timestamptz, smac_number = $3::text
+          where id = $1::uuid`,
+        [lead.quotation, lead.issued_at, lead.smac],
+      );
+      await query("update companies set lead_acknowledged_at = null where id = $1::uuid", [lead.id]);
+      expect(await twin()).toBe("waiting");
+      await expectStage(page, t, lead.name, "waiting");
+      // And how long it has sat, which a row badged Quoted never said.
+      const waited = (await waitingLeads()).find((row) => row.id === lead.id);
+      expect(waited, "the lead is not waiting in the database").toBeTruthy();
+      const row = page.getByRole("row").filter({ hasText: lead.name }).first();
+      await expect(
+        row
+          .locator('[data-slot="lead-stage"]')
+          .getByText(t("team.waitingDays", { count: waited!.days }), { exact: true }),
+      ).toBeVisible();
+    });
+  } finally {
+    await query(
+      `update quotations set status = 'issued', issued_at = $2::timestamptz, smac_number = $3::text
+        where id = $1::uuid`,
+      [lead.quotation, lead.issued_at, lead.smac],
+    );
+    await query("update companies set lead_acknowledged_at = $2::timestamptz where id = $1::uuid", [
+      lead.id,
+      lead.ack,
+    ]);
   }
 });
 

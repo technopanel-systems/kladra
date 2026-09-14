@@ -197,9 +197,6 @@ function RestoreButton({ row }: { row: ArchivedRow }) {
   const [pending, startTransition] = useTransition();
 
   function restore() {
-    // A second press while the first is on its way would only be refused as
-    // "not there any more"; it is simply not sent.
-    if (pending) return;
     startTransition(async () => {
       const form = new FormData();
       form.set("kind", row.kind);
@@ -214,9 +211,13 @@ function RestoreButton({ row }: { row: ArchivedRow }) {
     });
   }
 
+  // While it is on its way the button says so and takes no second press — the
+  // kit's own pending shape (`FormFooter`, the targets form): a second press
+  // would only be refused as "not there any more", and a press that does
+  // nothing visible reads as a press that did not land.
   return (
-    <Button type="button" variant="outline" size="sm" onClick={restore} aria-busy={pending}>
-      {t("admin.restore")}
+    <Button type="button" variant="outline" size="sm" onClick={restore} disabled={pending}>
+      {pending ? t("common.saving") : t("admin.restore")}
     </Button>
   );
 }

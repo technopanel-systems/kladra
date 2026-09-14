@@ -26,7 +26,19 @@ import { useRouter } from "@/i18n/navigation";
  * the list behind it from the queries that drew them (SPEC §3: no refresh
  * buttons).
  */
-export function AcknowledgeLeadButton({ companyId }: { companyId: string }) {
+export function AcknowledgeLeadButton({
+  companyId,
+  companyName,
+}: {
+  companyId: string;
+  /**
+   * Whose lead, for a reader who hears the button rather than sees its row: the
+   * band has one Acknowledge per lead, and five buttons all called "Acknowledge"
+   * cannot be told apart (Reassign says its customer the same way). The drawer's
+   * one button is about the drawer it is in, and needs none.
+   */
+  companyName?: string;
+}) {
   const t = useTranslations();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -48,6 +60,12 @@ export function AcknowledgeLeadButton({ companyId }: { companyId: string }) {
     <Button type="button" size="sm" variant="outline" disabled={pending} onClick={acknowledge}>
       <Check aria-hidden="true" />
       {t("leads.acknowledge")}
+      {companyName ? (
+        <span className="sr-only">
+          {" "}
+          <bdi>{companyName}</bdi>
+        </span>
+      ) : null}
     </Button>
   );
 }

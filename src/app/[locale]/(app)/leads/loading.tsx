@@ -2,16 +2,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 /**
  * The shape of the leads screen while it reads (DESIGN §1b: a skeleton is the
- * shape of the thing it stands in for, drawn once, still): the title and its
- * one action, the state chips beside the person picker, and rows of the list's
- * own height with an avatar at the start of each.
+ * shape of the thing it stands in for, drawn once, still): the title, the state
+ * chips beside the person picker, and rows of the list's own height with an
+ * avatar at the start of each.
+ *
+ * No action beside the title. New lead is marketing's alone, and this shape is
+ * drawn before anybody is asked who is reading: a button shape the manager and
+ * the admin watch appear and then vanish is a promise the screen breaks.
  */
 export default function LeadsLoading() {
   return (
     <div className="flex flex-col gap-4" aria-busy="true" role="status">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-7 w-32" />
-        <Skeleton className="h-9 w-32 rounded-lg" />
       </div>
       <div className="flex flex-wrap items-end gap-4">
         <div className="flex gap-2">

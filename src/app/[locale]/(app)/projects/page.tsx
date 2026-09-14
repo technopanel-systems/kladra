@@ -7,7 +7,7 @@ import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { requireUser } from "@/lib/authz";
-import { ownsCompanies } from "@/lib/floor";
+import { mayWrite, ownsCompanies } from "@/lib/floor";
 import { parseFollowUpFilter } from "@/lib/followups";
 import { companyOptions } from "@/lib/pickers";
 import {
@@ -17,6 +17,7 @@ import {
   projectFollowUpCounts,
 } from "@/lib/projects";
 import { LIST_LIMIT } from "@/lib/list-size";
+import { PROJECT_STAGES } from "@/lib/project-stage";
 import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { viewFor } from "@/lib/view";
 
@@ -71,9 +72,7 @@ export default async function ProjectsPage({
   const [t, rows, cards, counts, companies] = await Promise.all([
     getTranslations(),
     view === "board" ? Promise.resolve([]) : listProjects({ ...narrowing, limit: LIST_LIMIT }),
-    view === "board"
-      ? listProjectBoard({ user, q: q || undefined, locale, limit: LIST_LIMIT })
-      : Promise.resolve([]),
+    view === "board" ? listProjectBoard({ user, q: q || undefined, locale }) : Promise.resolve([]),
     // The chips count what this list shows — projects — not the home strip's
     // companies (D108).
     projectFollowUpCounts(user),
@@ -81,13 +80,16 @@ export default async function ProjectsPage({
   ]);
 
   // Only when the list came back full: on a floor this size the count is a
-  // query nobody needs to run (D80). The board counted its own, in the query.
+  // query nobody needs to run (D80). The board counted its own, in the query:
+  // each column is capped on its own, so the board's total is its columns'
+  // counts added, never a guess from how many cards came back.
   const shown = view === "board" ? cards.length : rows.length;
   const total =
     view === "board"
-      ? shown === LIST_LIMIT
-        ? await countProjects({ ...narrowing, filter: undefined })
-        : shown
+      ? PROJECT_STAGES.reduce(
+          (sum, stage) => sum + (cards.find((card) => card.stage === stage)?.inStage ?? 0),
+          0,
+        )
       : shown === LIST_LIMIT
         ? await countProjects(narrowing)
         : shown;
@@ -97,7 +99,9 @@ export default async function ProjectsPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.projects")}</h1>
         {/* The brand gradient lives on the primary button and nowhere else. */}
-        {!ownsCompanies(user.role) ? null : companies.length > 0 ? (
+        {/* The sentence the action asks (`mayWrite`): an admin viewing as a rep
+            is reading, and is offered neither door (P8.8, DESIGN §5). */}
+        {!ownsCompanies(user.role) || !mayWrite(user, user.id) ? null : companies.length > 0 ? (
           <NewProjectDialog companies={companies} />
         ) : (
           <Button asChild variant="brand">

@@ -47,7 +47,7 @@ import {
   followUpStateSql,
   goneQuietCompanySql,
   neverContactedCompanySql,
-  waitingLeadSql,
+  waitingLeadOnSql,
 } from "@/lib/followups";
 import { personName, personNameOf } from "@/lib/people";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
@@ -302,14 +302,17 @@ function narrowTo(input: ListCompaniesInput): (SQL | undefined)[] {
   const effective = effectiveFollowUpSql();
 
   const mine = ownedBy(user);
+  // The floor being read: his own list, or the manager's drill-down into one.
+  const floor = mine !== undefined ? user.id : input.repId;
   const conditions: (SQL | undefined)[] = [
     isNull(companies.archivedAt),
     mine,
     input.repId ? eq(companies.repId, input.repId) : undefined,
-    // One floor is read — his own, or the manager's drill-down into it — so a
-    // lead nobody has acknowledged is not one of its companies yet: it waits
-    // in his band and on the manager's leads view (`waitingLeadSql`, D185).
-    mine !== undefined || input.repId ? sql`not ${waitingLeadSql()}` : undefined,
+    // A lead nobody has acknowledged is not one of THAT floor's companies yet:
+    // it waits in its holder's band and on the manager's leads view. Only that
+    // floor's — one shared with him from another floor is in no band of his,
+    // and stays in his list (`waitingLeadOnSql`, D185).
+    floor ? sql`not ${waitingLeadOnSql(floor)}` : undefined,
   ];
 
   if (term) {

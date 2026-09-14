@@ -121,11 +121,20 @@ test("Jerom checks a rep's screen, changes nothing, and stops", async ({ page, l
     await expect(mark, "a write was offered while viewing").toHaveCount(0);
     expect(await unread(), "a notification was marked read while viewing").toBe(before);
 
+    // Nor does a list's primary action: each is drawn on the sentence its
+    // action asks (`mayWrite`), not on the role alone, so Faisal's own Add
+    // company and Add project are not offered to the admin reading his screen.
+    await page.goto(`/${locale}/projects`);
+    await expect(page.getByRole("heading", { name: t("common.projects") })).toBeVisible(COLD);
+    await expect(page.getByRole("button", { name: t("projects.newProject") })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: t("projects.openCompanies") })).toHaveCount(0);
+
     // And the drawers offer no work at all, the same way they do for a manager
     // reading somebody's floor (D42): the floor rule answers no while viewing,
     // so nothing has to remember to hide anything.
     await page.goto(`/${locale}/companies`);
     await expect(page.getByRole("heading", { name: t("common.companies") })).toBeVisible(COLD);
+    await expect(page.getByRole("button", { name: t("forms.addCompany") })).toHaveCount(0);
     await page.getByRole("table").first().getByRole("link").first().click();
     await expect(page.getByRole("dialog").first()).toBeVisible(COLD);
     for (const label of ["common.addReport", "common.edit", "drawer.archive"]) {
@@ -152,6 +161,36 @@ test("Jerom checks a rep's screen, changes nothing, and stops", async ({ page, l
     await page.goto(`/${locale}/team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
   });
+});
+
+test("Jerom reading marketing's leads is offered no New lead, which the action would refuse him", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const marketing = await personName("marketing@technopanel.com.sa", locale);
+  await login(page, locale, "jerom");
+  await page.goto(`/${locale}/admin/users`);
+  await expect(page.getByRole("heading", { name: t("common.users") })).toBeVisible(COLD);
+
+  const row = page.getByRole("row").filter({ hasText: marketing });
+  await row.getByRole("button", { name: t("viewAs.start") }).click();
+  const dialog = page.getByRole("dialog", { name: t("viewAs.title", { name: marketing }) });
+  await dialog.getByRole("button", { name: t("viewAs.start") }).click();
+  await expect(page.locator("[data-slot='viewing-banner']")).toBeVisible(COLD);
+
+  try {
+    await page.goto(`/${locale}/leads`);
+    // Marketing's own screen, read: its leads are there, its way in is not.
+    await expect(page.getByRole("heading", { name: t("leads.title") })).toBeVisible(COLD);
+    await expect(page.getByRole("button", { name: t("leads.new") })).toHaveCount(0);
+  } finally {
+    await page
+      .locator("[data-slot='viewing-banner']")
+      .getByRole("button", { name: t("viewAs.stop") })
+      .click();
+    await expect(page.locator("[data-slot='viewing-banner']")).toHaveCount(0, COLD);
+  }
 });
 
 test("a manager is offered no way to become somebody else", async ({ page, locale, t }) => {

@@ -250,10 +250,18 @@ test("every record opens in the same panel, on the edge the language reads from"
     const box = await panel().boundingBox();
     expect(box, `no panel on /${locale}/${screen}`).not.toBeNull();
     const side = (await panel().getAttribute("data-side")) ?? "";
-    const borders = await panel().evaluate((node) => {
-      const style = getComputedStyle(node);
-      return [style.borderInlineStartWidth, style.borderInlineEndWidth];
-    });
+    // Read until the panel answers: the drawer's body streams in after it
+    // opens, and a style read off a node being replaced comes back empty.
+    let borders: string[] = [];
+    await expect
+      .poll(async () => {
+        borders = await panel().evaluate((node) => {
+          const style = getComputedStyle(node);
+          return [style.borderInlineStartWidth, style.borderInlineEndWidth];
+        });
+        return borders.every((width) => width !== "");
+      })
+      .toBe(true);
     return { width: Math.round(box?.width ?? 0), side, borders };
   }
 

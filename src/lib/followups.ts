@@ -155,18 +155,29 @@ export function goneQuietCompanySql(followUp: SQL): SQL {
 
 /**
  * A lead the person holding it has not yet said he has (SPEC §3 P13, D157).
+ */
+function waitingLeadSql(): SQL {
+  return sql`(companies.lead_from_id is not null and companies.lead_acknowledged_at is null)`;
+}
+
+/**
+ * A lead waiting on the floor being read — on `repId`, and nobody else (D185).
  *
  * "The rep receives it apart from his own companies … highlighted until he
- * acknowledges": until then it waits in the band above his list, and is not
- * in the list, its strip or his day's bands — a customer shown twice on one
- * page is two things to do where there is one. Wherever ONE floor is read it
- * is left out: his own, and the manager's drill-down into it and the team row,
- * which must agree with his strip (D14) — the manager has those leads on his
- * leads view and his stuck list. The manager's list of every company keeps
- * it, because nobody may lose a company to a default (§3 P13). D185.
+ * acknowledges": until then it waits in the band above HIS list, and is not in
+ * that list or its strip — a customer shown twice on one page is two things to
+ * do where there is one. Wherever one floor is read it is left out the same
+ * way: his own, and the manager's drill-down into it, which must agree with his
+ * strip (D14).
+ *
+ * Only on the floor whose band carries it. The band reads `rep_id = reader`, so
+ * a waiting lead on Faisal's floor that is shared with Saad is in nobody's band
+ * on Saad's screen — left out of Saad's list as well, it was on no screen of
+ * his at all. And the manager's list of every company keeps every one, because
+ * nobody may lose a company to a default (§3 P13).
  */
-export function waitingLeadSql(): SQL {
-  return sql`(companies.lead_from_id is not null and companies.lead_acknowledged_at is null)`;
+export function waitingLeadOnSql(repId: string): SQL {
+  return sql`(${waitingLeadSql()} and companies.rep_id = ${repId}::uuid)`;
 }
 
 /**
@@ -228,7 +239,11 @@ export type FollowUpCounts = {
  */
 export async function followUpCounts(user: SessionUser): Promise<FollowUpCounts> {
   const mine = seesCompany(user);
-  return countsWhere(mine === undefined ? sql`true` : sql`${mine} and not ${waitingLeadSql()}`);
+  // His own floor's waiting leads are in the band above; a lead shared with him
+  // from somebody else's floor is in no band of his, so it counts here (D185).
+  return countsWhere(
+    mine === undefined ? sql`true` : sql`${mine} and not ${waitingLeadOnSql(user.id)}`,
+  );
 }
 
 /**
@@ -237,7 +252,7 @@ export async function followUpCounts(user: SessionUser): Promise<FollowUpCounts>
  * disagree; only the WHERE differs.
  */
 export async function followUpCountsForRep(repId: string): Promise<FollowUpCounts> {
-  return countsWhere(sql`companies.rep_id = ${repId}::uuid and not ${waitingLeadSql()}`);
+  return countsWhere(sql`companies.rep_id = ${repId}::uuid and not ${waitingLeadOnSql(repId)}`);
 }
 
 async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
