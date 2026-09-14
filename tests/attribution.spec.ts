@@ -98,25 +98,25 @@ async function achievedByCurrentOwner(repId: string): Promise<number> {
 }
 
 /**
- * The "Achieved" figure on a named row of the team table. The column carries
- * no `data-slot` (only Pace does — team-table.tsx), so it is found by its own
- * heading, the way tests/manager.spec.ts reads every column by `t(key)`
- * rather than by position, and read back the way tests/manager.spec.ts reads
- * a card figure: strip everything but the digits and the point (D6 — Western
- * digits in both locales, so the parse itself is locale-blind).
+ * The achieved figure on a named row of the team table. It shares the
+ * "Achieved of target" column with the target and the pace since P13-S8, so it
+ * is read by its own `data-slot` (team-table.tsx) under that column's heading,
+ * and read back the way tests/manager.spec.ts reads a card figure: strip
+ * everything but the digits and the point (D6 — Western digits in both
+ * locales, so the parse itself is locale-blind).
  */
 async function teamAchieved(page: Page, t: Translate, name: string): Promise<number> {
   const table = page.getByRole("table").first();
-  const headers = await table.getByRole("columnheader").allInnerTexts();
-  const column = headers.findIndex((header) => header.trim() === t("team.achieved"));
-  expect(column, `no "${t("team.achieved")}" column on the team table`).toBeGreaterThanOrEqual(0);
+  await expect(
+    table.getByRole("columnheader", { name: t("team.achievedOfTarget") }),
+    `no "${t("team.achievedOfTarget")}" column on the team table`,
+  ).toBeVisible();
 
   const text = await table
     .getByRole("row")
     .filter({ hasText: name })
     .first()
-    .getByRole("cell")
-    .nth(column)
+    .locator('[data-slot="member-achieved"]')
     .innerText();
   return Number(text.replace(/,/g, "").match(/-?\d+(?:\.\d+)?/)?.[0]);
 }

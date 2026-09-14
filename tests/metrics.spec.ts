@@ -238,9 +238,10 @@ test("the rep picker scopes the whole tab, not one card on it", async ({ page, l
 
   await expect(page).toHaveURL(new RegExp(`rep=${faisal.id}`), COLD);
 
-  // The month card names whose month it is now — the same card, one person's
-  // figures, so nothing on the screen is the company's and one rep's at once.
-  await expect(page.getByRole("heading", { name: faisal.name })).toBeVisible(COLD);
+  // The picker names whose figures these are now. The month card that used to
+  // say it left this tab in P13-S8 (SPEC §3 P13): the company's opens the work
+  // tab, and one rep's is on his floor, one press from his team row.
+  await expect(page.getByRole("combobox").first()).toContainText(faisal.name, COLD);
 
   // And the window is not lost on the way: picking a person keeps the window,
   // as pressing a window keeps the person.

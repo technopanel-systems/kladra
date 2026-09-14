@@ -119,9 +119,13 @@ below by number.
             - [ ] G4 · S6 **The coordinator** (13.6): pending quotations and dispatches side by side from `lg` up; a
                   rep picker at the top of both request dialogs for her, counting toward him, hers under Internal
                   Sales when no rep is named; reliance per rep on the manager's team tab.
-            - [ ] G4 · S8 **Dashboards, the work tabs** (13.2): the target card at the top of the first tab on the day
+            - [x] G4 · S8 **Dashboards, the work tabs** (13.2): the target card at the top of the first tab on the day
                   and team screens, out of Metrics; today's cards in the auto-fit grid; the team tab rebuilt in the
                   language — avatars, rings for leave and stuck, a row that opens the person.
+                  **Done**: the month opens both work tabs and the metrics tab has none (D187); the stuck groups and
+                  the day's cards in the one auto-fit grid, `Empty` where a card can be empty, a `loading.tsx` on
+                  both; the team row with its grey leave ring and red stuck ring, each with its word, the stuck
+                  count taken from the stuck list's own aged rows, and the row opening the person's floor (D188).
             - [ ] G5 · S9 **Metrics and the report builder** (13.2): pies and rings where a share is the point, each
                   slice a door to its list; the builder — measure, breakdown, period, rep — on the metrics tab, with
                   the table under the chart, CSV export for the manager and a print stylesheet; every question a

@@ -5,6 +5,7 @@ import { MonthsCard } from "@/components/team/months-card";
 import { RatiosCard } from "@/components/team/ratios-card";
 import { SegmentCard } from "@/components/team/segment-card";
 import { WaitingList } from "@/components/day/waiting-list";
+import { WorkGrid } from "@/components/team/work-grid";
 import { PageTabs } from "@/components/ui-ext/page-tabs";
 import { RangeChips } from "@/components/ui-ext/range-chips";
 import { redirect } from "@/i18n/navigation";
@@ -26,11 +27,14 @@ import { tabFor, type Tab } from "@/lib/tabs";
 /**
  * A rep's day — his home from P8 (SPEC §3, DESIGN §6).
  *
- * It answers one question in one column, in the order the work should be done:
- * how the month is going, what has come back to him and is stopped, and who is
- * owed a call. It is deliberately not a grid of cards: every figure on it is
- * something Faisal can act on before lunch, and anything he cannot act on today
- * belongs on the manager's screen instead.
+ * It answers one question, in the order the work should be done: how the month
+ * is going, what has come back to him and is stopped, and who is owed a call.
+ * The month comes first and across the page (SPEC §3 P13); what can be done
+ * today follows as cards in the one grid a work tab uses (DESIGN §1b), so on a
+ * desk the waiting work and the calls share rows and on a phone they stack in
+ * that same order. Every card on it is something Faisal can act on before
+ * lunch; anything he cannot act on today belongs on the metrics tab or the
+ * manager's screen instead.
  *
  * Nothing here computes its own totals. The month is `repMonth`, the same one
  * the team table reads, and the three bands are `listCompanies` with the three
@@ -125,6 +129,22 @@ export default async function DayPage({
 
       {working ? (
         <>
+          {/* The same card the manager reads, with this person's own figures —
+              one layout for one set of facts, so a rep recognises his row on the
+              team screen as the card on his own. First on the tab for everybody
+              who carries a target (SPEC §3 P13: "at the top of the first tab,
+              always visible"), because it is the frame the day is worked
+              against; the six months behind it are a measurement and stay on
+              Metrics (D151). This month only, with nothing to move to (D180). */}
+          {month ? (
+            <MonthCard
+              title={t("day.myMonth")}
+              target={month.target}
+              achieved={month.achieved}
+              pace={month.pace}
+            />
+          ) : null}
+
           {/* His own leave, said on his own screen (D75). The bands underneath are
               left exactly as they are: a customer who was promised a call on Tuesday
               is still waiting whether or not the rep was at work, and telling him
@@ -136,37 +156,27 @@ export default async function DayPage({
             </p>
           ) : null}
 
-          {/* The same card the manager reads, with this rep's own figures — one
-              layout for one set of facts, so a rep recognises his row on the team
-              screen as the card on his own. It stays on the working tab because
-              it is the frame the day is worked against; the six months behind it
-              are a measurement and moved (D151). */}
-          {month ? (
-            <MonthCard
-              title={t("day.myMonth")}
-              target={month.target}
-              achieved={month.achieved}
-              pace={month.pace}
-            />
-          ) : null}
+          {/* Today's cards, in the order they should be worked: what came back
+              to him, then each band of calls as its own card (P13-S8). */}
+          <WorkGrid>
+            {/* Worst first and capped like the bands beside it (D80, D83):
+                sixty-four rows before the calls is the calls buried, not shown. */}
+            {hasChain ? (
+              <WaitingList
+                rows={waiting.slice(0, BAND_LIMIT)}
+                total={waiting.length}
+                counts={waitingCounts(waiting)}
+              />
+            ) : null}
 
-          {/* Worst first and capped like the bands below it (D80, D83): sixty-four
-              cards above the calls is the calls buried, not shown. */}
-          {hasChain ? (
-            <WaitingList
-              rows={waiting.slice(0, BAND_LIMIT)}
-              total={waiting.length}
-              counts={waitingCounts(waiting)}
+            <CallList
+              overdue={overdue}
+              today={today}
+              never={never}
+              quiet={quiet}
+              totals={counts}
             />
-          ) : null}
-
-          <CallList
-            overdue={overdue}
-            today={today}
-            never={never}
-            quiet={quiet}
-            totals={counts}
-          />
+          </WorkGrid>
         </>
       ) : (
         <>

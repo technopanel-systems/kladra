@@ -52,7 +52,9 @@ export async function MonthCard({
   const tone = pace.justStarted ? null : paceTone(done, aimed, pace.ratio);
 
   return (
-    <section className="card-face flex flex-col gap-3 p-4">
+    // `month-card` names it for the specs that hold it to the top of its tab
+    // (SPEC §3 P13: "at the top of the first tab, always visible").
+    <section data-slot="month-card" className="card-face flex flex-col gap-3 p-3 md:p-4">
       <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
 
       <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">

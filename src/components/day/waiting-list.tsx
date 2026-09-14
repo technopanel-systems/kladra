@@ -1,6 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { WORK_CARD, WORK_ROW, WORK_ROWS } from "@/components/team/work-grid";
+import { Empty } from "@/components/ui-ext/empty";
 import { Ref } from "@/components/ui-ext/figures";
 import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
@@ -13,10 +15,10 @@ import { cn } from "@/lib/utils";
  * What has come back to this rep and is stopped until he does something
  * (SPEC §3, P8).
  *
- * It is first on the screen, above the calls, because every row here is a
- * customer already waiting: a lead somebody has just handed him, a quotation
- * the coordinator sent back, a dispatch she refused, a quotation the customer
- * is sitting on. Each row carries the reason in somebody's own words — hers on
+ * It is the first card in the day's grid, before the calls, because every row
+ * here is a customer already waiting: a lead somebody has just handed him, a
+ * quotation the coordinator sent back, a dispatch she refused, a quotation the
+ * customer is sitting on. Each row carries the reason in somebody's own words — hers on
  * the two she sent back, the finder's on a lead — so a rep does not have to
  * open it to know whether this is a two-minute fix or a phone call (S53).
  *
@@ -128,18 +130,16 @@ export function WaitingList({
 
   if (rows.length === 0) {
     return (
-      <section className="flex flex-col gap-3">
+      <section className={WORK_CARD}>
         <h2 className="text-sm font-medium">{t("day.waitingOnYou")}</h2>
-        <p className="card-face px-4 py-6 text-center text-sm text-muted-foreground">
-          {t("day.nothingWaiting")}
-        </p>
+        <Empty size="panel">{t("day.nothingWaiting")}</Empty>
       </section>
     );
   }
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+    <section className={WORK_CARD}>
+      <div className="flex flex-col gap-2">
         <h2 className="text-sm font-medium">
           {t("day.waitingOnYou")}{" "}
           <span dir="ltr" className="num text-muted-foreground">
@@ -153,12 +153,18 @@ export function WaitingList({
         </div>
       </div>
 
-      <ul className="flex flex-col gap-2">
+      {/* Rows inside the card rather than a card a row (P13-S8): the card is a
+          third of a desk wide in the day's grid, and a card inside a card is
+          two edges saying one thing. */}
+      <ul className={WORK_ROWS}>
         {rows.map((row) => (
           <li key={`${row.reasonKey}-${row.id}`}>
             <Link
               href={row.href}
-              className="card-face flex flex-col gap-1.5 p-3 outline-none transition-colors hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className={cn(
+                WORK_ROW,
+                "hover-tint flex flex-col gap-1.5 outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-ring/50",
+              )}
             >
               <span className="flex flex-wrap items-center gap-2">
                 {/* The document number heads its own card. A lead has none, so

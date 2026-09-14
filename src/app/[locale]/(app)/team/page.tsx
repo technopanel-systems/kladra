@@ -12,11 +12,13 @@ import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { PageTabs } from "@/components/ui-ext/page-tabs";
 import { RangeChips } from "@/components/ui-ext/range-chips";
 import { TeamTable } from "@/components/team/team-table";
+import { Empty } from "@/components/ui-ext/empty";
 import { redirect } from "@/i18n/navigation";
 import { homeFor, requireUser, seesAll } from "@/lib/authz";
 import {
   STUCK_FOLLOW_UP_WORKING_DAYS,
   STUCK_REQUEST_WORKING_DAYS,
+  stuckByPerson,
   stuckList,
   teamMonth,
 } from "@/lib/team";
@@ -34,7 +36,9 @@ import { tabFor, type Tab } from "@/lib/tabs";
  * under it, and what is stuck.
  *
  * In that order because that is the order the questions come in. How are we
- * doing; who is doing it; what has stopped moving. Nothing on this screen is
+ * doing; who is doing it; what has stopped moving. The company's month opens
+ * the first tab since SPEC §3 P13 — "always visible, above the three sections
+ * that exist now" — and left Metrics to do it. Nothing on this screen is
  * typed by anybody — every figure is derived from what reps and the coordinator
  * did in the course of their own work, which is the whole of S27: the history
  * of a company IS the manager's daily report, and there is no report to write.
@@ -78,12 +82,15 @@ export default async function TeamPage({
   const from = rangeStart(range);
   const repId = params.rep?.trim() || null;
 
-  const [t, month, stuck, months, cohort, losses, segments, ratios] = await Promise.all([
+  const [t, month, stuck, stuckPeople, months, cohort, losses, segments, ratios] = await Promise.all([
     getTranslations(),
-    // Every tab needs it: the work tab for the pipeline figure at the head of
-    // its strip, the metrics tab for the month, the team tab for the members.
+    // Every tab needs it: the work tab for the company's month and the pipeline
+    // at the head of its strip, the metrics tab for the rep picker, the team tab
+    // for the members.
     teamMonth(),
     tab === "work" ? stuckList() : null,
+    // The red ring on a team row counts the stuck list's own rows per person.
+    tab === "team" ? stuckByPerson() : null,
     tab === "metrics" ? monthsBack(repId) : null,
     tab === "metrics" ? chainCohort(repId, from) : null,
     tab === "metrics" ? lossCohort(repId, from) : null,
@@ -99,9 +106,6 @@ export default async function TeamPage({
     return `/team?tab=metrics&range=${next.range ?? range}${rep ? `&rep=${rep}` : ""}`;
   };
 
-  // Whose month is on the card: the company's, or the one rep being read.
-  const viewed = repId ? (month.members.find((member) => member.userId === repId) ?? null) : null;
-
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
@@ -116,6 +120,19 @@ export default async function TeamPage({
 
       {tab === "work" && stuck && month ? (
         <>
+          {/* The company's month, first and always (SPEC §3 P13): target,
+              achieved, pace and the one bar, above everything that can be
+              acted on today. It is the frame the day is worked against, which
+              is why it moved here from Metrics rather than being copied. A
+              month with no target says so and draws no bar (D41, S45). No month
+              to move to: this month is the only one a target is for (D180). */}
+          <MonthCard
+            title={t("team.companyMonth")}
+            target={month.company.target}
+            achieved={month.company.achieved}
+            pace={month.pace}
+          />
+
           {/* What is still out there to move (S45), and what has stopped moving
               (D14) — one strip, one glance, every figure after the first a door
               into the list it counts (D117). The five stay together: the tabs
@@ -206,23 +223,12 @@ export default async function TeamPage({
             />
           ) : null}
 
-          {/* The month against its target, and the six months behind it. Neither
-              is windowed and neither can be: a target is set per month (S43) and
-              the trend is the six months by definition (D61). They sit ABOVE the
-              window chips so that what the chips govern is exactly what is under
-              them (D154). */}
-          <MonthCard
-            title={viewed ? viewed.name : t("team.companyMonth")}
-            target={viewed ? viewed.target : month.company.target}
-            achieved={viewed ? viewed.achieved : month.company.achieved}
-            // His own working month, not the office's: a rep back from two
-            // weeks off has a shorter month and does not read as behind (S48).
-            pace={viewed ? viewed.pace : month.pace}
-          />
-
-          {/* And the months behind it. "3,524 against 4,500" is a fact with nothing
-              to be measured against; the question a manager asks in the second week
-              is whether the company is going up or down (D61). */}
+          {/* The six months behind this one, above the chips because the trend
+              is the six months by definition and cannot be windowed (D61, D154).
+              This month's own card is not here any more, the company's or a
+              picked rep's: the company's opens the work tab (SPEC §3 P13), and
+              one rep's is on his floor, one press from his team row, where
+              `/companies?rep=` has carried it since P11. */}
           {months ? <MonthsCard months={months} /> : null}
 
           <RangeChips
@@ -267,13 +273,24 @@ export default async function TeamPage({
         </>
       ) : null}
 
-      {tab === "team" && month ? (
+      {tab === "team" && month && stuckPeople ? (
         month.members.length === 0 ? (
-          <p className="card-face px-6 py-10 text-center text-sm text-muted-foreground">
-            {t("shell.emptyTeam")}
-          </p>
+          <Empty>{t("shell.emptyTeam")}</Empty>
         ) : (
-          <TeamTable members={month.members} />
+          <section className="flex flex-col gap-3">
+            {/* What the red word counts, once, above the rows that carry it: a
+                figure says what it means in words (D59), and "stuck" is the one
+                word on the row whose line is drawn on the other tab. */}
+            <p className="text-xs text-muted-foreground">
+              {t("team.stuckOnRowMeans", {
+                work: t("common.tab.work"),
+                requests: t("team.stuckRequests"),
+                followUps: t("team.stuckFollowUps"),
+                leads: t("team.stuckLeads"),
+              })}
+            </p>
+            <TeamTable members={month.members} stuck={stuckPeople} />
+          </section>
         )
       ) : null}
     </div>

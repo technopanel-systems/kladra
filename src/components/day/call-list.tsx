@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { CallBand, type CallBandData } from "@/components/day/call-band";
+import { WORK_CARD } from "@/components/team/work-grid";
+import { Empty } from "@/components/ui-ext/empty";
 import type { CompanyRow } from "@/lib/companies";
 import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
 
@@ -18,6 +20,13 @@ import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
  * exactly that state (D63). It is last because it is the least urgent of the
  * four — nobody is expecting a call today — and it is the one that loses
  * customers, which is why it is here at all rather than in a report.
+ *
+ * Each band is a card of its own in the day's grid (P13-S8), so a day with an
+ * overdue call and nothing else is one card and not four headings; the section
+ * around them is `contents` — it names the calls for a reader and a spec, and
+ * lends the grid its children rather than drawing a box of its own. A band
+ * with nobody in it is not drawn at all, and a day with nobody to call is one
+ * card that says so.
  *
  * This file decides WHAT the bands are; `CallBand` draws one, on the client,
  * from rows passed as data (D82). The report a call ends in opens in the one
@@ -80,17 +89,23 @@ export async function CallList({
     ] satisfies CallBandData[]
   ).filter((band) => band.rows.length > 0);
 
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-sm font-medium">{t("day.whoToCall")}</h2>
+  if (bands.length === 0) {
+    return (
+      <section className={WORK_CARD}>
+        <h2 className="text-sm font-medium">{t("day.whoToCall")}</h2>
+        <Empty size="panel">{t("day.nobodyToCall")}</Empty>
+      </section>
+    );
+  }
 
-      {bands.length === 0 ? (
-        <p className="card-face px-4 py-6 text-center text-sm text-muted-foreground">
-          {t("day.nobodyToCall")}
-        </p>
-      ) : (
-        bands.map((band) => <CallBand key={band.key} band={band} />)
-      )}
+  return (
+    <section className="contents">
+      {/* Absolutely placed, so it takes no cell of the grid: the band cards
+          each carry their own visible heading under it. */}
+      <h2 className="sr-only">{t("day.whoToCall")}</h2>
+      {bands.map((band) => (
+        <CallBand key={band.key} band={band} />
+      ))}
     </section>
   );
 }

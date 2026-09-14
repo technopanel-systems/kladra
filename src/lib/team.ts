@@ -30,7 +30,13 @@ import { countOpenDuplicates, listOpenDuplicates } from "@/lib/duplicates";
 import { carriesMetres } from "@/lib/floor";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { quotationLabel } from "@/lib/labels";
-import { ageLeads, lateLeads, unacknowledgedLeads, type LeadWithWait } from "@/lib/leads";
+import {
+  ageLeads,
+  lateLeads,
+  unacknowledgedLeads,
+  type Lead,
+  type LeadWithWait,
+} from "@/lib/leads";
 import { awayOn, type Away } from "@/lib/leave";
 import { personName, personNameOf } from "@/lib/people";
 import { ROLES } from "@/lib/types";
@@ -496,9 +502,34 @@ export type StuckDuplicate = {
   waited: Waited;
 };
 
-export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
-  const locale = await getLocale();
-  const [waiting, followUps, never, quiet, away, leads, pairs] = await Promise.all([
+/**
+ * The three kinds of stuck that are one person's to clear, as the database hands
+ * them over: a request on his customer waiting on the desk, a call promised on
+ * his floor, a lead given to him. Each is late by a WORKING-day clock, which is
+ * why none of them is filtered in SQL — the weekend and the holiday table are
+ * `@/lib/workdays`'s business (D141) — so they are read whole, oldest first, and
+ * aged by `ageLate`.
+ *
+ * Split out of `stuckList` in P13-S8 so that the red ring on a person's team row
+ * counts the very rows this list draws under his name, rather than a second
+ * reading of the same three rules that could come apart from it (rules/data.md).
+ */
+type RawLate = {
+  requests: {
+    id: string;
+    number: number;
+    revision: number;
+    companyName: string;
+    repName: string;
+    repId: string;
+    since: Day;
+  }[];
+  followUps: RawFollowUp[];
+  leads: Lead[];
+};
+
+async function readLate(locale: string): Promise<RawLate> {
+  const [waiting, followUps, leads] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -506,6 +537,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
         revision: quotations.revision,
         companyName: companies.name,
         repName: personName(locale),
+        repId: companies.repId,
         since: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
       })
       .from(quotations)
@@ -537,7 +569,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
          -- A CALENDAR-day cut, and deliberately the wrong one: N working days
          -- back is never later than N calendar days back, so this is a superset
          -- of what the working-day rule keeps and the read stays narrow. The
-         -- rule itself is applied below, once (D141).
+         -- rule itself is applied in ageLate, once (D141).
          and companies.next_follow_up
              < (now() at time zone 'Asia/Riyadh')::date - ${STUCK_FOLLOW_UP_WORKING_DAYS}::int
       union all
@@ -559,6 +591,97 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
              < (now() at time zone 'Asia/Riyadh')::date - ${STUCK_FOLLOW_UP_WORKING_DAYS}::int
        order by day asc
     `),
+
+    // Read whole and aged in ageLate, like every other row here: working days
+    // are `@/lib/workdays`'s business and a second copy of that arithmetic is
+    // how a rep back from Eid gets told he is late (D141).
+    unacknowledgedLeads(),
+  ]);
+
+  return {
+    requests: waiting.map((row) => ({ ...row, since: row.since as Day })),
+    followUps: followUps.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      companyName: row.company_name,
+      repName: row.rep_name,
+      repId: row.rep_id,
+      day: row.day,
+      kind: row.kind,
+    })),
+    leads,
+  };
+}
+
+/**
+ * The first day each kind counts from. Every read above is ordered oldest first,
+ * so its first row is its own earliest — which is how far back the holiday table
+ * has to be read for its ages to be right (D97).
+ */
+function lateFrom(raw: RawLate): (Day | undefined)[] {
+  return [raw.requests[0]?.since, raw.followUps[0]?.day, raw.leads[0]?.givenOn];
+}
+
+/** The soonest of some days, and never later than the first of this month. */
+function earliestOf(day: Day, candidates: (Day | undefined)[]): Day {
+  return candidates.reduce<Day>(
+    (soonest, candidate) => (candidate && candidate < soonest ? candidate : soonest),
+    firstOfMonth(day),
+  );
+}
+
+/** The late ones, whole and uncapped, each still carrying whose it is. */
+type LateWork = {
+  requests: (StuckRequest & { repId: string })[];
+  followUps: (StuckFollowUp & { repId: string })[];
+  leads: LeadWithWait[];
+};
+
+/**
+ * The three clocks, applied once: a request more than two working days on the
+ * desk (office days), a follow-up more than three working days past its date
+ * (counted against the person whose call it is, so his own leave is not
+ * lateness — S48, D141), and a lead nobody acknowledged in two (`lateLeads`).
+ */
+function ageLate(raw: RawLate, day: Day, nonWorking: NonWorking[]): LateWork {
+  const requests: LateWork["requests"] = [];
+  for (const row of raw.requests) {
+    const days = workingDaysBetween(row.since, day, nonWorking);
+    if (days <= STUCK_REQUEST_WORKING_DAYS) continue;
+    requests.push({
+      id: row.id,
+      label: quotationLabel(row.number, row.revision),
+      companyName: row.companyName,
+      repName: row.repName,
+      repId: row.repId,
+      since: row.since,
+      workingDaysWaiting: days,
+    });
+  }
+
+  const followUps: LateWork["followUps"] = [];
+  for (const row of raw.followUps) {
+    const late = workingDaysBetween(row.day, day, nonWorking, row.repId);
+    if (late <= STUCK_FOLLOW_UP_WORKING_DAYS) continue;
+    followUps.push({
+      id: row.id,
+      name: row.name,
+      companyName: row.companyName,
+      repName: row.repName,
+      repId: row.repId,
+      day: row.day,
+      daysOverdue: late,
+      kind: row.kind,
+    });
+  }
+
+  return { requests, followUps, leads: lateLeads(ageLeads(raw.leads, day, nonWorking)) };
+}
+
+export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
+  const locale = await getLocale();
+  const [raw, never, quiet, away, pairs] = await Promise.all([
+    readLate(locale),
 
     db.execute<{ id: string; name: string; rep_name: string; days: number }>(sql`
       select companies.id::text as id,
@@ -606,11 +729,6 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
 
     awayOn(day),
 
-    // Read whole and aged below, like every other row on this screen: working
-    // days are `@/lib/workdays`'s business and a second copy of that arithmetic
-    // is how a rep back from Eid gets told he is late (D141).
-    unacknowledgedLeads(),
-
     // The manager's own queue, read here so that his home screen names it
     // (P12-8). Capped at the size the band draws, because this read exists to
     // fill that band and the whole list is one click away on `/duplicates`.
@@ -638,45 +756,20 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
    * The holidays every wait on this screen crosses, back to the earliest day any
    * of them counts from (D97). It read from the first of the month, so a request
    * from the 28th aged a holiday on the 30th as a working day and read a day
-   * older than it was on the manager's screen and the coordinator's. Each list
-   * is ordered oldest first, so its first row is its own earliest day — and a
-   * follow-up promised in March is now aged by this too, which is the whole of
-   * D141.
+   * older than it was on the manager's screen and the coordinator's. A follow-up
+   * promised in March is aged by this too, which is the whole of D141.
    */
-  const earliest = [
-    firstOfMonth(day),
-    waiting[0]?.since as Day | undefined,
-    followUps.rows[0]?.day,
-    leads[0]?.givenOn,
-    pairs[0]?.raisedOn,
-    ...uncovered.map((row) => row.day),
-  ].reduce<Day>((soonest, candidate) => (candidate && candidate < soonest ? candidate : soonest), firstOfMonth(day));
-  const nonWorking = await listNonWorkingDays(earliest, day);
-
-  /**
-   * How late a promised call is, in working days, counted against the person
-   * whose call it is: his own leave is not lateness (S48, D141).
-   */
-  const lateBy = (row: RawFollowUp) => workingDaysBetween(row.day, day, nonWorking, row.repId);
-
-  const requests: StuckRequest[] = [];
-  for (const row of waiting) {
-    const days = workingDaysBetween(row.since, day, nonWorking);
-    if (days <= STUCK_REQUEST_WORKING_DAYS) continue;
-    requests.push({
-      id: row.id,
-      label: quotationLabel(row.number, row.revision),
-      companyName: row.companyName,
-      repName: row.repName,
-      since: row.since,
-      workingDaysWaiting: days,
-    });
-  }
+  const nonWorking = await listNonWorkingDays(
+    earliestOf(day, [...lateFrom(raw), pairs[0]?.raisedOn, ...uncovered.map((row) => row.day)]),
+    day,
+  );
+  const late = ageLate(raw, day, nonWorking);
 
   return {
-    requests: top(requests),
+    requests: top(late.requests),
     // Due TODAY counts here, which is the difference between this band and the
-    // stuck one, so nothing is filtered — only aged.
+    // stuck one, so nothing is filtered — only aged, against the person whose
+    // call it is: his own leave is not lateness (S48, D141).
     uncovered: top(
       uncovered.map((row) => ({
         id: row.id,
@@ -684,33 +777,12 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
         companyName: row.companyName,
         repName: row.repName,
         day: row.day,
-        daysOverdue: lateBy(row),
+        daysOverdue: workingDaysBetween(row.day, day, nonWorking, row.repId),
         kind: row.kind,
         backOn: row.backOn as Day,
       })),
     ),
-    followUps: top(
-      followUps.rows
-        .map((row) => ({
-          id: row.id,
-          name: row.name,
-          companyName: row.company_name,
-          repName: row.rep_name,
-          repId: row.rep_id,
-          day: row.day,
-          kind: row.kind,
-        }))
-        .filter((row) => lateBy(row) > STUCK_FOLLOW_UP_WORKING_DAYS)
-        .map((row) => ({
-          id: row.id,
-          name: row.name,
-          companyName: row.companyName,
-          repName: row.repName,
-          day: row.day,
-          daysOverdue: lateBy(row),
-          kind: row.kind,
-        })),
-    ),
+    followUps: top(late.followUps),
     goneQuiet: top(
       quiet.rows.map((row) => ({
         id: String(row.id),
@@ -727,7 +799,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
         days: Number(row.days),
       })),
     ),
-    leads: top(lateLeads(ageLeads(leads, day, nonWorking))),
+    leads: top(late.leads),
     duplicates: {
       rows: pairs.map((pair) => ({
         id: pair.id,
@@ -739,4 +811,37 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
       total: openPairs,
     },
   };
+}
+
+/**
+ * How many things are stuck on each person today, by user id (P13-S8).
+ *
+ * The red ring on a team row, and the word beside it. It counts the three groups
+ * of the stuck list that are one person's and late by a clock — requests waiting
+ * on his customers, follow-ups long overdue on his floor, leads given to him and
+ * not acknowledged — from the very rows `stuckList` draws under his name
+ * (`readLate`, `ageLate`), and before the list is capped, so a figure is never the
+ * length of a capped group (D144).
+ *
+ * Not the two groups keyed on fourteen calendar days, never contacted and gone
+ * quiet: they are blue on the strip above the list, because nobody is waiting on
+ * a call from them today, and each already has its own figure on the row. A red
+ * ring on everybody who has one customer gone quiet would be a ring on
+ * everybody, which is a ring that says nothing (DESIGN §1b).
+ *
+ * Counted in TypeScript over the rows rather than grouped in SQL, and on
+ * purpose: each of the three is late by WORKING days, and the only place that
+ * arithmetic may live is `@/lib/workdays` (rules/data.md, D141). A `group by`
+ * would have needed its own copy of the weekend and the holiday table.
+ */
+export async function stuckByPerson(day: Day = todayRiyadh()): Promise<Map<string, number>> {
+  const raw = await readLate(await getLocale());
+  const nonWorking = await listNonWorkingDays(earliestOf(day, lateFrom(raw)), day);
+  const late = ageLate(raw, day, nonWorking);
+
+  const counts = new Map<string, number>();
+  for (const row of [...late.requests, ...late.followUps, ...late.leads]) {
+    counts.set(row.repId, (counts.get(row.repId) ?? 0) + 1);
+  }
+  return counts;
 }

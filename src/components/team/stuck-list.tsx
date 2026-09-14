@@ -1,5 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { StuckRows, type StuckRowData } from "@/components/team/stuck-rows";
+import { WORK_CARD, WorkGrid } from "@/components/team/work-grid";
+import { Empty } from "@/components/ui-ext/empty";
 import { formatDay } from "@/lib/dates";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { LEAD_LATE_WORKING_DAYS } from "@/lib/leads";
@@ -63,9 +65,7 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     return (
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">{t("team.stuck")}</h2>
-        <p className="card-face px-6 py-10 text-center text-sm text-muted-foreground">
-          {t("team.stuckNothing")}
-        </p>
+        <Empty size="panel">{t("team.stuckNothing")}</Empty>
       </section>
     );
   }
@@ -161,72 +161,78 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   }));
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="flex flex-col gap-3">
       <h2 className="text-sm font-medium text-muted-foreground">{t("team.stuck")}</h2>
 
-      {/* First, because it is the only group here he can finish himself. */}
-      {stuck.duplicates.total > 0 ? (
-        <Group
-          title={t("duplicates.title")}
-          means={t("duplicates.means")}
-          rows={duplicates}
-          more={stuck.duplicates.total - duplicates.length}
-        />
-      ) : null}
+      {/* Each group is a card in the work tab's one grid (P13-S8): three across a
+          desk, one under the other on a phone, in the order below — which is
+          the order they should be cleared in, so the grid never reorders them. */}
+      <WorkGrid>
 
-      {/* Then the only group about TODAY: a customer expecting a call this
-          morning from somebody who is on leave. The rest have been waiting days
-          and will still be waiting tomorrow. */}
-      {stuck.uncovered.total > 0 ? (
-        <Group
-          title={t("team.uncovered")}
-          means={t("team.uncoveredMeans")}
-          rows={uncovered}
-          more={stuck.uncovered.total - uncovered.length}
-        />
-      ) : null}
+        {/* First, because it is the only group here he can finish himself. */}
+        {stuck.duplicates.total > 0 ? (
+          <Group
+            title={t("duplicates.title")}
+            means={t("duplicates.means")}
+            rows={duplicates}
+            more={stuck.duplicates.total - duplicates.length}
+          />
+        ) : null}
 
-      {stuck.leads.total > 0 ? (
-        <Group
-          title={t("team.stuckLeads")}
-          means={t("team.stuckLeadsMeans", { days: LEAD_LATE_WORKING_DAYS })}
-          rows={leads}
-          more={stuck.leads.total - leads.length}
-        />
-      ) : null}
+        {/* Then the only group about TODAY: a customer expecting a call this
+            morning from somebody who is on leave. The rest have been waiting days
+            and will still be waiting tomorrow. */}
+        {stuck.uncovered.total > 0 ? (
+          <Group
+            title={t("team.uncovered")}
+            means={t("team.uncoveredMeans")}
+            rows={uncovered}
+            more={stuck.uncovered.total - uncovered.length}
+          />
+        ) : null}
 
-      {stuck.requests.total > 0 ? (
-        <Group
-          title={t("team.stuckRequests")}
-          rows={requests}
-          more={stuck.requests.total - requests.length}
-        />
-      ) : null}
+        {stuck.leads.total > 0 ? (
+          <Group
+            title={t("team.stuckLeads")}
+            means={t("team.stuckLeadsMeans", { days: LEAD_LATE_WORKING_DAYS })}
+            rows={leads}
+            more={stuck.leads.total - leads.length}
+          />
+        ) : null}
 
-      {stuck.followUps.total > 0 ? (
-        <Group
-          title={t("team.stuckFollowUps")}
-          rows={followUps}
-          more={stuck.followUps.total - followUps.length}
-        />
-      ) : null}
+        {stuck.requests.total > 0 ? (
+          <Group
+            title={t("team.stuckRequests")}
+            rows={requests}
+            more={stuck.requests.total - requests.length}
+          />
+        ) : null}
 
-      {stuck.goneQuiet.total > 0 ? (
-        <Group
-          title={t("team.stuckQuiet")}
-          means={t("common.quietMeans", { days: NEVER_CONTACTED_DAYS })}
-          rows={goneQuiet}
-          more={stuck.goneQuiet.total - goneQuiet.length}
-        />
-      ) : null}
+        {stuck.followUps.total > 0 ? (
+          <Group
+            title={t("team.stuckFollowUps")}
+            rows={followUps}
+            more={stuck.followUps.total - followUps.length}
+          />
+        ) : null}
 
-      {stuck.neverContacted.total > 0 ? (
-        <Group
-          title={t("team.stuckNever")}
-          rows={neverContacted}
-          more={stuck.neverContacted.total - neverContacted.length}
-        />
-      ) : null}
+        {stuck.goneQuiet.total > 0 ? (
+          <Group
+            title={t("team.stuckQuiet")}
+            means={t("common.quietMeans", { days: NEVER_CONTACTED_DAYS })}
+            rows={goneQuiet}
+            more={stuck.goneQuiet.total - goneQuiet.length}
+          />
+        ) : null}
+
+        {stuck.neverContacted.total > 0 ? (
+          <Group
+            title={t("team.stuckNever")}
+            rows={neverContacted}
+            more={stuck.neverContacted.total - neverContacted.length}
+          />
+        ) : null}
+      </WorkGrid>
     </section>
   );
 }
@@ -247,9 +253,14 @@ async function Group({
   const t = await getTranslations();
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline gap-x-2">
-        <h3 className="text-xs font-medium text-faint">{title}</h3>
+    <section className={WORK_CARD}>
+      <div className="flex flex-col gap-0.5">
+        <h3 className="text-sm font-medium">
+          {title}{" "}
+          <span dir="ltr" className="num text-muted-foreground">
+            {rows.length + more}
+          </span>
+        </h3>
         {means ? <p className="text-xs text-muted-foreground">{means}</p> : null}
       </div>
       <StuckRows rows={rows} />
@@ -259,6 +270,6 @@ async function Group({
       {more > 0 ? (
         <p className="text-xs text-faint">{t("common.andMore", { count: more })}</p>
       ) : null}
-    </div>
+    </section>
   );
 }

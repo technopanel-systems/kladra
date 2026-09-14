@@ -385,7 +385,9 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "it moves out of Metrics",
-    owed: "P13-S8",
+    tests: [
+      "the month is the first thing on the work tab, the company's for the manager and his own for a rep, and it has left Metrics",
+    ],
   },
   {
     says: "Targets are the current month only",

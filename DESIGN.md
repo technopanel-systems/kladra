@@ -143,7 +143,8 @@ not state — the rule "colour only means something" (SPEC §3) holds because th
 "this is Faisal" — and it is a solid tint, never a gradient (§1's two gradients stay two).
 A ring is drawn only where a state exists and only in the five state colours: `state-over`
 around a rep on leave, `state-wait` around a lead nobody has acknowledged, `state-bad`
-around a company with an overdue follow-up, nothing around anybody else. A ring with no
+around a company with an overdue follow-up and around a person on the team tab with something
+stuck past its line (leave wins when both are true), nothing around anybody else. A ring with no
 meaning is decoration, and the word for the state is beside the avatar as well (colour is
 never the only carrier). (Twenty: hash → one of 25 hues; round for a person, square for a
 company from the record's own shape. Eight, not 25: on a warm-black canvas twenty-five hues

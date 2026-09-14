@@ -47,16 +47,16 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
 
   await login(page, locale, "abdulrahman");
 
-  await test.step("1 · his home is the team screen, and its month is one tab in", async () => {
+  await test.step("1 · his home is the team screen, and it opens on the company's month", async () => {
     // `homeFor` decides where a role lands (D15) — the test does not name the
     // path, it checks that signing in got him there.
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
 
-    // It lands on what has stopped, because that is what he can do something
-    // about today; the month and the quarter are measured rather than worked
-    // and live on the metrics tab (D151).
+    // It lands on the working tab: the company's month at the top of it since
+    // SPEC §3 P13 moved the card out of Metrics, and what has stopped under it,
+    // because that is what he can do something about today (D151).
+    await expect(page.getByRole("heading", { name: t("team.companyMonth") })).toBeVisible();
     await expect(page.getByRole("heading", { name: t("team.stuck") })).toBeVisible();
-    await page.goto(`/${locale}/team?tab=metrics`);
 
     // Whole metres on a card (money.ts): a target is set in whole m² and half a
     // metre is not a fact anybody acts on. The figure behind it is exact.
@@ -76,15 +76,17 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
     const jerom = { name: await personName("jerom@technopanel.com.sa", locale) };
     const marketing = { name: await personName("marketing@technopanel.com.sa", locale) };
 
-    // Every column §3 asks for, by its own heading.
+    // Every column §3 asks for, by its own heading. Target, achieved and pace
+    // are one column since P13-S8 — achieved of target, with the pace under it
+    // — and every figure is still on the row.
     for (const key of [
       "team.member",
-      "team.target",
-      "team.achieved",
-      "team.pace",
+      "team.achievedOfTarget",
+      "team.pipeline",
       "team.openQuotations",
       "team.overdueFollowUps",
       "team.neverContacted",
+      "team.stuckQuiet",
     ]) {
       await expect(page.getByRole("columnheader", { name: t(key) })).toBeVisible();
     }
