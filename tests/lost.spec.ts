@@ -173,3 +173,102 @@ test("and the rep's own hit still opens the company itself", async ({ page, loca
   await expect(page).toHaveURL(new RegExp(`/${locale}/companies\\?open=${company.id}`), COLD);
   await expect(page.getByRole("dialog", { name: company.name })).toBeVisible(COLD);
 });
+
+/**
+ * The palette never opens to a blank box, and every answer it can give is drawn
+ * (S12.1, lists-navigation).
+ *
+ * Before two letters are typed it offered one sentence and nothing else, so the
+ * first thing anybody saw on Ctrl+K was an empty box. Under the sentence now are
+ * the records he was most recently busy with — the company of his latest report
+ * among them, read here the way `src/lib/palette.ts` reads it. A search that
+ * finds nothing says so and offers the way out; Escape empties the box before it
+ * shuts it; and a search that cannot reach the server says so in the palette,
+ * keeps what he typed, and asks again when he presses Try again. That last one
+ * used to be drawn as "Nothing matched".
+ */
+test("the palette opens on what he was busy with, and says every answer", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const latest = await one<{ name: string }>(
+    `select c.name
+       from activities a
+       join companies c on c.id = a.company_id
+       join users u on u.id = a.user_id
+      where u.email = 'faisal@technopanel.com.sa'
+        and a.archived_at is null
+        and c.archived_at is null
+        and (c.rep_id = u.id
+             or exists (select 1 from company_shares cs where cs.company_id = c.id and cs.user_id = u.id))
+      order by a.created_at desc
+      limit 1`,
+  );
+
+  await login(page, locale, "faisal");
+  const trigger = page.locator("button:has([data-slot='search-label'])");
+  const palette = page.getByRole("dialog", { name: t("shell.searchDialog") });
+  const box = palette.getByRole("combobox");
+  await trigger.click();
+  await expect(palette).toBeVisible(COLD);
+
+  await test.step("1 · before anything is typed: the sentence, and his latest company under it", async () => {
+    // By its slot: the dialog's own description says the same sentence to a
+    // screen reader, out of sight.
+    await expect(palette.locator("[data-slot='search-hint']")).toHaveText(t("shell.searchHint"));
+    const recent = palette.getByRole("group", { name: t("shell.recentCompanies"), exact: true });
+    await expect(recent.getByRole("option").filter({ hasText: latest.name }).first()).toBeVisible(COLD);
+  });
+
+  await test.step("2 · nothing matched: one sentence, and the way out of it", async () => {
+    await box.fill("zzzzqqq");
+    const empty = palette
+      .getByRole("status")
+      .filter({ hasText: t("shell.searchNoResults", { q: "zzzzqqq" }) });
+    await expect(empty).toBeVisible(COLD);
+    await empty.getByRole("button", { name: t("companies.clearSearch") }).click();
+    await expect(box).toHaveValue("");
+    await expect(box).toBeFocused();
+    await expect(
+      palette.getByRole("group", { name: t("shell.recentCompanies"), exact: true }),
+    ).toBeVisible(COLD);
+  });
+
+  await test.step("3 · Escape empties the box first, and shuts the palette second", async () => {
+    await box.fill("zz");
+    await page.keyboard.press("Escape");
+    await expect(palette).toBeVisible();
+    await expect(box).toHaveValue("");
+    await page.keyboard.press("Escape");
+    await expect(palette).toBeHidden();
+  });
+
+  await test.step("4 · no signal: the palette says so, keeps the words, and asks again", async () => {
+    await trigger.click();
+    await expect(palette).toBeVisible(COLD);
+    await page.route("**/*", (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && request.headers()["next-action"]) {
+        return route.abort("connectionfailed");
+      }
+      return route.continue();
+    });
+    await box.fill(latest.name);
+    const alert = palette.getByRole("alert");
+    await expect(alert.getByText(t("shell.searchUnreachable"), { exact: true })).toBeVisible(COLD);
+    await expect(palette.getByText(t("shell.searchNoResults", { q: latest.name }))).toHaveCount(0);
+    await expect(box).toHaveValue(latest.name);
+
+    await page.unroute("**/*");
+    await alert.getByRole("button", { name: t("shell.tryAgain") }).click();
+    await expect(palette.getByRole("alert")).toHaveCount(0, COLD);
+    await expect(
+      palette
+        .getByRole("group", { name: t("common.companies"), exact: true })
+        .getByRole("option")
+        .filter({ hasText: latest.name })
+        .first(),
+    ).toBeVisible(COLD);
+  });
+});

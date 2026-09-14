@@ -25,6 +25,11 @@ import { bottomBarFor, isActive, navFor } from "./nav";
  * For a role that writes reports the middle of the bar is Add report (SPEC §3
  * P13, 13.8): the one thing written from anywhere, under the thumb that writes
  * it. Six across 375px is 62px each — still past the 44 a thumb needs (D130).
+ *
+ * The labels are `text-2xs` (11px), the one size below the scale, and the
+ * items carry no side padding of their own: six across 375px is 62px each, and
+ * «إضافة تقرير» at 11px needs 59 of them — with 4px either side it was cut to
+ * «إضافة تق…», and a label is never truncated (DESIGN §5).
  */
 export function BottomBar({ role }: { role: Role }) {
   const t = useTranslations();
@@ -54,12 +59,12 @@ export function BottomBar({ role }: { role: Role }) {
                   aria-haspopup="dialog"
                   data-slot="bottom-add-report"
                   onClick={() => openReport()}
-                  className="flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-1 px-1 text-rail-strong"
+                  className="flex min-h-14 min-w-11 flex-1 flex-col items-center justify-center gap-1 text-rail-strong"
                 >
                   <span className="flex size-6 items-center justify-center rounded-full bg-rail-strong/15">
                     <Plus aria-hidden="true" className="size-4 shrink-0" />
                   </span>
-                  <span className="max-w-full truncate text-[10px] font-medium">
+                  <span className="max-w-full truncate text-2xs font-medium">
                     {t("common.addReport")}
                   </span>
                 </button>
@@ -68,12 +73,12 @@ export function BottomBar({ role }: { role: Role }) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 px-1 transition-colors",
+                  "flex min-h-14 flex-1 flex-col items-center justify-center gap-1 transition-colors",
                   active ? "text-rail-strong" : "text-rail-text",
                 )}
               >
                 <Icon className="size-5 shrink-0" />
-                <span className="max-w-full truncate text-[10px] font-medium">
+                <span className="max-w-full truncate text-2xs font-medium">
                   {t(item.shortKey ?? item.labelKey)}
                 </span>
               </Link>
@@ -83,10 +88,10 @@ export function BottomBar({ role }: { role: Role }) {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="flex min-h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 px-1 text-rail-text"
+          className="flex min-h-14 min-w-14 flex-1 flex-col items-center justify-center gap-1 text-rail-text"
         >
           <Menu className="size-5 shrink-0" />
-          <span className="max-w-full truncate text-[10px] font-medium">{t("common.menu")}</span>
+          <span className="max-w-full truncate text-2xs font-medium">{t("common.menu")}</span>
         </button>
       </nav>
 
@@ -102,7 +107,7 @@ export function BottomBar({ role }: { role: Role }) {
             {groups.map((group, index) => (
               <div key={group.labelKey ?? index} className="flex flex-col gap-1">
                 {group.labelKey ? (
-                  <p className="px-2 pt-3 pb-1 text-[11px] font-medium text-muted-foreground">
+                  <p className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground">
                     {t(group.labelKey)}
                   </p>
                 ) : null}
@@ -119,7 +124,7 @@ export function BottomBar({ role }: { role: Role }) {
                           active ? "bg-secondary text-foreground" : "text-muted-foreground",
                         )}
                       >
-                        <Icon className="size-[18px] shrink-0" />
+                        <Icon className="size-5 shrink-0" />
                         <span className="truncate">{t(item.labelKey)}</span>
                       </Link>
                     </SheetClose>

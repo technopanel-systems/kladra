@@ -38,10 +38,10 @@ export function Trouble({
     <div
       role={failed ? "alert" : undefined}
       data-slot="trouble"
-      className="card-face flex w-full max-w-md flex-col items-start gap-5 p-6"
+      className="card-face flex w-full max-w-md flex-col items-start gap-6 p-6"
     >
       {bare ? <BrandMark /> : null}
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <h1 className="text-lg font-semibold">
           {failed ? t("failedTitle") : t("missingTitle")}
         </h1>
@@ -64,7 +64,7 @@ export function Trouble({
 
   if (!bare) return card;
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center px-5 py-12">
+    <main className="flex min-h-svh flex-col items-center justify-center px-4 py-12">
       {card}
     </main>
   );

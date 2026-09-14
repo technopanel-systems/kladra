@@ -10,6 +10,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Prose } from "@/components/ui-ext/prose";
 import type { NotificationRow } from "@/lib/notifications";
+import { cn } from "@/lib/utils";
 
 /**
  * What Kladra told this person, newest first.
@@ -43,12 +44,17 @@ export function NotificationsList({
   const unread = rows.filter((row) => !row.read).length;
 
   function markAll() {
+    // Busy, not disabled (states-feedback): the button keeps its place and the
+    // focus while the write is out, says what it is doing, and a second press
+    // is simply not a second write.
+    if (pending) return;
     startTransition(async () => {
       const outcome = await guarded(markReadAction)();
       if (!outcome.ok) {
         toast.error(outcome.error);
         return;
       }
+      toast.success(t("notifications.allMarkedRead"));
       router.refresh();
     });
   }
@@ -66,8 +72,8 @@ export function NotificationsList({
     <div className="flex flex-col gap-4">
       {unread > 0 && canWrite ? (
         <div className="flex">
-          <Button type="button" variant="outline" onClick={markAll} disabled={pending}>
-            {t("common.markAllRead")}
+          <Button type="button" variant="outline" onClick={markAll} aria-busy={pending || undefined}>
+            {pending ? t("notifications.markingRead") : t("common.markAllRead")}
           </Button>
         </div>
       ) : null}
@@ -75,21 +81,34 @@ export function NotificationsList({
       <ul className="flex flex-col gap-2">
         {rows.map((row) => (
           <li key={row.id}>
+            {/* Unread and read are told apart three ways, so the difference
+                survives with the colour switched off (DESIGN §5: colour is
+                never the only carrier). An unread notice is a card at rest —
+                the surface and its shadow — with its sentence at the heavier
+                weight in the full text colour; one already read steps back to
+                a hairline on the canvas and a muted sentence. The dot stays as
+                the quick glance, and the word is in the label for a reader. */}
             <Link
               href={row.link}
               onClick={() => open(row)}
-              className="card-face flex items-start gap-3 p-3 transition-colors hover:bg-surface-2"
+              data-state={row.read ? "read" : "unread"}
+              className={cn(
+                "hover-tint flex items-start gap-3 p-3",
+                row.read ? "rounded-xl border border-line" : "card-face",
+              )}
             >
-              {/* The one mark that says "you have not seen this". A word would
-                  be read aloud on every row; the label carries it instead. */}
               <span
                 aria-hidden="true"
-                className={
-                  row.read ? "mt-2 size-2 shrink-0 rounded-full" : "mt-2 size-2 shrink-0 rounded-full bg-brand"
-                }
+                className={cn("mt-2 size-2 shrink-0 rounded-full", row.read ? null : "bg-brand")}
               />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-sm">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span
+                  data-slot="notice-sentence"
+                  className={cn(
+                    "text-sm",
+                    row.read ? "text-muted-foreground" : "font-medium text-foreground",
+                  )}
+                >
                   {/* Raised for him by somebody else (SPEC §3 P13): the same
                       kind, and the sentence that says who raised it. */}
                   {row.raisedFor

@@ -25,7 +25,9 @@ export function NotificationBell() {
           {unread > 0 ? (
             <span
               aria-hidden="true"
-              className="num absolute -top-1.5 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] leading-none font-semibold text-brand-ink"
+              // `text-2xs` (11px), the one size under the scale, kept for a count
+              // inside a mark and the phone bar's labels (DESIGN §1).
+              className="num absolute -top-2 -end-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-2xs leading-none font-semibold text-brand-ink"
             >
               {unread > 99 ? "99+" : unread}
             </span>

@@ -15,6 +15,11 @@ import { isActive, navFor, type NavItem } from "./nav";
  * icons; the width transition is 200 ms, inside DESIGN §2's 150–250 ms window.
  * The brand gradient is deliberately absent here — DESIGN §1 keeps it on the
  * primary button — so the active row is a wash plus stronger text.
+ *
+ * Every size is on the scale (P13-G6): a row's words at `text-sm`, the group
+ * label at `text-xs`, the wordmark at `text-base`, the glyphs at 20. And one
+ * column runs down the rail — each glyph ends where the mark ends and each
+ * label starts where the wordmark starts, which is what the paddings are for.
  */
 export function Sidebar({
   role,
@@ -43,14 +48,14 @@ export function Sidebar({
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-medium transition-colors",
-          collapsed ? "w-10 justify-center px-0" : "px-2.5",
+          "flex h-9 items-center gap-3 rounded-lg text-sm font-medium transition-colors",
+          collapsed ? "w-10 justify-center px-0" : "px-2",
           active
             ? "bg-rail-active text-rail-strong"
             : "text-rail-text hover:bg-rail-active hover:text-rail-strong",
         )}
       >
-        <Icon className="size-[18px] shrink-0" />
+        <Icon className="size-5 shrink-0" />
         <span className={cn("truncate", collapsed && "sr-only")}>{label}</span>
       </Link>
     );
@@ -81,14 +86,14 @@ export function Sidebar({
       >
         <div
           className={cn(
-            "flex h-14 shrink-0 items-center gap-2.5",
+            "flex h-14 shrink-0 items-center gap-3",
             collapsed ? "justify-center px-0" : "px-3",
           )}
         >
           <BrandMark />
           <span
             className={cn(
-              "truncate text-[15px] font-semibold text-rail-strong",
+              "truncate text-base font-semibold text-rail-strong",
               collapsed && "sr-only",
             )}
           >
@@ -103,7 +108,7 @@ export function Sidebar({
                 <p
                   id={`nav-group-${index}`}
                   className={cn(
-                    "px-2.5 pt-5 pb-1.5 text-[11px] font-medium text-rail-text",
+                    "px-2 pt-5 pb-2 text-xs font-medium text-rail-text",
                     collapsed && "sr-only",
                   )}
                 >
@@ -113,7 +118,7 @@ export function Sidebar({
               {group.labelKey && collapsed ? <div className="my-3 h-px bg-line" /> : null}
               <ul
                 aria-labelledby={group.labelKey ? `nav-group-${index}` : undefined}
-                className="flex flex-col gap-0.5"
+                className="flex flex-col gap-1"
               >
                 {group.items.map(row)}
               </ul>
@@ -127,11 +132,11 @@ export function Sidebar({
             onClick={toggle}
             aria-label={t(collapsed ? "common.expand" : "common.collapse")}
             className={cn(
-              "flex h-9 items-center gap-2.5 rounded-lg text-[13px] font-medium text-rail-text transition-colors hover:bg-rail-active hover:text-rail-strong",
-              collapsed ? "mx-auto w-10 justify-center px-0" : "w-full px-2.5",
+              "flex h-9 items-center gap-3 rounded-lg text-sm font-medium text-rail-text transition-colors hover:bg-rail-active hover:text-rail-strong",
+              collapsed ? "mx-auto w-10 justify-center px-0" : "w-full px-2",
             )}
           >
-            <ToggleIcon className="size-[18px] shrink-0 rtl:-scale-x-100" />
+            <ToggleIcon className="size-5 shrink-0 rtl:-scale-x-100" />
             <span className={cn("truncate", collapsed && "sr-only")}>
               {t(collapsed ? "common.expand" : "common.collapse")}
             </span>

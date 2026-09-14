@@ -5,7 +5,7 @@ import { getLocale } from "next-intl/server";
 import { DirectionProvider } from "@/components/direction-provider";
 import { Hydrated } from "@/components/shell/hydrated";
 import { ServiceWorker } from "@/components/shell/service-worker";
-import { Toaster } from "@/components/ui/sonner";
+import { Toasts } from "@/components/shell/toasts";
 import { dirOf } from "@/i18n/routing";
 import { CANVAS, getTheme } from "@/lib/theme";
 import "./globals.css";
@@ -90,7 +90,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Hydrated />
             <ServiceWorker />
             {children}
-            <Toaster position={dir === "rtl" ? "bottom-left" : "bottom-right"} />
+            <Toasts dir={dir} />
           </DirectionProvider>
         </NextIntlClientProvider>
       </body>

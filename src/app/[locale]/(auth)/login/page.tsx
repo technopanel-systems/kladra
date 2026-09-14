@@ -48,12 +48,20 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
 
   return (
     <div className="w-full max-w-sm">
-      <header className="mb-7 flex items-center gap-2.5">
+      {/* On the 4px scale with the rest of the app (P13-G6): the gaps here were
+          7, 2.5 and 5 steps. The card's header sits a section's gap (24) above
+          the fields and the fields a part's gap (16) apart, so the sentence
+          under "Sign in" reads as the card's and not as the first field's. The
+          wordmark's tight tracking is for the Latin letters only: Arabic has no
+          letter-spacing that keeps its joins. */}
+      <header className="mb-8 flex items-center gap-3">
         <BrandMark className="size-9 rounded-xl text-base" />
-        <span className="font-heading text-2xl font-semibold tracking-tight">{t("common.app")}</span>
+        <span className="font-heading text-2xl font-semibold tracking-tight rtl:tracking-normal">
+          {t("common.app")}
+        </span>
       </header>
 
-      <div className="card-face flex flex-col gap-4 p-5">
+      <div className="card-face flex flex-col gap-6 p-6">
         <div className="flex flex-col gap-1">
           <h1 className="font-heading text-lg leading-snug font-medium">{t("auth.signIn")}</h1>
           <p className="text-sm text-muted-foreground">{t("auth.subtitle")}</p>

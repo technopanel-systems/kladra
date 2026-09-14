@@ -293,6 +293,13 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     const notice = page.getByText(t("notifications.quotationReturned", { label, company: project.company }));
     await expect(notice).toBeVisible();
 
+    // Unread is told apart by more than the dot (S12.1): the row says what it
+    // is, and its sentence is set at the heavier weight — so it still reads as
+    // new with the colour switched off. Step 9 holds a read one to the other.
+    const noticeRow = notice.locator("xpath=ancestor-or-self::a[1]");
+    await expect(noticeRow).toHaveAttribute("data-state", "unread");
+    await expect(noticeRow.locator("[data-slot='notice-sentence']")).toHaveCSS("font-weight", "500");
+
     // And HER words are a block of their own under it, not a clause inside a
     // sentence built from the message file: what a person typed runs in that
     // person's direction, on either locale's page (words.md, DESIGN §5). Read
@@ -451,15 +458,23 @@ test("the quotation chain: request, send back, edit, issue, the customer's answe
     await expect(accepted).toBeVisible(COLD);
     await expect(asked).toBeVisible();
 
-    const markAll = page.getByRole("button", { name: t("common.markAllRead") });
+    const markAll = page.getByRole("button", { name: t("common.markAllRead"), exact: true });
     await markAll.click();
-    // The button goes when nothing is unread, and it goes on the refresh the
-    // action asks for — which is also when the deleted rows leave the screen.
-    // Navigating before that lands would cancel the write in flight.
+    // The write answers with a toast that names what it did (S12.1) — while it
+    // is out the button says "Marking all read…" instead, so its going is not
+    // the proof. Then the button goes when nothing is unread, on the refresh
+    // the action asks for — which is also when the deleted rows leave the
+    // screen. Navigating before that lands would cancel the write in flight.
+    await expect(page.getByText(t("notifications.allMarkedRead"), { exact: true })).toBeVisible(COLD);
     await expect(markAll).toHaveCount(0, COLD);
 
     await expect(accepted, "a finished fact she has read is still a row").toHaveCount(0);
     await expect(asked, "the revision waiting in her queue left her screen").toBeVisible();
+    // And now it is read, it steps back: the row says so and the sentence is at
+    // the body's weight (S12.1).
+    const askedRow = asked.locator("xpath=ancestor-or-self::a[1]");
+    await expect(askedRow).toHaveAttribute("data-state", "read");
+    await expect(askedRow.locator("[data-slot='notice-sentence']")).toHaveCSS("font-weight", "400");
   });
 });
 

@@ -27,6 +27,13 @@ const ERROR_ID = "login-error";
  * form once its action returns, so after a refused attempt the address a rep
  * had just typed on a phone would vanish and have to be typed again. The
  * password is left to reset — retyping that is the point.
+ *
+ * Busy is not disabled (states-feedback). The button greyed itself out while
+ * the answer was on its way, which dropped it out of the Tab order and took
+ * the focus with it, and read as a button that had stopped working at the one
+ * moment somebody was watching it. It stays where it is now, in the order and
+ * in its colour, says "Signing in…", tells a reader it is busy — and a second
+ * press, or Enter in a field, is not a second sign-in.
  */
 export function LoginForm() {
   const t = useTranslations();
@@ -39,14 +46,24 @@ export function LoginForm() {
   const failed = state !== null && !state.ok;
   // The fields are wrong only when the server said so; a server that was not
   // reached says nothing about them.
-  const wrong = state !== null && !state.ok && state.reason !== "unreachable";
+  const unreachable = state !== null && !state.ok && state.reason === "unreachable";
+  const wrong = failed && !unreachable;
 
   return (
     // noValidate: the browser's own bubble is in the browser's language, not
     // the app's, and the sign-in screen is the first thing anyone sees
     // (DESIGN §5). The action answers instead.
-    <form action={action} noValidate className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
+    <form
+      action={action}
+      noValidate
+      // While the first press is out, the submit is refused before React turns
+      // it into a second call of the action.
+      onSubmit={(event) => {
+        if (pending) event.preventDefault();
+      }}
+      className="flex flex-col gap-4"
+    >
+      <div className="flex flex-col gap-2">
         <Label htmlFor="email">{t("auth.email")}</Label>
         <Input
           id="email"
@@ -67,7 +84,7 @@ export function LoginForm() {
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor="password">{t("auth.password")}</Label>
         <Input
           id="password"
@@ -90,20 +107,22 @@ export function LoginForm() {
           the language link jumped DOWN eighteen — the page moving under
           somebody at the exact moment they are reading why they were refused
           (D67). Two lines: the credentials sentence fits on one at 375, and
-          the wire's — "could not reach the server" (D132) — takes two. */}
+          the wire's takes two. The wire's is the sign-in screen's own: the
+          app-wide one says "nothing was saved", and nobody here saved anything
+          (D132). */}
       <p
         id={ERROR_ID}
         role="alert"
         className="min-h-10 text-sm leading-5 text-destructive"
         dir="auto"
       >
-        {failed ? state.error : null}
+        {unreachable ? t("auth.unreachable") : failed ? state.error : null}
       </p>
 
       <Button
         type="submit"
         size="lg"
-        disabled={pending}
+        aria-busy={pending || undefined}
         // The one primary action on the screen, so the one brand gradient
         // (DESIGN.md §1). Both values are tokens from globals.css.
         variant="brand"

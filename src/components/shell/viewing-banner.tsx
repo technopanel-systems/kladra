@@ -26,13 +26,16 @@ export async function ViewingBanner({ user }: { user: SessionUser }) {
       // colour, and this is the one thing on the page they must not miss.
       role="status"
       data-slot="viewing-banner"
-      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line bg-state-wait px-4 py-2 text-sm text-state-wait-fg md:px-8 print:hidden"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line bg-state-wait px-4 py-2 text-sm text-state-wait-fg md:px-8 print:hidden"
     >
       <Eye aria-hidden="true" className="size-4 shrink-0" />
       <span className="min-w-0">
         {t("viewAs.banner", { name: personNameFrom(user, locale), role: t(`common.${user.role}`) })}
       </span>
-      <span className="text-xs opacity-80">{t("common.readOnly")}</span>
+      {/* One step down by size, not by fading the state's own colour: at 80%
+          opacity the amber caption on the light theme's amber tint fell under
+          the contrast a line of text needs (lens F). */}
+      <span className="text-xs">{t("common.readOnly")}</span>
       {/* The other standing exception (DESIGN §5): void, ends in a redirect,
           and this banner renders on the server, so the form works with no
           JavaScript at all — which is the point of it being a form. */}

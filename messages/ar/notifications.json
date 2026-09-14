@@ -12,6 +12,8 @@
   "leadAssigned": "أسند إليك {rep} عميلًا محتملًا: {company}.",
   "leadAcknowledged": "استلم {rep} العميل المحتمل {company}.",
   "unreadMark": "غير مقروء",
+  "markingRead": "جارٍ تمييز الكل كمقروء…",
+  "allMarkedRead": "تم تمييز كل الإشعارات كمقروءة.",
   "companyShared": "شاركك {rep} {label}.",
   "projectShared": "أضافك {rep} إلى {label}.",
   "companyFolded": "دُمج {company} في سجل {rep} للعميل نفسه.",

@@ -218,10 +218,10 @@ test("Abdulrahman's floor: the company's month, everyone's month, and what is st
       return;
     }
 
-    await page.getByRole("button", { name: t("common.markAllRead") }).click();
+    await page.getByRole("button", { name: t("common.markAllRead"), exact: true }).click();
     // The bell reads the live channel, so it drops without a reload (DESIGN §2).
     await expect(page.getByRole("link", { name: t("common.notifications") })).toBeVisible(COLD);
-    await expect(page.getByRole("button", { name: t("common.markAllRead") })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: t("common.markAllRead"), exact: true })).toHaveCount(0, COLD);
   });
 });
 

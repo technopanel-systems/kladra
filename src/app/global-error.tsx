@@ -8,6 +8,13 @@
  * locale to ask for, one thing to press. It should never be seen; it exists
  * so that on the day the root layout itself throws, the screen is still
  * Kladra's and not the browser's.
+ *
+ * With no stylesheet there are no tokens to name, so the dark theme's values
+ * are written out here — and they are THE values, copied from globals.css, not
+ * a near miss: the button wore `#f2566b → #ff7a4a` with dark ink, a third
+ * spelling of the one primary gradient (DESIGN §1: there are exactly two). The
+ * sizes are the scale's: 15.5 and 14.5 for `text-base` and `text-sm`, 12 for
+ * `--radius`.
  */
 export default function GlobalError({
   reset,
@@ -56,7 +63,7 @@ export default function GlobalError({
           >
             K
           </span>
-          <p lang="en" style={{ margin: 0, fontSize: 15 }}>
+          <p lang="en" style={{ margin: 0, fontSize: 15.5 }}>
             Kladra could not draw this screen.
           </p>
           <p
@@ -64,7 +71,7 @@ export default function GlobalError({
             dir="rtl"
             style={{
               margin: 0,
-              fontSize: 15,
+              fontSize: 15.5,
               fontFamily: '"Readex Pro", ui-sans-serif, system-ui, sans-serif',
             }}
           >
@@ -76,12 +83,14 @@ export default function GlobalError({
             style={{
               cursor: "pointer",
               border: 0,
-              borderRadius: 10,
-              padding: "8px 14px",
-              background: "linear-gradient(135deg, #f2566b, #ff7a4a)",
-              color: "#1a0a0c",
+              borderRadius: 12,
+              padding: "8px 12px",
+              // --brand-grad, --brand-ink and --brand-glow, dark theme.
+              background: "linear-gradient(135deg, #ec5e62, #f08a4a)",
+              color: "#ffffff",
+              boxShadow: "0 8px 24px -10px rgba(236, 94, 98, 0.5)",
               font: "inherit",
-              fontSize: 14,
+              fontSize: 14.5,
               fontWeight: 500,
             }}
           >

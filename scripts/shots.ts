@@ -242,6 +242,69 @@ function fillField(key: string, value: string): Step {
   };
 }
 
+/** The sign-in form's two fields, with Faisal's address and the given password. */
+function typeCredentials(password: string): Step {
+  return async (page, T) => {
+    await page.getByLabel(T("auth.email"), { exact: true }).fill(IDENTITIES.rep);
+    await page.getByLabel(T("auth.password"), { exact: true }).fill(password);
+  };
+}
+
+function clickSignIn(): Step {
+  return async (page, T) => {
+    await page.locator("main form").getByRole("button", { name: T("auth.signIn"), exact: true }).click();
+  };
+}
+
+/** A server action is a POST carrying `Next-Action`; everything else passes. */
+async function serverActions(page: Page, answer: "hold" | "cut"): Promise<void> {
+  await page.route("**/*", async (route) => {
+    const request = route.request();
+    if (request.method() !== "POST" || !request.headers()["next-action"]) {
+      await route.continue();
+      return;
+    }
+    // Held: never answered, so whatever is waiting on it is caught waiting.
+    if (answer === "cut") await route.abort("internetdisconnected");
+  });
+}
+
+function holdServerActions(): Step {
+  return (page) => serverActions(page, "hold");
+}
+
+/** The wire cut under the next server action: what a lobby with no signal does. */
+function cutServerActions(): Step {
+  return (page) => serverActions(page, "cut");
+}
+
+function typeInPalette(term: string): Step {
+  return async (page) => {
+    await page.getByRole("dialog").first().getByRole("combobox").fill(term);
+  };
+}
+
+/**
+ * From the team table, the person whose name matches: his id is on his row's
+ * door (`/companies?rep=`), and the view-as cookie (src/lib/view-as.ts) is set
+ * for the day's address in this locale only.
+ */
+function viewAsOnDay(name: RegExp): Step {
+  return async (page) => {
+    const href = await page.locator("a[href*='rep=']").filter({ hasText: name }).first().getAttribute("href");
+    const id = href ? new URL(href, BASE).searchParams.get("rep") : null;
+    if (!id) throw new Error(`no team row matching ${name}`);
+    const url = new URL(page.url());
+    const locale = url.pathname.split("/")[1];
+    await page.context().addCookies([
+      { name: "kladra-view-as", value: id, domain: url.hostname, path: `/${locale}/day` },
+    ]);
+    await page.goto(`${BASE}/${locale}/day?tab=work`, { waitUntil: "load" });
+    assertHost(page);
+    await waitForHydration(page);
+  };
+}
+
 const MANIFEST: StateDef[] = [
   /* ---------------------------- signed-out --------------------------- */
   {
@@ -262,6 +325,38 @@ const MANIFEST: StateDef[] = [
     identity: "rep",
     path: "/no-such-screen",
     waitFor: heading("shell.missingTitle"),
+  },
+  // The three answers the sign-in form can give before it lets anybody in
+  // (S12.1). None of them signs anybody in: the address is Faisal's and the
+  // password is not, or the request never reaches the server.
+  {
+    role: "signed-out",
+    key: "login-busy",
+    identity: "anonymous",
+    path: "/login",
+    // The answer is held back, so the button is caught while it works.
+    steps: chain(holdServerActions(), typeCredentials("not the password"), clickSignIn()),
+    waitFor: async (page, T) => {
+      await page
+        .getByRole("button", { name: T("auth.signingIn"), exact: true })
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "signed-out",
+    key: "login-wrong",
+    identity: "anonymous",
+    path: "/login",
+    steps: chain(typeCredentials("not the password"), clickSignIn()),
+    waitFor: textVisible("auth.wrongCredentials"),
+  },
+  {
+    role: "signed-out",
+    key: "login-unreachable",
+    identity: "anonymous",
+    path: "/login",
+    steps: chain(cutServerActions(), typeCredentials("not the password"), clickSignIn()),
+    waitFor: textVisible("auth.unreachable"),
   },
 
   /* --------------------------------- rep ------------------------------ */
@@ -418,10 +513,53 @@ const MANIFEST: StateDef[] = [
     identity: "rep",
     path: "/day?tab=work",
     steps: pressKeys("Control+k"),
-    waitFor: async (page, T) => {
-      await page.getByRole("dialog").first().waitFor({ state: "visible" });
-      await page.getByPlaceholder(T("common.searchPlaceholder")).first().waitFor({ state: "visible" });
+    // Before anything is typed: the sentence, and under it what he was busy
+    // with (S12.1). The phone's box has a shorter placeholder than the desk's,
+    // so the proof is the records rather than the placeholder.
+    waitFor: dialogWithText("shell.recentCompanies"),
+  },
+  {
+    role: "rep",
+    key: "search-loading",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(holdServerActions(), pressKeys("Control+k")),
+    waitFor: async (page) => {
+      await page.locator("[data-slot='search-skeleton']").waitFor({ state: "visible" });
     },
+  },
+  {
+    role: "rep",
+    key: "search-results",
+    identity: "rep",
+    path: "/day?tab=work",
+    // A word most of his companies carry, so more match than a group shows and
+    // the line that says so is drawn too.
+    steps: chain(pressKeys("Control+k"), typeInPalette("شركة")),
+    waitFor: async (page) => {
+      await page.locator("[data-slot='search-capped']").waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "search-nothing",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(pressKeys("Control+k"), typeInPalette("zzzzqqq")),
+    waitFor: dialogWithText("shell.searchNoResults", { q: "zzzzqqq" }),
+  },
+  {
+    role: "rep",
+    key: "search-offline",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(
+      pressKeys("Control+k"),
+      async (page, T, prefix, width) => dialogWithText("shell.recentCompanies")(page, T, prefix, width),
+      cutServerActions(),
+      typeInPalette("شركة"),
+    ),
+    waitFor: dialogWithText("shell.searchUnreachable"),
   },
   {
     role: "rep",
@@ -430,6 +568,30 @@ const MANIFEST: StateDef[] = [
     path: "/day?tab=work",
     steps: clickButtonByPrefix("shell.accountMenuFor"),
     waitFor: menuVisible(),
+  },
+  // Two of the shell's states are only reachable as somebody other than Faisal,
+  // and are kept here beside his because they are the same screens (S12.1).
+  // A clean bell: the seed gives the manager no notices at all.
+  {
+    role: "manager",
+    key: "notifications-empty",
+    identity: "manager",
+    path: "/notifications",
+    waitFor: textVisible("shell.emptyNotifications"),
+  },
+  // Jerom reading Faisal's day through Faisal's eyes, banner and all. The
+  // view-as cookie is scoped to the day's own address, so no other state the
+  // admin's context captures is taken over by it.
+  {
+    role: "admin",
+    key: "viewing-rep-day",
+    identity: "admin",
+    path: "/team?tab=team",
+    steps: viewAsOnDay(/Faisal|فيصل/),
+    waitFor: async (page, T, prefix, width) => {
+      await page.locator("[data-slot='viewing-banner']").waitFor({ state: "visible" });
+      await textVisible("day.whoToCall")(page, T, prefix, width);
+    },
   },
 
   /* ----------------------------- coordinator --------------------------- */

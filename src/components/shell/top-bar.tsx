@@ -54,13 +54,13 @@ export async function TopBar({
 
         <SearchCommand role={role} />
 
-        <div className="ms-auto flex shrink-0 items-center gap-0.5">
+        <div className="ms-auto flex shrink-0 items-center gap-1">
           {writes ? (
             <ReportButton
               variant="outline"
               size="sm"
               data-slot="add-report"
-              className="me-1.5 max-md:size-11 max-md:px-0"
+              className="me-2 max-md:size-11 max-md:px-0"
             >
               <Plus aria-hidden="true" />
               {/* Hidden on a phone, where the bar has room for a glyph and not

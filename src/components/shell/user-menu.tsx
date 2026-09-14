@@ -84,23 +84,25 @@ export function UserMenu({
           // hidden below `md`, and a label that replaces it would leave a screen
           // reader with "your account" and no idea whose (P11G).
           aria-label={t("shell.accountMenuFor", { name })}
-          className="h-11 gap-2 px-1.5 md:h-9 md:px-2"
+          className="h-11 gap-2 px-1 md:h-9 md:px-2"
         >
           <Avatar id={userId} name={name} />
           {/* 36 (144px) cut "Abdulrahman Al-Zahrani" mid-surname at 1366, where
               there is room to spare. Widen once the viewport can afford it. */}
           <span className="hidden min-w-0 flex-col items-start leading-tight md:flex">
-            <span className="max-w-36 truncate text-[13px] font-medium lg:max-w-56">{name}</span>
-            <span className="max-w-36 truncate text-[11px] font-normal text-muted-foreground lg:max-w-56">
+            <span className="max-w-36 truncate text-sm font-medium lg:max-w-56">{name}</span>
+            <span className="max-w-36 truncate text-xs font-normal text-muted-foreground lg:max-w-56">
               {t(`common.${role}`)}
             </span>
           </span>
-          <ChevronsUpDown className="hidden size-3.5 text-muted-foreground md:block" />
+          <ChevronsUpDown className="hidden size-4 text-muted-foreground md:block" />
         </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-60!">
-        <div className="flex flex-col gap-0.5 px-1.5 py-1.5">
+        {/* The inline inset is the kit's own for a menu label and item, so the
+            name starts where "Theme" and "Dark" start below it. */}
+        <div className="flex flex-col gap-1 px-1.5 py-2">
           <span className="truncate text-sm font-medium">{name}</span>
           <span className="truncate text-xs text-muted-foreground">{t(`common.${role}`)}</span>
         </div>

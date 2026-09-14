@@ -11,7 +11,9 @@ const ADDRESS = "faisal@technopanel.com.sa";
  * second copy of the mark in a colour that changes between themes, the only
  * component-library card left in the app, and no heading of any level — a
  * `CardTitle` is a div, so the public page offered a screen reader nothing to
- * land on. The three assertions here are the three that would have caught it.
+ * land on. The first three steps are the three that would have caught it; the
+ * last two are the answers the form gives while it works and when the server
+ * cannot be reached (S12.1).
  */
 test("the sign-in screen: a heading, an address that runs the right way, and no jump", async ({
   page,
@@ -62,5 +64,60 @@ test("the sign-in screen: a heading, an address that runs the right way, and no 
     // And what he typed on a phone is still there to correct.
     await expect(email).toHaveValue(ADDRESS);
     await expect(password).toHaveValue("");
+  });
+
+  // Busy is not disabled (S12.1, states-feedback). The button greyed itself
+  // out while the answer was on its way: out of the Tab order, focus dropped,
+  // and a button that looked as if it had stopped working.
+  await test.step("4 · while it works the button says so, stays pressable, and a second press is not a second sign-in", async () => {
+    let calls = 0;
+    let release = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      if (request.method() !== "POST" || !request.headers()["next-action"]) return route.continue();
+      calls += 1;
+      await held;
+      return route.continue();
+    });
+
+    await password.fill("not the password");
+    await submit.click();
+    const busy = page.getByRole("button", { name: t("auth.signingIn") });
+    await expect(busy).toHaveAttribute("aria-busy", "true", COLD);
+    await expect(busy, "the working button left the Tab order").toBeEnabled();
+    await busy.focus();
+    await expect(busy).toBeFocused();
+    await busy.click();
+
+    release();
+    // Back to its own words once the answer is in — and by then a second
+    // sign-in, had the press made one, would have gone through the route too.
+    // Counted by the busy words going, not by "Sign in" arriving: in Arabic the
+    // one is inside the other («جارٍ تسجيل الدخول…»).
+    await expect(busy).toHaveCount(0, COLD);
+    await expect(page.locator("#login-error")).toHaveText(t("auth.wrongCredentials"));
+    expect(calls, "a second press signed in twice").toBe(1);
+    await page.unroute("**/*");
+  });
+
+  await test.step("5 · a server it cannot reach is said in the sign-in screen's own words", async () => {
+    await page.route("**/*", (route) => {
+      const request = route.request();
+      if (request.method() === "POST" && request.headers()["next-action"]) {
+        return route.abort("connectionfailed");
+      }
+      return route.continue();
+    });
+    await password.fill("not the password");
+    await submit.click();
+
+    await expect(page.locator("#login-error")).toHaveText(t("auth.unreachable"), COLD);
+    // Nothing was said about the fields, because the server said nothing.
+    await expect(email).not.toHaveAttribute("aria-invalid", "true");
+    await expect(email).toHaveValue(ADDRESS);
+    await page.unroute("**/*");
   });
 });

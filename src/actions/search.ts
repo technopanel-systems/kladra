@@ -5,8 +5,17 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { cities, companies, contacts, projects, quotations } from "@/db/schema";
-import { NotAllowed, refusalKey, requireActor, seesAll } from "@/lib/authz";
+import { NotAllowed, refusalKey, requireReader, seesAll } from "@/lib/authz";
 import { ownsCompanies } from "@/lib/floor";
+import { quotationLabel } from "@/lib/labels";
+import {
+  mayOpenCompanySql,
+  paletteCompanies,
+  recentFor,
+  type PaletteCompany,
+  type PalettePaper,
+  type RecentRecords,
+} from "@/lib/palette";
 import { normalizePhone, storedE164, type E164 } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
 import { seesCompany } from "@/lib/visibility";
@@ -25,23 +34,27 @@ import { seesCompany } from "@/lib/visibility";
  * customer; her FLOOR is the handful she sells herself, and the contacts and
  * projects she is offered are only those. Both of those are the same split
  * `mayOpen`/`mayWrite` has kept since D42, asked of a search box.
+ *
+ * Both actions READ, so they ask `requireReader` and not the write door: an
+ * admin viewing a rep's floor searches that floor, as every other screen he
+ * reads through the rep's eyes does (D105). The palette used to answer him with
+ * a refusal it drew as "nothing matched".
  */
 
 export type SearchResults = {
-  /**
-   * `mine` is "the reader may OPEN this company" — his own, one shared with
-   * him, or any of them for a manager. Only the coordinator's palette reads it:
-   * she is shown every company by name and may open the ones on her own floor,
-   * so it sends her to the drawer for those and to the paper for the rest
-   * (D139, SPEC §3).
-   */
-  companies: { id: string; name: string; city: string; mine: boolean }[];
+  companies: PaletteCompany[];
   contacts: { id: string; name: string; phone: E164; companyId: string; companyName: string }[];
   projects: { id: string; name: string; companyName: string }[];
-  quotations: { id: string; number: string; companyName: string }[];
+  quotations: PalettePaper[];
+  /**
+   * A group had more rows than it shows. The palette says so under the groups,
+   * because a capped list says it is capped (D144) — and the way to the rest is
+   * the same box, typed further.
+   */
+  capped: boolean;
 };
 
-const EMPTY: SearchResults = { companies: [], contacts: [], projects: [], quotations: [] };
+const EMPTY: SearchResults = { companies: [], contacts: [], projects: [], quotations: [], capped: false };
 
 const PER_GROUP = 5;
 const MIN_TERM = 2;
@@ -67,15 +80,28 @@ function phoneNeedle(term: string): string | null {
   return digits.replace(/^0+/, "");
 }
 
+/**
+ * The sentence a refused or failed palette read answers with. Its own words,
+ * not `common.signedOut` or `common.somethingWrong`: those two say "nothing was
+ * saved" and "press Save", and a search saves nothing and has no Save.
+ */
+async function refusal(error: unknown): Promise<{ ok: false; error: string }> {
+  const t = await getTranslations();
+  if (error instanceof NotAllowed) {
+    return {
+      ok: false,
+      error: refusalKey(error) === "signedOut" ? t("shell.searchSignedOut") : t("common.notAllowed"),
+    };
+  }
+  return { ok: false, error: t("shell.searchFailed") };
+}
+
 export async function searchAllAction(q: string): Promise<ActionResult<SearchResults>> {
   let actor: SessionUser;
   try {
-    actor = await requireActor();
+    actor = await requireReader();
   } catch (error) {
-    const t = await getTranslations("common");
-    // A session that has ended says so, not "you are not allowed" (D135).
-    if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    return { ok: false, error: t("somethingWrong") };
+    return refusal(error);
   }
 
   const parsed = querySchema.safeParse(q);
@@ -84,9 +110,27 @@ export async function searchAllAction(q: string): Promise<ActionResult<SearchRes
 
   try {
     return { ok: true, data: await runSearch(actor, term) };
-  } catch {
-    const t = await getTranslations("common");
-    return { ok: false, error: t("somethingWrong") };
+  } catch (error) {
+    return refusal(error);
+  }
+}
+
+/**
+ * What the palette shows before anything is typed: the records this person was
+ * most recently busy with (`src/lib/palette.ts` says where that is read from).
+ */
+export async function recentRecordsAction(): Promise<ActionResult<RecentRecords>> {
+  let actor: SessionUser;
+  try {
+    actor = await requireReader();
+  } catch (error) {
+    return refusal(error);
+  }
+
+  try {
+    return { ok: true, data: await recentFor(actor, await getLocale()) };
+  } catch (error) {
+    return refusal(error);
   }
 }
 
@@ -114,14 +158,19 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
   // paper on it — every rep's, which is her desk (D139) — and a search that
   // returned only her own customers would hide the ones she quotes all day. She
   // is the one person whose floor and whose reading are different questions,
-  // which is exactly the split `mayOpen`/`mayWrite` exists for.
-  const ownCompany: SQL | undefined = isRep && !isCoordinator ? seesCompany(actor) : undefined;
+  // which is exactly the split `mayOpen`/`mayWrite` exists for. The recent
+  // records ask the same function (`paletteCompanies`), so the two halves of
+  // the palette cannot disagree about whom she is shown.
+  const ownCompany: SQL | undefined = paletteCompanies(actor);
   // And the other half of her: the groups that are about WORKING a customer
   // rather than about the paper on him. A contact and a project belong to a
   // floor, and since §3 she has one — this is the same narrowing every rep
   // gets, asked of her too, where `ownCompany` above deliberately lets her past.
   const myFloor: SQL | undefined = all ? undefined : seesCompany(actor);
   if (!all && !isRep && !isCoordinator) return EMPTY;
+
+  // One more than the group shows, so the palette can say a group was cut.
+  const fetch = PER_GROUP + 1;
 
   const companyRows = db
     .select({
@@ -131,7 +180,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
       // group, rather than compared to an id here: a company SHARED with the
       // reader is one he may open, and `rep_id = me` would have sent him to a
       // screen for somebody else's paper about a customer he works (D147).
-      mine: (seesCompany(actor) ?? sql`true`).mapWith(Boolean),
+      mine: mayOpenCompanySql(actor),
       cityName: cityName,
       cityText: companies.cityText,
     })
@@ -139,53 +188,53 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
     .leftJoin(cities, eq(cities.id, companies.cityId))
     .where(and(isNull(companies.archivedAt), ilike(companies.name, anywhere), ownCompany))
     .orderBy(sql`case when ${companies.name} ilike ${prefix} then 0 else 1 end`, asc(companies.name))
-    .limit(PER_GROUP);
+    .limit(fetch);
 
   const contactRows = db
-        .select({
-          id: contacts.id,
-          name: contacts.name,
-          phone: contacts.phoneNormalized,
-          companyId: contacts.companyId,
-          companyName: companies.name,
-        })
-        .from(contacts)
-        .innerJoin(companies, eq(companies.id, contacts.companyId))
-        .where(
-          and(
-            isNull(contacts.archivedAt),
-            isNull(companies.archivedAt),
-            or(
-              ilike(contacts.name, anywhere),
-              needle ? ilike(contacts.phoneNormalized, `%${escapeLike(needle)}%`) : undefined,
-            ),
-            myFloor,
-          ),
-        )
-        .orderBy(asc(contacts.name))
-        .limit(PER_GROUP);
+    .select({
+      id: contacts.id,
+      name: contacts.name,
+      phone: contacts.phoneNormalized,
+      companyId: contacts.companyId,
+      companyName: companies.name,
+    })
+    .from(contacts)
+    .innerJoin(companies, eq(companies.id, contacts.companyId))
+    .where(
+      and(
+        isNull(contacts.archivedAt),
+        isNull(companies.archivedAt),
+        or(
+          ilike(contacts.name, anywhere),
+          needle ? ilike(contacts.phoneNormalized, `%${escapeLike(needle)}%`) : undefined,
+        ),
+        myFloor,
+      ),
+    )
+    .orderBy(asc(contacts.name))
+    .limit(fetch);
 
   const projectRows = db
-        .select({
-          id: projects.id,
-          name: projects.name,
-          companyName: companies.name,
-        })
-        .from(projects)
-        .innerJoin(companies, eq(companies.id, projects.companyId))
-        .where(
-          and(
-            isNull(projects.archivedAt),
-            isNull(companies.archivedAt),
-            ilike(projects.name, anywhere),
-            myFloor,
-          ),
-        )
-        .orderBy(
-          sql`case when ${projects.name} ilike ${prefix} then 0 else 1 end`,
-          asc(projects.name),
-        )
-        .limit(PER_GROUP);
+    .select({
+      id: projects.id,
+      name: projects.name,
+      companyName: companies.name,
+    })
+    .from(projects)
+    .innerJoin(companies, eq(companies.id, projects.companyId))
+    .where(
+      and(
+        isNull(projects.archivedAt),
+        isNull(companies.archivedAt),
+        ilike(projects.name, anywhere),
+        myFloor,
+      ),
+    )
+    .orderBy(
+      sql`case when ${projects.name} ilike ${prefix} then 0 else 1 end`,
+      asc(projects.name),
+    )
+    .limit(fetch);
 
   const quotationRows = db
     .select({
@@ -214,7 +263,7 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
       ),
     )
     .orderBy(desc(quotations.number), desc(quotations.revision))
-    .limit(PER_GROUP);
+    .limit(fetch);
 
   const [foundCompanies, foundContacts, foundProjects, foundQuotations] = await Promise.all([
     companyRows,
@@ -223,30 +272,35 @@ async function runSearch(actor: SessionUser, term: string): Promise<SearchResult
     quotationRows,
   ]);
 
+  const capped = [foundCompanies, foundContacts, foundProjects, foundQuotations].some(
+    (rows) => rows.length > PER_GROUP,
+  );
+
   return {
-    companies: foundCompanies.map((row) => ({
+    companies: foundCompanies.slice(0, PER_GROUP).map((row) => ({
       id: row.id,
       name: row.name,
       city: row.cityName ?? row.cityText ?? "",
       mine: Boolean(row.mine),
     })),
-    contacts: foundContacts.map((row) => ({
+    contacts: foundContacts.slice(0, PER_GROUP).map((row) => ({
       id: row.id,
       name: row.name,
       phone: storedE164(row.phone),
       companyId: row.companyId,
       companyName: row.companyName,
     })),
-    projects: foundProjects.map((row) => ({
+    projects: foundProjects.slice(0, PER_GROUP).map((row) => ({
       id: row.id,
       name: row.name,
       companyName: row.companyName,
     })),
-    quotations: foundQuotations.map((row) => ({
+    quotations: foundQuotations.slice(0, PER_GROUP).map((row) => ({
       id: row.id,
       // Q-12, and Q-12/2 for a revision (SPEC D10). Never an internal id.
-      number: row.revision > 1 ? `Q-${row.number}/${row.revision}` : `Q-${row.number}`,
+      number: quotationLabel(row.number, row.revision),
       companyName: row.companyName,
     })),
+    capped,
   };
 }
