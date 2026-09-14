@@ -516,11 +516,15 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
       ).toHaveCount(0);
     }
     // Edit, Archive and Mark lost live in the drawer's menu since P13-G6, so the
-    // buttons above are absent for everybody. The menu itself must be absent too.
-    await expect(
-      sheet.locator('[data-slot="row-menu"]'),
-      "a menu of changes is on a project that is not his",
-    ).toHaveCount(0);
+    // buttons above are absent for everybody; the menu is where to look. He may
+    // share a job (mayShare), and that is the only thing in it.
+    await sheet.locator('[data-slot="row-menu"]').click();
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem"), "the manager's menu on a rep's project").toHaveText([
+      t("drawer.share.action"),
+    ]);
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
   });
 });
 
