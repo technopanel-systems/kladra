@@ -65,8 +65,10 @@ test("a role with no floor is refused while companies are still on the account",
   await test.step("open Faisal's edit dialog and ask for a role with no floor", async () => {
     await openAdmin(page, locale, "users", t("common.users"));
 
+    // Edit is in the row's menu, which is named for the row (P13-G6).
     const row = page.getByRole("table").first().getByRole("row").filter({ hasText: faisalName });
-    await row.getByRole("button", { name: t("common.edit") }).click();
+    await row.getByRole("button", { name: t("admin.moreFor", { name: faisalName }) }).click();
+    await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
 
     const dialog = page.getByRole("dialog", { name: t("admin.editUser") });
     await expect(dialog).toBeVisible(COLD);

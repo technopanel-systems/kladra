@@ -196,11 +196,11 @@ below by number.
                         Every state shot only loaded: each slice shoots its empty, refused, loading and offline states.
                         Waves (≤3 builders, no file in two): 1 · K, S12.1, S12.9 — 2 · S12.2, S12.3, S12.8 —
                         3 · S12.4, S12.5, S12.6+S12.7 — then S12.10.
-                  - [ ] S12.K The kit, first, because every slice stands on it: the three overlays without blur, exits
+                  - [x] S12.K The kit, first, because every slice stands on it: the three overlays without blur, exits
                         faster than entrances, named transitions; tooltips at 300ms; the figure label in sentence case
                         on the scale; the board one stage at a time on a phone with a stage picker and a sliver on a
                         desk; a filter row that scrolls in one line; an idle chip with an edge.
-                  - [ ] S12.1 The shell: rail, top bar, bottom bar, search palette, bell and notifications, sign-in,
+                  - [x] S12.1 The shell: rail, top bar, bottom bar, search palette, bell and notifications, sign-in,
                         error and missing screens, the view-as banner.
                   - [ ] S12.2 Companies and contacts: list, strip, drawer, forms, hand-over, share, archive.
                   - [ ] S12.3 Projects: list, board, drawer, forms, lost.
@@ -209,7 +209,7 @@ below by number.
                   - [ ] S12.6 The coordinator's desk.
                   - [ ] S12.7 The rep's day and the manager's three tabs, metrics and the builder.
                   - [ ] S12.8 Reports, leads, duplicates.
-                  - [ ] S12.9 Admin: users, targets, lookups, holidays, use, archive, export.
+                  - [x] S12.9 Admin: users, targets, lookups, holidays, use, archive, export.
                   - [ ] S12.10 The stranger's pass: every state again, before beside after in one contact sheet for
                         Jerom; whatever still reads as another hand is reshaped here.
       - [ ] **Stage 3 (Fable)** — audit everything as a stranger, refix, push, report; `/cost` at the end.
@@ -226,7 +226,11 @@ isolated figure is said as «بالمئة» because it would read «%17»). Befo
 site; its 76 free patterns, the PDF, the public framework of its paid plugin (not bought), its shorts and the standards behind
 them are read, and kept as the `ux-patterns` skill with DESIGN §8 saying what was taken and refused.
 G6 starts with S12.0, the cold inventory, read from a fresh `shots/now` set against DESIGN §1, §1b, §6 and §8 through the
-skill's `lens.md`. When the machine is
+skill's `lens.md`. Wave 1 is merged: the kit (S12.K), the shell (S12.1) and admin (S12.9). Admin's row menu, the confirm it
+opens and the arrived flash then moved into `ui-ext` (`RowMenu`, `ConfirmDialog` with a hosted `open`, `useOpener`,
+`useRowFlash`) so the drawers of wave 2 share one of each. The wave's full suite is green: its two failures were one test
+still pressing an Edit button that now lives in the user row's menu. Wave 2 (S12.2, S12.3, S12.8) is building, each in its
+own worktree on its own port and database, because the suite on 3101 clears whatever database stands behind it. When the machine is
 short of memory the full suite runs as four `npx playwright test` calls over a quarter of `tests/*.spec.ts` each, a
 fresh test server for each, because one seventy-minute run was killed twice. The dev database is `seed:demo` on 0026; `seed:volume` after
 it puts the volume back. A dev server that has served a session's edits is restarted, not reused.
