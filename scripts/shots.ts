@@ -527,6 +527,112 @@ const MANIFEST: StateDef[] = [
     path: "/admin/export",
     waitFor: heading("common.export"),
   },
+  /* The admin states S12.9 reshaped (P13-G6): a row's menu, the act apart in it,
+     a refused save, an empty search, and a download on its way and failed. The
+     two refusals press Save on an EMPTY form, which the action refuses before it
+     reads anything; the two downloads are answered by the page itself, held or
+     failed, so no file is built and nothing is written. */
+  {
+    role: "admin",
+    key: "admin-users-menu",
+    identity: "admin",
+    path: "/admin/users",
+    steps: clickButtonByPrefix("admin.moreFor"),
+    waitFor: menuVisible(),
+  },
+  {
+    role: "admin",
+    key: "admin-users-menu-self",
+    identity: "admin",
+    path: "/admin/users",
+    // His own row: Deactivate is there, not pressable, and says why.
+    steps: async (page) => {
+      await page
+        .locator("tr:visible, li:visible")
+        .filter({ hasText: IDENTITIES.admin })
+        .locator('[data-slot="row-menu"]')
+        .first()
+        .click();
+    },
+    waitFor: menuVisible(),
+  },
+  {
+    role: "admin",
+    key: "admin-users-deactivate",
+    identity: "admin",
+    path: "/admin/users",
+    steps: chain(clickButtonByPrefix("admin.moreFor"), async (page, T) => {
+      await page.getByRole("menuitem", { name: T("admin.deactivate"), exact: true }).click();
+    }),
+    waitFor: dialogVisible(),
+  },
+  {
+    role: "admin",
+    key: "admin-users-refused",
+    identity: "admin",
+    path: "/admin/users",
+    steps: chain(clickButton("admin.addUser"), async (page, T) => {
+      await page.getByRole("dialog").getByRole("button", { name: T("common.save"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "admin",
+    key: "admin-lookups-refused",
+    identity: "admin",
+    path: "/admin/lookups?list=categories",
+    steps: chain(clickButton("admin.addRow"), async (page, T) => {
+      await page.getByRole("dialog").getByRole("button", { name: T("common.save"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "admin",
+    key: "admin-holidays-remove",
+    identity: "admin",
+    path: "/admin/holidays",
+    steps: clickButton("admin.removeDay"),
+    waitFor: dialogVisible(),
+  },
+  {
+    role: "admin",
+    key: "admin-archive-no-match",
+    identity: "admin",
+    path: "/admin/archive?q=no-such-record",
+    waitFor: textVisible("admin.archiveEmptySearch", { q: "no-such-record" }),
+  },
+  {
+    role: "admin",
+    key: "admin-export-preparing",
+    identity: "admin",
+    path: "/admin/export",
+    steps: async (page, T) => {
+      // Held on its way, so the pressed Download is caught while it prepares.
+      await page.route("**/api/export/**", async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 15_000));
+        await route.continue().catch(() => {});
+      });
+      await page.getByRole("button", { name: T("admin.download") }).first().click();
+    },
+    waitFor: textVisible("admin.preparing"),
+  },
+  {
+    role: "admin",
+    key: "admin-export-failed",
+    identity: "admin",
+    path: "/admin/export",
+    steps: async (page, T) => {
+      await page.route("**/api/export/**", (route) => route.fulfill({ status: 500, body: "" }));
+      await page.getByRole("button", { name: T("admin.download") }).first().click();
+    },
+    // The file's name is itself a message, so the sentence is built in two steps.
+    waitFor: (page, T, prefix, width) =>
+      textVisible("admin.exportFailed", { file: T("common.companies") })(page, T, prefix, width),
+  },
 
   /* ------------------------------ marketing ------------------------------ */
   { role: "marketing", key: "leads", identity: "marketing", path: "/leads", waitFor: heading("leads.title") },

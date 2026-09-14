@@ -1,7 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { ADMIN_PATHS } from "@/components/shell/nav";
 // The app's own day rules, not a second copy of them beside the test (D103).
-import { addDays, todayRiyadh } from "@/lib/dates";
+import { addDays, formatDay, todayRiyadh } from "@/lib/dates";
 import { isWeekend } from "@/lib/workdays";
 import { login } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
@@ -36,6 +36,15 @@ function row(page: Page, name: string): Locator {
 /** A card in one of the admin's lists, by the text in it. */
 function card(page: Page, name: string): Locator {
   return page.getByRole("listitem").filter({ hasText: name }).first();
+}
+
+/**
+ * One of a row's menu items (P13-G6): the row keeps its frequent action in plain
+ * sight and the rest behind its menu, which is named for the row.
+ */
+async function fromRowMenu(page: Page, t: Translate, within: Locator, name: string, item: string) {
+  await within.getByRole("button", { name: t("admin.moreFor", { name }) }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
 }
 
 
@@ -175,12 +184,20 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await openAdmin(page, locale, "use", t("admin.use"));
     await expect(row(page, person)).not.toContainText(t("admin.useNever"));
     await openAdmin(page, locale, "users", t("common.users"));
-    await row(page, person).getByRole("button", { name: t("admin.resetPassword") }).click();
+    // Reset password is in the row's menu, not on the row (P13-G6).
+    await expect(row(page, person).getByRole("button", { name: t("admin.resetPassword") })).toHaveCount(0);
+    await fromRowMenu(page, t, row(page, person), person, t("admin.resetPassword"));
 
     const ask = page.getByRole("dialog", { name: t("admin.resetPasswordTitle", { name: person }) });
     await ask.getByLabel(t("admin.newPassword")).fill(RESET_PASSWORD);
     await ask.getByRole("button", { name: t("admin.resetPassword") }).click();
     await expect(page.getByText(t("admin.passwordReset", { name: person }))).toBeVisible(COLD);
+    // The dialog was opened from the row's menu, and gives focus back to the
+    // row's menu button, not to the page (lens G: Esc returns to the opener).
+    await expect(ask).toHaveCount(0);
+    await expect(
+      row(page, person).getByRole("button", { name: t("admin.moreFor", { name: person }) }),
+    ).toBeFocused();
 
     const after = await one<{ password_hash: string }>(
       "select password_hash from users where id = $1::uuid",
@@ -202,13 +219,36 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await login(page, locale, "jerom");
     await openAdmin(page, locale, "users", t("common.users"));
 
-    await row(page, person).getByRole("button", { name: t("admin.deactivate") }).click();
+    // His own account: the action refuses it, so the menu says so first, on an
+    // item that cannot be pressed (D119) — never a live item that fails.
+    const me = await personName("jerom@technopanel.com.sa", locale);
+    await row(page, me).getByRole("button", { name: t("admin.moreFor", { name: me }) }).click();
+    const own = page.getByRole("menu").getByRole("menuitem").last();
+    await expect(own).toHaveText(t("admin.deactivate"));
+    await expect(own).toHaveAttribute("aria-disabled", "true");
+    await expect(own).toHaveAccessibleDescription(t("admin.cannotDeactivateSelf"));
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+
+    // The act that locks somebody out is the menu's last item, apart behind a
+    // divider and in the tint — never on the row beside the ones pressed daily.
+    await row(page, person).getByRole("button", { name: t("admin.moreFor", { name: person }) }).click();
+    const menu = page.getByRole("menu");
+    const last = menu.getByRole("menuitem").last();
+    await expect(last).toHaveText(t("admin.deactivate"));
+    await expect(last).toHaveAttribute("data-variant", "destructive");
+    await expect(menu.getByRole("separator")).toHaveCount(1);
+    await last.click();
     const ask = page.getByRole("dialog", { name: t("admin.deactivateTitle", { name: person }) });
     await ask.getByRole("button", { name: t("admin.deactivate") }).click();
     await expect(page.getByText(t("admin.deactivated", { name: person }))).toBeVisible(COLD);
 
-    // Still on the list, marked by a word rather than by a colour (S7, DESIGN §4).
+    // Still on the list, marked by a word rather than by a colour (S7, DESIGN §4),
+    // and offered the way back where the way out was.
     await expect(row(page, person)).toContainText(t("admin.inactive"));
+    await row(page, person).getByRole("button", { name: t("admin.moreFor", { name: person }) }).click();
+    await expect(page.getByRole("menu").getByRole("menuitem").last()).toHaveText(t("admin.activate"));
+    await page.keyboard.press("Escape");
     const still = await query("select 1 from users where email = $1::text", [email]);
     expect(still.length, "the account was deleted rather than deactivated").toBe(1);
 
@@ -231,8 +271,8 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     const box = page.getByLabel(faisal.name);
     await expect(box).toBeVisible(COLD);
     await box.fill("2500");
-    // Each box saves on its own, so the Save that matters is the one beside it.
-    await page.locator(".card-face").filter({ has: box }).getByRole("button", {
+    // Each box saves on its own, so the Save that matters is the one in its form.
+    await page.locator("form").filter({ has: box }).getByRole("button", {
       name: t("common.save"),
     }).click();
     await expect(page.getByText(t("admin.targetSaved"))).toBeVisible(COLD);
@@ -260,7 +300,8 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await form.getByLabel(t("admin.inArabic")).fill(categoryAr);
     await form.getByRole("button", { name: t("common.save") }).click();
 
-    await expect(page.getByText(t("admin.rowSaved"))).toBeVisible(COLD);
+    // The toast names the row it saved, the way the row reads.
+    await expect(page.getByText(t("admin.rowSaved", { name: category }))).toBeVisible(COLD);
     await expect(card(page, category)).toBeVisible();
 
     const saved = await one<{ id: number; active: boolean }>(
@@ -271,11 +312,13 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
     // Nothing is deleted: a category a company already carries has to keep
     // reading correctly, so it is only taken out of use (D21).
-    await card(page, category).getByRole("button", { name: t("admin.hide") }).click();
+    // Edit stays on the row; taking a row out of use is in its menu, apart (P13-G6).
+    await expect(card(page, category).getByRole("button", { name: t("common.edit") })).toBeVisible();
+    await expect(card(page, category).getByRole("button", { name: t("admin.hide") })).toHaveCount(0);
+    await fromRowMenu(page, t, card(page, category), category, t("admin.hide"));
     const ask = page.getByRole("dialog", { name: t("admin.hideTitle", { name: category }) });
     await ask.getByRole("button", { name: t("admin.hide") }).click();
-    // The row itself, not the toast: "Saved." is the same sentence for every
-    // one of these and two of them stack.
+    await expect(page.getByText(t("admin.rowHidden", { name: category }))).toBeVisible(COLD);
     await expect(card(page, category)).toContainText(t("admin.hidden"), COLD);
 
     const off = await one<{ active: boolean }>(
@@ -286,7 +329,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
     // Back in use, so the second locale's run and the rep test below find the
     // list as they expect it.
-    await card(page, category).getByRole("button", { name: t("admin.show") }).click();
+    await fromRowMenu(page, t, card(page, category), category, t("admin.show"));
     await page
       .getByRole("dialog", { name: t("admin.showTitle", { name: category }) })
       .getByRole("button", { name: t("admin.show") })
@@ -332,7 +375,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await page.locator(`[data-day="${holiday}"] button`).first().click();
     await form.getByLabel(t("common.note")).fill(holidayNote);
     await form.getByRole("button", { name: t("common.save") }).click();
-    await expect(page.getByText(t("admin.dayAdded"))).toBeVisible(COLD);
+    await expect(page.getByText(t("admin.dayAdded", { date: formatDay(holiday, locale) }))).toBeVisible(COLD);
 
     const added = await one<{ user_id: string | null; day: string }>(
       "select user_id, to_char(day, 'YYYY-MM-DD') as day from non_working_days where note = $1::text",
@@ -342,6 +385,15 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     // leave (S48).
     expect(added.user_id).toBeNull();
     expect(added.day).toBe(holiday);
+
+    // On the list it reads as a holiday at a glance: it leads with its day and
+    // carries nobody's avatar, where a person's leave leads with the person.
+    const listed = page.getByRole("listitem").filter({ hasText: holidayNote });
+    await expect(listed).toHaveAttribute("data-kind", "holiday");
+    await expect(listed.locator('[data-slot="avatar"]')).toHaveCount(0);
+    await expect(listed.locator('[data-slot="day"]').first()).toHaveText(formatDay(holiday, locale));
+    const leave = page.locator('li[data-kind="leave"]').first();
+    await expect(leave.locator('[data-slot="avatar"]')).toHaveCount(1);
 
     await page.goto(`/${locale}/team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
@@ -379,6 +431,27 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     expect(companiesCsv, "an Arabic company name did not survive the export").toContain(
       arabicName.name,
     );
+
+    // And the screen says what a press did (P13-G6). A file that could not be
+    // prepared is a toast that names it and carries its next step; the step is
+    // the same press, and that press saves the file under the server's name.
+    await openAdmin(page, locale, "export", t("common.export"));
+    const companies = page.locator('[data-file="companies"]');
+    await expect(companies).toContainText(t("admin.exportFile.companies"));
+    await page.route("**/api/export/companies", (route) => route.fulfill({ status: 500, body: "" }));
+    await companies.getByRole("button", { name: t("admin.download") }).click();
+    const failed = page
+      .locator("[data-sonner-toast]")
+      .filter({ hasText: t("admin.exportFailed", { file: t("common.companies") }) });
+    await expect(failed).toBeVisible(COLD);
+    await expect(failed.getByRole("button", { name: t("common.close") })).toBeVisible();
+    await page.unroute("**/api/export/companies");
+
+    const saved = page.waitForEvent("download");
+    await failed.getByRole("button", { name: t("shell.tryAgain") }).click();
+    const file = (await saved).suggestedFilename();
+    expect(file).toBe(`kladra-companies-${todayRiyadh()}.csv`);
+    await expect(page.getByText(t("admin.exportReady", { file }))).toBeVisible(COLD);
   });
 
   await test.step("10 · an archived company comes back with everything on it", async () => {

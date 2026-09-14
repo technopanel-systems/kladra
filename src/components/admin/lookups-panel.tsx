@@ -1,12 +1,19 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { EyeOff, Plus, Undo2 } from "lucide-react";
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { saveLookupAction, setLookupActiveAction } from "@/actions/admin";
+import {
+  HostedConfirm,
+  RowMenu,
+  sendForm,
+  useOpener,
+  useRowFlash,
+} from "@/components/admin/row-kit";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
-import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
+import { Empty } from "@/components/ui-ext/empty";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
@@ -23,7 +30,6 @@ import {
   type LookupKind,
   type LookupRow,
 } from "@/lib/lookup-kinds";
-import type { ActionResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,28 +43,66 @@ import { cn } from "@/lib/utils";
  * history with it. Out-of-use rows stay on this screen, marked by a word, so
  * they can be put back.
  *
+ * Edit is the row's action in plain sight; "Take out of use" is in the row's
+ * menu, apart and in the tint, the same shape as the users screen (P13-G6,
+ * S12.9). Side by side at one weight, the act that takes a category out of
+ * every rep's dropdown sat one slip away from renaming it.
+ *
  * The boxes differ by list because the lists do — a supplier has a code and a
  * full name, a thickness is a number — and which boxes a list has is decided in
- * src/lib/admin.ts, not here and never by a form.
+ * src/lib/lookup-kinds.ts, not here and never by a form.
  */
 export function LookupsPanel({
+  title,
   kind,
   rows,
 }: {
+  title: string;
   kind: LookupKind;
   rows: LookupRow[];
 }) {
   const t = useTranslations();
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
+  const { flash, flashOf } = useRowFlash();
 
-  // A value that needs its unit gets it once, here, so the row and the two
-  // dialogs that name it back cannot say the thickness differently.
+  // A value that needs its unit gets it once, here, so the row, the two
+  // dialogs and the toast that name it back cannot say the thickness differently.
   const unitKey = LOOKUP_FIELDS[kind].find((field) => field.unitKey)?.unitKey;
-  const named = (row: LookupRow) => (unitKey ? `${row.label} ${t(unitKey)}` : row.label);
+  const named = (label: string) => (unitKey ? `${label} ${t(unitKey)}` : label);
+
+  const [subject, setSubject] = useState<LookupRow | null>(null);
+  const [act, setAct] = useState<"edit" | "active" | null>(null);
+  const remember = useOpener(act !== null);
+  const choose = (row: LookupRow, next: "edit" | "active") => (opener: HTMLElement | null) => {
+    remember(opener);
+    setSubject(row);
+    setAct(next);
+  };
+  const closeTo = (open: boolean) => {
+    if (!open) setAct(null);
+  };
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{title}</h1>
+        <RowDialog
+          kind={kind}
+          named={named}
+          trigger={
+            <Button variant="brand">
+              <Plus aria-hidden="true" />
+              {t("admin.addRow")}
+            </Button>
+          }
+          onSaved={(first) => {
+            flash([`new:${first}`]);
+            refresh();
+          }}
+        />
+      </div>
+
       <FilterRow>
         {LOOKUP_KINDS.map((value) => (
           <FilterChip
@@ -71,117 +115,145 @@ export function LookupsPanel({
         ))}
       </FilterRow>
 
-      <div className="flex">
-        <RowDialog
-          kind={kind}
-          trigger={
-            <Button variant="brand">
-              <Plus aria-hidden="true" />
-              {t("admin.addRow")}
-            </Button>
-          }
-        />
-      </div>
-
-      {/* A list with nothing on it says so; an empty column reads as a screen
-          that failed to load (DESIGN §2, P11G). */}
+      {/* A list with nothing on it says so, and says where the first row comes
+          from — the Add at the top, not a second one here (DESIGN §1b, D31). */}
       {rows.length === 0 ? (
-        <p className="card-face px-6 py-8 text-center text-sm text-muted-foreground">
-          {t("admin.emptyLookups")}
-        </p>
+        <Empty>{t("admin.emptyLookups")}</Empty>
+      ) : (
+        <ul className="card-face flex flex-col">
+          {rows.map((row) => {
+            const byId = flashOf(String(row.id));
+            const marked = byId.className ? byId : flashOf(`new:${row.values[0]}`);
+            return (
+              <li
+                key={row.id}
+                onAnimationEnd={marked.onAnimationEnd}
+                className={cn(
+                  "flex items-center gap-3 border-b border-line px-3 py-1 last:border-0 md:px-4 md:py-2",
+                  marked.className,
+                )}
+              >
+                {/* The name and its words wrap together, and only they give
+                    way: the two controls keep their size at the end. */}
+                <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 py-2 md:py-0">
+                  <span
+                    data-slot="lookup-name"
+                    className={cn("font-medium", !row.active && "text-muted-foreground")}
+                  >
+                    {named(row.label)}
+                  </span>
+                  {row.active ? null : <Badge variant="outline">{t("admin.hidden")}</Badge>}
+                  {/* Why this row is missing from a rep's list (SPEC §3). Said on
+                      the screen that owns the row, because the admin may rename it
+                      in either language and nothing else here would tell him the
+                      rename does not change what it does. */}
+                  {row.restricted ? (
+                    <Badge variant="outline">{t("admin.forManagement")}</Badge>
+                  ) : null}
+                </span>
+
+                <span className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    onClick={(event) => choose(row, "edit")(event.currentTarget)}
+                  >
+                    {t("common.edit")}
+                  </Button>
+                  <RowMenu
+                    label={t("admin.moreFor", { name: named(row.label) })}
+                    items={[]}
+                    end={
+                      row.active
+                        ? {
+                            label: t("admin.hide"),
+                            icon: EyeOff,
+                            destructive: true,
+                            onSelect: choose(row, "active"),
+                          }
+                        : { label: t("admin.show"), icon: Undo2, onSelect: choose(row, "active") }
+                    }
+                  />
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {subject ? (
+        <>
+          <RowDialog
+            kind={kind}
+            row={subject}
+            named={named}
+            open={act === "edit"}
+            onOpenChange={closeTo}
+            onSaved={() => {
+              flash([String(subject.id)]);
+              refresh();
+            }}
+          />
+          <HostedConfirm
+            open={act === "active"}
+            onOpenChange={closeTo}
+            destructive={subject.active}
+            title={
+              subject.active
+                ? t("admin.hideTitle", { name: named(subject.label) })
+                : t("admin.showTitle", { name: named(subject.label) })
+            }
+            description={subject.active ? t("admin.hideHint") : t("admin.showHint")}
+            confirmLabel={subject.active ? t("admin.hide") : t("admin.show")}
+            successMessage={
+              subject.active
+                ? t("admin.rowHidden", { name: named(subject.label) })
+                : t("admin.rowShown", { name: named(subject.label) })
+            }
+            onConfirm={() =>
+              sendForm(setLookupActiveAction, {
+                kind,
+                id: String(subject.id),
+                active: String(!subject.active),
+              })
+            }
+            onDone={() => {
+              flash([String(subject.id)]);
+              refresh();
+            }}
+          />
+        </>
       ) : null}
-
-      <ul className="flex flex-col gap-2">
-        {rows.map((row) => (
-          <li
-            key={row.id}
-            className={cn("card-face flex flex-wrap items-center gap-3 p-3", !row.active && "opacity-70")}
-          >
-            {/* Its own line on a phone. A badge is `w-fit shrink-0` by design,
-                so when the name and its badges need more width than the third
-                of the row left over by the two buttons, they do not shrink —
-                they run under the buttons, which is exactly what the Marketing
-                row did at 375 in English and not in Arabic (the Arabic words
-                are narrower). Given the whole width there is nothing to run
-                under, and the two controls get a full-width row of their own,
-                which is a better phone target anyway (DESIGN §5). */}
-            <span className="flex min-w-0 basis-full flex-wrap items-center gap-2 sm:flex-1 sm:basis-auto">
-              <span data-slot="lookup-name" className="font-medium">
-                {named(row)}
-              </span>
-              {row.active ? null : <Badge variant="outline">{t("admin.hidden")}</Badge>}
-              {/* Why this row is missing from a rep's list (SPEC §3). Said on
-                  the screen that owns the row, because the admin may rename it
-                  in either language and nothing else here would tell him the
-                  rename does not change what it does. */}
-              {row.restricted ? (
-                <Badge variant="outline">{t("admin.forManagement")}</Badge>
-              ) : null}
-            </span>
-
-            <RowDialog
-              kind={kind}
-              row={row}
-              trigger={
-                <Button variant="ghost" size="sm">
-                  {t("common.edit")}
-                </Button>
-              }
-            />
-
-            <ConfirmDialog
-              trigger={
-                <Button variant="ghost" size="sm">
-                  {row.active ? t("admin.hide") : t("admin.show")}
-                </Button>
-              }
-              title={
-                row.active
-                  ? t("admin.hideTitle", { name: named(row) })
-                  : t("admin.showTitle", { name: named(row) })
-              }
-              description={row.active ? t("admin.hideHint") : t("admin.showHint")}
-              confirmLabel={row.active ? t("admin.hide") : t("admin.show")}
-              successMessage={t("admin.rowSaved")}
-              onConfirm={() =>
-                send(setLookupActiveAction, {
-                  kind,
-                  id: String(row.id),
-                  active: String(!row.active),
-                })
-              }
-              onDone={refresh}
-            />
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
-function send(
-  action: (
-    prev: ActionResult<undefined> | null,
-    form: FormData,
-  ) => Promise<ActionResult<undefined>>,
-  values: Record<string, string>,
-): Promise<ActionResult<unknown>> {
-  const form = new FormData();
-  for (const [key, value] of Object.entries(values)) form.set(key, value);
-  return action(null, form);
-}
-
+/** Add opens from its own button in the heading; Edit by state from a row. */
 function RowDialog({
   kind,
   row,
+  named,
   trigger,
+  open: held,
+  onOpenChange,
+  onSaved,
 }: {
   kind: LookupKind;
   row?: LookupRow;
-  trigger: ReactNode;
+  named: (label: string) => string;
+  trigger?: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** The first value as typed, so a new row can find itself and flash. */
+  onSaved: (first: string) => void;
 }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
+  const [own, setOwn] = useState(false);
+  const open = held ?? own;
+  const setOpen = (next: boolean) => {
+    if (held === undefined) setOwn(next);
+    onOpenChange?.(next);
+  };
 
   return (
     <ResponsiveDialog
@@ -191,7 +263,14 @@ function RowDialog({
       description={t(`admin.lookup.${kind}`)}
       trigger={trigger}
     >
-      <RowForm kind={kind} row={row} onClose={() => setOpen(false)} />
+      <RowForm
+        key={row?.id ?? "new"}
+        kind={kind}
+        row={row}
+        named={named}
+        onClose={() => setOpen(false)}
+        onSaved={onSaved}
+      />
     </ResponsiveDialog>
   );
 }
@@ -199,14 +278,17 @@ function RowDialog({
 function RowForm({
   kind,
   row,
+  named,
   onClose,
+  onSaved,
 }: {
   kind: LookupKind;
   row?: LookupRow;
+  named: (label: string) => string;
   onClose: () => void;
+  onSaved: (first: string) => void;
 }) {
   const t = useTranslations();
-  const router = useRouter();
   const fields = LOOKUP_FIELDS[kind];
   const [values, setValues] = useState<string[]>(() =>
     fields.map((_, index) => row?.values[index] ?? ""),
@@ -215,9 +297,11 @@ function RowForm({
   const { submit, pending, error, fieldErrors, answer } = useSubmitAction(
     saveLookupAction,
     () => {
-      toast.success(t("admin.rowSaved"));
+      const typed = values.map((value) => value.trim());
+      // Named the way the row reads it: its values on one line, and the unit.
+      toast.success(t("admin.rowSaved", { name: named(typed.filter(Boolean).join(" · ")) }));
       onClose();
-      router.refresh();
+      onSaved(typed[0] ?? "");
     },
   );
 
@@ -237,7 +321,7 @@ function RowForm({
           // its message need no second list to stay in step.
           const refused = fieldErrors[`f_${spec.key}`];
           return (
-            <div key={spec.key} className="flex flex-col gap-1.5">
+            <div key={spec.key} className="flex flex-col gap-2">
               <Label htmlFor={`lookup-${spec.key}`}>{t(spec.labelKey)}</Label>
               <Input
                 id={`lookup-${spec.key}`}

@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { DayText } from "@/components/ui-ext/day-text";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import {
@@ -62,41 +63,49 @@ export async function UsePanel({ use }: { use: Use }) {
         ]}
       />
 
-      <div className="flex flex-col gap-2 md:hidden">
+      {/* One card of rows on a phone, like every other admin list, each led by
+          the person (DESIGN §1b: 24 round in a row). */}
+      <ul className="card-face flex flex-col md:hidden">
         {use.people.map((person) => (
-          <div key={person.userId} className="card-face flex flex-col gap-1 p-3">
-            <span className="font-medium">{person.name}</span>
-            {/* Both facts weighted the same way — a muted label and its value in
-                the reading colour — because the desk table gives them equal
-                weight and one layout must not rank what the other does not. */}
-            <span className="flex flex-wrap items-baseline gap-x-4 text-xs text-muted-foreground">
-              <span className="flex items-baseline gap-x-1.5">
-                {t("admin.useOpened")}
-                <span className="text-foreground">
-                  <Opened person={person} locale={locale} />
+          <li
+            key={person.userId}
+            className="flex items-start gap-3 border-b border-line p-3 last:border-0"
+          >
+            <Avatar id={person.userId} name={person.name} size="sm" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="font-medium">{person.name}</span>
+              {/* Both facts weighted the same way — a muted label and its value
+                  in the reading colour — because the desk table gives them equal
+                  weight and one layout must not rank what the other does not. */}
+              <span className="flex flex-wrap items-baseline gap-x-4 text-xs text-muted-foreground">
+                <span className="flex items-baseline gap-x-2">
+                  {t("admin.useOpened")}
+                  <span className="text-foreground">
+                    <Opened person={person} locale={locale} />
+                  </span>
+                </span>
+                <span className="flex items-baseline gap-x-2">
+                  {t("admin.useDid", { days: USE_WINDOW_DAYS })}
+                  <span dir="ltr" className="num text-foreground">
+                    {person.did}
+                  </span>
                 </span>
               </span>
-              <span className="flex items-baseline gap-x-1.5">
-                {t("admin.useDid", { days: USE_WINDOW_DAYS })}
-                <span dir="ltr" className="num text-foreground">
-                  {person.did}
-                </span>
-              </span>
-            </span>
-          </div>
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
 
       <div className="card-face hidden md:block">
         <Table label={t("admin.use")}>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="p-3">{t("admin.person")}</TableHead>
-              <TableHead className="p-3">{t("admin.useOpened")}</TableHead>
+              <TableHead className="px-3">{t("admin.person")}</TableHead>
+              <TableHead className="px-3">{t("admin.useOpened")}</TableHead>
               {/* The window in words, from the one constant the figure counts
                   by (P11E): "this week" was three days on a Wednesday and the
                   figure was seven. */}
-              <TableHead className="p-3 text-end">
+              <TableHead className="px-3 text-end">
                 {t("admin.useDid", { days: USE_WINDOW_DAYS })}
               </TableHead>
             </TableRow>
@@ -104,11 +113,16 @@ export async function UsePanel({ use }: { use: Use }) {
           <TableBody>
             {use.people.map((person) => (
               <TableRow key={person.userId}>
-                <TableCell className="p-3 font-medium">{person.name}</TableCell>
-                <TableCell className="p-3">
+                <TableCell className="px-3 py-2">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Avatar id={person.userId} name={person.name} size="sm" />
+                    {person.name}
+                  </span>
+                </TableCell>
+                <TableCell className="px-3 py-2">
                   <Opened person={person} locale={locale} />
                 </TableCell>
-                <TableCell className="p-3 text-end">
+                <TableCell className="px-3 py-2 text-end">
                   <span dir="ltr" className="num">
                     {person.did}
                   </span>

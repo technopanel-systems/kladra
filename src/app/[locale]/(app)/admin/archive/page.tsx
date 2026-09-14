@@ -1,9 +1,14 @@
+import { eq, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ArchivePanel } from "@/components/admin/archive-panel";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
+import { db } from "@/db";
+import { companies } from "@/db/schema";
 import { requireAdmin } from "@/lib/authz";
 import { ARCHIVE_KINDS, listArchived } from "@/lib/admin";
+import { mayOpen } from "@/lib/floor";
 
 /**
  * The archive, and the way back out of it (SPEC S16, D24) — rebuilt from its
@@ -27,12 +32,15 @@ import { ARCHIVE_KINDS, listArchived } from "@/lib/admin";
 
 type Search = { q?: string };
 
+/** The company a folded record now IS, read under its own name. */
+const survivor = alias(companies, "survivor");
+
 export default async function AdminArchivePage({
   searchParams,
 }: {
   searchParams: Promise<Search>;
 }) {
-  await requireAdmin();
+  const user = await requireAdmin();
   const [locale, params] = await Promise.all([getLocale(), searchParams]);
   const q = (params.q ?? "").trim();
 
@@ -46,6 +54,32 @@ export default async function AdminArchivePage({
   const total = ARCHIVE_KINDS.reduce(
     (sum, kind) => sum + (rows.find((row) => row.kind === kind)?.inKind ?? 0),
     0,
+  );
+
+  // "Folded into …" names the company that continues, and a name the reader may
+  // open is a door to it (D121, P13-G6). The archive's read names the survivor
+  // and not its id, so the ids are asked here for the tombstones on screen and
+  // only for them — a primary-key lookup, and none at all when nothing drawn
+  // was folded. The fold never moves (a tombstone cannot be restored, and its
+  // pointer is set once), so this and the name above it describe one company.
+  const folded = rows
+    .filter((row) => row.kind === "company" && row.mergedIntoName)
+    .map((row) => row.id);
+  const pointers =
+    folded.length === 0
+      ? []
+      : await db
+          .select({ id: companies.id, intoId: survivor.id, intoRepId: survivor.repId })
+          .from(companies)
+          .innerJoin(survivor, eq(survivor.id, companies.mergedIntoId))
+          .where(inArray(companies.id, folded));
+  // Asked of the reader, the way every door is (D139): the admin sees every
+  // floor, so today this is every survivor — and the day that stops being true,
+  // the name stays a sentence rather than a door that opens onto nothing.
+  const survivors = Object.fromEntries(
+    pointers
+      .filter((pointer) => mayOpen(user, pointer.intoRepId))
+      .map((pointer) => [pointer.id, pointer.intoId]),
   );
 
   return (
@@ -63,7 +97,7 @@ export default async function AdminArchivePage({
         className="max-w-md sm:max-w-md"
       />
 
-      <ArchivePanel rows={rows} q={q} />
+      <ArchivePanel rows={rows} q={q} survivors={survivors} />
 
       <ListTail shown={rows.length} total={total} />
     </div>

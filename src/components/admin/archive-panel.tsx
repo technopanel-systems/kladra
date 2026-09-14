@@ -60,7 +60,19 @@ function recordHref(row: ArchivedRow): string {
   return row.kind === "project" ? `/projects?open=${row.id}` : `/companies?open=${row.companyId}`;
 }
 
-export function ArchivePanel({ rows, q }: { rows: ArchivedRow[]; q: string }) {
+export function ArchivePanel({
+  rows,
+  q,
+  survivors,
+}: {
+  rows: ArchivedRow[];
+  q: string;
+  /**
+   * For a folded company the reader may open, the id of the company it became
+   * (D121): its "Folded into …" is then a door. Absent, it stays a sentence.
+   */
+  survivors: Record<string, string>;
+}) {
   const t = useTranslations();
 
   if (rows.length === 0) {
@@ -89,13 +101,17 @@ export function ArchivePanel({ rows, q }: { rows: ArchivedRow[]; q: string }) {
           <section key={kind} aria-labelledby={headingId} data-kind={kind} className="flex flex-col gap-2">
             <h2 id={headingId} className="flex items-center gap-2 text-sm font-medium">
               {t(GROUP_KEYS[kind])}
-              <span dir="ltr" className="num rounded-full bg-surface-2 px-1.5 text-xs text-muted-foreground">
+              <span dir="ltr" className="num rounded-full bg-surface-2 px-2 text-xs text-muted-foreground">
                 {group[0].inKind}
               </span>
             </h2>
             <ul className="card-face flex flex-col">
               {group.map((row) => (
-                <ArchivedItem key={`${row.kind}-${row.id}`} row={row} />
+                <ArchivedItem
+                  key={`${row.kind}-${row.id}`}
+                  row={row}
+                  survivorId={row.kind === "company" ? survivors[row.id] : undefined}
+                />
               ))}
             </ul>
           </section>
@@ -105,7 +121,7 @@ export function ArchivePanel({ rows, q }: { rows: ArchivedRow[]; q: string }) {
   );
 }
 
-function ArchivedItem({ row }: { row: ArchivedRow }) {
+function ArchivedItem({ row, survivorId }: { row: ArchivedRow; survivorId?: string }) {
   const t = useTranslations();
   const locale = useLocale();
   const day = formatDay(row.archivedOn, locale);
@@ -117,8 +133,8 @@ function ArchivedItem({ row }: { row: ArchivedRow }) {
 
       {/* Wide enough to read a name and its reason on a phone: below twelve
           rems the Restore button wraps under it rather than squeezing it. */}
-      <div className="flex min-w-[12rem] flex-1 flex-col gap-1">
-        <Link href={recordHref(row)} className="flex items-center gap-1.5 font-medium hover:underline">
+      <div className="flex min-w-48 flex-1 flex-col gap-1">
+        <Link href={recordHref(row)} className="flex items-center gap-2 font-medium hover:underline">
           <span className="min-w-0 truncate">
             <bdi>{row.name}</bdi>
           </span>
@@ -154,14 +170,27 @@ function ArchivedItem({ row }: { row: ArchivedRow }) {
           <Prose line text={row.reason} className="text-xs text-foreground" />
         ) : null}
 
-        {/* A tombstone says what it became instead of why it left (P12-8, D13). */}
-        {row.mergedIntoName ? (
+        {/* A tombstone says what it became instead of why it left (P12-8, D13),
+            and the company it became is one press away (D121, P13-G6): the
+            admin checking a fold opens the record that continues, not the
+            tombstone, which is empty by design. Underlined, because it is a door
+            in a column of plain lines. */}
+        {row.mergedIntoName && survivorId ? (
+          <Link
+            href={`/companies?open=${survivorId}`}
+            data-slot="open-survivor"
+            className="flex w-fit items-center gap-2 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            <span>{t("duplicates.foldedIntoShort", { name: row.mergedIntoName })}</span>
+            <LinkPending />
+          </Link>
+        ) : row.mergedIntoName ? (
           <span className="text-xs text-muted-foreground">
             {t("duplicates.foldedIntoShort", { name: row.mergedIntoName })}
           </span>
         ) : null}
 
-        <span data-slot="archived-by" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span data-slot="archived-by" className="flex items-center gap-2 text-xs text-muted-foreground">
           {row.archivedById && row.archivedByName ? (
             <>
               <Avatar id={row.archivedById} name={row.archivedByName} size="sm" />
@@ -175,9 +204,9 @@ function ArchivedItem({ row }: { row: ArchivedRow }) {
 
       <div className="flex shrink-0 items-center">
         {row.mergedIntoName ? (
-          <span className="max-w-[16rem] text-xs text-muted-foreground">{t("admin.restoreMerged")}</span>
+          <span className="max-w-64 text-xs text-muted-foreground">{t("admin.restoreMerged")}</span>
         ) : row.companyArchived ? (
-          <span className="max-w-[16rem] text-xs text-muted-foreground">
+          <span className="max-w-64 text-xs text-muted-foreground">
             {row.kind === "contact"
               ? t("admin.restoreCompanyFirstContact")
               : t("admin.restoreCompanyFirstProject")}
@@ -203,7 +232,12 @@ function RestoreButton({ row }: { row: ArchivedRow }) {
       form.set("id", row.id);
       const outcome = await guarded(restoreAction)(null, form);
       if (!outcome.ok) {
-        toast.error(outcome.error);
+        // A failure the admin has to act on stays until it is closed (DESIGN
+        // §8); the sentence is the action's own, with its next step in it.
+        toast.error(outcome.error, {
+          duration: Infinity,
+          cancel: { label: t("common.close"), onClick: () => {} },
+        });
         return;
       }
       toast.success(t("admin.restored", { name: row.name }));
@@ -211,12 +245,20 @@ function RestoreButton({ row }: { row: ArchivedRow }) {
     });
   }
 
-  // While it is on its way the button says so and takes no second press — the
-  // kit's own pending shape (`FormFooter`, the targets form): a second press
-  // would only be refused as "not there any more", and a press that does
-  // nothing visible reads as a press that did not land.
+  // While it is on its way the button says so and sends no second press: a
+  // second one would only be refused as "not there any more", and a press that
+  // does nothing visible reads as a press that did not land. Busy, not disabled
+  // (DESIGN §8): it keeps its place and its focus while it works.
   return (
-    <Button type="button" variant="outline" size="sm" onClick={restore} disabled={pending}>
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      aria-busy={pending || undefined}
+      onClick={() => {
+        if (!pending) restore();
+      }}
+    >
       {pending ? t("common.saving") : t("admin.restore")}
     </Button>
   );

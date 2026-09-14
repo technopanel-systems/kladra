@@ -184,3 +184,30 @@ test("a crowd of newly archived companies does not push the archived contacts an
     await query("delete from companies where id = any($1::uuid[])", [inserted.map((row) => row.id)]);
   }
 });
+
+test("a folded record names the company it became, and the name opens it", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // The seeded fold: the tombstone, and the company that continues.
+  const tomb = await one<{ name: string; intoId: string; into: string }>(
+    `select c.name, m.id as "intoId", m.name as into
+       from companies c join companies m on m.id = c.merged_into_id
+      order by c.archived_at desc
+      limit 1`,
+  );
+
+  await login(page, locale, "jerom");
+  await page.goto(`/${locale}/admin/archive`);
+  await expect(page.getByRole("heading", { name: t("admin.archive") })).toBeVisible(COLD);
+
+  // "Folded into …" is a door where the admin may open the company (D121,
+  // P13-G6), and it opens the survivor — not the tombstone, which is empty.
+  const row = page.getByRole("listitem").filter({ hasText: tomb.name });
+  const door = row.getByRole("link", { name: t("duplicates.foldedIntoShort", { name: tomb.into }) });
+  await expect(door).toBeVisible(COLD);
+  await door.click();
+  await expect(page).toHaveURL(new RegExp(`[?&]open=${tomb.intoId}`), COLD);
+  await expect(page.getByRole("dialog", { name: tomb.into })).toBeVisible(COLD);
+});

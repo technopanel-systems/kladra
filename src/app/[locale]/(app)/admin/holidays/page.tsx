@@ -29,10 +29,5 @@ export default async function AdminHolidaysPage() {
       .orderBy(asc(personName(locale))),
   ]);
 
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t("common.holidays")}</h1>
-      <HolidaysPanel rows={rows} people={people} />
-    </div>
-  );
+  return <HolidaysPanel title={t("common.holidays")} rows={rows} people={people} />;
 }

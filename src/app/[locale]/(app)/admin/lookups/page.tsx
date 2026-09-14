@@ -24,10 +24,5 @@ export default async function AdminLookupsPage({
   const kind: LookupKind = isLookupKind(params.list) ? params.list : LOOKUP_KINDS[0];
   const [t, rows] = await Promise.all([getTranslations(), listLookup(kind)]);
 
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t("common.lookups")}</h1>
-      <LookupsPanel kind={kind} rows={rows} />
-    </div>
-  );
+  return <LookupsPanel title={t("common.lookups")} kind={kind} rows={rows} />;
 }

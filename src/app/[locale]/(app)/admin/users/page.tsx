@@ -16,16 +16,5 @@ export default async function AdminUsersPage() {
 
   const [t, users] = await Promise.all([getTranslations(), listUsers()]);
 
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t("common.users")}</h1>
-      {users.length === 0 ? (
-        <p className="card-face px-6 py-10 text-center text-sm text-muted-foreground">
-          {t("shell.emptyUsers")}
-        </p>
-      ) : (
-        <UsersPanel users={users} meId={user.id} />
-      )}
-    </div>
-  );
+  return <UsersPanel title={t("common.users")} users={users} meId={user.id} />;
 }
