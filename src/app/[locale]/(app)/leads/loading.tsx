@@ -16,13 +16,20 @@ export default function LeadsLoading() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-7 w-32" />
       </div>
-      <div className="flex flex-wrap items-end gap-4">
-        <div className="flex gap-2">
-          {[0, 1, 2].map((chip) => (
-            <Skeleton key={chip} className="h-8 w-24 rounded-full" />
-          ))}
+      {/* Each facet under its word, as the filters are drawn (S12.8). */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+        <div className="flex flex-col gap-1">
+          <Skeleton className="h-3 w-12" />
+          <div className="flex gap-2">
+            {[0, 1, 2].map((chip) => (
+              <Skeleton key={chip} className="h-8 w-24 shrink-0 rounded-full" />
+            ))}
+          </div>
         </div>
-        <Skeleton className="h-9 w-full rounded-lg sm:w-64" />
+        <div className="flex w-full flex-col gap-1 sm:w-64">
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-9 w-full rounded-lg" />
+        </div>
       </div>
       <div className="card-face flex flex-col">
         {[0, 1, 2, 3, 4].map((row) => (

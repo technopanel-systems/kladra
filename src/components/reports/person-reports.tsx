@@ -1,11 +1,11 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { ReportCalendar } from "@/components/reports/report-calendar";
 import { ReportDays } from "@/components/reports/report-days";
 import { Empty } from "@/components/ui-ext/empty";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { listNonWorkingDays } from "@/lib/calendar";
-import { firstOfMonth, lastOfMonth, type Day } from "@/lib/dates";
+import { firstOfMonth, formatMonth, lastOfMonth, type Day } from "@/lib/dates";
 import { isFiltered, reportsHref, type ReportQuery } from "@/lib/report-view";
 import {
   recordedFor,
@@ -16,6 +16,9 @@ import {
   type ReportPerson,
 } from "@/lib/reports";
 import type { SessionUser } from "@/lib/types";
+
+/** No filter at all: what a month holds before anybody narrows it. */
+const UNFILTERED: ReportFilter = { companyId: null, kind: null, outcomeId: null };
 
 /**
  * One person's reports (SPEC §3 P13, 13.8): his days, a calendar, and beside
@@ -30,6 +33,15 @@ import type { SessionUser } from "@/lib/types";
  * pressing a day narrows it to that day, and a day with nothing written still
  * opens, with its lane, because "what did the records say about Tuesday" is a
  * question whether or not he wrote anything.
+ *
+ * **A month with nothing in it says which kind of nothing** (P13-G6, S12.8;
+ * DESIGN §8: empty has four kinds). "Nothing written this month yet" was said
+ * of July in September, which is a sentence about a month that is over; it
+ * says the month's name now. And a filter that hides every report says how many
+ * it is hiding and offers the way back — "nothing matched" over a month of
+ * twelve reports reads as a month of none. The hidden figure is one more count
+ * of the same rows without the filter, asked only when the list came back
+ * empty under one.
  */
 export async function PersonReports({
   user,
@@ -44,12 +56,13 @@ export async function PersonReports({
   filter: ReportFilter;
   today: Day;
 }) {
-  const t = await getTranslations("reports");
+  const [t, locale] = await Promise.all([getTranslations("reports"), getLocale()]);
 
   const month = query.day ? firstOfMonth(query.day) : (query.month ?? firstOfMonth(today));
   const monthEnd = lastOfMonth(month);
   const from = query.day ?? month;
   const to = query.day ?? (monthEnd < today ? monthEnd : today);
+  const current = month === firstOfMonth(today);
 
   const [counts, list, nonWorking] = await Promise.all([
     reportCounts(user, { personId: person.id, from: month, to: monthEnd, filter }),
@@ -67,6 +80,17 @@ export async function PersonReports({
       : new Map();
 
   const filtered = isFiltered(query);
+
+  // How many the filter is hiding, when it is hiding all of them.
+  const hidden =
+    days.length === 0 && filtered
+      ? Object.values(
+          (await reportCounts(user, { personId: person.id, from: month, to: monthEnd, filter: UNFILTERED }))[
+            person.id
+          ] ?? {},
+        ).reduce((sum, n) => sum + n, 0)
+      : 0;
+
   const clear = (
     <Button asChild variant="outline" size="sm">
       <Link href={reportsHref(query, { company: null, kind: null, outcome: null })}>
@@ -74,6 +98,10 @@ export async function PersonReports({
       </Link>
     </Button>
   );
+
+  const nothingInMonth = current
+    ? t("nothingThisMonth")
+    : t("nothingInMonth", { month: formatMonth(month, locale) });
 
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[19rem_minmax(0,1fr)]">
@@ -86,16 +114,24 @@ export async function PersonReports({
           selected={query.day}
           today={today}
           query={query}
+          filtered={filtered}
         />
       </div>
 
       <div className="min-w-0">
         {days.length === 0 ? (
-          <Empty action={filtered ? clear : undefined}>
-            {filtered ? t("nothingMatched") : t("nothingThisMonth")}
-          </Empty>
+          hidden > 0 ? (
+            // Filtered out: how many, and the way back to them.
+            <Empty action={clear}>
+              {t("hiddenInMonth", { count: hidden, month: formatMonth(month, locale) })}
+            </Empty>
+          ) : (
+            // Nothing written at all — clearing a filter would find nothing more.
+            <Empty>{nothingInMonth}</Empty>
+          )
         ) : (
           <ReportDays
+            personId={person.id}
             days={days}
             entries={list.rows}
             total={list.total}

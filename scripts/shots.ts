@@ -500,6 +500,46 @@ const MANIFEST: StateDef[] = [
     waitFor: dialogWithText("dispatches.pickQuotationFirst"),
   },
   { role: "rep", key: "reports", identity: "rep", path: "/reports", waitFor: heading("reports.title") },
+  // The states S12.8 reshaped. The popup pressed with nothing chosen and nothing
+  // written, which the form refuses itself before any action is asked.
+  {
+    role: "rep",
+    key: "report-dialog-refused",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(
+      clickButtonByPrefix("reports.addFor"),
+      (page, T, prefix, width) => dialogWithText("reports.dialog.kind")(page, T, prefix, width),
+      async (page, T) => {
+        await page.getByRole("dialog").getByRole("button", { name: T("common.save"), exact: true }).click();
+      },
+    ),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  // A month he wrote nothing in: two before this one, which the seed never
+  // reaches, so it is empty whatever day this runs.
+  {
+    role: "rep",
+    key: "reports-empty-month",
+    identity: "rep",
+    path: "/reports",
+    steps: async (page) => {
+      const locale = new URL(page.url()).pathname.split("/")[1];
+      const month = new Date();
+      month.setUTCDate(1);
+      month.setUTCMonth(month.getUTCMonth() - 2);
+      await page.goto(`${BASE}/${locale}/reports?month=${month.toISOString().slice(0, 7)}`, {
+        waitUntil: "load",
+      });
+      assertHost(page);
+      await waitForHydration(page);
+    },
+    waitFor: async (page) => {
+      await page.locator("[data-slot='empty']").first().waitFor({ state: "visible" });
+    },
+  },
   {
     role: "rep",
     key: "notifications",
@@ -650,6 +690,30 @@ const MANIFEST: StateDef[] = [
     waitFor: heading("duplicates.title"),
   },
   { role: "manager", key: "leads", identity: "manager", path: "/leads", waitFor: heading("leads.title") },
+  // S12.8: a person with nothing written this month, read the way the manager
+  // reaches it — Rawan's name on the team's day is the door, and her id is on it.
+  {
+    role: "manager",
+    key: "reports-person-empty",
+    identity: "manager",
+    path: "/reports?period=day",
+    steps: async (page) => {
+      const href = await page
+        .locator("[data-slot='team-person'] a[href*='person=']")
+        .filter({ hasText: /Rawan|روان/ })
+        .first()
+        .getAttribute("href");
+      const id = href ? new URL(href, BASE).searchParams.get("person") : null;
+      if (!id) throw new Error("no team section for Rawan");
+      const locale = new URL(page.url()).pathname.split("/")[1];
+      await page.goto(`${BASE}/${locale}/reports?person=${id}`, { waitUntil: "load" });
+      assertHost(page);
+      await waitForHydration(page);
+    },
+    waitFor: async (page) => {
+      await page.locator("[data-slot='empty']").first().waitFor({ state: "visible" });
+    },
+  },
 
   /* -------------------------------- admin -------------------------------- */
   { role: "admin", key: "admin-users", identity: "admin", path: "/admin/users", waitFor: heading("common.users") },
@@ -805,6 +869,45 @@ const MANIFEST: StateDef[] = [
     path: "/leads",
     steps: clickButton("leads.new"),
     waitFor: dialogWithText("leads.new"),
+  },
+  // S12.8: Save pressed on the empty lead form, which the action refuses before
+  // it reads anything; and a number already on file typed into the contact,
+  // which only reads.
+  {
+    role: "marketing",
+    key: "lead-new-refused",
+    identity: "marketing",
+    path: "/leads",
+    steps: chain(
+      clickButton("leads.new"),
+      (page, T, prefix, width) => dialogWithText("leads.giveToHint")(page, T, prefix, width),
+      async (page, T) => {
+        await page.getByRole("dialog").getByRole("button", { name: T("common.save"), exact: true }).click();
+      },
+    ),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "marketing",
+    key: "lead-new-duplicate",
+    identity: "marketing",
+    path: "/leads",
+    steps: chain(
+      clickButton("leads.new"),
+      (page, T, prefix, width) => dialogWithText("leads.giveToHint")(page, T, prefix, width),
+      async (page, T) => {
+        // A seeded contact's number (scripts/seed/demo-data.ts), on two floors.
+        await page.getByRole("dialog").getByLabel(T("common.phone")).fill("0556612094");
+      },
+    ),
+    waitFor: async (page) => {
+      const warning = page.locator("[data-slot='duplicate-warning']");
+      await warning.waitFor({ state: "visible" });
+      // On a phone the sheet's body scrolls, and the warning sits under the fold.
+      await warning.scrollIntoViewIfNeeded();
+    },
   },
   {
     role: "marketing",

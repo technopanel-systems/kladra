@@ -27,6 +27,37 @@ import type { NonWorking } from "@/lib/workdays";
  * without being shown. Nothing here carries a target, a pace or a percentage.
  */
 
+/**
+ * A name cut to fit its place loses its own END, never its first word (the
+ * shape of `Clip` in shell/search-command.tsx, S12.1). A `truncate` box round a
+ * `<bdi>` keeps the page's direction and clips at the page's end, so on an
+ * English screen «عبدالرحمن الزهراني» lost «عبدالرحمن». The box takes the name's
+ * direction instead and is never wider than its text — `column` for a child of
+ * a flex column, which would otherwise stretch it to the column's width and set
+ * the name against the far edge.
+ */
+function Clip({
+  text,
+  id,
+  className,
+  column = false,
+}: {
+  text: string;
+  id?: string;
+  className?: string;
+  column?: boolean;
+}) {
+  return (
+    <span
+      id={id}
+      dir="auto"
+      className={cn("min-w-0 truncate", column && "max-w-full self-start", className)}
+    >
+      {text}
+    </span>
+  );
+}
+
 /** Which drill a person's name opens: his reports on that day, filters kept. */
 function personHref(query: ReportQuery, personId: string, day: Day | null): string {
   return reportsHref(query, { person: personId, period: null, day, month: null });
@@ -96,9 +127,7 @@ export async function NothingWritten({
                   className="hover-tint touch inline-flex items-center gap-2 rounded-full border border-line py-1 ps-1 pe-3 text-sm"
                 >
                   <Avatar id={person.id} name={person.name} size="sm" />
-                  <span className="min-w-0 truncate">
-                    <bdi>{person.name}</bdi>
-                  </span>
+                  <Clip text={person.name} />
                   <LinkPending />
                 </Link>
               </li>
@@ -187,10 +216,16 @@ export async function TeamDay({
   today,
   query,
   filtered,
+  hidden,
 }: {
   people: readonly ReportPerson[];
   entries: readonly ReportEntry[];
   total: number;
+  /**
+   * How many of the day's reports the filter hides when it hides every one —
+   * the "filtered out" empty says how many and how to show them (DESIGN §8).
+   */
+  hidden: number;
   /** Entries per person on this day under the screen's filter, keyed person then day. */
   counts: Readonly<Record<string, Readonly<Record<Day, number>>>>;
   recorded: (person: ReportPerson) => Recorded;
@@ -226,7 +261,7 @@ export async function TeamDay({
           </Button>
         }
       >
-        {t("nothingMatchedDay")}
+        {hidden > 0 ? t("hiddenOnDay", { count: hidden }) : t("nothingWrittenDay")}
       </Empty>
     );
   }
@@ -248,13 +283,11 @@ export async function TeamDay({
           >
             <Link
               href={personHref(query, person.id, day)}
-              className="hover-tint -m-1.5 flex min-w-0 items-center gap-2.5 rounded-lg p-1.5"
+              className="hover-tint -m-2 flex min-w-0 items-center gap-3 rounded-lg p-2"
             >
               <Avatar id={person.id} name={person.name} ring={reason === "leave" ? "over" : undefined} />
               <span className="flex min-w-0 flex-1 flex-col">
-                <span id={headingId} className="truncate text-sm font-medium">
-                  <bdi>{person.name}</bdi>
-                </span>
+                <Clip id={headingId} text={person.name} className="text-sm font-medium" column />
                 <span className="text-xs text-muted-foreground">
                   {tc(person.role)}
                   {" · "}
@@ -286,14 +319,14 @@ export async function TeamDay({
                   <Link
                     href={personHref(query, person.id, day)}
                     data-slot="person-more"
-                    className="hover-tint inline-flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted-foreground underline underline-offset-2"
+                    className="hover-tint inline-flex w-fit items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground underline underline-offset-2"
                   >
                     {t("moreOnDay", { count: more })}
                     <LinkPending />
                   </Link>
                 ) : null}
               </div>
-              <RecordedLane recorded={recorded(person)} />
+              <RecordedLane recorded={recorded(person)} personId={person.id} day={day} />
             </div>
           </section>
         );
@@ -364,11 +397,11 @@ export async function TeamWeek({
               {t("person")}
             </th>
             {week.map((day) => (
-              <th key={day} scope="col" className="w-29 px-0.5 py-2 text-center text-xs font-medium">
+              <th key={day} scope="col" className="w-29 px-1 py-2 text-center text-xs font-medium">
                 {day <= today ? (
                   <Link
                     href={reportsHref(query, { period: "day", day, person: null, month: null })}
-                    className="hover-tint inline-flex flex-col items-center rounded-md px-0.5 py-1"
+                    className="hover-tint inline-flex flex-col items-center rounded-md px-1 py-1"
                     data-day={day}
                   >
                     <span>{nameOfDay(day)}</span>
@@ -400,9 +433,7 @@ export async function TeamWeek({
                     className="flex min-w-0 items-center gap-2"
                   >
                     <Avatar id={person.id} name={person.name} size="sm" />
-                    <span className="truncate font-medium">
-                      <bdi>{person.name}</bdi>
-                    </span>
+                    <Clip text={person.name} className="font-medium" />
                   </Link>
                 </th>
                 {week.map((day) => {

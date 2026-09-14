@@ -32,6 +32,7 @@ import type { ReportEntry } from "@/lib/reports";
  * the whole of it.
  */
 export async function ReportDays({
+  personId,
   days,
   entries,
   total,
@@ -41,6 +42,8 @@ export async function ReportDays({
   correct,
   empty,
 }: {
+  /** Whose days these are: the lane's doors open his lists. */
+  personId: string;
   /** The days to draw, newest first. A day with no entries is drawn only when it was asked for. */
   days: readonly Day[];
   entries: readonly ReportEntry[];
@@ -104,14 +107,14 @@ export async function ReportDays({
                     href={whole}
                     scroll={false}
                     data-slot="day-more"
-                    className="hover-tint inline-flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted-foreground underline underline-offset-2"
+                    className="hover-tint inline-flex w-fit items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground underline underline-offset-2"
                   >
                     {t("moreOnDay", { count: more })}
                     <LinkPending />
                   </Link>
                 ) : null}
               </div>
-              <RecordedLane recorded={recorded(day)} />
+              <RecordedLane recorded={recorded(day)} personId={personId} day={day} />
             </div>
           </section>
         );

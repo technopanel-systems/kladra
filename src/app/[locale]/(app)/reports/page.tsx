@@ -103,8 +103,15 @@ export default async function ReportsPage({
             <div className="flex flex-wrap items-center gap-3">
               <Avatar id={person.id} name={person.name} size="lg" />
               <div className="flex min-w-0 flex-col">
-                <p className="truncate text-base font-medium" data-slot="report-person">
-                  <bdi>{person.name}</bdi>
+                {/* The name's own direction on a box no wider than the name, so a
+                    long one is cut at its end and never loses its first word
+                    (the palette's Clip, S12.1). */}
+                <p
+                  data-slot="report-person"
+                  dir="auto"
+                  className="max-w-full self-start truncate text-base font-medium"
+                >
+                  {person.name}
                 </p>
                 <p className="text-xs text-muted-foreground">{t(`common.${person.role}`)}</p>
               </div>
@@ -233,6 +240,21 @@ export default async function ReportsPage({
     listNonWorkingDays(day, day),
   ]);
 
+  // Under a filter that matched nothing, how many reports the day does hold:
+  // "filtered out" says how many are hidden (DESIGN §8). Asked only then.
+  const filtered = isFiltered(query);
+  const hidden =
+    filtered && list.total === 0
+      ? Object.values(
+          await reportCounts(user, {
+            personId: null,
+            from: day,
+            to: day,
+            filter: { companyId: null, kind: null, outcomeId: null },
+          }),
+        ).reduce((sum, byDay) => sum + (byDay[day] ?? 0), 0)
+      : 0;
+
   return (
     <div className="flex flex-col gap-6">
       {head(
@@ -264,7 +286,8 @@ export default async function ReportsPage({
         day={day}
         today={today}
         query={query}
-        filtered={isFiltered(query)}
+        filtered={filtered}
+        hidden={hidden}
       />
     </div>
   );

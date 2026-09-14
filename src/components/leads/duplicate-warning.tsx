@@ -32,7 +32,7 @@ export function DuplicateWarning({ hit }: { hit: DuplicateHit }) {
     <div
       role="status"
       data-slot="duplicate-warning"
-      className={cn("flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs", TONE_CLASS.wait)}
+      className={cn("flex items-start gap-2 rounded-lg px-3 py-2 text-xs", TONE_CLASS.wait)}
     >
       <Info aria-hidden="true" className="mt-px size-3.5 shrink-0" />
       <span className="flex min-w-0 flex-col gap-0.5">

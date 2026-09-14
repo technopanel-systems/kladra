@@ -52,7 +52,7 @@ export function PeriodSwitch({
           size="sm"
           variant="ghost"
           className={cn(
-            "h-7 gap-1.5 rounded-full px-2.5 text-xs",
+            "h-7 gap-2 rounded-full px-3 text-xs",
             period === value && "bg-surface shadow-xs",
           )}
         >

@@ -1,4 +1,5 @@
-import { addDays, todayRiyadh, type Day } from "@/lib/dates";
+import { CHANNELS } from "@/db/schema";
+import { addDays, firstOfMonth, formatMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { quotationLabel } from "@/lib/labels";
 import { nothingWritten } from "@/lib/report-view";
 import { isWeekend, isWorkingDay, type NonWorking } from "@/lib/workdays";
@@ -679,4 +680,124 @@ test("the manager's week fits its card at 1366 in either language, and scrolls i
       );
     }
   }
+});
+
+/**
+ * A figure Kladra recorded is a door (S12.8, D117): "1 quotation request" named a
+ * paper and was plain text. It opens the list that holds it, narrowed as far as
+ * that list's address can go, and says how far before it is pressed — that
+ * day's list where the list can name the day, the whole list where it cannot.
+ */
+test("every figure in the recorded lane is a door to its list, and says how far that list narrows", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const raised = await one<{ user_id: string; day: Day }>(
+    `select quotations.rep_id as user_id,
+            to_char(max((quotations.created_at at time zone 'Asia/Riyadh')::date), 'YYYY-MM-DD') as day
+       from quotations
+       join users on users.id = quotations.rep_id
+      where users.email = $1::text
+      group by quotations.rep_id`,
+    [FAISAL],
+  );
+  const loaded = await one<{ day: Day }>(
+    `select to_char(max((dispatches.created_at at time zone 'Asia/Riyadh')::date), 'YYYY-MM-DD') as day
+       from dispatches
+       join users on users.id = dispatches.rep_id
+      where users.email = $1::text`,
+    [FAISAL],
+  );
+  const laneOn = (day: Day) =>
+    page
+      .locator(`[data-slot="report-day"][data-day="${day}"]`)
+      .getByRole("complementary", { name: t("reports.recorded") });
+
+  await login(page, locale, "faisal");
+
+  await test.step("a dispatch request opens the whole dispatches list, and says so", async () => {
+    await page.goto(`/${locale}/reports?day=${loaded.day}`);
+    const door = laneOn(loaded.day).locator('[data-figure="dispatchRequests"]').getByRole("link");
+    await expect(door).toHaveAttribute("href", new RegExp(`/${locale}/dispatches$`), COLD);
+    await expect(door).toContainText(t("reports.opensWholeList"));
+  });
+
+  await test.step("a quotation request opens that day's quotations, counted for him, and the list says so", async () => {
+    await page.goto(`/${locale}/reports?day=${raised.day}`);
+    const door = laneOn(raised.day).locator('[data-figure="quotationRequests"]').getByRole("link");
+    await expect(door).toHaveAttribute(
+      "href",
+      new RegExp(`/quotations\\?from=${raised.day}&to=${raised.day}&credited=${raised.user_id}$`),
+      COLD,
+    );
+    await expect(door).toContainText(t("reports.opensThatDay"));
+    await door.click();
+    await expect(page).toHaveURL(new RegExp(`/${locale}/quotations\\?from=${raised.day}`), COLD);
+    await expect(page.locator('[data-slot="narrowing"]')).toBeVisible(COLD);
+  });
+});
+
+/**
+ * The calendar's figure has its word, and a filter that hides a whole month says
+ * how many it hides (S12.8; DESIGN §8: filtered out says how many are hidden and
+ * how to show them). The month and the filter are read from the records: the
+ * month of his newest report, and a kind and an outcome he wrote nothing under
+ * in it.
+ */
+test("the calendar says what its figures count, and a filter that empties the month says how many it hides", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const his = await newestEntry(FAISAL);
+  const month = firstOfMonth(his.day);
+  const unmatched = await one<{ channel: string; outcome: number; total: string }>(
+    `select kinds.channel, outcomes.id as outcome,
+            (select count(*) from activities
+              where activities.user_id = $1::uuid and activities.archived_at is null
+                and activities.happened_on between $2::date
+                    and ($2::date + interval '1 month' - interval '1 day')::date
+            )::text as total
+       from unnest($3::text[]) as kinds(channel)
+       cross join outcomes
+      where outcomes.active
+        and not exists (
+          select 1 from activities
+           where activities.user_id = $1::uuid and activities.archived_at is null
+             and activities.channel::text = kinds.channel and activities.outcome_id = outcomes.id
+             and activities.happened_on between $2::date
+                 and ($2::date + interval '1 month' - interval '1 day')::date
+        )
+      order by kinds.channel, outcomes.id
+      limit 1`,
+    [his.user_id, month, `{${CHANNELS.join(",")}}`],
+  );
+
+  await login(page, locale, "faisal");
+
+  await test.step("unfiltered, the line under the calendar says the figure is the day's reports", async () => {
+    await page.goto(`/${locale}/reports?month=${month.slice(0, 7)}`);
+    await expect(page.locator('[data-slot="calendar-legend"]')).toHaveText(t("reports.calendarLegend"), COLD);
+  });
+
+  await test.step("filtered to nothing, the list says how many the filters hide and offers them back", async () => {
+    await page.goto(
+      `/${locale}/reports?month=${month.slice(0, 7)}&kind=${unmatched.channel}&outcome=${unmatched.outcome}`,
+    );
+    await expect(page.locator('[data-slot="calendar-legend"]')).toHaveText(
+      t("reports.calendarLegendFiltered"),
+      COLD,
+    );
+    const empty = page.locator('[data-slot="empty"]');
+    await expect(empty).toContainText(
+      t("reports.hiddenInMonth", { count: Number(unmatched.total), month: formatMonth(month, locale) }),
+    );
+    // Each row of chips is named by the question it answers.
+    await expect(page.getByRole("group", { name: t("reports.dialog.kind") })).toBeVisible();
+    await expect(page.getByRole("group", { name: t("reports.dialog.outcome") })).toBeVisible();
+
+    await empty.getByRole("link", { name: t("reports.clearFilters") }).click();
+    await expect(page).not.toHaveURL(/[?&]kind=/, COLD);
+  });
 });

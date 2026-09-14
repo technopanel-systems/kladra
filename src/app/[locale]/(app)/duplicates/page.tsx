@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { DuplicateList } from "@/components/duplicates/duplicate-list";
+import { Empty } from "@/components/ui-ext/empty";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { firstOfMonth, todayRiyadh } from "@/lib/dates";
@@ -61,16 +62,17 @@ export default async function DuplicatesPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-xl font-semibold">{t("duplicates.title")}</h1>
         <p className="max-w-prose text-sm text-muted-foreground">{t("duplicates.means")}</p>
       </div>
 
+      {/* A clear desk is `Empty`, the space where pairs will be — not a card at
+          rest, which is what this was, drawn by hand in its own padding (DESIGN
+          §1b). It needs no way out: nothing narrowed it (D127). */}
       {rows.length === 0 ? (
-        <p className="card-face px-6 py-12 text-center text-sm text-muted-foreground">
-          {t("duplicates.empty")}
-        </p>
+        <Empty>{t("duplicates.empty")}</Empty>
       ) : (
         <DuplicateList rows={rows} />
       )}

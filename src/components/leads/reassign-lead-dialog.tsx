@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { UserRoundPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { reassignLeadAction } from "@/actions/companies";
+import { useLeadFlash } from "@/components/leads/lead-flash";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ export function ReassignLeadDialog({
 }) {
   const t = useTranslations();
   const router = useRouter();
+  const flash = useLeadFlash()?.flash;
   const ids = useId();
   const [toId, setToId] = useState<string | null>(null);
 
@@ -98,7 +100,11 @@ export function ReassignLeadDialog({
         if (!open) setToId(null);
       }}
       onConfirm={() => reassignLeadAction(companyId, toId)}
-      onDone={() => router.refresh()}
+      onDone={() => {
+        // The row it moved lights up where it lands (DESIGN §8).
+        flash?.([companyId]);
+        router.refresh();
+      }}
     >
       <div className="flex flex-col gap-2">
         <Label id={`${ids}-to`}>{t("leads.giveTo")}</Label>

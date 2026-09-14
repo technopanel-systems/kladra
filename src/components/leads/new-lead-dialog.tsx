@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { createLeadAction } from "@/actions/companies";
 import { duplicateCheckAction, type DuplicateHit, type FormLookups } from "@/actions/forms";
 import { DuplicateWarning } from "@/components/leads/duplicate-warning";
+import { useLeadFlash } from "@/components/leads/lead-flash";
 import { useActionOutcome, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
@@ -29,6 +30,7 @@ import { useRouter } from "@/i18n/navigation";
 import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { PickerOption } from "@/lib/picker-option";
 import type { ActionResult } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 /**
  * New lead — marketing's one way in (SPEC §3, P12-7, P13).
@@ -61,9 +63,32 @@ import type { ActionResult } from "@/lib/types";
  *
  * Nothing here converts anything later. The row is on the chosen floor when
  * Save returns, the phone number is on it, and it is in his band and on his day.
+ *
+ * **What is attached to the company is three labelled groups** (P13-G6, S12.8;
+ * DESIGN §8). The contact had a rule above it and a bold heading, while what
+ * the customer asked for and who takes him had only their field labels — three
+ * sections drawn three ways in one dialog. Each is now the labelled group: a
+ * small muted word over a bordered inset, the company's own fields above them
+ * as the form's subject, the way Add company draws its contact. A group of one
+ * field is still a group, and its word is that field's label, so nothing is
+ * said twice.
  */
 
 const DEBOUNCE_MS = 400;
+
+/*
+ * The labelled group (DESIGN §8), in one spelling for the three groups here:
+ * the word and what the group is for above, sentence case and never tracked;
+ * the fields inside the inset strip's own edge and ground (DESIGN §1). The top
+ * padding makes the break between groups 24, a step past the 16 between the
+ * fields inside one (visual.md: the gap inside a group is smaller than the gap
+ * between groups).
+ */
+const GROUP = "flex flex-col gap-2 pt-2";
+const GROUP_HEAD = "flex flex-col gap-1";
+const GROUP_LABEL = "text-xs font-medium text-muted-foreground";
+const GROUP_HINT = "text-xs text-faint";
+const GROUP_INSET = "rounded-xl border border-line bg-surface-2 p-3";
 
 export function NewLeadDialog({
   targets,
@@ -77,17 +102,19 @@ export function NewLeadDialog({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { lookups, failed } = useFormLookups(open);
+  const flash = useLeadFlash()?.flash;
 
   const onCreated = useCallback(
-    (name: string, to: string) => {
+    (name: string, to: string, companyId: string | undefined) => {
       toast.success(t("leads.filed", { name, rep: to }));
       setOpen(false);
-      // The list it lands on is this one. No id in the address: a lead is read
-      // as a row here and opened as a customer on the companies screen, by
-      // whoever holds him.
+      // The list it lands on is this one, and the row it became lights up
+      // there. No id in the address: a lead is read as a row here and opened
+      // as a customer on the companies screen, by whoever holds him.
+      if (companyId) flash?.([companyId]);
       router.refresh();
     },
-    [router, t],
+    [router, t, flash],
   );
 
   return (
@@ -144,7 +171,7 @@ function LeadForm({
 }: {
   lookups: FormLookups;
   targets: PickerOption[];
-  onCreated: (name: string, to: string) => void;
+  onCreated: (name: string, to: string, companyId: string | undefined) => void;
   onCancel: () => void;
 }) {
   const t = useTranslations();
@@ -178,7 +205,9 @@ function LeadForm({
   const form = useRef<HTMLFormElement>(null);
 
   useFocusFirstError(form, state);
-  useActionOutcome(state, () => onCreated(filed.current.name, filed.current.rep));
+  useActionOutcome(state, (data) =>
+    onCreated(filed.current.name, filed.current.rep, data?.companyId),
+  );
 
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
   const error = (field: string) => errors[field];
@@ -261,7 +290,7 @@ function LeadForm({
     >
       <FormBody>
         {/* ---- the customer ---- */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor={id("name")}>
             {t("common.company")}
             {required}
@@ -283,7 +312,7 @@ function LeadForm({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor={id("category")}>{t("common.category")}</Label>
             <SearchableSelect
               id={id("category")}
@@ -302,7 +331,7 @@ function LeadForm({
 
           {/* Where it came from — the whole list for this role, Marketing on it
               (SPEC §3, narrowing D1; `seesEveryLeadSource`). */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor={id("lead-source")}>{t("common.leadSource")}</Label>
             <SearchableSelect
               id={id("lead-source")}
@@ -321,7 +350,7 @@ function LeadForm({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor={id("country")}>{t("common.country")}</Label>
             <SearchableSelect
               id={id("country")}
@@ -336,7 +365,7 @@ function LeadForm({
             <input type="hidden" name="countryId" value={draft.countryId} />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             <Label htmlFor={id("city")}>{t("common.city")}</Label>
             {inSaudi ? (
               <>
@@ -373,14 +402,21 @@ function LeadForm({
         </div>
 
         {/* ---- whom to ring ---- */}
-        <div className="flex flex-col gap-4 border-t border-line pt-4">
-          <div className="flex flex-col gap-0.5">
-            <h3 className="text-sm font-medium">{t("forms.contactHeading")}</h3>
-            <p className="text-xs text-muted-foreground">{t("leads.contactHint")}</p>
+        <div
+          role="group"
+          aria-labelledby={id("contact-group")}
+          data-slot="labelled-group"
+          className={GROUP}
+        >
+          <div className={GROUP_HEAD}>
+            <h3 id={id("contact-group")} className={GROUP_LABEL}>
+              {t("forms.contactHeading")}
+            </h3>
+            <p className={GROUP_HINT}>{t("leads.contactHint")}</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
+          <div className={cn(GROUP_INSET, "grid gap-4 sm:grid-cols-2")}>
+            <div className="flex flex-col gap-2">
               <Label htmlFor={id("contact-name")}>
                 {t("common.name")}
                 {required}
@@ -398,7 +434,7 @@ function LeadForm({
               {fieldError("contactName", id("contact-name-error"))}
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor={id("phone")}>
                 {t("common.phone")}
                 {required}
@@ -424,7 +460,7 @@ function LeadForm({
                   {phoneError}
                 </p>
               ) : normalized ? (
-                <p id={id("phone-help")} className="flex items-center gap-1.5 text-xs text-faint">
+                <p id={id("phone-help")} className="flex items-center gap-2 text-xs text-faint">
                   {t("forms.phoneStoredAs")}
                   <span dir="ltr" className="num">
                     {normalized}
@@ -440,13 +476,20 @@ function LeadForm({
           </div>
         </div>
 
-        {/* ---- what he asked for, and who takes him ---- */}
-        <div className="flex flex-col gap-4 border-t border-line pt-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor={id("query")}>
+        {/* ---- what he asked for ---- */}
+        <div data-slot="labelled-group" className={GROUP}>
+          <div className={GROUP_HEAD}>
+            {/* The group's word is the field's own label: a group of one field
+                says its name once. */}
+            <Label htmlFor={id("query")} className={GROUP_LABEL}>
               {t("leads.query")}
               {required}
             </Label>
+            <p id={id("query-help")} className={GROUP_HINT}>
+              {t("leads.queryHint")}
+            </p>
+          </div>
+          <div className={cn(GROUP_INSET, "flex flex-col gap-2")}>
             <Textarea
               id={id("query")}
               name="query"
@@ -461,20 +504,22 @@ function LeadForm({
               aria-invalid={error("query") ? true : undefined}
               aria-describedby={error("query") ? id("query-error") : id("query-help")}
             />
-            {error("query") ? (
-              fieldError("query", id("query-error"))
-            ) : (
-              <p id={id("query-help")} className="text-xs text-faint">
-                {t("leads.queryHint")}
-              </p>
-            )}
+            {fieldError("query", id("query-error"))}
           </div>
+        </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label id={id("rep")}>
+        {/* ---- who takes him ---- */}
+        <div data-slot="labelled-group" className={GROUP}>
+          <div className={GROUP_HEAD}>
+            <Label id={id("rep")} className={GROUP_LABEL}>
               {t("leads.giveTo")}
               {required}
             </Label>
+            <p id={id("rep-help")} className={GROUP_HINT}>
+              {t("leads.giveToHint")}
+            </p>
+          </div>
+          <div className={cn(GROUP_INSET, "flex flex-col gap-2")}>
             <SearchableSelect
               aria-labelledby={id("rep")}
               value={draft.repId}
@@ -487,13 +532,7 @@ function LeadForm({
               aria-describedby={error("repId") ? id("rep-error") : id("rep-help")}
             />
             <input type="hidden" name="repId" value={draft.repId} />
-            {error("repId") ? (
-              fieldError("repId", id("rep-error"))
-            ) : (
-              <p id={id("rep-help")} className="text-xs text-faint">
-                {t("leads.giveToHint")}
-              </p>
-            )}
+            {fieldError("repId", id("rep-error"))}
           </div>
         </div>
       </FormBody>

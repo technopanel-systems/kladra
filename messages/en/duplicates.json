@@ -1,7 +1,7 @@
 {
   "title": "Duplicates",
   "means": "Two records holding one telephone number. Until you answer, two people are working one customer.",
-  "empty": "No two records share a telephone number.",
+  "empty": "Nothing to decide. No two records share a telephone number.",
   "listLabel": "Records that may be one customer",
   "sameNumber": "Same number",
   "between": "{a} and {b}",

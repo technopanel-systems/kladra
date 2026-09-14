@@ -564,10 +564,10 @@ function ReportPanel({
             {/* The customer. Locked when the popup was opened from him, or when a
                 report is being corrected — the wrong customer is unfiled, not
                 moved (D70). */}
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label id={`${ids}-company`}>{t("common.company")}</Label>
               {locked ? (
-                <p className="flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface-2 px-2.5 py-1.5 text-sm">
+                <p className="flex min-h-9 items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-1 text-sm">
                   {companyId ? (
                     <Avatar id={companyId} name={companyName || "?"} kind="company" size="sm" />
                   ) : null}
@@ -593,7 +593,7 @@ function ReportPanel({
             </div>
 
             {companyId && !targets ? (
-              <div className="flex flex-col gap-1.5" aria-hidden="true">
+              <div className="flex flex-col gap-2" aria-hidden="true">
                 <Skeleton className="h-3 w-24" />
                 <Skeleton className="h-9 w-full" />
               </div>
@@ -690,8 +690,8 @@ function ReportPanel({
               errorId={errorId("kind")}
             />
 
-            <fieldset className="flex flex-col gap-1.5" disabled={pending}>
-              <legend className="mb-1.5 text-sm font-medium">{t("reports.dialog.outcome")}</legend>
+            <fieldset className="flex flex-col gap-2" disabled={pending}>
+              <legend className="mb-2 text-sm font-medium">{t("reports.dialog.outcome")}</legend>
               <div
                 role="radiogroup"
                 aria-label={t("reports.dialog.outcome")}
@@ -704,7 +704,7 @@ function ReportPanel({
                   <label
                     key={row.id}
                     className={cn(
-                      "touch inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm transition-colors",
+                      "touch inline-flex cursor-pointer items-center min-h-8 rounded-full border px-3 py-1 text-sm transition-colors",
                       "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
                       // Refused, the caret is put on a chip by script, which a
                       // browser need not count as focus-visible: the ring then
@@ -733,7 +733,7 @@ function ReportPanel({
               {fieldError("outcomeId")}
             </fieldset>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-2">
               <Label htmlFor={`${ids}-text`}>{t("reports.dialog.text")}</Label>
               <Textarea
                 id={`${ids}-text`}
@@ -759,7 +759,7 @@ function ReportPanel({
             {!editing ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 {followUpOffered ? (
-                  <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-col gap-2">
                     <span id={`${ids}-follow-up`} className="text-sm font-medium">
                       {t("common.nextFollowUp")}
                       <span className="ps-1 text-xs font-normal text-faint">
@@ -781,8 +781,8 @@ function ReportPanel({
                 ) : null}
 
                 {form ? (
-                  <fieldset className="flex flex-col gap-1.5" disabled={pending}>
-                    <legend className="mb-1.5 text-sm font-medium">
+                  <fieldset className="flex flex-col gap-2" disabled={pending}>
+                    <legend className="mb-2 text-sm font-medium">
                       {t("reports.dialog.happenedOn")}
                     </legend>
                     <div
@@ -796,7 +796,7 @@ function ReportPanel({
                         <label
                           key={which}
                           className={cn(
-                            "touch inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm transition-colors",
+                            "touch inline-flex cursor-pointer items-center min-h-8 rounded-full border px-3 py-1 text-sm transition-colors",
                             "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
                             errors.happenedOn && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
                             day === which
@@ -858,8 +858,8 @@ function KindField({
 }) {
   const t = useTranslations("common");
   return (
-    <fieldset className="flex flex-col gap-1.5" disabled={disabled}>
-      <legend className="mb-1.5 text-sm font-medium">{legend}</legend>
+    <fieldset className="flex flex-col gap-2" disabled={disabled}>
+      <legend className="mb-2 text-sm font-medium">{legend}</legend>
       <div
         role="radiogroup"
         aria-label={legend}
@@ -935,7 +935,7 @@ function PickField({
   errorId: string;
 }): ReactNode {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-2">
       <Label htmlFor={id}>
         {label}
         {optional ? <span className="text-xs font-normal text-faint">{optional}</span> : null}

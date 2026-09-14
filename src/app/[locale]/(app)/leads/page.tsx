@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { LeadFilters } from "@/components/leads/lead-filters";
+import { LeadFlashHost } from "@/components/leads/lead-flash";
 import { parseLeadQuery } from "@/components/leads/lead-view";
 import { LeadsTable, type LeadRow } from "@/components/leads/leads-table";
 import { NewLeadDialog } from "@/components/leads/new-lead-dialog";
@@ -66,6 +67,10 @@ export default async function LeadsPage({
    * day (D97, D141).
    */
   const total = leads.length === LIST_LIMIT ? await countLeads(user, query) : leads.length;
+  // Filtered out, how many the filters hide — asked only when they hide all of
+  // them, because that is the one empty that owes the number (DESIGN §8).
+  const hidden =
+    filtered && leads.length === 0 ? await countLeads(user, { with: null, state: null }) : 0;
   const earliest = leads.reduce(
     (soonest, lead) => (lead.givenOn < soonest ? lead.givenOn : soonest),
     firstOfMonth(today),
@@ -97,44 +102,54 @@ export default async function LeadsPage({
     : [];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{t("leads.title")}</h1>
-        {mayFile ? <NewLeadDialog targets={targets} /> : null}
-      </div>
+    // The flash on the row the reader's own save filed or moved, held above the
+    // heading's form and the table it lands in (lead-flash.tsx).
+    <LeadFlashHost>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">{t("leads.title")}</h1>
+          {mayFile ? <NewLeadDialog targets={targets} /> : null}
+        </div>
 
-      <LeadFilters query={query} people={holders} />
+        <LeadFilters query={query} people={holders} />
 
-      {rows.length === 0 ? (
-        filtered ? (
-          <Empty
-            action={
-              <Button asChild variant="outline">
-                <Link href="/leads">{t("leads.clearFilters")}</Link>
-              </Button>
-            }
-          >
-            {t("leads.emptyFilter")}
-          </Empty>
+        {/*
+         * Three kinds of nothing, each its own sentence (DESIGN §8, D127). Filtered
+         * out says how many the filters hide and is the one with a way out. First
+         * use is marketing's and says where the work starts — the Add lead above
+         * it, never drawn a second time, because an empty list that repeats its own
+         * primary action puts two brand buttons on one screen (§2, D31, D35). And
+         * the manager's first use says whose work fills it, since nothing on his
+         * screen starts it.
+         */}
+        {rows.length === 0 ? (
+          filtered && hidden > 0 ? (
+            <Empty
+              action={
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/leads">{t("leads.clearFilters")}</Link>
+                </Button>
+              }
+            >
+              {t("leads.emptyFilter", { count: hidden })}
+            </Empty>
+          ) : (
+            <Empty>{readsOwn ? t("leads.empty") : t("leads.emptyManager")}</Empty>
+          )
         ) : (
-          /* The sentence alone: New lead is already in the heading row above,
-             and an empty list that repeats its own primary action puts two brand
-             gradients on one screen (DESIGN §2, D31, D35). */
-          <Empty>{readsOwn ? t("leads.empty") : t("common.nothingYet")}</Empty>
-        )
-      ) : (
-        // Who found it is only worth a column on a screen that reads more than
-        // one person's: marketing's own list would say its own name on every
-        // row (D46 — a figure nobody can read two ways).
-        <LeadsTable
-          rows={rows}
-          showFinder={readsAll}
-          opens={readsAll}
-          people={mayMove ? holders : null}
-        />
-      )}
+          // Who found it is only worth a column on a screen that reads more than
+          // one person's: marketing's own list would say its own name on every
+          // row (D46 — a figure nobody can read two ways).
+          <LeadsTable
+            rows={rows}
+            showFinder={readsAll}
+            opens={readsAll}
+            people={mayMove ? holders : null}
+          />
+        )}
 
-      <ListTail shown={rows.length} total={total} />
-    </div>
+        <ListTail shown={rows.length} total={total} />
+      </div>
+    </LeadFlashHost>
   );
 }

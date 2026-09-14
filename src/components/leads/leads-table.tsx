@@ -1,12 +1,14 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { useLeadFlash } from "@/components/leads/lead-flash";
 import { ReassignLeadDialog } from "@/components/leads/reassign-lead-dialog";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { WaitedFor } from "@/components/ui-ext/waited-for";
 import {
   Table,
   TableBody,
@@ -16,11 +18,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useArrivedIds } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
 import type { LeadStage } from "@/lib/leads";
 import type { PickerOption } from "@/lib/picker-option";
-import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
+import type { StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,7 +46,33 @@ import { cn } from "@/lib/utils";
  * Two layouts, one data shape, like every list here: a table from `md` up and a
  * card per row below it, because the person who files a lead is often doing it
  * from a phone with the customer still on the line.
+ *
+ * A lead somebody else filed or moved arrives with the live flash, and the one
+ * the reader's own save filed or moved takes the same flash (`useLeadFlash`),
+ * so after the toast nobody hunts for the row (DESIGN §2, §8).
  */
+
+/**
+ * A name cut to fit its cell loses its own END, never its first word (the shape
+ * of `Clip` in shell/search-command.tsx, S12.1): the box takes the name's
+ * direction and is never wider than its text. `column` for a child of a flex
+ * column, which would otherwise stretch it and set the name at the far edge.
+ */
+function Clip({
+  text,
+  className,
+  column = false,
+}: {
+  text: string;
+  className?: string;
+  column?: boolean;
+}) {
+  return (
+    <span dir="auto" className={cn("min-w-0 truncate", column && "max-w-full self-start", className)}>
+      {text}
+    </span>
+  );
+}
 
 export type LeadRow = {
   id: string;
@@ -94,10 +123,10 @@ function Stage({ row }: { row: LeadRow }) {
   return (
     <span data-slot="lead-stage" data-stage={row.stage} className="flex flex-wrap items-center gap-x-2 gap-y-1">
       <StateBadge tone={tone}>{word[row.stage]}</StateBadge>
+      {/* How long, and "late" in words once it is: the badge's red is never
+          the only thing saying so (DESIGN §5). */}
       {row.stage === "waiting" ? (
-        <span className={cn("text-xs", row.waited?.late ? TONE_TEXT.bad : "text-muted-foreground")}>
-          {t("team.waitingDays", { count: row.waited?.days ?? 0 })}
-        </span>
+        <WaitedFor waited={row.waited ?? { days: 0, late: false }} />
       ) : row.stage === "acknowledged" && row.acknowledgedOn ? (
         <span className="text-xs text-muted-foreground">
           <DayText day={row.acknowledgedOn} locale={locale} />
@@ -112,23 +141,28 @@ function CompanyName({ row, opens, wrap = false }: { row: LeadRow; opens: boolea
   const t = useTranslations();
   // A card on a phone has a line to itself for the name, so it wraps rather than
   // cutting a long Arabic firm name down to its last two words.
-  const fit = wrap ? "min-w-0 break-words" : "min-w-0 truncate";
   if (!opens) {
-    return (
-      <span className={cn(fit, "font-medium")}>
+    return wrap ? (
+      <span className="min-w-0 font-medium break-words">
         <bdi>{row.name}</bdi>
       </span>
+    ) : (
+      <Clip text={row.name} className="font-medium" column />
     );
   }
   return (
     <Link
       href={`/companies?open=${row.id}`}
       aria-label={t("companies.openCompany", { name: row.name })}
-      className="flex min-w-0 items-center gap-1.5 font-medium underline-offset-2 hover:underline"
+      className="flex min-w-0 items-center gap-2 font-medium underline-offset-2 hover:underline"
     >
-      <span className={fit}>
-        <bdi>{row.name}</bdi>
-      </span>
+      {wrap ? (
+        <span className="min-w-0 break-words">
+          <bdi>{row.name}</bdi>
+        </span>
+      ) : (
+        <Clip text={row.name} />
+      )}
       <LinkPending />
     </Link>
   );
@@ -149,6 +183,16 @@ export function LeadsTable({
 }) {
   const t = useTranslations();
   const locale = useLocale();
+  const arrived = useArrivedIds(rows);
+  const own = useLeadFlash();
+  // Somebody else's change, or the reader's own save: one flash either way.
+  const flashOf = (id: string, base: string) => {
+    const mark = own?.flashOf(id);
+    return {
+      className: cn(base, arrived.has(id) && "row-arrived", mark?.className),
+      onAnimationEnd: mark?.onAnimationEnd,
+    };
+  };
 
   return (
     <>
@@ -172,7 +216,7 @@ export function LeadsTable({
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id} data-lead={row.id} className="hover-tint">
+              <TableRow key={row.id} data-lead={row.id} {...flashOf(row.id, "hover-tint")}>
                 <TableCell className="max-w-[16rem]">
                   <span className="flex min-w-0 items-center gap-2">
                     <Avatar
@@ -185,9 +229,7 @@ export function LeadsTable({
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <CompanyName row={row} opens={opens} />
                       {row.city ? (
-                        <span className="truncate text-xs text-muted-foreground">
-                          <bdi>{row.city}</bdi>
-                        </span>
+                        <Clip text={row.city} className="text-xs text-muted-foreground" column />
                       ) : null}
                     </span>
                   </span>
@@ -202,18 +244,14 @@ export function LeadsTable({
                   <TableCell className="max-w-[10rem]">
                     <span className="flex min-w-0 items-center gap-2">
                       <Avatar id={row.fromId} name={row.fromName} size="sm" />
-                      <span className="min-w-0 truncate">
-                        <bdi>{row.fromName}</bdi>
-                      </span>
+                      <Clip text={row.fromName} />
                     </span>
                   </TableCell>
                 ) : null}
                 <TableCell className="max-w-[10rem]">
                   <span className="flex min-w-0 items-center gap-2">
                     <Avatar id={row.repId} name={row.repName} size="sm" />
-                    <span className="min-w-0 truncate">
-                      <bdi>{row.repName}</bdi>
-                    </span>
+                    <Clip text={row.repName} />
                   </span>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
@@ -243,7 +281,11 @@ export function LeadsTable({
 
       <ul aria-label={t("leads.listLabel")} className="flex flex-col gap-2 md:hidden">
         {rows.map((row) => (
-          <li key={row.id} data-lead={row.id} className="card-face flex flex-col gap-2 p-3">
+          <li
+            key={row.id}
+            data-lead={row.id}
+            {...flashOf(row.id, "card-face flex flex-col gap-2 p-3")}
+          >
             <div className="flex items-start gap-2">
               <Avatar
                 id={row.id}
@@ -261,9 +303,7 @@ export function LeadsTable({
                   </span>
                 </div>
                 {row.city ? (
-                  <span className="truncate text-xs text-muted-foreground">
-                    <bdi>{row.city}</bdi>
-                  </span>
+                  <Clip text={row.city} className="text-xs text-muted-foreground" column />
                 ) : null}
               </div>
             </div>

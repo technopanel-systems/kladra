@@ -17,6 +17,11 @@ import { useRouter } from "@/i18n/navigation";
  * person is the searchable picker every long list of people is (DESIGN §2),
  * with "everyone" as an answer that can be given again. Pressing a chip that is
  * already pressed lets go of it.
+ *
+ * Both facets carry their word above them (P13-G6, S12.8; DESIGN §8), the same
+ * small muted one the Reports filters and every picker here have: the person
+ * picker said "With" and the chips beside it said nothing, so one facet was
+ * named and the other had to be guessed from its answers.
  */
 const ALL = "__all__";
 
@@ -35,8 +40,11 @@ export function LeadFilters({
   const go = (href: string) => startTransition(() => router.push(href, { scroll: false }));
 
   return (
-    <div data-slot="lead-filters" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-4">
-      <div role="group" aria-label={t("leads.state")}>
+    <div data-slot="lead-filters" className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:gap-4">
+      <div role="group" aria-labelledby="lead-filter-state" className="flex min-w-0 flex-col gap-1">
+        <span id="lead-filter-state" className="text-xs text-muted-foreground">
+          {t("leads.state")}
+        </span>
         <FilterRow
           all={
             <FilterChip href={leadsHref(query, { state: null })} active={query.state === null}>

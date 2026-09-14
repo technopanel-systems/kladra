@@ -143,6 +143,12 @@ test("marketing files a lead with a phone and the customer's query as its one no
     await expect(form.getByLabel(t("common.notes"))).toHaveCount(0);
     await expect(form.locator("textarea")).toHaveCount(1);
 
+    // Under the company's own fields, three labelled groups in one spelling —
+    // whom to ring, what they asked for, who takes it (S12.8, DESIGN §8) — and
+    // the contact's group is named for a screen reader by its word.
+    await expect(form.locator('[data-slot="labelled-group"]')).toHaveCount(3);
+    await expect(form.getByRole("group", { name: t("forms.contactHeading") })).toBeVisible();
+
     await form.getByLabel(t("common.company")).fill(name);
     await pickFirst(form.getByRole("combobox", { name: t("common.category") }));
     // Marketing is on the list of where it came from, for this role.
@@ -460,11 +466,14 @@ test("a lead nobody has acknowledged in two working days is on the manager's lea
       );
       await expect(page).toHaveURL(/[?&]with=/, COLD);
 
-      // Red, with how long it has sat in working days, in words.
+      // Red, with how long it has sat in working days, and "late" in words —
+      // the red is never the only thing saying so (S12.8, DESIGN §5).
       const row = page.getByRole("row").filter({ hasText: late.name }).first();
       await expect(row).toBeVisible(COLD);
       await expect(row.locator('[data-tone="bad"]')).toHaveText(t("leads.notAcknowledged"));
-      await expect(row.getByText(t("team.waitingDays", { count: late.days }))).toBeVisible();
+      const waited = row.locator('[data-slot="lead-stage"] [data-slot="waited"]');
+      await expect(waited).toContainText(t("queue.workingDays", { days: late.days }));
+      await expect(waited).toContainText(t("queue.late"));
     });
 
     await test.step("3 · he gives it to Saad from the row, told what will happen to it with whoever he picks", async () => {
@@ -1013,10 +1022,8 @@ test("a request still on the desk is not a quote, and a lead nobody has acknowle
       expect(waited, "the lead is not waiting in the database").toBeTruthy();
       const row = page.getByRole("row").filter({ hasText: lead.name }).first();
       await expect(
-        row
-          .locator('[data-slot="lead-stage"]')
-          .getByText(t("team.waitingDays", { count: waited!.days }), { exact: true }),
-      ).toBeVisible();
+        row.locator('[data-slot="lead-stage"] [data-slot="waited"]'),
+      ).toContainText(t("queue.workingDays", { days: waited!.days }));
     });
   } finally {
     await query(

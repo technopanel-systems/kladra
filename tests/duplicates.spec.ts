@@ -191,6 +191,20 @@ test("a rep is stopped by nothing, and the pair is on the manager's screen a mom
   await expect(card).toContainText(held.company);
   await expect(card.getByText(formatPhone(storedE164(held.phone)))).toBeVisible();
 
+  // No answer on the card is the brand button: the choice is its word and the
+  // record it sits in, and each record leads with its face and its holder's
+  // (S12.8; DESIGN §1b, one brand control at rest).
+  await expect(card.locator('[data-variant="brand"]')).toHaveCount(0);
+  const sides = card.locator('[data-slot="duplicate-side"]');
+  await expect(sides).toHaveCount(2);
+  for (const side of await sides.all()) {
+    await expect(side.locator('[data-slot="avatar"]')).toHaveCount(2);
+    await expect(side.getByRole("button", { name: t("duplicates.keepThis") })).toHaveAttribute(
+      "data-variant",
+      "secondary",
+    );
+  }
+
   // And it is on his own home screen, in the band that is his own work.
   await page.goto(`/${locale}/team`);
   const band = page.getByRole("heading", { name: t("duplicates.title") });

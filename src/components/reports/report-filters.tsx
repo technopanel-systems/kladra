@@ -21,6 +21,15 @@ import { reportsHref, type ReportQuery } from "@/lib/report-view";
  *
  * Pressing a chip that is already pressed lets go of it, which is what a person
  * pressing it a second time means.
+ *
+ * **Each row of chips says which question it answers** (P13-G6, S12.8; DESIGN
+ * §8, the labelled group). Two lines of chips sat one above the other — Visit,
+ * Call, WhatsApp over Reached, No answer, Meeting set — with nothing to say they
+ * were two facets rather than one row that wrapped, while the pickers under
+ * them each had a word. Every facet has its word now, the same small muted one,
+ * and it names the group for a screen reader too, so the question a sighted
+ * reader sees is the one that is heard. The word stands outside the line, so a
+ * row that scrolls sideways (S12.K) never scrolls it away.
  */
 const ALL = "__all__";
 
@@ -44,7 +53,10 @@ export function ReportFilters({
 
   return (
     <div data-slot="report-filters" className="flex flex-col gap-3">
-      <div role="group" aria-label={t("reports.dialog.kind")}>
+      <div role="group" aria-labelledby="report-filter-kind" className="flex flex-col gap-1">
+        <span id="report-filter-kind" className="text-xs text-muted-foreground">
+          {t("reports.dialog.kind")}
+        </span>
         <FilterRow
           all={
             <FilterChip href={reportsHref(query, { kind: null })} active={query.kind === null}>
@@ -69,7 +81,10 @@ export function ReportFilters({
         </FilterRow>
       </div>
 
-      <div role="group" aria-label={t("reports.dialog.outcome")}>
+      <div role="group" aria-labelledby="report-filter-outcome" className="flex flex-col gap-1">
+        <span id="report-filter-outcome" className="text-xs text-muted-foreground">
+          {t("reports.dialog.outcome")}
+        </span>
         <FilterRow
           all={
             <FilterChip

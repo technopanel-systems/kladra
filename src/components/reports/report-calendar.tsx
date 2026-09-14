@@ -20,6 +20,13 @@ import type { NonWorking } from "@/lib/workdays";
  *
  * A grid of links rather than the kit's date picker: this is a place a manager
  * can send as an address, not a question with one answer.
+ *
+ * **The figure under a day says what it is** (P13-G6, S12.8). Each cell was a
+ * date over a bare number, named only for a screen reader, so a sighted reader
+ * had to guess whether "9" under the 9th counted reports, calls or something
+ * the system did. A line under the grid says it in words — and says "that
+ * match the filters" when a filter is on, because then the figure is not the
+ * day's whole count and the grid must not look as though it were.
  */
 export async function ReportCalendar({
   month,
@@ -29,6 +36,7 @@ export async function ReportCalendar({
   selected,
   today,
   query,
+  filtered,
 }: {
   /** The month shown, as its first day. */
   month: Day;
@@ -38,6 +46,8 @@ export async function ReportCalendar({
   selected: Day | null;
   today: Day;
   query: ReportQuery;
+  /** A filter is on, so each figure counts only the reports that match it. */
+  filtered: boolean;
 }) {
   const [t, locale] = await Promise.all([getTranslations("reports"), getLocale()]);
   const weekdays = new Intl.DateTimeFormat(locale === "ar" ? "ar-u-nu-latn" : "en-GB", {
@@ -159,6 +169,10 @@ export async function ReportCalendar({
           ))}
         </tbody>
       </table>
+
+      <p data-slot="calendar-legend" className="text-xs text-muted-foreground">
+        {filtered ? t("calendarLegendFiltered") : t("calendarLegend")}
+      </p>
     </section>
   );
 }

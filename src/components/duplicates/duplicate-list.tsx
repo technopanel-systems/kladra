@@ -3,15 +3,16 @@
 import { useCallback, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ruleDuplicateAction } from "@/actions/duplicates";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Ref } from "@/components/ui-ext/figures";
+import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
+import { WaitedFor } from "@/components/ui-ext/waited-for";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import type { DuplicatePair, DuplicateSide } from "@/lib/duplicates";
-import { TONE_TEXT } from "@/lib/state-tone";
-import { cn } from "@/lib/utils";
 
 /**
  * One pair, side by side, and the manager's three answers (P12-8).
@@ -27,6 +28,20 @@ import { cn } from "@/lib/utils";
  * button and a submit. The third answer belongs to neither record, so it sits
  * under both.
  *
+ * **No answer is the brand button** (P13-G6, S12.8). "Keep this one" wore the
+ * brand gradient on both sides of every pair, so a desk of three pairs was six
+ * primary buttons, and the loudest thing on the screen was the same word twice,
+ * pointing two ways. The brand says "this is the one thing to press" and here
+ * there is no such thing until he has read both records. Keep this one is the
+ * filled secondary, Keep and share and Not the same company are outlined, and
+ * the choice is carried by the word on the button and the record it sits in —
+ * the confirmation that follows is where the one brand press of the act lives.
+ *
+ * Each record leads with its face and its holder's (DESIGN §1b): the company a
+ * rounded square and the rep round, both 24, the tint from their own ids, so
+ * Faisal is the same colour here as on the team tab and a manager sees whose
+ * floor each side is on before he reads a name.
+ *
  * Every answer confirms first. Two of them move a whole customer's history from
  * one floor to another and none of the three can be pressed twice — the flag is
  * answered once, for ever (`duplicate_flags_pair_idx`) — which is exactly the
@@ -40,23 +55,22 @@ export function DuplicateList({ rows }: { rows: DuplicateRow[] }) {
   const refresh = useCallback(() => router.refresh(), [router]);
 
   return (
-    <ul aria-label={t("duplicates.listLabel")} className="flex flex-col gap-3">
+    <ul aria-label={t("duplicates.listLabel")} className="flex flex-col gap-4">
       {rows.map((row) => (
-        <li key={row.id} className="card-face flex flex-col gap-3 p-3">
+        <li key={row.id} data-slot="duplicate-pair" className="card-face flex flex-col gap-4 p-3 md:p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {/* The evidence, and the reason this pair exists at all. The badge
+                  is amber while the pair is young and red once it has waited
+                  past the line — and the line under it says "late" in words,
+                  because a hue is never the only thing saying so (DESIGN §5). */}
               <StateBadge tone={row.waited.late ? "bad" : "wait"}>
                 {t("duplicates.sameNumber")}
               </StateBadge>
-              {/* The evidence, and the reason this pair exists at all. A number
-                  is always read left to right (rules/words.md). */}
+              {/* A number is always read left to right (rules/words.md). */}
               <Ref className="text-sm font-medium">{row.phone}</Ref>
             </span>
-            <span
-              className={cn("text-xs", row.waited.late ? TONE_TEXT.bad : "text-muted-foreground")}
-            >
-              {t("team.waitingDays", { count: row.waited.days })}
-            </span>
+            <WaitedFor waited={row.waited} />
           </div>
 
           {/* One column each from `sm` up; stacked below it, older first, which
@@ -110,14 +124,30 @@ function Side({
        */
       role="group"
       aria-label={side.name}
-      className="flex min-w-0 flex-col gap-2 rounded-lg bg-surface-2 p-3"
+      /*
+       * An edge on the card's own surface, not the inset fill: the answer under
+       * it is the filled secondary button, which is that fill, and a filled
+       * button on a panel of the same colour is a word with no button round it.
+       */
+      className="flex min-w-0 flex-col gap-3 rounded-xl border border-line p-3"
     >
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-medium">
-          <bdi>{side.name}</bdi>
+      <div className="flex min-w-0 flex-col gap-1">
+        <span className="flex min-w-0 items-start gap-2">
+          <Avatar id={side.id} name={side.name} kind="company" size="sm" />
+          {/* The name wraps: it is what the decision is about, and a pair of
+              names cut to their first words is two records nobody can tell
+              apart. */}
+          <span className="min-w-0 font-medium break-words">
+            <bdi>{side.name}</bdi>
+          </span>
         </span>
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-          <bdi>{side.repName}</bdi>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-2">
+            <Avatar id={side.repId} name={side.repName} size="sm" />
+            <span className="min-w-0 break-words">
+              <bdi>{side.repName}</bdi>
+            </span>
+          </span>
           {side.city ? (
             <>
               <span aria-hidden="true" className="text-faint">
@@ -129,7 +159,7 @@ function Side({
         </span>
       </div>
 
-      <dl className="flex flex-col gap-0.5 text-xs">
+      <dl className="flex flex-col gap-1 text-xs">
         <Fact label={t("duplicates.addedOn")}>
           <DayText day={side.addedOn} locale={locale} />
         </Fact>
@@ -142,28 +172,29 @@ function Side({
         </Fact>
       </dl>
 
-      {/* What would move if this record were not the one that continues.
-          Figures in a row rather than a sentence: the manager is comparing the
-          two sides, and a sentence per side has to be read twice to be compared
-          once. The words are the app's existing names for the four things
-          (D102) — a fifth name for a contact would be a fifth word for one
-          thing.
+      {/* What would move if this record were not the one that continues, in the
+          strip every drawer's figures stand in. The words are the app's
+          existing names for the four things (D102).
 
-          Two by two until the card is wide enough for four. A side is half a
+          Two by two until the card is wide enough for four: a side is half a
           card from `sm` up, so four columns is under 75px each and «جهات
-          الاتصال» — the app's own word, correct everywhere else — is cut in
-          half. A figure whose caption is an ellipsis is not a figure. */}
-      <div className="grid grid-cols-2 gap-x-2 gap-y-1 pt-0.5 text-center lg:grid-cols-4">
-        <Count value={side.has.contacts} label={t("common.contacts")} />
-        <Count value={side.has.projects} label={t("common.projects")} />
-        <Count value={side.has.quotations} label={t("common.quotations")} />
-        <Count value={side.has.dispatches} label={t("common.dispatches")} />
-      </div>
+          الاتصال» would stand on three lines. The label wraps rather than
+          truncating either way — a figure whose caption is an ellipsis is not
+          a figure. */}
+      <StandingStrip
+        className="sm:grid-cols-2 lg:grid-cols-4"
+        items={[
+          { label: t("common.contacts"), value: <Count value={side.has.contacts} /> },
+          { label: t("common.projects"), value: <Count value={side.has.projects} /> },
+          { label: t("common.quotations"), value: <Count value={side.has.quotations} /> },
+          { label: t("common.dispatches"), value: <Count value={side.has.dispatches} /> },
+        ]}
+      />
 
-      <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <ConfirmDialog
           trigger={
-            <Button variant="brand" size="sm">
+            <Button variant="secondary" size="sm">
               {t("duplicates.keepThis")}
             </Button>
           }
@@ -194,25 +225,18 @@ function Side({
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-baseline gap-x-1.5">
+    <div className="flex flex-wrap items-baseline gap-x-2">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0">{children}</dd>
     </div>
   );
 }
 
-/** One figure and what it counts, drawn the same on both sides of the pair. */
-function Count({ value, label }: { value: number; label: string }) {
+/** One figure, drawn the same on both sides of the pair. */
+function Count({ value }: { value: number }) {
   return (
-    <div className="flex min-w-0 flex-col">
-      <span dir="ltr" className="num text-sm font-medium tabular-nums">
-        {value}
-      </span>
-      {/* Wraps rather than truncates: the caption is what tells the manager
-          what the figure counts, and a second line costs nothing here. */}
-      <span className="text-[0.6875rem] leading-tight text-balance text-muted-foreground">
-        {label}
-      </span>
-    </div>
+    <span dir="ltr" className="num font-medium">
+      {value}
+    </span>
   );
 }
