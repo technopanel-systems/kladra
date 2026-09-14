@@ -1,0 +1,25 @@
+TITLE: Behind the Button
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/behind-the-button
+
+PROBLEM: A checkout button's spinner hides six separate steps, and skipping the server-side half of the work (trusting the client) turns a UI bug into a money bug.
+
+RULES:
+- Client-side validation exists for speed, not safety — inline errors and green checks should fire with zero network calls, because catching mistakes instantly is a frontend job.
+- The server must re-run every check the client already did, only stricter, and re-compute totals from its own catalog — never trust a price or total the client sent (video: "Never trust the client").
+- Wrap related writes (order, items, inventory, payment) in one database transaction so a single failed row rolls back everything — all of it or none of it.
+- When the response returns, repaint the UI with server truth (the real order ID the server generated), not a locally guessed value.
+- Optimistic UI belongs to cheap, reversible actions (a like, a favorite, a rename) that can repaint instantly and reconcile later. Money/irreversible actions are different — hold the spinner until the server actually confirms.
+
+DO / DON'T:
+- Do: validate on the client for speed and the server for trust, never only one.
+- Do: recompute prices/totals server-side from the source of truth.
+- Do: wrap multi-row writes in one transaction so any failure rolls back the whole thing.
+- Don't: trust any value the client sends, including price — a request is trivial to forge.
+- Don't: use optimistic UI on payments or other irreversible actions.
+
+VIDEO ADDS: Walks a literal 6-node request lifecycle diagram (validate → request → server → logic → write → respond) and highlights which node is "active" at each stage of the six steps named in the hook. Shows the actual request JSON payload (`{"items": 3, "total": 89.00}`) being intercepted client-side, then a server-side re-verification panel checking "schema + types", "token verified", and "total re-computed: $89.00 from the catalog, not the client" with green checkmarks. A transaction panel shows 4 SQL-like operations (INSERT orders, INSERT order_items, UPDATE inventory, INSERT payments) where the payments row is shown failing in red with "ROLLBACK ALL" called out — proving the all-or-nothing rule with a concrete failure case. A side-by-side contrasts optimistic UI (instant repaint, "cheap actions repaint now — money waits") against the payment flow which shows a spinner "processing payment..." through to "Order confirmed" with the real order ID (#4127) only appearing after server confirmation.
+
+KLADRA: This is the correctness backbone for every write Kladra makes with money attached: quotation totals, dispatch quantities, any pricing calculation. Kladra's CLAUDE.md already mandates "server actions for every write," which is exactly the "never trust the client" principle at the framework level — this pattern gives the reasoning for why that rule exists and where it must bite (recompute totals server-side, wrap multi-row writes in one transaction, never optimistically repaint a quotation total before the server confirms it). No conflict with any standing decision; this is pure backend discipline, invisible in the UI except that money-related actions should show a real pending state (spinner/disabled button) rather than repainting early — consistent with "disabled buttons" and "no number tickers."
+
+PRIORITY: high — Kladra is a CRM with quotations and dispatches where a client-trusted total would be a real financial bug, and this pattern states the exact server-side discipline (recompute, transaction, no optimism on money) that server actions must follow.

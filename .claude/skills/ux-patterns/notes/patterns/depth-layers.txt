@@ -1,0 +1,25 @@
+TITLE: Depth Layers
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/depth-layers
+
+PROBLEM: The same flat layout and palette can read as fully dimensional using just three CSS properties, without any redesign.
+
+RULES:
+- Layered shadows beat one flat drop shadow: stack a tight shadow (~2px), a mid spread (~12px), and a large ambient one (~32px) to mimic how light actually falls off (video shows exactly these three values as dot-badges: "•• 2px", "•• 12px", "••• 32px" per row).
+- Parallax scroll sells distance by moving layers at different speeds: background slowest, midground medium, foreground fastest — roughly 1x / 2.5x / 5x (video labels the three speeds directly: "1x", "2.5x", "5x").
+- Z-translation on hover reacts to the cursor: lift the element toward the viewer with `translateZ` plus a slight `scale(1.03)` and a soft glow (video shows the literal CSS: `transform: translateZ(20px) scale(1.03)`).
+- Depth also lives in border and shadow intensity, not just position — brightening the border on hover reinforces the lift.
+- Stack all three techniques (shadow, parallax, z-hover) together and the interface reads as fully dimensional while the layout and palette stay unchanged.
+
+DO / DON'T:
+- Do: stack multiple shadows at increasing blur/offset instead of one flat drop shadow.
+- Do: keep hover lifts subtle — a few pixels plus ~3% scale reads physical, not cartoonish.
+- Do: vary scroll speed per layer so background/mid/foreground imply real distance.
+- Don't: redesign layout or palette to fake depth when three properties already do it.
+- Don't: push parallax offsets or hover scale far enough to distract from content.
+
+VIDEO ADDS: Opens with a literal flat-vs-depth side-by-side of the identical 4-item nav list, labeled "FLAT" (red) and "DEPTH" (teal) even though "Same layout. Same colors." Shows three shadow-layer badges stacking on the same list (•• 2px → •• 12px → ••• 32px) as "Layer 1: Layered Shadows." Shows "Layer 2: Parallax Scroll" as three cropped panels scrolling past each other at visibly different rates with speed labels 1x/2.5x/5x pinned to each. Shows "Layer 3: Z-Translation on Hover" with the cursor hovering one row, that row visibly lifted/scaled/glowing while the others stay flat, plus the raw CSS transform string printed under the panel. Final combined view stacks all three labeled "Shadows · Parallax · Z-Translation" on a fleshed-out nav list with icons and subtitles.
+
+KLADRA: Applies narrowly — the layered-shadow technique is a cheap, safe upgrade for elevated surfaces Kladra already has (record drawers, dialogs, dropdown menus, cards) and pairs naturally with DESIGN.md's existing elevation tokens if any. Z-translation-on-hover overlaps with card-hover-anatomy's "lift with weight" rule (~8px, 200ms) — treat as the same idea, don't implement both independently. Parallax scroll has essentially no fit in a data-dense CRM (it is a marketing/storytelling device, not a list/dashboard device) — flag as not applicable rather than forcing it in. No conflict with standing decisions as long as hover-lift timing stays inside Kladra's 100ms hover budget (see card-hover-anatomy's same conflict note).
+
+PRIORITY: low — the layered-shadow idea is a fine, cheap elevation upgrade worth folding into DESIGN.md's shadow tokens, but two of the pattern's three techniques (parallax, z-hover) either don't fit a CRM or duplicate ground already covered by card-hover-anatomy.

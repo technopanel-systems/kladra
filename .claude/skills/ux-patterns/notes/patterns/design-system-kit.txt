@@ -1,0 +1,27 @@
+TITLE: Design System Kit
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/design-system-kit
+
+PROBLEM: Random hex values and eyeballed pixel gaps don't scale across a product — only a named-token system does.
+
+RULES:
+- Swap hardcoded hex for semantic tokens (`var(--brand)`, `var(--error)`) — intent survives every redesign, and a single rename updates the whole app (video shows raw `color: #7C3AED` replaced by `color: var(--brand)`, etc., with a green checkmark once tokenized).
+- Build a numbered color scale (100–900) so every shade is systematic, then map it to semantic names (brand, success, error) — video shows a 9-step primary scale (900→100) plus 4 semantic swatches (bg-primary, brand, success, error).
+- Define a fixed type scale with set sizes/weights (video lists six steps: 36px/700 text-4xl down to 12px/400 text-base) — same size/weight everywhere kills hierarchy.
+- Base spacing on a 4px scale: space-1=4px up to space-16=64px (video shows 6 steps: 4/8/12/16/24/32/48px labeled space-1 through space-12). Random gaps (7px, 23px, 11px) read as sloppy.
+- Standardize components as variants × sizes × states: Primary/Secondary/Ghost/Destructive buttons, Small/Medium/Large sizes, Default/Focus/Error/Disabled inputs (video shows exactly this button/input matrix plus a sample card with New/Active/Pending/Error status chips).
+- Match motion to intent and keep a duration scale: ease-out to enter, ease-in-out to move, ease-in to exit; 100ms micro-interactions (hover, toggle) up to 500ms complex transitions (video lists 100/200/300/400/500ms mapped to micro/small/medium/large/XL).
+
+DO / DON'T:
+- Do: store every value as a named token so color, type, spacing stay consistent app-wide.
+- Do: build numbered scales (color 100–900, spacing 4→64) so choices are systematic.
+- Do: tie easing and duration to the interaction's intent.
+- Don't: hardcode raw hex or pixel values inline.
+- Don't: pick spacing by eye.
+- Don't: give every text the same size and weight.
+
+VIDEO ADDS: Every rule is shown as a literal before/after code diff (raw hex crossed out in red, `var(--token)` confirmed in green with a checkmark badge) rather than just described. The color scale, type scale, spacing scale, component matrix, and motion-duration table are all rendered as actual labeled panels with real numbers (the exact px/ms values listed above come directly from these panels, not just the text). Closing frame is a literal "DESIGN SYSTEM" title card tying colors → typography → spacing → components → motion into one system.
+
+KLADRA: This is close to a direct spec for exactly what Kladra's DESIGN.md is supposed to be — CLAUDE.md already names DESIGN.md as "identity tokens, principles, component kit." Every numbered scale here (color 100-900, spacing 4px-based, type scale, 100-500ms motion durations, component variant/size/state matrix) is a checklist to verify DESIGN.md's existing tokens against, not a new decision — if DESIGN.md already has these, this pattern confirms it; if any are missing or ad hoc, this is the gap list. Directly reinforces "one setting for fourteen people" (a fixed scale is the opposite of an eyeballed one-off) and gives duration numbers consistent with (not duplicating) animation-timing.txt's Doherty-threshold numbers. CONFLICT: the video's own "04 — Components" panel shows a sample "Card Title" demo with a purple-to-pink gradient header banner — a third decorative gradient beyond Kladra's "exactly two gradients (the primary action and the logo mark)" cap. Take the scale/token/matrix ideas, not that card's gradient treatment.
+
+PRIORITY: high — this is effectively a completeness checklist for DESIGN.md's token system (color/type/spacing/component/motion scales), directly actionable and free of any conflict with Kladra's standing decisions.

@@ -1,0 +1,26 @@
+TITLE: Proximity Rule
+CATEGORY: Visual
+URL: https://designmotionhq.com/patterns/proximity-rule
+
+PROBLEM: A UI with elements spaced identically everywhere forces the eye to parse every item individually, because nothing in the layout tells it which things belong together.
+
+RULES:
+- Proximity is a Gestalt principle: elements placed close together read as one group, elements spaced apart read as separate — the eye infers relationships from distance alone, before it even reads labels. Sheet opens with a "chaos" grid of evenly spaced grey squares versus a "clear" layout where colored squares (purple/cyan/green) cluster into three visibly distinct groups.
+- Borders, boxes, and dividers are rarely needed — spacing alone can do the grouping. Sheet's grouped examples use zero dividers, only gaps.
+- The trick is contrast: make the gap within a group smaller than the gap between groups. Equal spacing everywhere flattens hierarchy so everything reads as one undifferentiated block. Sheet shows two clusters of colored blocks with an explicit 32px gap labeled between the clusters, tighter spacing within each.
+- In forms, tighten related fields (~12px) and open up section breaks (~40px) so sections like "Personal Info" and "Payment" visibly separate without a single line. Sheet's form frame labels the two gap values (12px, 40px) directly on the right edge of the field stack.
+- In toolbars and nav, group controls by function — navigate, actions, system — instead of laying every icon out in one evenly spaced row. Sheet compares "equally spaced" (all icons same gap) against "grouped by function" with labeled clusters (Navigate / Actions / System) and specific per-gap pixel values shown under the icons.
+- Same content, more clarity: a flat list of eight sidebar links becomes scannable the instant it's split into labeled groups. Sheet's before/after sidebar shows an ungrouped flat list versus one split into "Dashboard," "Management," and "Account" sections, each with a color-coded status dot.
+
+DO / DON'T:
+- Do: keep spacing within a group tighter than the spacing between groups.
+- Do: group form fields and nav items by function or meaning.
+- Do: let whitespace carry the grouping before reaching for borders or dividers.
+- Don't: space every element equally — it erases hierarchy and forces users to parse everything at once.
+- Don't: reach for boxes and dividers when a larger gap would communicate the same grouping.
+
+VIDEO ADDS: Exact pixel values for the gap contrast that the text only describes qualitatively — a 32px gap between grouped blocks, and a form example labeling 12px (within-group) against 40px (between-group) directly on the frame; a toolbar/nav frame showing specific per-icon gap values under three functional clusters (Navigate / Actions / System); and a complete rendered before/after dashboard sidebar (flat 8-link list vs three labeled, color-dotted sections: Dashboard, Management, Account) demonstrating the whole rule on a realistic nav component rather than abstract shapes.
+
+KLADRA: This is close to a universal layout rule for Kladra rather than a single-screen pattern — it applies to the main sidebar nav (grouping "Companies/Projects/Quotations/Dispatches" apart from account/settings items), to every form (record-drawer edit forms, request dialogs — tighten related fields like "first name / last name," open a real gap before the next logical section), to dashboard KPI-card clusters, and to the coordinator's queue if it groups items by status or urgency. The concrete 12px/40px-style contrast (tight within a group, wide between groups) is a good literal default to standardize on in DESIGN.md's spacing tokens. No conflict with standing decisions — proximity/spacing is orthogonal to drag-and-drop, bulk edit, saved views, density toggle, and comments; it's pure information-architecture via whitespace, which fits well with "no chart for decoration" restraint (it argues for fewer visual elements, not more).
+
+PRIORITY: high — this is a foundational, low-cost spacing rule that should govern the sidebar nav, every form and drawer, and dashboard card clusters across Kladra; worth codifying as a spacing-token pair in DESIGN.md during the re-audit rather than treating as a one-off fix.

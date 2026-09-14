@@ -1,0 +1,26 @@
+TITLE: Context Menu
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/context-menu
+
+PROBLEM: A right-click menu that doesn't measure its space, group its actions, or support touch reads as a bolted-on list rather than a system.
+
+RULES:
+- Measure before opening: anchor to the cursor, measure available space, flip on collision — video annotates a real example with "anchor: cursor · measure → place · collision: flip" and viewport/cursor coordinates (cursor at 930,652 in a 1920×1080 viewport) where the menu flips upward/leftward near an edge.
+- Group by intent with dividers, destructive action isolated at the bottom in red: video counts "12 flat actions" collapsing into "3 groups by intent" with a PRIMARY badge on the top group and DELETE styled red at the bottom.
+- Submenus need a "safe triangle": video draws it explicitly — vertex at the cursor tip, base at the submenu edge — comparing a SAFE TRIANGLE (submenu survives a diagonal cursor move) against NO TRIANGLE (submenu closes instantly on drift).
+- Power users never aim: arrows walk the list, a letter key jumps to the matching item (press "D" → lands on Duplicate), Esc closes one level only, not the whole menu.
+- Mobile has no right-click: a long press (500ms) opens the identical action set as a bottom sheet — "two triggers, same actions."
+
+DO / DON'T:
+- Do: measure available space and flip the menu so it always opens inside the viewport.
+- Do: group actions by intent with dividers, and set the destructive action apart at the bottom in red.
+- Do: add a safe triangle from cursor to submenu so it survives a diagonal move.
+- Don't: close a submenu the moment the cursor leaves the row, ignoring the diagonal path toward it.
+- Don't: dump a dozen ungrouped actions into one flat, unscannable list.
+- Don't: ship right-click only; wire a long press to the same actions on mobile.
+
+VIDEO ADDS: the literal 12-actions-to-3-groups count, the labeled safe-triangle geometry (vertex/base), the exact viewport/cursor coordinates for the flip demo, and the 500ms long-press figure for the mobile trigger — none of which appear as numbers in the static text.
+
+KLADRA: row-level quick actions on companies/projects/quotations/dispatches lists and boards (open, rename, archive), reachable by long-press on the phone layout (1366/375 breakpoints already in the acceptance matrix). Grouping-by-intent and destructive-in-red map directly onto Kladra's existing "every state has a word, never colour alone" and state-word conventions. CONFLICT: the source page's own related-patterns rail promotes "Bulk Actions" (a multi-select flow) — that conflicts with Kladra's "no bulk edit" rule; adopt the single-row context menu only, not any bulk-select extension of it.
+
+PRIORITY: medium — useful if row-level quick actions are wanted on lists/boards, but a right-click/long-press menu is a nice-to-have alongside the existing record drawer, not a screen Kladra is currently missing.

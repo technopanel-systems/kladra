@@ -1,0 +1,29 @@
+TITLE: Undo UX
+CATEGORY: Feedback
+URL: https://designmotionhq.com/patterns/undo-ux
+
+PROBLEM: Confirmation dialogs punish every user for the rare mistake of one, while undo lets the action happen instantly and only asks for a decision if someone actually regrets it.
+
+RULES:
+- Undo beats confirmation for reversible actions. Sheet directly compares a "Confirm" flow (delete a file: click delete → modal → click confirm, labeled "3 clicks · every time") against an "Undo" flow (click delete → toast with Undo, labeled "1 click · regret optional") — captioned "punish the 1%, or protect them."
+- Soft delete means removing the item from the screen, not from the database. Sheet shows two views of the same action: "what the user sees" (file just disappears from a list) vs. "what the database sees" (row still exists with a timestamp, e.g. `2026-03-03T12:22Z`, moving through a visible status bar: Deleted → Trash → Purged). Keep deleted items recoverable in trash for 30 days before permanent purge — captioned "deletion is a state, not an event."
+- Reserve heavy friction (confirmation, typed confirmation) only for genuinely irreversible actions, and scale the friction to the cost. Sheet shows a GitHub-style "Delete repository" dialog requiring the user to type the exact repo name (e.g. `acme/production-api`) before the red "I understand, delete this repository" button enables, positioned on a friction scale: Undo → Confirm → Type to confirm, captioned "match friction to the cost."
+- A single undo is a toast; a stack is a time machine. Sheet shows a design-tool-style undo stack (Cmd+Z) with a visible history panel listing discrete steps ("Draw line," "Add ellipse," "Move rectangle," "Add rectangle," "Create frame") and a counter incrementing (x0 → x2 → x3) as Cmd+Z is pressed repeatedly, walking back through steps in order — captioned "Figma remembers. Your app can too."
+- Delayed send turns a network/processing delay into a deliberate safety feature: Gmail-style compose holds the message for a visible grace period (sheet shows a 10-second window) with a "Sending…" progress bar and an inline Undo button before the send actually fires — captioned "the delay is the feature."
+- Show the countdown visibly wherever an undo window is time-limited (a draining bar/ring on the toast or send-progress bar) so the user knows exactly how much time is left.
+
+DO / DON'T:
+- Do: execute destructive-but-reversible actions immediately, then offer a time-limited undo with a visible countdown.
+- Do: soft-delete with a recovery window (30 days in trash shown here) before permanent purge.
+- Do: reserve typed/heavy confirmation for genuinely irreversible actions, and scale friction to the actual cost of the mistake.
+- Do: build a real undo stack (not just single-level) for tools where users take many sequential actions.
+- Do: use delayed send/commit as a built-in "catch my mistake" window for outbound actions like sending.
+- Don't: block every destructive action behind an "Are you sure?" modal — it punishes everyone for the rare mistake.
+- Don't: hard-delete from the database the instant a user clicks.
+- Don't: make the undo window so short users can't realistically react.
+
+VIDEO ADDS: The literal click-count comparison ("3 clicks · every time" confirm vs "1 click · regret optional" undo) on identical file-delete UI, the dual view of soft delete (user-facing disappearance vs. database row with an ISO timestamp moving through a Deleted → Trash → Purged status bar), the exact GitHub-style type-to-confirm dialog with the real repo-name string to match and the friction-scale graphic (Undo / Confirm / Type to confirm), the live Cmd+Z stack demo with a named step history and an incrementing undo counter (x0/x2/x3), and the Gmail-style delayed-send mock showing a live "Sending…" progress bar with an inline Undo button during a 10-second window. None of the exact timestamps, the 30-day trash window, the 10-second send delay, or the friction-scale graphic are stated in the page text.
+
+KLADRA: Directly applies to deletions and destructive edits across companies/projects/quotations/dispatches — instead of a confirm modal on every delete, execute immediately and offer a toast-based undo (consistent with Kladra's existing toast pattern from toast-notifications.txt). Soft-delete-with-a-recovery-window fits Kladra's "no production data — migrations clear" ethos poorly as a permanent policy but is still relevant for day-to-day record deletion (e.g. archiving a lead or project) versus hard delete. The type-to-confirm pattern is relevant only for the rare truly irreversible action in Kladra (if any exists — most CRM deletes are recoverable) so should be reserved narrowly. The undo-stack (Cmd+Z) pattern is likely overkill for Kladra's CRUD-style screens (no canvas/drawing tool) — single-level undo-via-toast is the realistic fit. Delayed send is directly relevant if Kladra ever sends outbound messages (e.g. a quotation or notification to a client) — a few-second grace window with an Undo button before the send actually fires would catch typos. CONFLICT: none of the core rules conflict with drag-and-drop/bulk-edit/saved-views/comments bans. However "no refresh buttons" and "no number tickers or looping motion" are unrelated to this pattern's countdown bar, which is a one-shot draining timer (not a looping animation) so it does not read as a ticker — worth a brief gut-check when implementing to keep the countdown a single linear drain, not a pulsing/looping effect, to stay consistent with the "skeletons do not pulse" spirit.
+
+PRIORITY: high — every destructive action in a CRM (deleting a company, project, quotation, dispatch, or lead) is a candidate for this pattern, and it directly replaces a heavier "Are you sure?" modal pattern that a small team would find annoying on repeat daily use.

@@ -1,0 +1,24 @@
+TITLE: Golden Ratio
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/golden-ratio
+
+PROBLEM: Two layouts with the same content can look cheap or expensive purely based on whether their spacing, type, and panel proportions share one consistent ratio — 1.618.
+
+RULES:
+- Build a spacing scale by multiplying a base unit by 1.618: 8 → 13 → 21 → 34 → 55 (px). Every gap relates to the next by the same factor, so the UI feels deliberate rather than arbitrary.
+- Split the screen at the golden ratio — roughly 62% / 38% — giving primary content the larger panel and secondary actions/nav the smaller one (video: a dashboard content area at 61.8% next to a sidebar at 38.2%).
+- Step the type scale by the same factor: 16px body → 26px subheading → 42px heading → 68px display (video shows exactly these four sizes stacked, each labeled with its role).
+- Not just theory — Stripe, Linear, and Airbnb are named in the video as using the same proportional system.
+
+DO / DON'T:
+- Do: multiply one base unit by 1.618 to derive both spacing and type scales.
+- Do: split layouts at 62%/38%, handing the larger share to primary content.
+- Do: round results to clean pixel values your grid can actually use.
+- Don't: pick gaps and font sizes arbitrarily.
+- Don't: apply the ratio so rigidly it fights real content or an existing 8px grid.
+
+VIDEO ADDS: Opens with a literal "BEFORE / AFTER" phone mockup — an unstructured stack of grey bars vs a golden-ratio-proportioned dashboard layout with a visible spiral overlay. States "Your brain is literally wired to find it beautiful" next to the 1.618 figure and three real-world references (seashells, galaxies, the Mona Lisa). The layout-split demo shows the exact 61.8%/38.2% numbers stamped directly on a two-panel dashboard mockup. The spacing-scale demo renders the 8/13/21/34/55 values as actual bar-lengths with multiplier labels (×1.618) between each step. Closing credibility line names "Stripe · Linear · Airbnb" as practitioners.
+
+KLADRA: The spacing/type-scale idea overlaps with design-system-kit.txt and design-tokens.txt (both already establish a spacing/type scale) — this pattern argues for a specific multiplier (1.618) rather than the more common 4px-linear or a modular 1.25/1.333 type scale; treat as an alternative scale-generation method, not an additional requirement layered on top of the other two token patterns (pick one scale system, don't stack three). The 62%/38% panel-split idea is the most directly novel and usable piece — applicable to Kladra's list+drawer layouts (a list at roughly 60% width, a detail panel at roughly 40%) or a dashboard's primary-chart-plus-sidebar split. No conflict with any standing decision, though "one setting for fourteen people" argues for picking ONE scale system project-wide rather than golden-ratio in some places and 4px-linear in others — flag this as a §4 default decision to make once, not per-screen.
+
+PRIORITY: low — the panel-split idea (62/38) is a nice, usable layout ratio, but the spacing/type-scale rule duplicates ground already covered (and arguably better specified with concrete numbers) by design-system-kit.txt and design-tokens.txt; avoid running two competing scale systems.

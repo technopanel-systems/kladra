@@ -1,0 +1,63 @@
+INDEX — PART A (38 patterns) — sorted high priority first
+
+HIGH
+accordion-disclosure · high · height:auto can't transition — use grid-template-rows or measured scrollHeight, and drive the chevron off the same curve as the panel.
+animation-timing · high · entrances 200-300ms ease-out, exits ~40% faster, tap feedback under 100ms — gives Kladra's motion-timing rule real numbers.
+behind-the-button · high · client validation is speed, server validation is truth — recompute price server-side, wrap related writes in one transaction, no optimistic UI on money.
+charts-that-lie · high · zero-baseline axis, chart type matched to the question, honest aspect ratio, title = the takeaway — the craft checklist behind Kladra's "no decorative chart" rule.
+color-accessibility · high · 4.5:1 / 3:1 / 7:1 contrast targets plus a second non-color signal on every state — the numeric backing for "never colour alone."
+command-palette · high · fuzzy match, grouped results, prefilled recents, full keyboard control — a near-complete, conflict-free spec for Kladra's planned search palette.
+dark-mode · high · near-black base (#121212) with layered surfaces, desaturated accents, off-white text tiers — not inverted light mode; a foundational check for a dark-by-default app.
+data-table · high · tri-state sort, tabular right-aligned numbers, sticky header/frozen column — adopt directly, but reject the density-toggle and bulk-row-select rules as written.
+date-pickers · high · presets first (1 click vs 6), two months side by side, full keyboard, full-screen sheet on mobile; RTL/Hijri is the one open question.
+design-system-kit · high · the completeness checklist for a real token system — color/type/spacing/component/motion scales, named, not eyeballed.
+design-tokens · high · three-layer token architecture (primitive → semantic → component) so a theme or locale change is a token swap, not a hunt-and-replace.
+destructive-actions · high · danger needs its own language — verb-labeled buttons, a small red budget, placement away from the safe default, a cancellable grace period.
+disabled-buttons · high · a disabled button must say why, or better, stay enabled and validate on submit — disabling alone breaks keyboard access and tooltips.
+doherty-threshold · high · respond within ~400ms or the user mentally disconnects — the reason optimistic UI and instant feedback exist.
+dropdown-design · high · 48px clickable trigger, flip on edge, full keyboard, search past ~10 items — used on nearly every form and filter Kladra has.
+empty-states · high · four kinds of empty (first run / no results / error / filtered-out), each its own copy and one primary CTA, never a bare "No data."
+error-states · high · match error type and severity to surface (inline/toast/modal), always give an exit, prevent most errors with live validation.
+file-upload-ux · high · five states — drag feedback, honest percent+time-left, inline retry without restart, real thumbnail preview, independent per-file queue — replace a bare file input.
+filter-chips · high · three distinct chip states, instant result count, one clear-all, single scrolling row on mobile — especially important given Kladra's "no saved views" ban.
+focus-states · high · never remove the ring without replacing it — :focus-visible, DOM order = visual order, trap focus in dialogs/drawers.
+form-field-states · high · a field has six real states (default/focus/error/success/disabled/loading), most apps design two.
+form-validation-timing · high · validate on blur first, live after the first error — never every keystroke, never only on submit.
+grid-system · high · one 12-column grid, one fixed gutter (24px reads "balanced," the single choice that fits Kladra's no-density-toggle rule), verified per breakpoint.
+
+MEDIUM
+autosave-ux · medium · debounce ~800ms, an honest state-machine status pill, an offline queue, warn before an unsaved close.
+border-radius · medium · nested corners need concentric radii (outer = inner + padding) or the nesting reads as "off."
+bottom-sheets · medium · mobile actions belong within thumb reach in a bottom sheet with drag-to-dismiss and snap points, not a top-anchored menu.
+card-hover-anatomy · medium · four hover signals together (lift, shadow, border/accent, content reveal) at a consistent short duration make a card feel alive.
+context-menu · medium · measure and flip to fit the viewport, group actions with dividers, safe-triangle for submenus, long-press equivalent on mobile.
+css-has-selector · medium · :has() replaces a lot of derived React state (checked/invalid/open/child-count styling) — an implementation win, not a UX change.
+easing-curves · medium · linear only for continuous motion, ease-out for entrances, spring reserved narrowly — don't take "spring always wins" literally for a utilitarian CRM.
+gestalt-laws · medium · proximity, similarity, continuity, closure, figure-ground as a free audit lens on layouts already built.
+gradient-design · medium · a gradient stays premium within ~60° of hue travel and one lightness direction, but most of the pattern (mesh, ambient glow, gradient text) should be declined outright under Kladra's two-gradient cap — useful only as craft rules for the two gradients already allowed.
+
+LOW
+bulk-actions · low · bulk selection needs a real state system, but bulk edit itself is banned in Kladra — only the undo-instead-of-confirm idea survives.
+color-picker-ux · low · OKLCH, memory, live contrast, alpha-on-checkerboard — moot since Kladra's colors are fixed design tokens, not user-chosen.
+de-ai-landing-hero · low · five AI-landing-page tells and their fixes — Kladra has no public marketing hero; only "show the real thing, not decoration" transfers.
+depth-layers · low · layered shadows for elevation — a cheap DESIGN.md token upgrade; parallax and z-hover don't fit a CRM or duplicate card-hover-anatomy.
+drag-and-drop · low · pickup/drop-zone/snap/undo feedback for drag interactions — directly banned as an interaction model in Kladra; only the undo-toast idea carries over.
+golden-ratio · low · proportion as a gut-check for spacing/type scale — Kladra's screens are mostly single-pane and already on an 8px scale, so little changes.
+
+CROSS-CUTTING PRINCIPLES ACROSS THESE 38 PATTERNS
+
+1. Every state needs a word, not just a color or a position shift. This recurs directly in color-accessibility, filter-chips, form-field-states, data-table, disabled-buttons, dropdown-design, and focus-states — it is the numeric/behavioral backing for a rule Kladra has already adopted, not a new idea.
+
+2. Feedback must be instant (~400ms, doherty-threshold) and honest, never faked. Autosave-ux, file-upload-ux, error-states, behind-the-button, and filter-chips all independently arrive at the same rule: show real percentages/counts/status, update them on the same frame as the triggering action, and never let a status indicator claim success that didn't happen.
+
+3. Motion needs both a duration and a curve, chosen on purpose and reused everywhere. Animation-timing, easing-curves, card-hover-anatomy, and accordion-disclosure each show that the same distance/duration reads completely differently depending on the easing function — Kladra's existing 100ms/150-250ms rules need a matching curve decision (ease-out for entrances, spring reserved for rare emphasis) recorded once, not re-guessed per component.
+
+4. Every dead end needs an exit. Error-states, empty-states, destructive-actions (a cancellable grace period over a confirm modal), drag-and-drop's undo toast, and file-upload's inline retry all reject the pattern of a terminal failure state with no way forward — retry, undo, or a clear next action is mandatory, not optional.
+
+5. Never trust the client for anything that matters, and never let the client fake success. Behind-the-button, autosave-ux (offline queue, conflict handling), and form-validation-timing all converge on: validate on the client for speed, but the server (or explicit confirmation) is the only source of truth, especially for money and shared records.
+
+6. "It's a system, not a control" is the recurring reframe. Data-table, command-palette, error-states, context-menu, empty-states, dropdown-design, destructive-actions, and filter-chips are all explicitly framed by the source as a small system of states/behaviors rather than one component — the practical implication for Kladra is to build each of these once as a shared, fully-specified component rather than re-deciding sort/validation/error-surface/empty-copy per screen.
+
+7. Foundational token work (color, spacing, motion, radius, gradients) pays off once at the DESIGN.md level. Design-tokens, design-system-kit, dark-mode, border-radius, grid-system, gradient-design, golden-ratio, and depth-layers are all really the same instruction in different clothes: name the scale, apply it everywhere, and stop re-deciding pixel/hue/duration values screen by screen.
+
+8. A recurring minority of patterns collide directly with Kladra's standing bans — worth one consolidated conflict review rather than resolving piecemeal: drag-and-drop (banned outright, only its undo-toast idea survives), bulk-actions (bulk edit banned, only undo-over-confirm survives), data-table's density toggle (banned, sort/alignment/freeze survive), filter-chips/date-pickers brushing against "no saved views" (fixed quick-ranges and chip filters are not user-saved views — state that distinction if raised), gradient-design's mesh/ambient-glow/gradient-text uses brushing the two-gradient cap (only the hue/direction/contrast craft rules for the two allowed gradients survive), and doherty-threshold's own looping-spinner and percent-ticker demo clips brushing "no number tickers or looping motion" (the underlying visible-feedback-under-400ms idea survives in static/worded form). None of these need the underlying pattern rejected wholesale — each has a non-conflicting subset worth keeping, as noted per-file above.

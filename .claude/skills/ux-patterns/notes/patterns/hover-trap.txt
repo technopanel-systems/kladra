@@ -1,0 +1,30 @@
+TITLE: Hover Trap
+CATEGORY: Interaction
+URL: https://designmotionhq.com/patterns/hover-trap
+
+PROBLEM: Hover-revealed actions work fine with a mouse but on touch the first tap only fakes a sticky hover, so a primary action hidden behind hover can become unreachable or take two taps to trigger.
+
+RULES:
+- On touch, the browser fakes hover: the first tap becomes a "sticky hover" that freezes the revealed actions in place until the user taps elsewhere. Sheet shows a stuck sticky-hover state lasting 1.1s in one clip and 5.5s in another before it clears ("nobody removes it" / state reads "trusted" vs stuck) — i.e. duration is unpredictable and can strand the user.
+- One tap on touch carries two meanings (hover-in and click) — captioned "one tap, two meanings."
+- Never put a primary action only behind hover; hover may reveal secondary/extra actions only, never something otherwise unreachable — "hover reveals extras, never the primary action."
+- Detect capability, not device: gate hover styles with `@media (hover: hover)` rather than user-agent sniffing, so a tablet or laptop with a mouse still gets full hover treatment. Sheet shows the exact CSS:
+  `@media (hover: hover) { .card:hover .actions { opacity: 1; } }`
+- Pair with `@media (pointer: coarse)` to grow controls when the pointer is a thumb, e.g. `.icon-btn { padding: 12px; }` shown in the sheet — grows the tap target without growing the visible icon.
+- Give hover-only actions a real touch-reachable home instead of stranding them: (1) in the card (always there, one discovery cost), (2) behind a swipe (one gesture, hidden until swiped), (3) in a bottom sheet (see all options, no swipe needed). Sheet frames these three side by side, each captioned "extras — compare, quick view … always/never visible."
+- Tap target sizing: pad the hit box, not the icon. Sheet compares 20px hit area (fails — "misses the thumb," "failed design review") against 44px hit area (passes — "passed design review"), referencing Apple HIG 44pt and Material 48dp as the baseline while the visible glyph stays ~20px.
+- Capability matrix shown for laptop+mouse / phone / tablet+mouse: hover:hover true/false and pointer:fine/coarse true/false — laptop+mouse = hover yes/pointer fine; phone = hover no/pointer coarse; tablet+mouse = hover yes/pointer fine — driving the same "ask the pointer, not the device" rule.
+
+DO / DON'T:
+- Do: reveal only secondary/extra actions on hover; keep every primary action reachable by tap.
+- Do: gate hover effects behind `@media (hover: hover)` so pointer capability decides, not device type.
+- Do: pad tap targets to 44px while keeping the visible icon around 20px.
+- Don't: hide primary actions behind a hover state touch users can never trigger.
+- Don't: detect touch by sniffing the user agent instead of querying the pointer.
+- Don't: size the tap target to the 20px icon and leave the thumb missing it.
+
+VIDEO ADDS: The exact CSS media queries (`hover: hover`, `pointer: coarse`, the 12px icon-button padding), the capability matrix per device (laptop+mouse, phone, tablet+mouse), the 20px-vs-44px hit-area comparison with Apple HIG 44pt / Material 48dp cited, the three concrete "homes" for hover-only actions (in-card, swipe, bottom sheet) as three rendered card layouts, and a live stuck-sticky-hover timer (1.1s vs 5.5s) showing how unpredictable the fake-hover duration is on a real touch device — none of this is spelled out with numbers in the text.
+
+KLADRA: Applies to companies/projects/quotations/dispatches list rows and board cards where row-hover currently reveals action icons (edit, open, compare) — on the phone layout (375px, reps in the field) these must not rely on hover alone. Any hover-only affordance needs a touch home: keep it always-visible in the card (simplest, matches "no swipe actions" standing decision below), never behind swipe. Also applies to the coordinator's queue rows and record-drawer row actions. Use `@media (hover: hover)` + `@media (pointer: coarse)` in Tailwind via arbitrary variants, and bump icon-button hit areas to 44px (matches existing "every state has a word" ethos of not relying on a mouse-only affordance). CONFLICT: the pattern's "behind a swipe" home is a swipe action, which conflicts with Kladra's standing "no drag-and-drop" adjacent decision if swipe-to-reveal is read as a form of gesture-only interaction not covered by written CLAUDE.md rules — swipe actions are not explicitly banned but are not part of Kladra's toolkit either; the safer home for Kladra is "in the card" (always visible) or a menu, not swipe or a bottom sheet (no bottom-sheet pattern established).
+
+PRIORITY: high — every list/board row in Kladra already uses hover-revealed row actions, and Kladra explicitly must work on the phone (375px) for reps in the field, so this is a real, current bug risk not a hypothetical.

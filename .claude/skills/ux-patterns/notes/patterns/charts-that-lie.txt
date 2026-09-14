@@ -1,0 +1,27 @@
+TITLE: Charts That Lie
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/charts-that-lie
+
+PROBLEM: The same underlying data can tell opposite stories depending purely on how the chart is drawn — axis baseline, chart type, aspect ratio, and color choice all bias the reading.
+
+RULES:
+- Start every bar chart's y-axis at zero, no exceptions. Truncating the baseline turns a real +4% change into a visual "+400%"-looking explosion — the single most common way charts mislead (video: two identical 47%-vs-48% bars, one truncated axis reading "Landslide?", one zero-based reading "or a tie").
+- Match chart type to the question: bars compare values, lines show change over time, pie charts fall apart past ~5 slices. The question should pick the form, not taste.
+- Aspect ratio rewrites the trend — the same rising series looks flat when squished ("Flat?") or like a spike when stretched ("Spike?"); balance it so the average slope sits near 45° to read honestly.
+- Maximize the data-ink ratio: strip gridlines, drop shadows, 3D skew, boxed legends; label the line directly. Video shows a literal "data-ink" meter jumping from 45% to 84% after chartjunk removal.
+- Color is encoding, not decoration — use one hero/accent color to spotlight the series that matters; choose categorical, sequential, or diverging palettes to match the data type (three example swatch scales shown).
+- Title the chart with the takeaway, not the metric: "Revenue flat since March" beats "Quarterly revenue."
+
+DO / DON'T:
+- Do: start every bar chart's y-axis at zero.
+- Do: pick chart type from the question being answered.
+- Do: spotlight the one series that matters with a single accent color.
+- Don't: truncate or crop an axis to exaggerate small differences.
+- Don't: add gridlines, shadows, or 3D effects that encode no data.
+- Don't: use a pie chart with more than five slices.
+
+VIDEO ADDS: Directly overlays the same 104-vs-108 bar pair, first captioned "This chart is lying" (implied truncated axis), then explicitly shows a 47%/48% truncated-axis version ("Landslide? Or a tie") next to the zero-based honest version with the rule "Bar charts start at zero. No exceptions." Shows three chart-type thumbnails with pass/fail badges: bar "Compare values ✓", line "Change over time ✓", pie "Breaks past 5 slices ✗". Shows the exact three palette rows used (Categorical, Sequential, Diverging) as swatch strips. Aspect-ratio demo runs the identical line series through three frame ratios labeled "Flat?", "Spike?", "Banking to 45°" with a dotted 45° reference line on the last. Final card shows the finished, titled chart: "Revenue flat since March" over a chart with one bar in accent teal and the rest muted grey.
+
+KLADRA: Lands squarely on Kladra's own rule, P13: "no chart for decoration: a bar, a pie or a ring only where it answers a question a manager asks." This pattern is the execution discipline behind that rule for Kladra's dashboards and reports (Abdulrahman's manager view, the report builder, metrics screens) — zero-based bars, chart-type-matches-question, and title-as-takeaway should be checked against every chart Kladra ships. The one-hero-color rule also reinforces "no chart for decoration": if a chart needs more than one accent color to make its point, it's probably decorating rather than answering a question. No conflict with any standing decision — pure chart-honesty discipline. Diverging/sequential palette needs to stay inside Kladra's dark-mode-by-default, WCAG-contrast rules (see color-accessibility.txt).
+
+PRIORITY: high — Kladra already has an explicit "no chart for decoration" rule (P13) and a metrics/report builder screen; this pattern is the concrete checklist for not shipping a misleading or decorative chart there.

@@ -1,0 +1,66 @@
+INDEX — PART B (38 patterns)
+
+## HIGH
+
+hover-trap · high · Hover reveals extras only, never a primary action; gate with `hover:hover`/`pointer:coarse` and pad touch targets to 44px — Kladra's list-row hover actions need a touch-safe home for the phone layout.
+inline-editing · high · Editable text needs a visible affordance, zero layout shift on edit, and one consistent save rule (blur/enter) — core to every editable field in Kladra's records.
+loading-states-system · high · Pick the loading indicator from what's known about the wait (spinner/skeleton/progress bar/optimistic/none), not by default — a five-way decision tree to apply across every Kladra screen.
+microcopy · high · Word choice alone changes usability; write labels/errors/empty-states in plain, human language, not system-speak — touches every screen in both locales.
+modal-hierarchy · high · Match overlay weight to action weight (popover < sheet/drawer < modal); reserve full modals for truly blocking, high-stakes actions.
+navigation-patterns · high · Pick nav shape by platform and hierarchy depth, not taste; hiding primary nav behind a hamburger measurably kills engagement.
+notification-system · high · Route each event to the surface matching its severity (inline/toast/badge/blocking) — never make every event equally loud, or users tune all of them out.
+optimistic-ui · high · Update the UI instantly for reversible, near-certain actions and reconcile after the server confirms; keep quotations/dispatches honest with a clear rollback boundary.
+pagination · high · Cursor-based paging (not offset) plus URL-persisted page state and scroll restoration prevents duplicate/missing rows when the underlying list changes mid-browse.
+perfect-card · high · Padding, type hierarchy via weight/opacity, layered shadow, and a deliberate hover state are the four decisions that separate a "premium" card from a "free" one — audit every card surface against this.
+proximity-rule · high · Related elements need visibly tighter spacing than unrelated ones, or the eye has to parse every item individually — codify as a spacing-token pair, not a one-off fix.
+reverse-engineered-linear · high · Density, flat surfaces over shadows, one accent color, and visible keyboard shortcuts are what make an interface feel "expensive" without decoration — near-direct style reference for Kladra's list/queue surfaces.
+search-experience-system · high · Search is five coordinated parts (input, live results, ranking, zero-state, recovery) not one box — Kladra's search palette needs all five, not just the input.
+stepper-wizard · high · Split long multi-field forms into meaningfully grouped steps with per-step validation and state persistence, so a rep never loses a half-entered quotation on Back or refresh.
+tabs-system · high · Tabs must solve indicator motion, overflow, keyboard nav, mobile collapse, and content transition together — concrete timing numbers are directly implementable.
+toast-notifications · high · Tiered duration (short/long/until-acknowledged), a damped stacking spring, and icon+border (never colour alone) are the numbers Kladra's toast system currently lacks.
+undo-ux · high · Let the destructive action happen instantly with a brief undo window, instead of a blocking "Are you sure?" modal on every delete — less friction for daily use.
+visual-hierarchy · high · Stack size, colour, contrast, whitespace and weight toward one focal point per screen; one-accent-color is the most auditable rule during the re-audit.
+
+## MEDIUM
+
+icon-design-rules · medium · Icons are judged optically not mathematically — same visual weight, not identical pixel math; mainly an audit risk for Kladra's non-library icons (logo, custom status glyphs).
+input-masking · medium · Format digits live without breaking caret position or validating before the field is complete — narrow surface (phone fields) but easy to get wrong.
+password-field-ux · medium · A live strength meter plus checklist beats a static rule list validated only after submit.
+peak-end-rule · medium · Users remember a flow by its most intense moment and its ending, not the average — invest in the final screen of quotation/dispatch/lead flows; tone down the pattern's confetti-style "delight" to fit Kladra's restraint.
+serial-position · medium · People recall the first and last items of a list far better than the middle — a lens for ordering nav, onboarding, and wizard steps, not a component to build.
+settings-system · medium · Group settings by task, not schema; instant-apply for low-stakes fields, explicit save for identity fields, and quarantine destructive actions behind a divider and confirmation.
+shadow-elevation · medium · Shadow should encode hierarchy (a layered recipe: contact + mid + optional glow), not be one flat value copy-pasted everywhere — reusable for drawers/dialogs/dropdowns.
+skeleton-loading · medium · Content-aware skeleton shapes and RTL-aware shimmer direction are useful; the core animated-shimmer recommendation is blocked by Kladra's static-skeleton rule.
+toggle-anatomy · medium · A toggle needs animated movement, keyboard/screen-reader support, and optimistic pending state — secondary control, but the optimistic pattern reapplies elsewhere.
+tooltip-design · medium · A pre-show delay (~300ms), viewport-aware flipping, and multiple dismiss routes turn a tooltip from annoying to helpful — standardize once across icon buttons.
+von-restorff · medium · Isolate exactly one element per view (the primary CTA, a genuinely urgent record) so it's noticed and chosen — already implicit in Kladra's two-gradient/one-accent rule; don't let it become a promotional badge.
+
+## LOW
+
+landing-page-skeleton · low · Five proven marketing-page sections in the right order — Kladra has no landing page, so only general copy discipline carries over.
+live-cursors · low · Identity-color-hashed multiplayer cursors with reconciled (not raw) position updates — no multiplayer canvas in Kladra to apply this to.
+otp-input · low · One shared string across six boxes (not six independent inputs) plus a disabled, countdown-gated resend — no OTP flow in Kladra today, but the countdown-resend idea reapplies to any retry action.
+range-sliders · low · A thick filled track, a large thumb hit area, and a value tooltip that follows the drag make a slider usable — no slider surface exists in Kladra yet.
+scroll-driven-animations · low · Native CSS scroll-linked animation replaces JS scroll listeners — Kladra is data-dense, not scroll-driven; risks reading as decoration if used cosmetically.
+star-rating · low · Hover preview kept separate from the committed value, and honest (non-rounded) fractional-average rendering — no review/rating surface in Kladra's domain.
+swipe-actions · low · Swipe needs real physics, direction semantics, and an undo safety net to avoid becoming a data-loss bug — not actionable unless the founder decides to introduce gesture-based row actions.
+z-index-mastery · low · Z-index only matters once there's a positioning/stacking context; use `isolation: isolate` and DevTools Layers instead of escalating numbers — implementation hygiene, not a UI decision.
+zeigarnik-effect · low · A visible, meaningful gap (not 100% completion) keeps users returning — narrow use cases in Kladra, and the tempting animated-completion-meter execution conflicts with "no looping motion."
+
+## CROSS-CUTTING PRINCIPLES ACROSS THIS BATCH
+
+1. Kladra's existing motion budget (100ms hover/menus, 150–250ms dialogs/drawers) held up as the check for nearly every motion-bearing pattern here (perfect-card's hover lift, optimistic-ui's state swap, star-rating's hover preview, password-field-ux's strength bar, reverse-engineered-linear's ~80ms hover, peak-end-rule's success confirmation) — none needed a new number, they confirmed the existing one. The two real exceptions needing their own numbers: toast dismiss timing (short/long/until-acknowledged tiers) and tooltip pre-show delay (~300ms, distinct from the reveal transition).
+
+2. "Every state has a word, never colour alone" gets independently re-derived by several unrelated patterns (toast-notifications' icon+border rule, reverse-engineered-linear's "grey status icon, not a coloured pill," visual-hierarchy, von-restorff) rather than contradicted — treat it as validated by outside evidence, not just an in-house preference.
+
+3. The one recurring real tension is decorative or looping motion: skeleton-loading's animated shimmer, peak-end-rule's confetti-style "delight," and zeigarnik-effect's animated completion meter all collide with "skeletons do not pulse" / "no number tickers or looping motion." The pattern library defaults to celebratory motion each time; the fix is the same each time too — keep the underlying idea (content-aware skeleton shape, a strong final screen, a visible completion gap) but render it as a single static or non-looping state change, never a loop.
+
+4. Gesture-only interactions are an open question, not a resolved one. Both hover-trap (swipe as a "home" for hover-only actions) and swipe-actions itself land on the same unresolved point: swipe is not explicitly banned by CLAUDE.md's "no drag-and-drop" but isn't part of Kladra's toolkit either. This surfaced twice independently — worth the founder settling once rather than re-litigating per screen.
+
+5. RTL support for this batch is logical-CSS discipline, not new design work: toast-notifications (`border-inline-start`), tooltip-design (flip-near-edge using inline positioning), visual-hierarchy (logical padding) all just require existing shadcn/Radix components to be built with logical properties — no new pattern needed, just the discipline already named in `.claude/rules/words.md`.
+
+6. Nine of the thirty-eight patterns are low priority for one shared reason, not nine different ones: no matching surface exists yet in a B2B CRM (otp-input, range-sliders, star-rating, live-cursors, landing-page-skeleton, scroll-driven-animations, swipe-actions, zeigarnik-effect, z-index-mastery is the exception — it's low because it's pure CSS mechanics, not a domain mismatch). These are worth keeping on file, not building now.
+
+7. Several patterns are foundational cross-cutting principles rather than single-screen features — visual-hierarchy, proximity-rule, serial-position, reverse-engineered-linear, perfect-card. These belong as DESIGN.md tokens and a re-audit checklist (spacing-token pair, one-accent-color count per screen, card recipe) rather than as one-off build tasks tied to a single surface.
+
+8. Concrete numeric defaults this batch supplies that Kladra currently lacks and should adopt outright: toast tiers (short/long/until-acknowledged) with a damped stacking spring; a 300ms tooltip pre-show delay; a 44px minimum touch target against a ~20px visible icon; cursor-based (not offset) pagination with URL-persisted page state and scroll restoration.

@@ -1,0 +1,27 @@
+TITLE: Pagination
+CATEGORY: Navigation
+URL: https://designmotionhq.com/patterns/pagination
+
+PROBLEM: Offset-based pagination looks fine until the underlying data changes mid-browse — a new row shifts every page down, so the same record can appear twice or vanish from the list entirely.
+
+RULES:
+- Offset pagination drifts when data changes: inserting a row at the top shifts every page down, so the same item can surface twice (or get skipped). Sheet shows `OFFSET 10 LIMIT 10 · page 2`, a row inserted at the top, and the same user row flagged "seen twice" in red.
+- Cursor pagination stays stable: it anchors to a specific row (`WHERE id < :lastId`) instead of a numeric position, so inserts/deletes never create duplicates or skips. Sheet labels this "cursor = stable."
+- Three patterns fit different jobs: numbered (jump to any page), load-more (user stays in control), infinite scroll (best for continuous feeds). Sheet renders all three side by side against the same 6-row dataset.
+- Never render every page link — at 10,000 rows / 833 pages, a full numbered grid "spills off-screen." Truncate to first, last, current, and immediate neighbors with an ellipsis for the gaps (sheet shows `1 … 499 500 501 … 833`, captioned "Show ~7 cells, never the whole range").
+- Keep the page number in the URL (`app.com/users?page=500`) so a refresh stays on the same page and the view becomes a shareable link; without URL state, a refresh resets silently to page 1. Sheet shows both address bars side by side with the outcome labeled directly under each.
+- When users return from a detail view, restore their scroll position instead of dumping them back at the top of the list. Sheet compares "scroll → 0" (loses your place, row highlighted red) against "restore scroll" (lands back on the same row, highlighted green).
+- Always keep first and last page reachable even when truncating the middle.
+
+DO / DON'T:
+- Do: reach for cursor pagination when rows are inserted or deleted often, to avoid duplicates and skips.
+- Do: persist the current page in the URL so refreshes and shared links land on the same page.
+- Do: collapse long page ranges to first, last, current, and neighbors with an ellipsis.
+- Don't: render hundreds of numbered links — they spill off-screen and overwhelm.
+- Don't: reset an infinite-scroll list to the top when the user comes back from a detail view.
+
+VIDEO ADDS: A concrete 10,000-row / 833-page dataset used throughout, with a literal "go to page 500" jump; the exact SQL-shaped labels `OFFSET 10 LIMIT 10` vs `WHERE id < :lastId`; a rendered duplicate-row bug (same user shown twice, flagged in red) from an insert-at-top under offset pagination; a full-width grid of ~500 tiny page-link cells literally spilling off the right edge of the screen to make the "don't render 500 links" point visceral; three complete side-by-side pattern implementations (numbered/load-more/infinite-scroll) rendered as working lists; and matching before/after address-bar frames showing `page=500` surviving a refresh vs silently resetting to `page=1`.
+
+KLADRA: Every list in Kladra (companies, projects, quotations, dispatches) and the coordinator's queue is a pagination candidate the moment row counts grow past a screenful. Given Kladra explicitly has no saved views and no bulk edit, keep pagination simple: numbered pages with truncation (first/last/current/neighbors) for company and project lists where reps jump around, and consider cursor-based paging only if rows are inserted/deleted frequently enough for offset drift to bite (the coordinator's queue, which likely mutates constantly through the day, is the most at-risk list). The "page number lives in the URL" rule pairs naturally with Kladra having no saved-views feature — a shareable/bookmarkable URL with page state is a lighter-weight substitute for saved views, not a conflict. Scroll-restoration on return from a record drawer applies directly: opening a company/project/quotation drawer from a list row and closing it should not reset scroll to the top. No conflict with standing decisions — pagination itself is orthogonal to drag-and-drop, bulk edit, and refresh buttons.
+
+PRIORITY: high — Kladra's lists (companies, projects, quotations, dispatches) and the coordinator's queue will all need page-state handling, and the URL-persistence + scroll-restoration rules are cheap, concrete fixes likely missing from a first pass.

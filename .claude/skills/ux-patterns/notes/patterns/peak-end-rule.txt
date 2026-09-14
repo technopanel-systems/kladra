@@ -1,0 +1,26 @@
+TITLE: Peak-End Rule
+CATEGORY: Interaction
+URL: https://designmotionhq.com/patterns/peak-end-rule
+
+PROBLEM: Users don't remember a flow by its average quality — they remember its single most intense moment and its final moment — so smoothing every step equally is wasted effort if the ending is flat or broken.
+
+RULES:
+- The brain doesn't average a flow; it stores the peak (most intense moment) and the end (final moment), then judges the whole experience from those two points alone.
+- Two flows with an identical average satisfaction are remembered completely differently depending on how they finish — same middle, opposite memory. Sheet plots Path A and Path B, both with the same average rating of 65, but Path A (rough finish) scores a memory of 26/100 while Path B (smooth finish) scores 53/100.
+- Engineer at least one intentional peak — a surprise upgrade, a free perk, a moment of delight; one delight outweighs five neutral steps. Sheet lists a plain flow (Browse, Filter, Add to cart, Checkout) and inserts one flagged "PEAK" step: "Surprise upgrade — Free express shipping."
+- The ending carries disproportionate weight — a joyful last screen beats a flat, cold confirmation for identical underlying work. Sheet compares two checkout confirmations on the same 60-second flow: a plain checkmark ("cold ending," memory score 58/100) against a confetti animation with "You're all set!" ("joyful ending," memory score 94/100) — labeled "Same UX. +40% recall."
+- The reverse holds too: a broken or error-filled final step tanks the memory of an otherwise smooth experience. Sheet runs the same 5-step signup flow (Sign up, Verify email, Pick a plan, Add payment) into a failed final step ("Payment failed — Card declined, try another method"), with memory collapsing to 0/100 in one version and only 20-22/100 in a slightly softer failure — captioned "The 99% that worked? Gone."
+- Stop trying to make every step equally good; concentrate effort on the peak and the end rather than spreading it evenly.
+
+DO / DON'T:
+- Do: engineer a deliberate peak — a surprise or moment of delight partway through the flow.
+- Do: end on a high note — celebrate success on the last screen instead of a flat confirmation.
+- Do: audit the final interaction of every flow — it weighs heaviest in what users remember.
+- Don't: spread effort evenly across every step while neglecting the finish.
+- Don't: let a flow end on friction, an error, or a cold dead-end.
+
+VIDEO ADDS: Concrete memory-score numbers throughout that the text never states — Path A 26/100 vs Path B 53/100 at an identical 65 average; the checkout ending pair scored 58/100 (cold) vs 94/100 (joyful, confetti) with the "+40% recall" figure; and the broken-ending signup flow scored down to 0/100 vs 20-22/100 depending on how the failure is handled. It also shows the actual UI treatments: a rendered confetti burst plus "You're all set!" copy for the joyful ending, and a red "Payment failed" error card inserted as the last visible step for the broken-ending case. The closing frame distills it to three tags — PEAK, END, MEMORY — with the line "Forget the average. Polish the end."
+
+KLADRA: Applies to the end of any multi-step Kladra flow: creating a quotation and sending it, closing a dispatch, converting a lead to a project. The ending screen for each of these should read as a clear, positive final state (a confirmation with the record's key facts, not a bare "Saved") rather than a flat toast. It also argues for treating error recovery at the last step of a flow with extra care — e.g. if sending a quotation fails on the final action, the recovery screen should not be a generic error dump, since a bad final step poisons memory of the whole flow. CONFLICT: "engineer a peak" via a surprise/confetti-style delight risks colliding with Kladra's "no number tickers or looping motion" rule and the general restraint implied by "no chart for decoration" — any celebratory animation on quotation-send or dispatch-close must be a single, non-looping, purposeful state change (matching the 150-250ms dialog/drawer motion budget), not a decorative confetti burst; treat the pattern's "delight" as a well-worded, clearly-stated success confirmation rather than an animated flourish, to stay inside Kladra's restrained motion language.
+
+PRIORITY: medium — the underlying insight (audit and polish the last screen of every flow, don't let a late-flow error erase a good experience) is cheap to apply to quotation/dispatch/lead-conversion endings, but the literal "surprise delight" mechanic needs to be toned down to fit Kladra's no-decoration, no-looping-motion standards.

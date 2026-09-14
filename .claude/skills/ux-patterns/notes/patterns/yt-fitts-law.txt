@@ -1,0 +1,25 @@
+TITLE: Fitts's Law Applied to Design
+CATEGORY: interaction / psychology-law
+URL: https://www.youtube.com/shorts/E2TNSk10BZc (YouTube Shorts channel @designmotionhq_yt; not one of the 76 designmotionhq.com/patterns/<slug> pages)
+
+PROBLEM: A button sized and placed by eyeballing it, not by the actual cost of reaching it, makes users miss it, hesitate, or reach across the screen for something that should have been under the thumb or the cursor already.
+
+RULES:
+- Named and defined on-screen: "Fitts's Law — the rule behind every great button." Formula shown on screen: T = a + b·log2(D/W + 1) — time to reach a target depends on two things: distance to it (D) and its width (W).
+- Time-to-click demo with a slider/target: far + small target = 9.6s; same distance, bigger target = 4.5s ("Bigger target = faster clicks"); same size, closer target = 3.0s ("Closer target = faster clicks"). The on-screen fix card: "Make targets BIGGER."
+- SECRET 01 — SIZE IN ACTION: a mobile screen comparison, small button ("X BAD") vs. large green button ("✓ GOOD") — captioned tap rates jump from 12% to 34% (video line: "Watch the tap rate jump from 12% to 34%"). A touch-target-size grid shows small squares labeled "bad targets" against larger squares labeled "good targets," captioned "Apple's guideline: 44pt minimum."
+- SECRET 02 — THE DISTANCE TRICK ("Reduce distance to zero"): three concrete techniques shown as before/after rows — right-click menu (menu appears at the point of click, not a fixed toolbar), floating action button (fixed position, always within reach), inline editing (edit in place, no modal/new screen needed). Line: "The best target is the one already under your cursor."
+- Mobile-specific framing (from narration, not the 76 slugs): "the most important action is at the top, but your thumb is at the bottom — flip it, put the primary action within thumb reach."
+
+DO / DON'T:
+- Do: size primary tap targets to at least Apple's 44pt (×44pt) minimum, especially on any touch/tablet surface.
+- Do: bring the action to the cursor/thumb instead of asking the user to travel — right-click/context menus, floating buttons, inline edit.
+- Do: put the primary mobile action within thumb reach (bottom of screen), not just where desktop conventions put it (top).
+- Don't: size icon-only or row-action buttons by eye — a small, distant target measurably slows and degrades accuracy of every click.
+- Don't: treat "put it near the top because that's where actions go" as a rule on a handheld/tablet layout — it directly fights thumb reach.
+
+VIDEO ADDS: the actual Fitts's Law formula on screen (T = a + b·log2(D/W + 1)); three concrete timed comparisons (9.6s / 4.5s / 3.0s) proving distance and size both independently cut time-to-click; the 12%→34% tap-rate number tied to a specific before/after button size; Apple's 44pt minimum cited by name as the size floor; three named "distance trick" techniques (context menu, FAB, inline edit) as the practical alternative to just enlarging targets.
+
+KLADRA: directly actionable on icon-only row actions in dense tables (leads/companies/projects/quotations/dispatches lists) and drawer-head icon buttons — these are exactly the small, dense targets Fitts's Law penalizes. Concretely: every icon-only action button needs a minimum ~44×44px hit area (padding around a smaller visible icon is fine — the glyph can stay small, the tap/click target cannot), and spacing between adjacent row-action icons needs enough gap that a slightly-off click doesn't land on the neighboring action (especially destructive vs. non-destructive actions sitting side by side). On any tablet use in the yard, primary actions in a bottom sheet or mobile-nav-style control should sit low, within thumb reach, not pinned to the top matching desktop habit. The "reduce distance to zero" idea also validates Kladra's existing inline-editing and dialog-in-place patterns over navigating to a separate edit screen. NO CONFLICT with existing Kladra rules — this reinforces "every state has a word" and general density care rather than contradicting no-drag-and-drop/no-bulk-edit; it does NOT license a floating action button as a new nav pattern unless DESIGN.md already allows one — treat the FAB example as illustrative of the underlying law (distance-to-zero), not as a mandate to add a new floating button to Kladra's UI.
+
+PRIORITY: high — this is a genuine gap (Fitts's Law is not covered by any of the 76 pattern pages, per R/slugs.txt), and it converts directly into a concrete, checkable rule (44px minimum hit target, adequate gap between adjacent row-action icons) that a reviewer can apply to every dense table and drawer head Kladra ships.

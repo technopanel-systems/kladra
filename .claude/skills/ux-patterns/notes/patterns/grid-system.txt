@@ -1,0 +1,26 @@
+TITLE: Grid System
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/grid-system
+
+PROBLEM: The same dashboard content reads as chaotic or intentional purely based on whether it's aligned to a real 12-column grid and consistent gutters, and layouts that never establish a grid can't "break it on purpose" for emphasis.
+
+RULES:
+- Start from a 12-column grid — the web standard because 12 divides cleanly into halves, thirds, quarters, and sixths, so almost any layout maps onto it.
+- Use column ratios to structure the page: 4:8 for sidebar+content, 6:6 for an even split, 3:9 for a narrow nav beside a wide canvas (video shows all three ratios applied to the identical dashboard content, captioned "Same content. Different structure.").
+- Gutters set the mood as much as columns do: 8px reads dense/technical, 24px feels balanced/clean, 40px gives an editorial/premium feel (video shows the identical card grid at all three gutter widths, captioned "Same cards. Different feeling.").
+- Stay responsive by dropping columns at each breakpoint: 12 at desktop, 6 on tablet, 4 on large phones, down to a single stacked column on the smallest screens (video shows exact breakpoints: 768px → 8 cols, 320px → 1 col).
+- Once the grid is solid, break it on purpose — let a hero image bleed full-width or push a pull-quote into the margin for deliberate emphasis (video's own line: "Not chaos. Contrast.").
+- Alignment is what separates polished from amateur — elements snapped to shared column edges instantly read as designed.
+
+DO / DON'T:
+- Do: anchor every element to shared column edges.
+- Do: match gutter width to the mood — tight for dense dashboards, wide for editorial.
+- Do: collapse columns at each breakpoint (12 → 6 → 4 → 1) so content reflows cleanly.
+- Don't: break the grid before establishing it — a bleed only reads as intentional against order.
+- Don't: reach for arbitrary widths when a clean ratio like 4:8 or 6:6 already fits.
+
+VIDEO ADDS: Shows the identical dashboard (Acme workspace, revenue/customers/growth stats, a bar chart, a transactions table) re-rendered at 4:8, 6:6, and 3:9 column ratios with the exact split stamped on each ("4:8," "6:6," "3:9"), making the ratio choice's visual effect concrete rather than described. Shows the same responsive dashboard reflowing at 768px (labeled "8 cols") and 320px (labeled "1 col") with cards visibly regrouping. Shows the same KPI-card row at 8px/24px/40px gutters with each width labeled directly on the gap ("Dense / Technical," "Balanced / Clean," "Editorial / Premium"). The break-the-grid demo shows a clean grid layout next to the same layout with a full-bleed hero image and an out-of-column pull quote, captioned "Not chaos. Contrast. Pros know when to break the rules." Closing line: "The grid is a superpower. Master it. Then break it on purpose."
+
+KLADRA: This is the structural layer under every Kladra screen — dashboards, list+detail splits, record drawers, the report builder. The 4:8/6:6/3:9 ratios map directly onto Kladra's likely layouts (a 3:9 or 4:8 split for a filter sidebar plus a list, a 6:6 split for a two-panel comparison view). The gutter-sets-mood rule argues for ONE deliberate gutter choice for Kladra's dense, data-heavy screens (likely the 24px "balanced/clean" tier, not 8px "technical" which risks feeling cramped for fourteen people reading Arabic/English data tables, nor 40px "editorial" which wastes space in a working tool) — this is a §4-worthy default to record once rather than vary per screen, consistent with "one setting for fourteen people." No conflict with any standing decision. RTL: a 12-column grid and column ratios (e.g. 4:8) must mirror as a unit in RTL — the "4" column block moves from left to right, not just individual elements within it — worth calling out explicitly since asymmetric ratios are the case most likely to be mirrored incorrectly.
+
+PRIORITY: high — Kladra's screens are grid-structured by nature (list/detail splits, dashboards, drawers) and this pattern gives concrete column ratios, gutter sizes, and breakpoint counts to standardize once across the app, with only a gutter-size default left to decide.

@@ -1,0 +1,28 @@
+TITLE: Tooltip Design
+CATEGORY: Interaction
+URL: https://designmotionhq.com/patterns/tooltip-design
+
+PROBLEM: Tooltips that fire instantly, float unanchored, get clipped at viewport edges, only close one way, or read like documentation feel annoying instead of helpful.
+
+RULES:
+- Delay a hover tooltip ~300ms before showing it, so it reflects intent rather than an accidental cursor graze. Sheet contrasts 0ms delay (labeled "fires on every cursor graze," shown in red) against 300ms delay (labeled "intent confirmed," shown in green) on the same icon-button trigger.
+- Anchor the tooltip to its trigger with a pointing arrow. Sheet shows a row of 4 icon buttons: "without arrow" leaves a floating "Settings" label above the row with the caption "which one does it describe?"; "with arrow" points the label directly at the correct (highlighted) icon, removing the ambiguity.
+- Flip the tooltip to the opposite side automatically when its trigger sits near a viewport edge, so it doesn't get clipped. Sheet shows this live inside a mock app window near a top-right corner element, captioned "flipped in business" (i.e., demonstrated in a real UI context, not just an isolated component).
+- Make it dismissible through every exit route, not just one: mouse leave, the Escape key, focus-out/blur, and tap-outside. Sheet lists all 4 explicitly as numbered items (1 Mouse leave, 2 Escape key, 3 Focus out — shown mid-interaction as "CLOSED", 4 Tap outside).
+- Keep tooltip copy tight: cap width around 200–300px (sheet shows "BEFORE — 400px, documentation" containing a multi-line paragraph, vs. "AFTER — 200px, one sentence" containing a single short line: "Controls notification defaults.") and hold it to one sentence — if it needs a paragraph, it isn't a tooltip anymore, it's documentation.
+
+DO / DON'T:
+- Do: wait ~300ms before revealing a hover tooltip.
+- Do: point at the trigger with an arrow so the reference is unambiguous.
+- Do: flip position near viewport edges to prevent clipping.
+- Do: close on mouse leave, Escape, focus-out, and tap-outside — all four.
+- Do: cap width near 200–300px and hold copy to one sentence.
+- Don't: fire the tooltip instantly on every cursor graze.
+- Don't: cram multi-line, documentation-length text into a tooltip.
+- Don't: rely on only one dismiss method (e.g., mouse-leave alone misses keyboard/touch users).
+
+VIDEO ADDS: The literal 0ms-vs-300ms side-by-side comparison with "fires on every cursor graze" vs "intent confirmed" captions, the 4-icon-button "without arrow / with arrow" ambiguity demo, a live in-app edge-flip example near a window's top-right corner labeled "flipped in business," the four dismiss routes enumerated as a checklist with "Focus out" shown actively transitioning to a "CLOSED" state, and the exact before/after width numbers (400px documentation paragraph vs 200px one-sentence tooltip) with real example copy ("This setting controls the default behavior of the notification system across your entire workspace..." collapsed to "Controls notification defaults."). None of these numbers or the arrow/no-arrow ambiguity demo appear in the page text.
+
+KLADRA: Applies to icon-only buttons across Kladra's dense lists and boards (row actions, toolbar icons), form field hints in record drawers, request dialogs, and the coordinator's queue where compact icon controls need a one-sentence explanation without adding visible label text. Also relevant to truncated text in narrow list columns if tooltips are used to show full values on hover (though "no internal codes or IDs on screen" already limits what a tooltip would need to reveal). Kladra's stated hover/menu motion timing is 100ms, but a tooltip's pre-show delay (300ms here) is a different thing from the reveal transition itself — worth keeping the 300ms delay before onset, with a fast (~100ms) fade-in once triggered, so it stays consistent with Kladra's existing motion scale. RTL: the arrow and flip-near-edge logic must use logical/inline positioning so tooltips still point correctly and flip off the correct edge in Arabic. On the phone layout (375px), hover-triggered tooltips don't apply the same way (no persistent hover) — tap-to-show with tap-outside-to-dismiss is the relevant substitute, consistent with the "dismiss everywhere" rule already listing tap-outside. CONFLICT: none — tooltips are a lightweight, non-blocking hint surface and don't touch drag-and-drop, bulk edit, saved views, comments, or density.
+
+PRIORITY: medium — useful and easy to standardize (delay, width, dismiss routes) across Kladra's icon buttons, but tooltips are a secondary/supporting affordance rather than a primary screen like lists, drawers, or dashboards.

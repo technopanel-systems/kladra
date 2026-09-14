@@ -1,0 +1,29 @@
+TITLE: Search Experience System
+CATEGORY: Interaction
+URL: https://designmotionhq.com/patterns/search-experience-system
+
+PROBLEM: Most apps treat search as a single input box, but a search bar that actually helps users is five coordinated parts working together, and skipping any one of them turns search into a dead end.
+
+RULES:
+- Placeholder text is the first onboarding moment: a bare "Search" tells the user nothing, while "Search by name, SKU, or brand" tells them exactly what's searchable. Sheet shows a placeholder built from three parts — WHAT / HOW / SCOPE tags — and example placeholders like "Search 12,000 products", "Find a city, address, or ZIP", "Filter by tag, color, or size."
+- An empty field is not an empty state: load recent searches the instant the bar is focused, so returning users refill it in one tap instead of retyping. Sheet's metric: without recent searches, refilling takes about 2.4s; with one-tap recent chips, about 0.3s — roughly an 8x speedup.
+- Rank autocomplete suggestions by click popularity, not alphabetically, and tag each suggestion with a category badge (caption: "category badge = scope"). Sheet shows three ranked suggestions with click-share bars — #1 "Shoes" 67%, #2 "Shop New" 18%, #3 "Shorts" 9% — and the rule "three sharp results beat ten noisy ones."
+- Make the entire flow keyboard-operable: arrow keys move through results, Enter selects, Escape closes. Sheet shows this exact key trio (Nav / Select / Close) as an on-screen legend.
+- Keep the focus ring visible at every step (sheet shows a ~2px focus ring on the input) — an invisible focus ring silently breaks keyboard navigation and accessibility, described in the sheet as "no mouse trap."
+- Zero results must never be a dead end: offer popular searches, a category jump, or the user's last-visited item as recovery options at the exact moment they'd otherwise give up. Sheet's example: searching "xqzz" (no matches) surfaces "Try: shoes (popular search)," "Browse: Footwear (top category)," "Recent: Nike Air Max (last visited)."
+- Sheet's own measured payoff for recovery suggestions: dead-end/no-recovery zero-results screens convert about 4% of users onward, versus about 23% when recovery suggestions are shown — roughly a 5.8x lift, captioned "lose the user here, lose them for good."
+- The five parts form a checklist to reuse on every search bar: Placeholder, Recent, Autocomplete, Keyboard, Recovery (zero-results) — sheet's closing line: "the best UI feels invisible until it fails."
+
+DO / DON'T:
+- Do: write descriptive placeholder text that hints at what's actually searchable.
+- Do: surface recent searches on focus so returning users refill the bar in one tap.
+- Do: turn zero-result screens into recovery paths with suggestions and category jumps.
+- Don't: ship a bare "Search" as the only placeholder.
+- Don't: sort autocomplete alphabetically instead of by popularity/click-through.
+- Don't: leave a "No matches" screen as a dead end.
+
+VIDEO ADDS: The concrete numbers behind every rule that the text only states qualitatively — recent-search one-tap refill cutting time from 2.4s to 0.3s (8x), autocomplete click-share percentages (67% / 18% / 9%) behind the "rank by clicks" rule, the exact placeholder formula (WHAT / HOW / SCOPE) with three example placeholder strings, the visible ~2px focus ring, the three-key keyboard legend (arrows / Enter / Esc), and the zero-results recovery lift (4% baseline to 23% with suggestions, 5.8x) with the three concrete recovery types (popular search, top category, last-visited item) shown as an actual panel.
+
+KLADRA: Directly applicable to Kladra's search palette (mentioned explicitly in the standing decisions) and to any in-list filter/search field on companies, projects, quotations, and dispatches. Concretely: give the palette a placeholder naming what's searchable in Kladra's domain (e.g. "Search by company, project, or quotation number" rather than "Search"); show recent searches or recently opened records on focus for the coordinator's and reps' repeat lookups; rank results by relevance/recency rather than alphabetically; make the palette fully keyboard-operable (arrows/Enter/Esc) with a visible focus ring, which aligns with Kladra's existing "every state has a word" accessibility ethos; and give zero-results a recovery panel (e.g. "did you mean," a jump to browse all companies, or last-viewed record) instead of a bare "no results" message. No conflict with any standing decision — recent-searches-on-focus is not a "saved view," it is ephemeral per-session history, and ranking/recovery are read-only conveniences, not bulk edit or drag-and-drop. Two gradient/no-looping-motion rules are untouched since this pattern is static UI, not animation.
+
+PRIORITY: high — Kladra explicitly has a search palette as a named standing surface, it is used by all four personas (rep, coordinator, manager, admin), and a poor zero-results or alphabetic-autocomplete experience directly costs time for a 14-person team who search company/project names daily; the five-part checklist is cheap to apply and each part is currently either unspecified or likely underbuilt.

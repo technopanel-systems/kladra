@@ -1,0 +1,26 @@
+TITLE: Easing Curves
+CATEGORY: motion
+URL: https://designmotionhq.com/patterns/easing-curves
+
+PROBLEM: The same distance and duration can feel completely different depending purely on the easing curve — that shape, not the numbers, is what the eye actually reads as quality.
+
+RULES:
+- An easing curve maps how a value changes over time; keep distance and duration fixed and swap only the curve, and the motion reads as a different quality of interface entirely.
+- Linear moves at constant speed — looks mechanical and cheap; reserve it for continuous motion (spinners, marquees), never for UI that starts and stops.
+- Ease-out starts fast then decelerates into place — the safest default for elements entering the screen, because it mirrors how real objects settle.
+- Spring overshoots slightly then settles, adding a bounce that reads as alive/premium — ideal for button presses, modals, playful confirmations.
+- Apply the same handful of curves everywhere (button press, card cascade, sheet open) — consistent easing is a big part of why an interface feels coherent rather than stitched together.
+- Stagger list/card entrances a few frames apart so they cascade in rather than snapping on as one rigid block.
+
+DO / DON'T:
+- Do: default to ease-out for elements entering the screen.
+- Do: add a subtle spring overshoot to presses, modals, and confirmations.
+- Do: stagger card/list entrances for a cascade instead of a hard snap.
+- Don't: reach for linear easing on UI that starts and stops.
+- Don't: push spring stiffness/bounce so high the element visibly wobbles.
+
+VIDEO ADDS: Shows three "Submit" buttons (grey/blue/green) each pressed with a different curve, with the actual curve line plotted underneath each (a straight diagonal for linear, a decelerating arc for ease-out, an overshooting arc for spring) — makes the abstract curve shapes literal and comparable in one frame. Runs the identical card-entrance list three times (linear/ease-out/spring) and the identical modal-open three times, letting the same content demonstrate all three curves directly. A dedicated curve-comparison panel plots all three curves on one small graph with color-coded dots (grey=linear, blue=ease-out, green=spring) next to the ranking "spring > ease > linear. Always." repeated twice as the closing statement.
+
+KLADRA: This is the qualitative companion to animation-timing.txt's numeric rules — where that pattern gives durations, this one gives curve shapes. Ease-out as the default entrance curve is consistent with (and should be paired with) Kladra's stated 100ms/150-250ms motion budget. The spring/bounce recommendation is the one to flag carefully: Kladra's rule "no number tickers or looping motion (skeletons do not pulse)" signals a general preference for restrained, non-bouncy motion in a B2B ops tool — a visible overshoot on every modal/button press risks reading as too playful for Technopanel's context (industrial cladding, not a consumer app). Recommend Kladra standardize on ease-out for nearly everything and reserve spring/bounce narrowly (if at all) for a single moment like a toast/notification arriving, not modals or routine button presses — this is a judgment call worth surfacing to Jerom as a §4 default rather than adopting "spring > ease > linear, always" verbatim.
+
+PRIORITY: medium — the ease-out-as-default and stagger-for-cascades rules apply cleanly, but the pattern's closing claim ("spring always wins") should not be taken literally for a utilitarian CRM; worth a deliberate, narrower default.

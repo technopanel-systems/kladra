@@ -1,0 +1,27 @@
+TITLE: Optimistic UI
+CATEGORY: Feedback
+URL: https://designmotionhq.com/patterns/optimistic-ui
+
+PROBLEM: Waiting for a server round-trip before updating the UI makes a reversible, almost-always-successful action (a like, a toggle) feel broken even though the network did nothing wrong.
+
+RULES:
+- Update the UI the instant the user acts; sync with the server in the background instead of blocking on the response.
+- The brain reads anything under ~400ms as instant; a spinner or wait past that threshold reads as broken. Sheet shows a gauge: 56ms labeled "feels instant" (green zone) vs 720ms labeled "feels broken" (red zone, spinner shown) — same 400ms cutoff line on both gauges.
+- On failure, roll back cleanly: undo the like, restore the count, as if the action never happened. Sheet shows a like count going 248 → 247 with a caption "rolled back" and a toast "Network error — Couldn't reach the server — reverting."
+- The core bet: trust the success case (it is almost always what happens) and only handle the rare failure gracefully. Sheet gives a concrete hit rate: 99% of the time the optimistic bet was correct.
+- Reserve optimistic updates for reversible, low-stakes actions — likes, follows, saves, bookmarks, reordering — where an occasional rollback costs nothing.
+- Draw a hard boundary for irreversible/high-stakes actions — pay, transfer, delete — where you must show the real request state ("Processing payment…") and wait for server truth, never fake success.
+- Model the flow as three steps: user acts → render now (client update) → reconcile (background sync with server).
+
+DO / DON'T:
+- Do: update the interface immediately, then reconcile with the real server response behind the scenes.
+- Do: roll back to the previous state the moment a request fails, so the UI never lies for long.
+- Do: apply it to reversible interactions like likes, favorites, and list reordering.
+- Don't: use it for payments, transfers, or anything that can't be safely undone.
+- Don't: show a charge, booking, or confirmation before the server has actually cleared it.
+
+VIDEO ADDS: The exact 400ms perceptual cutoff shown as a speedometer-style gauge with two concrete timings (56ms = instant, 720ms = broken, same threshold line); a live rollback demo with a specific before/after count (248 → 247) and the literal error toast copy; the 99% hit-rate figure for "the bet was correct"; a labeled three-step pipeline (user acts / render now / reconcile); and a two-column "boundaries" comparison listing exactly which actions are optimistic-safe (Like, Follow, Save, Bookmark) against which must show the truth (Pay, Transfer, Delete, with a live "Processing payment…" state) — none of these concrete pairings or numbers appear in the page text.
+
+KLADRA: Applies to any toggle-like action in Kladra that hits the database but is cheap to undo — starring/flagging a lead or company, marking a notification read, reordering within a personal filter, toggling a checklist item inside a project or dispatch. The 400ms/rollback framing also directly supports Kladra's existing "toasts and notifications" surface: a failed optimistic update should produce a plain-language toast, never a silent revert. The hard boundary the pattern itself draws (never fake success on irreversible actions) matters most for quotation approval, dispatch confirmation, and any status change a coordinator or manager relies on as a record of truth — those must wait for the real server response and show a pending state, not an optimistic one. No conflict with the "no number tickers or looping motion" rule since optimistic UI is a single state swap, not an animated counter; the 400ms threshold sits comfortably inside Kladra's 100ms hover/menu and 150-250ms dialog motion budget.
+
+PRIORITY: high — Kladra is full of small toggle actions (flags, read states, checklist ticks) that currently likely wait on the server action round-trip before updating, and this pattern is a direct, low-risk perceived-speed win with a clear boundary rule to keep quotations/dispatches honest.

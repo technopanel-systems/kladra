@@ -1,0 +1,277 @@
+designmotionhq.com — DESIGN SYSTEM EXTRACTED FROM LIVE SITE
+Source: raw HTML of /, /about, /patterns, /patterns/perfect-card (curl) + the site's single
+CSS bundle /_next/static/chunks/2m_qj29a12mbd.css (Tailwind v4, CSS-first @theme config,
+all values below are literal, not inferred) + full-page screenshots at 1366x900 and 375x812.
+Stack: Next.js (Vercel), Tailwind v4 (utility classes generated straight from CSS variables,
+no tailwind.config.js — theme lives in :root as custom properties), lucide-react icons,
+next/font for Inter. Dark-only site — no light theme, no [data-theme] or prefers-color-scheme
+block found anywhere in the bundle.
+
+## 1. TYPE
+
+Font family: Inter (variable, weights 100–900) via next/font (self-hosted woff2, NOT a
+Google Fonts <link> — the @font-face rules point at /_next/static/media/*.woff2 shipped
+by next/font, with per-script unicode-range splitting, e.g. Cyrillic and Vietnamese
+subsets are separate @font-face blocks so only the glyphs used are downloaded).
+--font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif
+No serif, no mono display font in body copy; --font-mono: ui-monospace, SFMono-Regular,
+Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace — used only for the
+terminal demo block and inline <code> tags.
+
+Type scale (Tailwind v4 default scale, all present in the bundle and in use):
+  text-xs    .75rem  (12px)  line-height 1/.75   = 1.333
+  text-sm    .875rem (14px)  line-height 1.25/.875 = 1.428
+  text-base  1rem    (16px)  line-height 1.5
+  text-lg    1.125rem(18px)  line-height 1.75/1.125 = 1.555
+  text-xl    1.25rem (20px)  line-height 1.75/1.25  = 1.4
+  text-2xl   1.5rem  (24px)  line-height 2/1.5      = 1.333
+  text-3xl   1.875rem(30px)  line-height 2.25/1.875 = 1.2
+  text-4xl   2.25rem (36px)  line-height 2.5/2.25   = 1.111
+  text-5xl   3rem    (48px)  line-height 1
+Only one custom size found off-scale: text-[13px] (terminal demo body) and text-[11px]
+(the "New in 2.0" pill label) — both bracket/arbitrary values, confirming the team allows
+one-off escapes from the scale for very small chrome labels.
+
+Weights actually used: 400 (font-weight-normal, body), 500 (font-weight-medium, nav links,
+eyebrow/category label, small CTAs), 600 (font-weight-semibold, card titles, FAQ summary,
+skill names, button labels), 700 (font-weight-bold, h1–h3).
+No 800/900 anywhere in the rendered HTML class list despite the variable font supporting it —
+restraint: two weights carry almost the whole page (400 body / 600–700 heads).
+
+Headings: H1 "text-3xl font-bold tracking-tight sm:text-5xl" (mobile 30px, desktop 48px,
+jumps two full steps at the sm breakpoint — no text-4xl intermediate step used for H1).
+H2 section titles: "text-2xl font-bold tracking-tight sm:text-3xl" (24px -> 30px).
+tracking-tight = -.025em is applied to every heading, nowhere on body text.
+text-balance (CSS text-wrap: balance) is applied to every H1/H2 so headline lines break
+evenly instead of leaving a short orphan word.
+
+Eyebrow / category label (the small word above a pattern's H1, e.g. "Visual", and the pill
+on each grid thumbnail, e.g. "interaction"): NOT uppercase-transformed by CSS (the bundle
+has no .uppercase rule in use) — it is sentence-case text ("Visual", "interaction") styled
+with text-sm font-medium text-accent (page eyebrow) or text-xs font-medium capitalize
+text-text-muted on a translucent pill (grid thumbnail badge). Kladra takeaway: "eyebrow"
+does not have to mean uppercase-tracked-out; a colored sentence-case word one size above
+the label size does the same job with less visual noise.
+
+Body copy color is never pure white: headings are --color-text (#ecedef, near-white) but
+paragraph copy is almost always --color-text-muted (#9494a8), which is the single biggest
+contributor to the page's calm, low-contrast-but-still-legible feel — hierarchy comes from
+color/weight more than from size jumps.
+
+## 2. COLOR (exact hex/rgba, all as CSS custom properties on :root)
+
+  --color-background:      #0b0d10   (page background, near-black with a blue cast)
+  --color-surface-1:       #13161b   (cards, header/footer backdrop, terminal window)
+  --color-surface-2:       #1a1e25   (image/thumbnail placeholder background, nested surface)
+  --color-surface-3:       #222730   (traffic-light dots in the terminal mock, deepest surface)
+  --color-text:             #ecedef  (headings, primary text, near-white not pure white)
+  --color-text-muted:       #9494a8  (body copy — cool grey-violet, not neutral grey)
+  --color-text-dim:         #7d828a  (timestamps, meta labels, disabled-feeling text)
+  --color-border-subtle:    #ffffff0f  (white at 6% alpha — nearly invisible hairlines between sections)
+  --color-border-strong:    #ffffff1f  (white at 12% alpha — visible card/button borders)
+  --color-border-accent:    #14b8a673  (accent teal at 45% alpha — "this card/pill matters" border)
+  --color-accent:           #14b8a6   (teal — primary brand color, buttons, links, check icons)
+  --color-accent-light:     #2dd4bf   (hover state of accent buttons)
+  --color-accent-dark:      #0f9b8e
+  --color-accent-wash:      #14b8a62e (accent at 18% alpha — tinted card backgrounds, "New in 2.0" pill fill)
+  --color-red-400:          #ff6568   (the only status/negative color used — "Without UX Engine" X icons)
+  --color-black:             #000
+Notably NO green/yellow/blue status colors are defined or used anywhere on the site — a
+single accent (teal) plus one negative (red-400) is the entire semantic palette. Positive
+= teal check icon, not a separate "success green". This is a deliberate restraint Kladra
+should notice: not every state needs its own hue; accent-vs-danger can carry both roles
+in a single-accent brand.
+
+All alpha compositing is literal 8-digit hex alpha (e.g. #ffffff0f) or Tailwind's /NN
+opacity-modifier syntax (bg-background/80, bg-accent-wash/30), not rgba(); with a CSS
+@supports (color-mix) fallback block generated automatically by Tailwind v4 for browsers
+that support oklab color-mix — an implementation detail, not something to copy, but a
+reminder that translucent surfaces (backdrop-blur header, image placeholder overlays,
+tinted "New in 2.0" pills) are used constantly and cheaply throughout.
+
+## 3. RADII, BORDERS, SHADOWS
+
+  --radius-xl:   .75rem (12px)  — used on small chips/pills in some contexts
+  --radius-2xl:  1rem   (16px)  — the dominant radius: every card, every image thumb, every
+                                  aside/CTA box, the terminal mock, the pricing box
+  rounded-full                  — every button, every filter chip, every avatar/traffic-light dot
+  rounded  (.25rem)             — barely used
+Border widths: 1px solid everywhere (border, border-t, border-b) — no 2px borders found.
+  border-border-subtle  → hairline dividers between homepage sections (almost invisible)
+  border-border-strong  → default card/button outline (12% white)
+  border-border-accent  → the "this one is special" outline (pricing box, UX Engine aside,
+                           active filter chip, related-pattern hover, "New in 2.0" pill)
+Shadows: only two shadow utilities appear in the compiled CSS:
+  shadow    → 0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.10)  (barely used)
+  shadow-2xl → 0 25px 50px -12px rgba(0,0,0,.25), used ONLY on the hero terminal-mock figure
+               (shadow-2xl shadow-black/40) and (on pattern pages) a hand-authored arbitrary
+               shadow on the video frame: shadow-[0_8px_40px_rgba(0,0,0,0.5)].
+Kladra takeaway: the site does NOT layer many small card shadows the way most dashboards do —
+on a near-black background, a 1px 12%-white border does almost all of the "this is a
+surface" work; shadow is reserved for exactly one hero element per page (the thing that
+should look like it's floating above everything else).
+
+## 4. SPACING, GRID, MAX WIDTHS
+
+Base unit --spacing: .25rem (4px), so gap-1..gap-10 = 4/8/12/16/24/32/40px — the classic
+Tailwind 4px rhythm, not the PDF Blueprint's 8px-primary scale (the live site is finer-
+grained than the free PDF it gives away — worth noting as an inconsistency, not a rule).
+Section rhythm on the homepage: every section is `border-t border-border-subtle py-16`
+(64px top/bottom padding, hairline divider) — the entire homepage is one repeating rhythm
+of "hairline, 64px, content, 64px, hairline, 64px…", nothing else varies it. The hero
+section is the one exception at py-12 sm:py-24.
+Content max-widths (container-* tokens): xs 20rem, sm 24rem, md 28rem, xl 36rem, 2xl 42rem,
+3xl 48rem, 5xl 64rem, 6xl 72rem. In practice: header/footer/main use max-w-6xl (72rem/1152px)
+almost everywhere; the About page and a pattern's prose column narrow to max-w-2xl (42rem)
+and prose uses max-w-none inside a lg:grid-cols-[minmax(0,380px)_1fr] split so body copy
+never gets wider than a comfortable reading column even inside a 1152px shell.
+Patterns grid: `grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3` — 2 columns even on mobile
+(never drops to 1), 3 columns from lg (1024px) up. Gap tightens from 24px to 12px on mobile
+to keep 2 columns comfortable on a 375px screen. Card image aspect ratio is fixed 4:5
+(aspect-[4/5]) — tall/portrait, matching the Reels/TikTok source material.
+
+## 5. COMPONENTS
+
+Buttons — two variants only:
+  Primary: `rounded-full bg-accent px-6 py-3 text-sm font-semibold text-background
+  transition-colors hover:bg-accent-light` — text color is --color-background (near-black)
+  on the teal fill, not white; hover swaps the fill to the lighter teal, no shadow/scale change.
+  Secondary/outline: `rounded-full border border-border-strong px-6 py-3 text-sm font-semibold
+  text-text transition-colors hover:border-border-accent` — hover only brightens the border
+  to the accent-tinted one, fill never changes.
+  Special nav CTA ("UX Engine · $79" pill, .ux-cta class): a genuinely novel technique —
+  a 1.5px animated conic/linear gradient border (5-stop rainbow: teal -> cyan -> indigo ->
+  pink -> amber -> back to teal) built with a ::before pseudo-element using mask-composite:
+  exclude to punch out the fill, animated via `@keyframes ux-loop { to { background-position:
+  200% 0 } }` over 4s linear infinite, PLUS a blurred (`filter:blur(11px)`) ::after copy at
+  opacity .45 (→ .75 on hover) sitting behind it as a soft glow. This is the one moment of
+  real motion/color flourish on an otherwise very restrained page — reserved for a single
+  recurring nav element, not sprinkled everywhere.
+
+Chips / filter pills (patterns index category filter): `rounded-full border px-4 py-1.5
+text-sm font-medium capitalize transition-colors` — inactive: border-border-strong
+bg-surface-1 text-text-muted hover:text-text; active (aria-pressed="true"): border-border-
+accent bg-accent-wash text-accent. Categories found: All, content, feedback, forms,
+interaction, motion, navigation, visual — 7 categories + All, lower-case in the DOM,
+capitalize'd by CSS.
+
+Cards (pattern grid item): `rounded-2xl border border-border-subtle bg-surface-1
+overflow-hidden transition-colors hover:border-border-accent` wrapping a 4:5 image with a
+`group-hover:scale-[1.03]` zoom (duration-300) on the <img>, a small category pill
+absolute top-left on the image (bg-background/70 backdrop-blur border-border-strong), and
+a text block below (title text-sm/base font-semibold, one-line-clamped description
+text-xs/sm text-text-muted). Hover changes exactly two things: the card border brightens
+to border-accent, and the image scales up 3% — no shadow, no lift, no color shift on the
+text. Confirmed by screenshot: the hover state is genuinely subtle, almost a "did that
+just happen" effect rather than a showy one.
+
+Cards (content/comparison, e.g. "Without/With UX Engine"): rounded-2xl border p-6, "without"
+uses border-border-subtle bg-surface-1 (neutral), "with" uses border-border-accent
+bg-accent-wash/30 (tinted) — the losing/negative option is visually flat and the winning
+option gets the accent treatment, a simple, effective before/after color code that needs
+no red at all for the "without" side (red only appears on the small X icons inside it).
+
+FAQ / disclosure: native <details>/<summary>, `group py-4` rows separated by
+`divide-y divide-border-subtle`, a "+" glyph that rotates 45° (→ becomes "×") via
+`transition-transform group-open:rotate-45` — no JS-driven accordion library, just CSS
++ the native details element, animated with a single transform.
+
+Terminal/demo mock (hero): a `rounded-2xl border border-border-strong bg-surface-1
+shadow-2xl shadow-black/40` window with 3 traffic-light dots (bg-surface-3, no red/yellow/
+green macOS colors — monochrome dots, deliberately not skeuomorphic), a font-mono
+text-[13px] leading-6 transcript with a blinking cursor block built from
+`animate-pulse` (opacity 50% at the keyframe midpoint, 2s cubic-bezier(.4,0,.6,1) infinite)
+on a 2-unit-wide span — the "AI is thinking" indicator is literally the same Tailwind
+pulse utility everyone has, used well.
+
+## 6. MOTION
+
+Transition durations in the bundle: only two — 150ms (default-transition-duration, used
+for color/background/border swaps on hover) and 300ms (duration-300, used for the single
+larger scale/transform effect on card-image hover). No 200ms, 400ms, 500ms tier despite
+those being common Tailwind defaults elsewhere — the site intentionally collapsed motion
+to two speeds: fast for color, slower for transform.
+Easing: --default-transition-timing-function: cubic-bezier(.4,0,.2,1) (Tailwind's default
+"ease" curve) used everywhere; --ease-out/--ease-in/--ease-in-out tokens are defined but
+transition-timing-function is never overridden away from the default in what's rendered —
+i.e., they resist the urge to hand-tune easing per component.
+Keyframes present in the bundle: `spin` (loading spinners, 1s linear infinite), `pulse`
+(the cursor/skeleton blink, opacity 100→50→100, 2s), `ux-loop` (the gradient-border CTA,
+4s linear infinite, background-position 0→200%). That's the entire animation vocabulary —
+three keyframes for the whole site.
+No parallax, no IntersectionObserver-driven reveal-on-scroll classes were found in the
+static HTML/CSS (no [data-aos], no opacity-0/translate-y utility pairs suggestive of a
+scroll library) — sections are simply present, not animated in on scroll. The one place
+per-element JS motion happens is the pattern-page video progress bar
+(`scaleX(0)` transform driven by playback time) and the hover card-image zoom.
+`motion-reduce:animate-none` is applied to the hero cursor pulse — the one explicit
+prefers-reduced-motion accommodation found in the markup.
+
+## 7. PATTERN PAGE ANATOMY (from /patterns/perfect-card, representative of all 76)
+
+1. Eyebrow: category word in accent color, text-sm font-medium (e.g. "Visual").
+2. H1: pattern name, text-3xl/4xl font-bold tracking-tight.
+3. Hook: one-line subtitle in text-lg text-text-muted directly under H1, always a punchy
+   before/after or provocation ("One card looks free. The other costs $1000. Four CSS
+   changes.").
+4. Two-column layout at lg breakpoint (`lg:grid-cols-[minmax(0,380px)_1fr]`): LEFT column
+   is sticky (`lg:sticky lg:top-24`) and holds the video; RIGHT column scrolls and holds text.
+5. Video block: portrait 9:16 aspect, autoplay+muted+loop by default with a "Tap for sound"
+   pill top-center (pulsing), a YouTube/TikTok-style custom control bar that fades in only
+   on hover/interaction (progress bar + play/pause + mute, bottom overlay with a
+   background gradient from bg-background/80 to transparent so controls stay legible over
+   any video frame), and a "Watch on Instagram ↗" link directly below linking to the
+   source Reel — the video is the primary artifact, the plain-text breakdown is presented
+   as a bonus/transcript next to it, not the other way around.
+6. Below the video: a UX Engine upsell aside (border-border-accent bg-surface-1), same
+   component reused on the homepage pricing section and the patterns index.
+7. Article body ("prose prose-invert" — Tailwind Typography plugin, inverted for dark
+   background): exactly two H2s every time — "Key insights" (bulleted, <strong> on the
+   numbers/key terms: "40px", "24px", "two shadows", "55% opacity" — every concrete value
+   mentioned is bolded so a skimmer can scan just the bold words) and "Do / Don't" (a
+   single flat <ul> where each <li> starts with **Do:** or **Don't:** in bold rather than
+   two separate columns/lists — simpler markup than a visual two-column do/don't grid,
+   relies on the bold lead word to do the sorting).
+8. Blueprint (free PDF) upsell card — identical component appears on every page (home
+   footer, about page, every pattern page): consistent placement of the "give us your
+   email" ask right after the free content, never before it.
+9. "Related patterns" — 3-card grid, same card component as the index grid, manually or
+   algorithmically curated (perfect-card links to de-ai-landing-hero, reverse-engineered-
+   linear, charts-that-lie — a mix of same-category "visual" and cross-category picks).
+
+## 8. WHAT MAKES THE UI FEEL THE WAY IT DOES (from reading the screenshots)
+
+- Density is low and confident: generous 64px vertical rhythm between sections, generous
+  card padding (24px), short line lengths (max-w-2xl/5xl containers) — nothing fights for
+  attention because very little is on screen at once. For a data-dense CRM this is the
+  opposite end of the spectrum from Kladra's tables/boards, but the RESTRAINT principle
+  transfers: one accent color, two font weights carrying most of the page, one radius,
+  one shadow reserved for one hero element per screen.
+- Contrast is achieved almost entirely through the text/text-muted/text-dim three-step
+  ladder rather than through size — headings are barely larger than body text in many
+  places (text-2xl h2 vs text-base body is only 8px apart) but read as clearly senior
+  because color does the separating work.
+- The accent teal is used sparingly and functionally: check icons, links, active states,
+  the one gradient CTA — it is never a decorative fill. Large surfaces stay near-black/
+  surface-1/surface-2; teal only ever touches small elements (icons, 1-2px borders, text).
+  This "small hits of one saturated color on a desaturated dark field" is the single
+  biggest transferable idea for Kladra's own dark theme and its own accent color.
+- Video framed as a phone screen (9:16, rounded-2xl, floating shadow) inside a page that
+  is otherwise a normal desktop reading layout — the video visually cites "this came from
+  a phone-native Reel" without the whole page adopting a mobile app skin.
+- Do/Don't blocks are typographic, not iconographic pairs of screenshots — bold "Do:"/
+  "Don't:" lead words in a single list read faster than two side-by-side image panels
+  would, and cost nothing to produce/maintain, which matters for Kladra's own review docs.
+- Card hover is deliberately quiet (border brightens + 3% image zoom, 300ms) — nothing
+  lifts, nothing casts a new shadow, confirmed by the hover screenshot. The site trusts a
+  border-color change to read as "interactive" rather than reaching for a lift/shadow combo.
+
+Files backing this: home.html, about.html, p-perfect-card.html, patterns.html, app.css
+(all in this folder), and shots/home-1366.png, shots/home-375.png, shots/patterns-1366.png,
+shots/patterns-375.png, shots/about-1366.png, shots/about-375.png,
+shots/perfect-card-1366.png, shots/perfect-card-375.png, shots/patterns-card-hover-1366.png.
+Note: most of the 76 thumbnails on /patterns did not finish lazy-loading before the
+full-page screenshot fired (native loading="lazy" images far down a 15,000px-tall page) —
+the first ~12 cards and the category filter/hero chrome are fully rendered and sufficient
+to read the grid system; the other agents extracting the 76 individual pattern pages have
+the per-pattern thumbnails covered.

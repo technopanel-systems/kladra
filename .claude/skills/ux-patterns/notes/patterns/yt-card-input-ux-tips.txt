@@ -1,0 +1,29 @@
+TITLE: Card Input UX Tips (payment card number field)
+CATEGORY: forms / input-masking
+URL: https://www.youtube.com/shorts/ai7ExJmtxcY (YouTube Shorts channel @designmotionhq_yt; caption reads "Card input IX tips" — "IX" is a typo for "UX." Content confirms this is a PAYMENT CARD NUMBER field, not a content/UI "card" component — resolves the ambiguity noted in R/site/social.txt. Closest of the 76 designmotionhq.com/patterns/<slug> pages is input-masking, which this short specializes into one field type.)
+
+PROBLEM: A raw, ungrouped 16-digit card number input is unreadable while typing, breaks the moment a user pastes a formatted number, and either shames the user with a premature error or lets a caret jump around and force retyping.
+
+RULES:
+- Group digits 4-by-4 as they're typed: raw "4242424242424242" (video labels it "X Hard to read") vs. grouped "4242 4242 4242 4242" ("✓ Readable") — captioned "Group them four by four as they type."
+- Detect and show the card brand from the first digit, live, as soon as it's typed: on-screen table — 4 = Visa, 5 = Mastercard, 3 = Amex — with the brand logo appearing in the field the instant the leading digit is entered. Line: "The first digit names the brand. Show the logo the instant it's known."
+- Keep the caret where the user's finger left it when auto-inserting a formatting space — shown as "X Caret jumps" vs. "✓ Caret held" on the same input. Line: "Nothing feels worse than retyping."
+- Validate on blur, not on keystroke: "X Premature" shows a red/error state firing mid-entry ("4242 42"); "✓ Patient" only confirms/errors once the field is complete and loses focus. Line: "Don't flag an error on the first keystroke. Validate on blur. Forgive while they type."
+- "Red means done and wrong, not unfinished" — an incomplete-but-still-being-typed number must never be styled as an error; red is reserved for a completed, invalid value.
+- Strip pasted junk: a pasted value full of dashes/spaces ("4242-4242-4242-4242") is silently cleaned and reformatted to the field's own grouping, not rejected. Line: "Never reject a value you could clean yourself."
+- Store raw, display formatted: what the user sees stays the grouped/spaced string; what's sent/stored is the raw digit string only — shown as a literal before/after code snippet: displayed "4242 4242 4242 4242" vs. stored `"cardNumber": "4242424242424242"`. Line: "The mask is for humans. The value is for code."
+
+DO / DON'T:
+- Do: auto-group digits as typed (4-by-4 for a 16-digit card number) so the value is scannable mid-entry.
+- Do: detect and surface brand/type from the leading digit(s) the instant it's identifiable.
+- Do: preserve caret position through any auto-inserted formatting character.
+- Do: validate only on blur/completion, never on each keystroke.
+- Do: auto-clean pasted input (strip separators, reformat) instead of rejecting it.
+- Don't: store the formatted/masked display string as the value — keep raw digits for the data layer, formatted string for the screen only.
+- Don't: color an in-progress, incomplete field red — that's reserved for a genuinely wrong, completed value.
+
+VIDEO ADDS: the exact 4-by-4 grouping rule for a 16-digit sequence; the specific brand-detection digit table (4→Visa, 5→Mastercard, 3→Amex) as a concrete worked example of "detect from the leading digit"; the literal store-vs-display code snippet proving the "mask for humans, raw value for code" separation; the explicit "validate on blur, not keystroke" framing paired with a named failure mode ("premature" vs. "patient").
+
+KLADRA: Kladra has no payment-card-number field today (it is a CRM/ops tool for a cladding company, not a checkout flow) — this pattern is not directly applicable to any current Kladra screen. Its real value to Kladra is as a specific worked instance of the general input-masking rules Kladra DOES need elsewhere: any formatted numeric field (a phone number, a Saudi IBAN/bank account number if ever collected for a supplier/dispatch record, a VAT/CR number, a quotation reference number) should follow the same four sub-rules found here — group as typed, preserve caret through auto-insertion, validate on blur not on keystroke, and strip pasted separators/reformat rather than reject. The store-raw/display-formatted separation is directly relevant to Kladra's Zod schemas and server actions: the formatted string a user sees in a form field must never be what's validated or persisted — validate and store the normalized/raw value, format only at render time. No conflict with any standing Kladra rule.
+
+PRIORITY: medium — no live payment field exists in Kladra to apply this to today, but the underlying masking/caret/validate-on-blur rules generalize directly to any formatted-number field Kladra does have (phone numbers in company/contact records, any reference/ID-like numeric input), so the rules are worth keeping on record even though the specific card-brand-detection example is not reusable as-is.

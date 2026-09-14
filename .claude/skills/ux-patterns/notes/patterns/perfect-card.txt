@@ -1,0 +1,26 @@
+TITLE: Perfect Card
+CATEGORY: Visual
+URL: https://designmotionhq.com/patterns/perfect-card
+
+PROBLEM: Two cards with identical content can look "free" (unstyled default) or "premium" (deliberate) depending on four small CSS decisions, not on the content itself.
+
+RULES:
+- Padding is the biggest tell: going from a cramped ~12px to ~40px, paired with a 24px border-radius, instantly reads as intentional instead of cheap. Sheet's basic card is tight and square-cornered; the premium card labels its padding explicitly and pairs it with a visibly rounder corner.
+- Build a real type hierarchy — push the title to 600 weight and roughly 38px, then shrink the body copy and drop it to ~55% opacity so the eye lands on the title first. Sheet shows the title/body pairing with `font-weight` and an opacity value called out directly on the frame.
+- Stack two shadows for believable depth: a tight, darker shadow for contrast plus a wide, soft shadow for ambient elevation — one shadow alone reads flat or artificial.
+- Add a hairline border at roughly 12% opacity to define the card's edge against a dark background, rather than relying on the shadow alone to separate it from the page.
+- Give the card a hover state — lift it about 8px, scale to roughly 1.02, and deepen the shadow — so it visibly signals "clickable" and adds the final layer of polish. Sheet shows a cursor hovering the card with the lift/scale/shadow change applied live.
+- Same content, four changes: spacing (padding/radius), typography (weight/size/opacity), shadows (layered), and hover are the entire gap between a card that looks free and one that looks like it cost real design effort.
+
+DO / DON'T:
+- Do: layer a tight shadow for contrast with a soft ambient one for depth, plus a subtle border around 12% opacity.
+- Do: set the description to ~55% opacity so the title clearly wins the hierarchy.
+- Do: give the card a hover lift (~8px up, slight scale, deeper shadow) so it feels interactive.
+- Don't: cram content against the edges with tiny padding and near-zero border-radius — it reads as an unstyled default.
+- Don't: give the title and body the same weight and full opacity, so nothing guides the eye.
+
+VIDEO ADDS: A literal side-by-side "Basic" (red-labeled) vs "Premium" (green-labeled) card built from the exact same "Dashboard Redesign" content, walked through the four changes as numbered steps (01 Padding, 02 Typography, 03 Shadows, 04 Hover State) with each frame captioned by its category; a closing frame stating plainly "The difference? 4 CSS changes" and "Same content. Four changes. That's it."; and a live cursor demonstrating the hover-lift on the finished card so the scale/shadow change is visible in motion rather than described.
+
+KLADRA: Directly applies to every card surface in Kladra — board-view cards for projects/dispatches/leads, KPI/summary cards on dashboards, and any card used in the coordinator's queue or team tab. The padding/radius/shadow/hover recipe is a concrete checklist to audit existing cards against during the front-end re-audit: are cards using layered shadows and a hairline border (matching DESIGN.md's dark-by-default identity), is title/body hierarchy established via weight and opacity rather than just size, and does hover feel deliberate. The hover lift/scale must stay inside Kladra's 100ms hover motion budget (a lift + scale + shadow change is a single quick transform, not the 150-250ms dialog timing) — flag this as a constraint to apply, not a conflict, since the pattern doesn't specify timing and Kladra's own budget governs it. No standing-decision conflict: this is pure visual polish, unrelated to drag-and-drop, bulk edit, saved views, or density.
+
+PRIORITY: high — cards are one of the most repeated primitives across Kladra's surfaces (boards, dashboards, queue), so getting the padding/typography/shadow/hover recipe right once pays off everywhere, and it's a natural checklist item for the upcoming front-end re-audit.

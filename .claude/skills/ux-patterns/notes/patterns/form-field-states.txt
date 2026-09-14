@@ -1,0 +1,27 @@
+TITLE: Form Field States
+CATEGORY: forms
+URL: https://designmotionhq.com/patterns/form-field-states
+
+PROBLEM: A text field has six required states, and most apps ship only two — the forgotten ones become bugs in production.
+
+RULES:
+- Six states, each needs explicit design: default, focus, error, success, disabled, loading. Video's own closing tally: "6 states · 1 system. One forgotten = one bug," with most apps shown shipping only two (Default + Error highlighted, rest greyed).
+- At rest: label outside the field, helper text below — a placeholder-as-label vanishes the moment typing starts.
+- On focus: a focus ring of at least 3:1 contrast makes the active target obvious; a soft blue glow looks pretty but fails accessibility (video shows a measured "CONTRAST 4.8:1 ✓" badge on the correct ring).
+- On error: combine color + icon + message together — border-only red is invisible to ~12% of users with color-vision deficiency; name what's wrong ("Email format is invalid — check the @ symbol").
+- On success: confirm inside the field, where attention already is — toasts steal focus and disappear before they're read (video: "thibault@designmotionhq.com ✓ Email available" confirmed in-field).
+- Disabled vs loading must look distinct: disabled uses a grayscale fill with a not-allowed cursor; loading shows an in-field spinner and blocks input to prevent double submits (video: "Checking availability..." spinner inside the field, captioned "Spinner inside + disable the input").
+
+DO / DON'T:
+- Do: place the label above the field and helper text below.
+- Do: signal every error with color, an icon, and a written message at once.
+- Do: disable the input and show a spinner during async checks.
+- Don't: use a placeholder as the label.
+- Don't: rely on border-only red for errors.
+- Don't: fake a disabled state with opacity 0.5 — it reads as loading instead.
+
+VIDEO ADDS: Numbers every state 1/6 through 6/6 with a progress dots indicator, and pairs each with an explicit "RULE" tag and "AVOID" tag (e.g. Focus: RULE "Ring contrast 3:1 minimum" / AVOID "Soft blue glow fails accessibility"; Disabled: RULE "Grayscale background + cursor not-allowed" / AVOID "Opacity 0.5 looks like a loading state"). Shows the exact email validation error copy ("Email format is invalid — check the @ symbol") and the exact success copy ("Email available") rather than generic placeholders. Closing card literally lists all six state names in colored pills (DEFAULT/FOCUS/ERROR/SUCCESS/DISABLED/LOADING) as a checklist.
+
+KLADRA: Every text input in Kladra's forms (quotation line items, lead/company fields, request dialogs) needs all six states designed once in DESIGN.md's component kit and reused everywhere, not decided per screen. This connects directly to disabled-buttons.txt (loading ≠ disabled, same distinction) and error-states.txt (color+icon+message, matching Kladra's "every state has a word, never colour alone" rule exactly). No conflicts with standing decisions. The opacity-0.5-disabled anti-pattern is a common shadcn/Tailwind default worth explicitly checking Kladra's input component against.
+
+PRIORITY: high — this is a base-level component correctness checklist (6 states × every text field in Kladra) that directly reinforces two of Kladra's own standing rules (every state has a word; disabled ≠ loading) and is cheap to get right once in the shared Input component.

@@ -1,0 +1,26 @@
+TITLE: Autosave
+CATEGORY: forms
+URL: https://designmotionhq.com/patterns/autosave-ux
+
+PROBLEM: A "Saved" indicator that shows even when the write never reached the server silently costs users their work.
+
+RULES:
+- Never write on every keystroke. Start/reset a debounce timer on each keystroke and commit one clean write after ~800ms of silence (video: "800ms of silence → one clean write", shown as a progress bar filling from 150/800ms to 800/800ms).
+- Model the status pill as an explicit state machine: Typing → Saving → Saved, plus Offline and Error as reachable states from any point — never let the pill read "Saved" when the write didn't land.
+- On connection loss, queue every edit locally and show a badge with the pending count (video shows "3 changes pending" and a 4-item local queue with timestamps). On reconnect, drain the queue oldest-first.
+- Two tabs open on the same document risk silent last-write-wins data loss — merge concurrent changes or warn the user; never overwrite silently (video shows a two-tab diff highlighting the conflicting paragraph in red before merging).
+- Guard the exit: intercept tab close via `beforeunload` when unsaved work exists ("Leave site? Changes you may not be saved" dialog with Leave/Stay).
+
+DO / DON'T:
+- Do: debounce writes to one clean save after a pause (~800ms).
+- Do: queue edits locally while offline and replay them oldest-first on reconnect.
+- Do: keep the status pill honest by mapping it to real states, updated in real time.
+- Don't: show "Saved" when the change never reached the server.
+- Don't: overwrite a concurrent edit silently.
+- Don't: let a tab close on unsaved work without confirming.
+
+VIDEO ADDS: Renders the state machine as an actual node graph (Typing → Saving → Saved, with Offline and Error as branches), shown once healthy and once stuck in the Error node with a red ring. The offline queue is shown as a real list of 4 pending edits with relative timestamps under a "Server: waiting for connection" line. The two-tab conflict demo visually diffs "Agenda — Friday offsite" between Tab A and Tab B, tags one path "LAST WRITE WINS" (in red, the bad path) vs "MERGE" (teal, the good path). Closing line: "Autosave is a system. DEBOUNCE · STATES · QUEUE · MERGE · GUARD."
+
+KLADRA: Directly relevant anywhere Kladra lets someone type into a field that should not require an explicit Save click — request/quotation line-item edits, the coordinator's queue notes, inline edits on record drawers. Debounce + explicit state-machine status pill fits Kladra's "every state has a word, never colour alone" rule well (Typing/Saving/Saved/Offline/Error are exactly the kind of word-labeled states Kladra wants). No conflict with drag-and-drop/bulk-edit/saved-views bans. One open question for Kladra: does it want autosave at all, or does every write go through an explicit server action on submit (SPEC/DESIGN should say) — if Kladra's forms are submit-based rather than continuously autosaved, only the debounce-on-search-input and beforeunload-guard pieces apply, not the full state machine.
+
+PRIORITY: medium — valuable if Kladra has any continuously-edited field (queue notes, inline edits), but much of Kladra's data entry is likely explicit server-action forms rather than autosaving documents, so applicability depends on a product decision not yet confirmed here.

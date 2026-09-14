@@ -1,0 +1,26 @@
+TITLE: Color Picker UX
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/color-picker-ux
+
+PROBLEM: A bare gradient-and-slider color picker treats color choice as decoration when every pick actually cascades into contrast, transparency, and palette decisions across the whole UI.
+
+RULES:
+- Treat the picker as a decision tool, not a gradient with a slider — every choice cascades into the rest of the UI.
+- Offer OKLCH next to hex: hex is for machines, OKLCH's lightness/chroma/hue lets a person change one number and get a predictable shade (video shows `rgb(59,130,246)` vs `oklch(0.74 0.19 259)` with sliders for each of L/C/H).
+- Give the picker memory: recent swatches and saved palettes put the last five picks one tap away instead of re-hunting.
+- Show a live contrast ratio at pick time, not in review — a badge that flips red (FAIL) to green (PASS) kills failing pairs before they ship (video: "2.5:1 FAIL" vs "4.8:1 AA" badges live next to the swatch).
+- Preview alpha over a checkerboard on both light and dark backgrounds — transparency lies on a plain white canvas.
+- Turn one pick into a system: generate tints/shades from a single hue to produce ten tokens (blue-50 through blue-900) from one decision.
+
+DO / DON'T:
+- Do: expose human-readable formats like OKLCH so one value maps to a predictable shade.
+- Do: surface recent swatches and saved palettes so past picks stay one tap away.
+- Do: validate contrast live while picking, with a red/green badge.
+- Don't: preview alpha only on white — use a checkerboard to reveal true transparency.
+- Don't: ship a bare gradient-and-slider picker with no memory, contrast check, or palette output.
+
+VIDEO ADDS: Shows the literal OKLCH slider trio (Lightness 0.74, Chroma 0.19, Hue 259) next to five generated tint swatches labeled with their lightness values (L 0.32 through L 0.78). Shows a 5-swatch "recent" row plus a saved "Brand — 4 colors" group appearing under the picker. Shows the contrast badge flipping live as a background swatch changes: "2.5:1 FAIL" (red) on one panel vs "4.8:1 AA" (green) on another, both anchored to the same "Continue" button preview. Shows the alpha slider (90% vs 45%) previewed as a swatch on both a light and dark card with "Aa — Body text" and an "Action" button rendered at each alpha, plus the raw `rgba(59,130,246,0.90)` string. Shows a full generated palette (blue-50 → blue-900, 10 steps) branching from one picked swatch (#3B82F6) with a footer stat "10 tokens · 1 decision."
+
+KLADRA: Most relevant if Kladra ever exposes a color picker to an end user (e.g. a tag/label color for lead status, a dispatch calendar color) rather than only using a closed DESIGN.md token palette. Given CLAUDE.md's "Five files, nothing else" and a fixed design-token system with "exactly two gradients," Kladra likely does NOT want an open-ended color picker in the product at all — the live-contrast-badge and OKLCH-over-hex ideas are the parts worth keeping if any picker exists (e.g. an admin-only settings screen), while the "memory/recent swatches" and "saved palettes" features risk drifting toward a personalization feature Kladra hasn't asked for. Flag as likely LOW APPLICABILITY unless SPEC/DESIGN calls for user-chosen colors anywhere.
+
+PRIORITY: low — Kladra's fixed, pre-defined design-token approach (not user-customizable color) makes a full color-picker component unlikely to be needed; keep only the live-contrast-check idea in mind if any settings screen ever exposes color choice.

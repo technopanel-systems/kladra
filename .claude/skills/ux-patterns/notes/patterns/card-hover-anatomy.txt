@@ -1,0 +1,26 @@
+TITLE: Card Hover Anatomy
+CATEGORY: motion
+URL: https://designmotionhq.com/patterns/card-hover-anatomy
+
+PROBLEM: The same card can feel alive or dead on hover depending on four specific motion rules — most hover treatments break at least one of them.
+
+RULES:
+- Lift with weight: raise the card ~8px on hover and stretch its shadow with it, over ~200ms ease-out. Faster reads as twitchy, slower feels stuck (video shows exactly this 3-way comparison: fast = "twitchy," 200ms = correct, slow = "stuck").
+- Claim the cursor: a pulsing accent border or a gradient sweep around the edge signals interactivity instead of leaving the card visually flat.
+- Cascade the actions: reveal hidden action buttons (favorite/cart/share) staggered ~60ms apart, anchored at the bottom — a reveal should add an affordance, not shift layout.
+- Push against the glass: scale the inner image to ~1.05 inside an `overflow-hidden` frame while the outer container stays fixed size — the product presses outward instead of the whole card resizing.
+- The trap: never scale the whole card — that shifts neighboring cards and breaks the grid. Animate the content, keep the footprint (geometry) fixed.
+
+DO / DON'T:
+- Do: lift the card ~8px and grow its shadow together over ~200ms ease-out.
+- Do: stagger revealed action buttons ~60ms apart, anchored to the bottom edge.
+- Do: scale the image ~1.05 inside an overflow-hidden frame while the container holds still.
+- Don't: scale the entire card — it shifts neighbors and breaks the grid.
+- Don't: stack action buttons over the title or let them spill outside the card boundary.
+- Don't: time the lift too fast (twitchy) or too slow (stuck).
+
+VIDEO ADDS: Opens on a 4-card grid labeled "Same card" then isolates one card to show hover physically lifting with a growing drop shadow. Three hover-treatment thumbnails are compared with explicit failure labels: "zooms right" (wrong), "grows stuck" (wrong), correct version marked "CORRECT" with a green badge. The action-reveal demo shows heart/cart/share icons fading in with visible stagger timing under a "60ms apart" label. The image-scale demo runs the same product photo at container-fixed-1.05x-inner-scale vs (implied) a whole-card scale for comparison. The anti-pattern grid explicitly marks two 4-card grids "WRONG" (red, cards overlapping/shifted neighbors) vs "RIGHT" (green, geometry intact) captioned "Never scale the whole card. Lift the content. Keep the geometry."
+
+KLADRA: Applies to any card-grid view Kladra has — companies/projects board views, dashboard summary cards, the coordinator's queue cards. The lift+shadow+stagger recipe gives concrete numbers (8px, 200ms, 60ms) that fit inside Kladra's stated 100ms hover budget only partially: the 200ms lift is slower than Kladra's "100ms for hover/menus" rule — a CONFLICT worth flagging plainly, since this pattern's signature "weight" feel depends on the slower 200ms timing. Recommend keeping the lift fast (closer to 100–150ms) to stay in Kladra's budget, accepting a slightly less "weighty" feel, rather than adopting 200ms verbatim. The "claim the cursor" gradient-sweep border risks conflicting with "exactly two gradients (primary action, logo mark)" if applied to every card — use a plain accent-color border/ring instead of a gradient sweep on hover to stay within that budget. The geometry-preservation rule (never scale the whole card) is a clean, conflict-free correctness rule Kladra should keep regardless.
+
+PRIORITY: medium — useful hover vocabulary for board/dashboard cards, but two of its four signature moves (200ms timing, gradient-sweep border) need trimming to fit Kladra's motion-timing and two-gradients rules.

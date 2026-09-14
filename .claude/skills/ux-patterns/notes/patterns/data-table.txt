@@ -1,0 +1,26 @@
+TITLE: Data Table
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/data-table
+
+PROBLEM: A data table built as a plain grid of divs — binary sort, jittery numbers, tiny checkbox targets — feels cheap next to one built as a system.
+
+RULES:
+- Sort is tri-state, not a toggle: ascending → descending → back to original — video contrasts a "Binary toggle" (original order lost forever) against "Tri-state: asc → desc → original," showing the actual on-screen captions "Sorted ascending" then "Natural order restored" on the same rows.
+- Numeric columns need tabular figures, right-aligned: video shows identical dollar values ($1,299.00, $84.50, $12,400.00, $349.99, $2,750.00, $96.00) proportional-and-left-aligned (digits don't line up) next to tabular-and-right-aligned (every digit sits on the same vertical grid).
+- Freeze what you navigate by: sticky header with a depth shadow on vertical scroll, frozen first column with an edge shadow on horizontal scroll — shown as two side-by-side table crops, each labeled with its freeze axis.
+- Density as one token-driven control, not a guess: video gives exact row heights — Compact 36px, Comfortable 48px, Spacious 60px — switched from a single control.
+- Whole row is the selection target: full-row tint + accent left bar + checkbox, versus a checkbox-only hit target — video's footer literally counts "1 of 6 selected" vs "3 of 6 selected" to show the whole-row target gets used more.
+- Select-all state morphs empty → indeterminate (dash) → checked so partial selection reads at a glance — visible on the final frame's header checkbox.
+
+DO / DON'T:
+- Do: right-align numeric columns with tabular figures so values form a scannable vertical grid.
+- Do: keep the header sticky and freeze the first column so labels stay anchored while scrolling.
+- Do: expose row density as one token-driven control for consistent, predictable spacing.
+- Don't: ship a binary sort that strips the original order with no way back to natural sequence.
+- Don't: rely on a tiny checkbox-only hit target when the entire row could be clickable.
+
+VIDEO ADDS: the exact row-height tokens (36/48/60px), the literal before/after dollar-value grid comparison, the tri-state sort's actual on-screen captions ("Sorted ascending" / "Natural order restored"), and the "1 of 6" vs "3 of 6" selected-count comparison arguing whole-row targets get selected more — concrete numbers the static text only gestures at ("e.g. 36/48/60px").
+
+KLADRA: every list surface — companies, projects, quotations, dispatches. Tri-state sort, tabular-numeric right-aligned amounts, and sticky header/frozen first column are direct wins with no conflict. CONFLICT: two of this pattern's core rules collide head-on with Kladra's standing decisions — (1) the row-density control (Compact/Comfortable/Spacious, one control switching 36/48/60px) conflicts with "no density toggle (one setting for fourteen people)" — Kladra should pick ONE fixed row height, not expose the control; (2) whole-row-target selection plus a select-all indeterminate checkbox is explicitly a multi-select/bulk-selection affordance, which conflicts with "no bulk edit" — Kladra rows should not carry selection checkboxes at all.
+
+PRIORITY: high — Kladra's list screens are the single most-used surface for Faisal, Rawan and Abdulrahman; the sort/numeric-alignment/freeze rules should be adopted directly, and the density and row-selection rules must be explicitly rejected rather than silently copied, since they conflict with existing decisions.

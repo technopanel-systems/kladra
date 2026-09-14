@@ -1,0 +1,26 @@
+TITLE: Disabled Buttons
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/disabled-buttons
+
+PROBLEM: A disabled submit button blocks the user without ever explaining why, and disabling itself breaks keyboard access, tooltips, and contrast simultaneously.
+
+RULES:
+- A disabled button drops out of the tab order — keyboard users skip right past it and screen readers stay silent; the block exists but nothing announces it (video: "Tab" hint skipping straight from field to Cancel, captioned "Skip 1/7... (1) skipped").
+- Pointer events are dead on a disabled element, so a tooltip meant to explain the block never fires — the reason is unreachable by design (video: hover shows no tooltip at all, captioned "no pointer events, no reason").
+- Greyed-out labels usually fail contrast — video shows a disabled label measured at 1.9:1, well under the 4.5:1 threshold required, so the text is hard to read on top of being blocked.
+- Keep the button live and validate on click instead: light up the blocking fields and move focus to the first one so the path forward is visible (video shows two required fields highlighted in orange with an inline "Pick a region" / "Accept the terms" message, then focus visibly landing on the first).
+- Disabled and loading are different states: during a request, hold focus, show a spinner, and report `aria-busy`; greying the button out mid-request throws away the user's place (video's state table: Disabled = tab order no / announces no / keeps place no, vs Busy = yes/yes/yes across all three).
+
+DO / DON'T:
+- Do: keep the button enabled, validate on click, flag blocking fields, move focus to the first one.
+- Do: for async actions, use a busy state that holds focus, spins, and sets `aria-busy`.
+- Do: name the blocker in reachable text, not a tooltip on a dead control.
+- Don't: disable submit and leave the user guessing what's missing.
+- Don't: rely on a tooltip to explain a disabled control.
+- Don't: treat loading as disabled.
+
+VIDEO ADDS: Runs the exact same "New project" form through three labeled failure modes with matching visual proof — Tab order (keyboard skips the disabled button entirely, shown as a dashed skip-arrow), Pointer events (hover produces literally nothing, "no pointer events, no reason"), and a measured contrast readout ("1.9:1" in red against the 4.5:1 requirement line). The fix side shows the form's Region and Terms fields highlighting orange with inline messages and a validation summary panel ("Region — Pick a region · Focus", "Terms — Accept the terms · queued") appearing live as the user tabs through. The busy-vs-disabled comparison renders an actual 3-row state table (Disabled/Busy/Done × in tab order/announces progress/keeps user's place) with yes/no values color-coded green/red. Closing line: "Don't disable. Explain."
+
+KLADRA: Applies to essentially every form submit and record-drawer save action in Kladra — quotation forms, request dialogs, lead/company creation. This is a genuine accessibility correctness bug most disabled-until-valid buttons ship with, and it interacts directly with Kladra's "server actions for every write" architecture: client-side validation should light up fields and move focus rather than disabling the submit button, with the server action still re-validating (consistent with behind-the-button.txt's "never trust the client" rule). No conflict with standing decisions — this is a pure correctness fix. Async submit states (busy/spinner/aria-busy) should follow Kladra's 100-250ms motion budget for the spinner's appearance, not a slow fade.
+
+PRIORITY: high — nearly every Kladra form has a submit button, and shipping it disabled-until-valid is a common, easy-to-miss accessibility and clarity bug this pattern fixes with a concrete alternative.

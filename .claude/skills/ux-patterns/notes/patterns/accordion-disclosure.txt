@@ -1,0 +1,27 @@
+TITLE: Accordion Disclosure
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/accordion-disclosure
+
+PROBLEM: Expand/collapse panels are usually built with a naive height transition or a plain div, so they either snap open instead of animating or fail keyboard and screen-reader users entirely.
+
+RULES:
+- `height: auto` cannot be transitioned — it snaps. Either use `display: grid` with `grid-template-rows` animating 0fr -> 1fr, or measure `scrollHeight` and transition to that pixel value.
+- The demo's own CSS sample uses `display: grid; grid-template-rows: 1fr; transition: 0.3s;` — i.e. a ~300ms panel transition.
+- The chevron icon must rotate on the exact same timing curve as the panel height change; the video calls out that even ~10 frames of lag between chevron and panel reads as broken, not smooth.
+- Decide up front: accordion (one panel open at a time) vs disclosure (many can stay open). Sequential/step content should stay single-open; FAQ-style lists should allow multi-open.
+- The clickable header must be a real `<button>`, not a `<div>`, with `aria-expanded` reflecting open/closed state and `aria-controls` pointing at the panel id — this is what makes Enter/Space toggle it and gives it a visible focus ring.
+- When a lower item in the list expands, anchor the tapped header's scroll position so the page doesn't jump, and stagger the newly revealed content in rather than showing it instantly.
+
+DO / DON'T:
+- Do: drive chevron rotation and panel height off one shared timing curve so they move as a unit.
+- Do: render the header as a real `<button>` wired with `aria-expanded` and `aria-controls`.
+- Do: match open behavior to content type — one-at-a-time for steps, many-open for FAQs.
+- Don't: animate `height: auto` directly — use grid-rows or a measured pixel value instead.
+- Don't: let the chevron trail the panel by even a few frames.
+- Don't: let the list scroll-jump when a lower item expands — keep the tapped header anchored.
+
+VIDEO ADDS: Shows the literal broken-vs-fixed code diff (`height: auto` crossed out in red vs `display: grid; grid-template-rows: 1fr; transition: 0.3s;` marked correct in green). Plots two line graphs labeled "chevron tracks the panel — 0 frame lag" vs "chevron arrives 10 frames late — feels broken," confirming the ~10-frame number as a literal case, not a metaphor. Shows a side-by-side "Accordion" (single-open, numbered steps: Shipping address / Payment / Review order) vs "Disclosure" (multi-open FAQ) mock so the two named behaviors are visually distinct. Shows a "no anchor" vs "anchored" comparison of a Help Center list where a lower item's expansion either shoves the whole list down or keeps the tapped row pinned. Shows keyboard hint row: Tab (move) / Enter or Space (toggle) under an `aria-expanded="false"` / `aria-controls="panel-1"` code snippet.
+
+KLADRA: Applies to any collapsible group — company/project record drawer sections (contact info, documents, activity), FAQ-style help content, filter-chip groups that expand for more options, and mobile-width card lists where a row expands into details instead of opening a full drawer. The single-vs-multi-open decision matters for the coordinator's queue (each request likely single-open, since only one should be "active" at a time) versus a settings-style FAQ. No conflict with any standing decision — grid-rows/scrollHeight technique and button semantics are pure implementation hygiene. The suggested ~300ms panel duration sits above Kladra's 100ms hover/menu budget but fits inside the 150–250ms dialog/drawer band loosely (slightly over); use 200–250ms to stay in-budget rather than the demo's 300ms.
+
+PRIORITY: high — accordions/disclosures are a near-certain fit for record drawers and FAQ/help content, and the aria-expanded/aria-controls + grid-rows technique is exactly the kind of correctness bug Kladra should not ship.

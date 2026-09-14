@@ -1,0 +1,26 @@
+TITLE: Dropdown Design
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/dropdown-design
+
+PROBLEM: A dropdown built as a 30px low-contrast box with no keyboard support or overflow handling feels cheap next to one built to five specific rules.
+
+RULES:
+- Make the trigger obviously clickable: a 48px touch target, a visible caret icon, a real hover state — not a faint 30px box (video's before/after: "before" flagged with "30px height (too small)," "low contrast border," "no hover feedback"; "after" fixed with "48px touch target," "clear caret icon," "hover state feedback").
+- Flip on edge: when there isn't room below the trigger, open the menu upward so it never clips off-screen.
+- Keyboard support isn't optional: arrow keys move the highlight, Enter selects, Esc closes (video's hint row: ↑↓ navigate / Enter select / Esc close, captioned "Every user. Every time.").
+- Once a list passes ~10 items, add a search field so users filter instead of scroll-hunt (video shows a "Fra" query narrowing a long list to one match, "France," captioned "Filter beats scroll. Always.").
+- Animate the open around 150ms — video runs an explicit 3-way comparison: 50ms flagged "Too fast," 150ms flagged "Just right," 500ms flagged "Too slow."
+
+DO / DON'T:
+- Do: give the trigger a 48px touch target, a clear caret, and a visible hover state.
+- Do: open the menu upward when space below runs out.
+- Do: wire up arrow keys, Enter, and Esc.
+- Don't: ship a 30px, low-contrast trigger with no hover feedback.
+- Don't: let a long menu clip off the bottom of the viewport.
+- Don't: animate slower than ~150ms — or with no transition at all.
+
+VIDEO ADDS: Every rule is numbered (Rule 1–5) with its own before/after or comparison demo, matching the text almost value-for-value but making the numbers literal on-screen rather than described: the 50/150/500ms open-speed comparison renders three actual dropdown menus opening at those exact speeds side by side, each stamped with its verdict ("Too fast" / "Just right" / "Too slow"). Closing line: "Dropdowns, done right."
+
+KLADRA: This is a near-complete, low-risk spec for every select/dropdown in Kladra — filters on list screens, status selects in record drawers, the coordinator's queue actions menu. The 150ms open timing sits exactly inside Kladra's stated "100ms for hover/menus" range at the edge (150ms vs Kladra's 100ms ceiling) — worth tightening to ~100-120ms to stay strictly inside Kladra's own budget rather than adopting 150ms verbatim; flag as a minor tuning note, not a real conflict. The 10+-items-gets-search rule matters for Kladra's company/project pickers which could have hundreds of records. No conflict with "no saved views" (a search-to-filter field inside a dropdown is not a saved view) or any other standing decision. RTL: caret icon must mirror, and "flip on edge" logic needs to account for both vertical AND horizontal edges when the dropdown is near the leading/trailing edge in RTL.
+
+PRIORITY: high — dropdowns/selects appear on nearly every Kladra screen (filters, status pickers, record fields) and this pattern is concrete, low-conflict, and needs only a small timing tweak to fit Kladra's existing motion budget.

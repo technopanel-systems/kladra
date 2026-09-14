@@ -1,0 +1,27 @@
+TITLE: Error States
+CATEGORY: feedback
+URL: https://designmotionhq.com/patterns/error-states
+
+PROBLEM: The same underlying error recovers badly or well purely based on which surface it uses and whether it gives the user a real way out.
+
+RULES:
+- Match error type to surface: validation belongs inline under the field, a lost connection reads as a banner/toast, a server crash or permission block needs its own prominent space (video's "4 errors, 4 patterns" grid: Validation → inline field message; Network → "No connection, Reconnecting..." banner; Server → "Something broke" card with Try again; Permission → "You don't have access" card with Sign in).
+- Let severity drive the surface: minor stays inline, transient surfaces as a toast, blocking failures earn a modal — the more an error interrupts, the more space it should occupy, and the reverse (video's 3-tier map: Inline=Recoverable, Toast=Transient, Modal=Blocking).
+- Every error needs an exit: a dead-end "OK" leaves people stuck — offer Retry, a support link, or expandable technical details (video shows an escalating recovery panel: "Try again," "Contact support," then "What happened? Network timed out after 30s" with Retry/Escalate/Explain options).
+- Write copy for humans: "Error 500 — An error occurred" tells nothing; say what broke, why, and what to do next (video literally times a countdown: "Lost connection. Reconnecting in 4 seconds..." vs the generic "An error occurred / Code: 0x80004005").
+- Prevent errors before they happen: live inline validation, checking each rule as the user types and turning criteria green, stops most mistakes before submit — video's own stat: "Inline validation kills 80% of errors."
+- Keep field-level validation small, inline, and anchored to the specific input, not a generic floating alert.
+
+DO / DON'T:
+- Do: offer a clear recovery action on every error — retry, undo, or a path to help.
+- Do: match the surface to severity: inline / toast / modal.
+- Do: validate inline as the user types.
+- Don't: ship dead-end errors whose only option is "OK".
+- Don't: surface raw codes like "Error 500" with no guidance.
+- Don't: interrupt a minor validation slip with a full-screen modal.
+
+VIDEO ADDS: A literal before/after modal comparison flags a generic "Error 500 / An error occurred / OK" dialog as the failure case directly beside a "Lost connection / We're trying to reconnect / Try again · Refresh page" recovery card, captioned "Don't show a 500 modal for a typo." A severity-to-surface bar chart runs Inline (green, "Recoverable") → Toast (amber, "Transient") → Modal (red, "Blocking") along a low-to-high severity axis, captioned "Most apps overuse modals." The live-validation demo shows a signup form's password field gaining green checkmarks one rule at a time as the user types ("At least 8 characters" ✓, "Contains a number" ✓, "Contains a special char" ✓), contrasted against the same form validating only after submit. Closing "5 RULES" checklist: Match the type to the surface / Always offer a way out / Severity drives surface / Write copy for humans / Prevent with live validation.
+
+KLADRA: Directly governs every server action failure and form validation error in Kladra (quotation forms, request dialogs, dispatch scheduling, lead capture). The severity-to-surface mapping (inline/toast/modal) gives Kladra's error taxonomy structure, and pairs with Kladra's "every state has a word, never colour alone" rule — each error surface here already names its state in words, not just color. The live-validation idea converges with disabled-buttons.txt (validate on interaction, not by disabling submit) and behind-the-button.txt (server re-validates regardless of client checks) — treat as one connected rule set, not three separate findings. No conflict with any standing decision.
+
+PRIORITY: high — Kladra's server-action architecture generates errors constantly (network, validation, permission, server); this pattern gives the concrete severity→surface mapping and copy discipline needed to handle all of them consistently.

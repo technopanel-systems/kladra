@@ -1,0 +1,27 @@
+TITLE: Animation Timing
+CATEGORY: motion
+URL: https://designmotionhq.com/patterns/animation-timing
+
+PROBLEM: The same UI feels premium or broken purely based on how many milliseconds its motion takes and which easing curve it uses.
+
+RULES:
+- Entrances: 200–300ms with cubic ease-out — fast enough to feel responsive, slow enough to read as deliberate. The video marks 250ms as "perfect", 50ms as "too fast", 700ms as "too slow".
+- Exits should run faster than entrances — pair a 250ms entrance with a ~150ms exit (video states exits are ~30-40% faster: "250 → 150", "Exits are 30% faster. The user already decided.").
+- Tap/press feedback must land under 100ms or it reads as lag even when the action is instant. Video shows a 3-way comparison: 200ms = "laggy", 100ms = "OK", 50ms = "instant", captioned "<100ms — Press. Hover. Toggle. The Doherty threshold — feels instant."
+- Attention-grabbing motion (notifications, alerts) can run longer and use bounce/overshoot: 500–800ms.
+- Stagger list items ~50ms apart. Video shows 30ms = "too fast" (items blur together), 50ms = "perfect", 100ms = "too slow" (list crawls in).
+- Match easing to intent: ease-out for entrances; reserve spring/bounce for moments that must grab attention.
+
+DO / DON'T:
+- Do: use ease-out curves for entrances so motion decelerates into place.
+- Do: make exits roughly 30-40% faster than their matching entrance.
+- Do: keep tap/press feedback under 100ms.
+- Don't: stretch entrances past ~300ms.
+- Don't: use symmetric in/out timing.
+- Don't: use linear easing on entrances — reads mechanical and cheap.
+
+VIDEO ADDS: Every number in the text is also shown as an on-screen stat with a labeled demo: a confirm-delete modal at 500ms (feels sluggish) vs 250ms (feels right); a "Saved" toast that fires correctly inside a 250ms-in/150ms-out modal vs one where the modal takes 250ms in but a mismatched 250ms out ("Some spend + sluggish exit"); three color-coded buttons (red/orange/green) demonstrating 200ms/100ms/50ms feedback lag explicitly tied to "the Doherty threshold"; a settings-list stagger demo run at 30/50/100ms per item.
+
+KLADRA: This is a direct, numeric spec for every motion Kladra already has an opinion on. It refines Kladra's stated "100ms for hover/menus, 150–250ms for dialogs/drawers" — the pattern's Doherty-threshold rule (<100ms tap feedback) matches Kladra's 100ms hover/menu figure almost exactly, and its 200–300ms entrance / faster-exit rule fits inside Kladra's 150–250ms dialog/drawer band if entrances are kept at the low end (200–250ms) with exits at 150ms or below. No conflict — this pattern is the numeric justification underneath Kladra's existing motion rule. Applies to: every dialog/drawer open-close (record drawers, request dialogs), toasts/notifications (500-800ms bounce fits an alert but Kladra's toasts likely want the calmer entrance range, not bounce, given "no number tickers or looping motion"), the coordinator's queue list stagger, and any list reveal (companies/projects/quotations lists).
+
+PRIORITY: high — gives Kladra's existing motion-timing rule concrete numbers and easing guidance instead of just a range, and applies to nearly every screen with a dialog, drawer, toast, or list entrance.

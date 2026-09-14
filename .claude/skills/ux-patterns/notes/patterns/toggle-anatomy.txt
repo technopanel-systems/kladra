@@ -1,0 +1,27 @@
+TITLE: Toggle Anatomy
+CATEGORY: Forms
+URL: https://designmotionhq.com/patterns/toggle-anatomy
+
+PROBLEM: A toggle looks like a trivial two-state control, but a snapped, unanimated, mouse-only switch reads as broken and leaves keyboard/screen-reader users and pending network state unhandled.
+
+RULES:
+- Proportions: make the rail twice the knob's diameter (sheet shows rail width 600px against a knob track of ~260px in the enlarged mockup, i.e. roughly 2x), and pad the knob by its own radius so it sits centered off either edge in both on/off states.
+- Animate the flip, don't snap it: transition over ~250ms with an ease-out curve (sheet labels this exactly "250ms · ease-out" on three separate frames).
+- Four properties change together during the flip, not in sequence: rail color (neutral → teal), knob position (translateX), knob shadow (soft → glow), and the state label (OFF → ON) — sheet lists all four as "Rail color," "Knob slide," "Knob shadow," "Label" moving together.
+- Accessibility is built in, not bolted on: Space toggles the control when it has focus, a visible focus ring marks keyboard position, and `aria-checked` lets screen readers announce state — sheet shows the literal chain "Space → [toggle] " and labels "Space," "Focus ring," "aria-checked" as three required pieces.
+- For async toggles (one that persists to a server), go optimistic: flip the visual state immediately on click, show a spinner inside the knob while the request (sheet shows `POST /api/settings` with body `{ notifications: true }`) is pending, then roll back with a shake animation and an error toast ("Couldn't save — try again") if the request fails.
+
+DO / DON'T:
+- Do: size the rail to 2x the knob diameter, with knob padding equal to its own radius.
+- Do: morph rail color, knob position, knob shadow, and label together over ~250ms ease-out.
+- Do: support Space-to-toggle, a visible focus ring, and `aria-checked` for screen readers.
+- Do: flip optimistically, spin a loader in the knob while pending, and roll back with a shake + error toast on failure.
+- Don't: snap the knob instantly between states — reads as broken, not responsive.
+- Don't: leave the toggle visually ambiguous during a pending network request (an un-spun switch looks stuck).
+- Don't: ship a toggle that only responds to mouse clicks and ignores keyboard/screen-reader users.
+
+VIDEO ADDS: The literal rail/knob pixel proportions (600px rail vs. ~260px knob track in the enlarged mockup), the exact "250ms · ease-out" transition label repeated three times, the four synchronized properties named individually (rail color, knob slide, knob shadow, label) with mini before/after chips (e.g. "neutral → teal," "soft → glow," "OFF → ON"), the accessibility chain rendered as Space key → focused unchecked toggle → focused checked toggle with a glowing focus ring, and the full optimistic-flip failure sequence shown as a live client mock: knob flips immediately, a `POST /api/settings {notifications: true}` request fires, the request fails (shown in red), the knob shakes and rolls back, and a "Couldn't save — try again" toast appears. None of this sequencing or the API-call/error-toast rollback flow is described in the page text.
+
+KLADRA: Applies anywhere Kladra uses a switch — settings screens (notification preferences, feature flags), record drawer fields with a boolean state (e.g. active/inactive on a company or project), and any coordinator-queue toggle. The optimistic-flip-with-rollback pattern is directly relevant since every Kladra write goes through a server action — this gives a concrete UX for that round trip (flip immediately, spinner in the knob, shake + toast on failure) that fits Kladra's existing toast pattern. The 250ms timing sits within Kladra's stated 150–250ms window for dialogs/drawers, so it's consistent with (not a new addition to) the existing motion scale — worth confirming toggles specifically use 250ms rather than the 100ms hover/menu figure since a toggle isn't a menu. RTL: knob translateX must use a logical transform (flip direction, not hardcode left-to-right) so ON slides toward the trailing edge in Arabic, not visually "backwards." CONFLICT: none — no density toggle is a separate, unrelated decision (this is a single boolean switch component, not a settings density control); optimistic-update-with-rollback does not conflict with "no refresh buttons" since it is a background retry pattern with a toast, not a manual refresh action.
+
+PRIORITY: medium — toggles are a common but secondary control in Kladra's UI (mostly settings/booleans, not a primary list/drawer/dashboard surface), though the optimistic-update pattern is a good reusable pattern for other async controls too.

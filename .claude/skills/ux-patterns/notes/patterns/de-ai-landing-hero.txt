@@ -1,0 +1,28 @@
+TITLE: De-AI Landing Hero
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/de-ai-landing-hero
+
+PROBLEM: Generated marketing landing pages share five visible tells (adjective headline, purple gradient blob, two equal buttons, fake social proof, generic icon-feature row) because they have no real product to show.
+
+RULES:
+- Tell 1 — headline: an adjective-stuffed headline ("Supercharge your workflow with AI") sells feeling because it has no product to name; replace with a plain outcome + audience line ("Close the month in one afternoon" / "Bookkeeping for small teams, without the spreadsheet").
+- Tell 2 — the blob: a gradient smear behind everything exists because the page needs energy from somewhere; use a neutral background and put the only color on the product screenshot and one primary button ("1 accent, 0 blobs").
+- Tell 3 — two equal buttons: "Get started" and "Learn more" at the same size splits the click 50/50; keep one primary button, demote the second to a text link with an arrow (video literally reweights a "click weight" slider from 50/50 to ~90/10).
+- Tell 4 — fake social proof: "Trusted by 10,000+ users" over unrecognizable grey logos is an uncheckable number; replace with one quote — name, role, and a measurable result with a unit ("closed August in three hours, used to take a week").
+- Tell 5 — generic feature row: three icon-in-circle cards with one-word labels (Fast/Secure/Easy) appear on every generated page; replace with one real product screenshot with annotations pointing at actual UI.
+
+DO / DON'T:
+- Do: name the outcome in the headline and the audience in the subtitle.
+- Do: give the product screenshot and primary button the only accent color on the page.
+- Do: quote one customer with a role and a measurable result.
+- Don't: fill the headline with adjectives like supercharge, seamless, powerful.
+- Don't: place two identical-weight buttons side by side.
+- Don't: ship the icon-in-a-circle feature row with one-word labels.
+
+VIDEO ADDS: Runs all five fixes as literal before/after swaps on the same mock landing page, each captioned with the fix name ("Outcome first · plain text", "1 accent · 0 blobs", "One primary · one text link", "Name · role · result with a unit", "Show the product · not the adjectives"). A numbered overlay ("Tell 1" through "Tell 5") marks each AI-tell directly on the before screenshot. The two-buttons fix animates an actual click-weight bar splitting 50/50 then re-splitting to ~90/10 as the second button shrinks to a text link. The final "after" hero shows a real dashboard screenshot ($48,210 revenue, a small line chart) replacing the generic feature-icon row.
+
+VIDEO ADDS (cont.): opens on "Five tells. Five fixes." with the whole AI-made hero flagged "AI-made · 5 tells" in a single red badge.
+
+KLADRA: Low direct applicability — Kladra is an internal CRM/operations tool for a 14-person company, not a marketing landing page trying to convert visitors, so most of this pattern's specific advice (hero headline, social proof quote, feature-icon row) has no obvious surface in Kladra as scoped by SPEC/DESIGN. Say so plainly rather than forcing relevance. The one transferable principle worth keeping: "show the real thing, not decoration" generalizes to Kladra's own dashboards and empty states — a dashboard KPI card or empty state that leans on a generic icon-and-adjective instead of a real number or a real next action is making the same AI-generated-page mistake. The one-accent-color discipline also reinforces Kladra's "exactly two gradients" rule from the opposite direction (this pattern argues for zero gradients as decoration, consistent with keeping gradients rare and functional).
+
+PRIORITY: low — Kladra has no marketing landing page in scope; only the general "decoration replaces content when there's nothing real to show" lesson carries over, and only loosely, to dashboards/empty states.

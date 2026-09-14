@@ -1,0 +1,26 @@
+TITLE: Empty States
+CATEGORY: content
+URL: https://designmotionhq.com/patterns/empty-states
+
+PROBLEM: A blank screen reads as broken, not empty-on-purpose — and most apps waste the empty state instead of using it as onboarding.
+
+RULES:
+- A blank screen can't be told apart from a failure; one small illustration or icon signals the emptiness is intentional (video: a plain "Nothing here yet" with no visual is marked the weaker version next to one with a small icon).
+- Write like a product, not a log file — swap corporate error copy ("No items found. Result set empty.") for a warm, on-brand line ("Looks quiet in here").
+- Every empty state needs a primary action — not "Try refreshing," but the actual next step ("+ Add your first project," "+ Create project," "+ New project").
+- There are (at least) four kinds of empty, each needing its own copy and CTA: first run, no results, error, and filtered-out (video shows a 4-card grid: "Welcome aboard / Let's set up your workspace" with Start tutorial; "No matches found / Try different keywords" with Clear search; "Something broke / We couldn't load your data" with Retry; "Hidden by filters / You have 12 items but filters are hiding them" with Reset filters).
+- The empty state is a prime onboarding moment — show a ghost preview of what a real item will look like to teach the feature before users touch it (video: a Tasks list showing one greyed-out placeholder task labeled "← This is how a task looks" above a "Drag files to start" CTA).
+
+DO / DON'T:
+- Do: add a small illustration or icon so the screen reads as intentional.
+- Do: give every empty state one clear primary CTA pointing to the next real step.
+- Do: tailor copy and action to context — first run, no results, error, or filtered-out.
+- Don't: leave a bare "No data" or blank body with no visual or guidance.
+- Don't: rely on a generic "Try refreshing" as the only action.
+- Don't: write cold, log-file copy like "ERROR 404 — Result set empty."
+
+VIDEO ADDS: Runs a direct "corporate vs human" tone comparison on the identical layout — "ERROR 404 / No items found. Result set empty." (flagged red/CORPORATE) vs "Looks quiet in here / Add your first project and your team will see it instantly." (flagged teal/HUMAN) — same icon, same button position, only the words differ. Shows a numbered "5 empty state RULES" summary card (01 Illustration, 02 Human tone, 03 Primary CTA, 04 Context, 05 Onboarding) as a literal checklist. The four-empty-types grid gives each its own real copy and CTA verbatim (quoted above), making the "don't ship one generic screen" rule concrete rather than abstract.
+
+KLADRA: Every list screen in Kladra will hit at least one of these four empty states — a brand-new company with no projects yet (first run), a search with no matches, a failed data fetch, or a filtered list showing nothing. This maps directly onto the CRM's core surfaces (companies/projects/quotations/dispatches lists, the coordinator's queue when clear). No conflict with standing decisions — filtered-out and no-results empty states are about existing filters, not saved views. The corporate-vs-human tone rule needs a Kladra-specific voice pass in both English and Arabic (words.md governs this) so the two locales don't read as literal translations of each other's personality. The ghost-preview-as-onboarding idea is a nice-to-have, lower priority than getting the four states' copy and CTA right first.
+
+PRIORITY: high — every list surface in Kladra needs at least first-run and no-results empty states with a real CTA, and this pattern gives the exact copy/action framework with no conflicts to resolve.

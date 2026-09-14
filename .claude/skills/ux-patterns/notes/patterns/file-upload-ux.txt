@@ -1,0 +1,27 @@
+TITLE: File Upload UX
+CATEGORY: forms
+URL: https://designmotionhq.com/patterns/file-upload-ux
+
+PROBLEM: The same file upload feels broken or safe purely based on whether it's a bare file input or a real system of drag feedback, honest progress, recovery, preview, and queue.
+
+RULES:
+- Upload is a system of five states — drag feedback, honest progress, error recovery, preview, and queue — not a bare `<input type=file>`.
+- A dropzone must answer back the moment a file hovers over it: border, glow, and copy change together before the drop, so users never hesitate over a dead zone (video: "Drop hero-banner.png" idle vs a teal-bordered, glowing "Release to upload / hero-banner.png — 2.4 MB" state).
+- A spinner hides the truth — show percent complete and time remaining so the user can decide to wait or walk away (video: an unlabeled spinner marked "MYSTERY" beside an honest card reading "50% / Uploading... / 9s left / 1.7 MB/s").
+- When an upload dies at 90%, never make them start over — inline retry keeps the file loaded and resumes in one tap (video: "demo-recording.mp4 — 90% / Paused at 90% — file kept in memory / Upload failed: Connection lost [Retry]").
+- A filename is not feedback — show the thumbnail, type, and size as visual proof the right file arrived (video: a "MYSTERY" generic file icon labeled only "IMG_4032.jpg uploaded" vs a real thumbnail preview panel with type/size and "Replace / Remove" actions).
+- In a multi-file queue, each item gets its own progress and its own retry — one failure never blocks the other nine (video: a 5-file queue list, each row showing its own % independently, captioned "One failure never blocks the others").
+
+DO / DON'T:
+- Do: react to drag-over with a border, glow, and copy change before the drop.
+- Do: show percent complete and estimated time remaining during upload.
+- Do: offer inline retry that keeps the file loaded so one tap resumes.
+- Don't: rely on a spinner that hides how far along the upload really is.
+- Don't: force users to re-select and start over after a failed upload.
+- Don't: treat a bare filename as confirmation the right file arrived.
+
+VIDEO ADDS: Every one of the five states gets an explicit "signal" label (Signal 01 — Drag Feedback, 02 — Honest Progress, 03 — Inline Retry, 04 — Upload Preview, 05 — Independent Queue) with a paired failure/success demo, making all the percentages and byte/time numbers quoted above literal on-screen values rather than described figures. The queue demo shows a real 5-row list (brief.pdf, hero-banner.png, demo-recording.mp4, invoice-2026.pdf, avatar-photo.jpg) each at a different % with its own state icon, ending on a fully-complete state with green checkmarks on all 5.
+
+KLADRA: Applies wherever Kladra accepts a file — quotation attachments, dispatch proof-of-delivery photos, project documents. The drag-feedback rule needs care: drag-and-drop as a *file-selection* input (dropping a file onto a dropzone) is a different mechanic from Kladra's banned drag-and-drop (reordering/moving records), so this is NOT a conflict — worth stating that distinction plainly since the word "drag" appears in both. Honest progress, inline retry-without-restart, real thumbnail preview, and independent per-file queue status are all direct, conflict-free wins that also reinforce Kladra's "no number tickers or looping motion" rule (a percent-complete progress bar is determinate, not a looping spinner, and is exactly the kind of motion Kladra should prefer).
+
+PRIORITY: high — Kladra needs file upload for attachments/photos in at least quotations and dispatches, and this pattern's five-state system directly prevents a common class of "it looks stuck / did it work?" support questions with no conflicts to resolve.

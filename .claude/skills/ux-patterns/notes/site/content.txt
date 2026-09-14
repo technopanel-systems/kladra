@@ -1,0 +1,168 @@
+designmotionhq.com — CONTENT BEYOND THE 76 PATTERN PAGES
+Sources: about.html, home.html (full HTML captured in this folder), and R/pdf/text.txt
+(the free 11-page "Design System Blueprint" PDF, already extracted, read but not refetched
+here). Everything below is the site's own public wording, summarized/paraphrased except
+where quoted. No paid content (the $79 plugin's skill files or PDF manual) was sought.
+
+## SITE MAP (everything internal, confirmed by reading every page fetched)
+/            — homepage, doubles as the UX Engine product/sales page
+/about       — company page (About) — identity, stats, "what we make", testimonials, contact
+/patterns    — index of the 76 free pattern breakdowns (search + 8 category filters)
+/patterns/<slug> — one of 76 pattern pages (owned by other agents, not duplicated here)
+No blog, no docs, no changelog page, no pricing page separate from home#pricing, no
+careers/team page. Footer + nav repeat identically on every page. External-only links:
+Instagram (instagram.com/designmotionhq), TikTok (tiktok.com/@designmotionhq), a Lemon
+Squeezy checkout for UX Engine ($79) and a separate Lemon Squeezy checkout for the free
+Blueprint PDF (gated by email), and a mailto: to support@designmotionhq.com.
+
+## ABOUT PAGE — verbatim identity lines
+Tagline: "UI that doesn't look AI-made."
+Mission line: "designmotionhq makes tools and breakdowns so that interfaces built with AI
+do not look built by AI. Design reasoning for developers who ship with AI: the sequence of
+decisions a senior designer makes, written down and shipped with you."
+Stats (dated "Figures as of 2026-09-10", i.e. they timestamp their own claims): 70k+
+followers across Instagram and TikTok · 76 pattern breakdowns free to read · 130+
+developers using UX Engine.
+"What we make" — three products, one line each:
+  1. UX Engine — the $79 Claude Code plugin.
+  2. The pattern library — "Every Reel as a page you can search, skim and link to: the
+     breakdown in plain text, the video beside it. Free, forever." (confirms the whole
+     pattern library exists to turn short-form video into durable, linkable, searchable text.)
+  3. The Design System Blueprint — "The rules behind the patterns, condensed into one PDF.
+     Free, against an email address."
+Two testimonials (unattributed beyond role): a developer ("The UX engine became a standard
+plugin in my Claude, really love it") and a software-company founder ("I have a software
+company, I would love to see you overhaul our software").
+Contact: support@designmotionhq.com or Instagram DM, "Replies come within 72 hours, signed
+designmotionhq." — note the personal, singular signature despite presumably being a team.
+
+## THE FREE PDF — "The Design System Blueprint" (11 pages, already read in R/pdf/text.txt)
+Framing stat used to sell the idea of a design system at all (sourced to "Figma Design
+Systems Report 2024" and Brad Frost's Atomic Design): 47% faster development, 33% fewer
+inconsistencies, 2x faster onboarding.
+Structure is a checklist-first, not essay-first, document: Foundations (color tokens,
+type scale, 4px spacing, icon sizes) -> Components (buttons/inputs/cards/badges with every
+state) -> Motion (easing curves, a duration scale from 100ms micro to 500ms XL) ->
+Do's/Don'ts -> a literal "Design System Checklist" the reader can tick through.
+Its own semantic color-token example names a pattern Kladra already needs: bg.primary,
+bg.surface, border.default, text.primary, text.muted, brand.primary, status.success,
+status.error — i.e. always name tokens by ROLE not by value, "the biggest single lever for
+theme-switching being trivial later."
+Its icon guidance is concrete and directly reusable: 2px stroke weight, rounded caps/joins,
+24x24 default bounding box, currentColor fills, and a call-out that even a 20px icon needs
+a >=44x44px hit target for accessible touch — this is a WCAG-adjacent rule (2.5.5 Target
+Size) stated in plain language before naming the standard.
+Its motion guidance gives a named duration ladder Kladra can adopt directly: 100ms micro
+(hover/toggle/fade), 200ms small (button press/tooltip), 300ms medium (modal/dropdown),
+400ms large (page transition/slide), 500ms XL (complex orchestration) — with the explicit
+rule "never block the user, 300ms max for interactions" and "ease-out for enters, ease-in
+for exits" (asymmetric easing, not one curve for everything).
+
+## UX ENGINE PRODUCT PAGE (public content on /) — REASONING FRAMEWORKS, IN OUR WORDS
+This is the $79 plugin's SALES page, publicly readable; nothing below came from the paid
+PDF manual or the plugin's own skill/command source files — only what the marketing copy
+states about what the tool does. Framed as "eight skills of senior-designer reasoning,
+four commands that run them," sold as: "Your Claude Code, but with senior-designer
+reasoning baked in."
+
+### The core complaint the product exists to fix (their words, condensed)
+AI coding tools "produce clean Tailwind, decent spacing, cohesive colors" but still ship
+"a 12-column table with Delete next to Edit and call it a dashboard... not a product, a
+schema browser." I.e. their diagnosis is that AI-generated UI is visually clean but
+STRUCTURALLY wrong: it mirrors the database shape instead of the user's task. This is the
+single most load-bearing idea on the whole site and it is exactly Kladra's own risk
+surface (CRUD screens over Postgres tables) — worth internalizing directly, not just as a
+marketing hook.
+
+### The "Without / With" comparison table (their concrete example, a user-admin page)
+Without: 12-column table dumping every field · Edit and Delete equally weighted on every
+row · Search hidden in a "Filter" dropdown · No empty state (blank rows on no results) ·
+"Active" status as green text only (not colorblind-safe, no icon) · No loading state
+(first paint feels broken).
+With: 5 columns — identity, status, last seen, plan, actions · destructive action moved to
+an overflow menu + typed confirmation · search is the primary action on the page · empty
+state carries an "Invite your first user" CTA · status shown as an icon+label pill,
+colorblind-safe · a 5-row skeleton matching the final layout for the loading state.
+Every one of these six paired items is a directly applicable checklist item for Kladra's
+own list/table screens (leads, projects, dispatches, queue).
+
+### Eight skills (as named and described on the page)
+1. Intent Discovery — "Forces the who / what / worst-case questions before a single line
+   of UI is written." (who uses this, day to day, and what's the worst mistake they could
+   make on it — shown worked through in the hero terminal demo for a user-admin page.)
+2. Information Hierarchy — "Ranks actions primary / secondary / tertiary and enforces
+   scanning patterns and density."
+3. State Completeness — "Guarantees all six states: loading, empty, partial, error,
+   success, offline." (this exact six-state list is the most quotable, most directly
+   reusable idea on the page — see deeper.txt.)
+4. Form UX — "Field grouping, label placement, validation strategy, smart defaults,
+   progressive disclosure."
+5. Feedback & Affordance — "Feedback under 100ms, confirmation on destructive actions,
+   clickable looks clickable." (the "<100ms" figure is a specific, testable number, not
+   just "fast feedback" — worth carrying into Kladra's own interaction-latency bar.)
+6. UX Auditor — "Point it at any UI and get a severity-ranked, shippable fix list, not
+   vague advice." (i.e. every audit finding is triaged by severity and phrased as an
+   action, not an observation — a good rubric for Kladra's own review passes.)
+7. Design System (new in 2.0) — "Writes DESIGN.md at your project root, then enforces it.
+   Off-system values get flagged, never invented in silence." Elaborated in an FAQ/detail
+   block: it reads the project's existing Tailwind config, CSS variables and "most reused
+   component" FIRST — "whatever you already encode is the system" — and only asks about
+   genuine gaps, "five questions maximum," rather than inventing a system from scratch.
+   Kladra already has DESIGN.md as one of its five files, so this idea is essentially
+   already adopted — the transferable refinement is the ENFORCEMENT half: an explicit
+   rule that any value not in DESIGN.md must be either a declared, deliberate extension or
+   flagged as drift, never silently introduced.
+8. Visual Character (new in 2.0) — "One explicit decision per axis: type, color, space,
+   finish. No falling back on the model's default look." Elaborated: "Every model has a
+   statistically safest aesthetic, and UI that falls back on it reads as AI-made... It
+   ships with no house style on purpose, so the result looks like your product and not
+   like this plugin." Then names a self-test: "the lineup test: would this screenshot be
+   recognizable among ten AI-generated UIs for the same prompt?" This axis-by-axis
+   decision framing (type / color / space / finish, each requiring one deliberate choice)
+   plus the "lineup test" as a pass/fail heuristic is one of the most concrete, portable
+   ideas on the page — see deeper.txt for how to operationalize it.
+
+### Four commands (the "dependable way in" — each runs the skills it needs, every time)
+  /ux-design  — "Wireframe + spec before you implement, via the ux-designer sub-agent."
+  /ux-audit   — "A prioritized, actionable audit of a file, URL, or screen."
+  /ux-review  — "A UX pass on your current diff before merge: state gaps, hierarchy,
+                affordance, copy." (explicitly a PRE-MERGE gate, diff-scoped, not a whole-
+                app audit — directly mirrors what a "review the diff" step could look like
+                for Kladra's own acceptance process.)
+  /restyle [path] (new in 2.0) — "Diagnoses an existing UI axis by axis, applies DESIGN.md,
+                hands back a before/after." Elaborated: "It reports what that UI currently
+                does on each axis and whether it was a decision or a default... Visual
+                only: logic, component structure and copy meaning stay exactly where you
+                left them." I.e. restyle is scoped to remain non-destructive to behavior —
+                a useful constraint to state explicitly whenever Kladra re-skins a screen.
+Two named sub-agents exist (ux-designer invoked by /ux-design; an auditor role implied by
+UX Auditor/, /ux-audit) but the page does not name a second sub-agent beyond ux-designer
+explicitly — "2 sub-agents" is stated as a headline stat without both being named.
+
+### How the skills are meant to be invoked (their own operating model, stated in FAQ)
+"The four slash commands [fire] every time: each one runs the skills it needs. Naming a
+skill works too, every time: 'use visual-character on this screen'. Left to itself on a
+plain prompt, Claude consults the skills when the match is obvious and skips them when it
+isn't." They admit a tested failure case: "'build a pricing card component in React' on a
+clean setup with no other plugin: four files, no skill invoked" — i.e. skills are NOT
+reliably autonomous; the product's own honest FAQ says use a command or name the skill
+explicitly to guarantee the reasoning runs. This maps directly onto how Kladra should think
+about its own WORKFLOW.md rules/skills: don't assume a rule "just fires" — name it in the
+command, or make it a checklist a human/agent walks explicitly.
+
+### Pricing / packaging model (for context, not to copy commercially, but the shape is
+informative): one-time $79, "no subscription," bundles the plugin + "Premium PDF manual
+with worked examples, plus the 2.0 supplement" + 12 months of update access + email
+support (72h) + 30-day no-questions refund. Positioning line: "Buy. Unzip. Two minutes...
+No marketplace registration. No license activation."
+
+## THINGS TO NOTE FOR KLADRA'S OWN REVIEW PROCESS (synthesis, not their wording)
+- The six-state completeness list (loading / empty / partial / error / success / offline)
+  is stated as a hard guarantee ("Guarantees all six states"), not a suggestion — Kladra's
+  own screen-builder/audit passes could adopt exactly these six as a required checklist per
+  screen, matching WORKFLOW's acceptance-script spirit.
+- "Off-system values get flagged, never invented in silence" is a good literal rule to add
+  to Kladra's own DESIGN.md enforcement: any Tailwind class or hex value not already a
+  token should fail review, not just be discouraged.
+- The Without/With table format (paired bullet lists, red X vs teal check, same row count)
+  is itself a reusable presentation pattern for Kladra's own before/after review write-ups.

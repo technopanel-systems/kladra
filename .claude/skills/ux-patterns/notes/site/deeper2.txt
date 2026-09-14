@@ -1,0 +1,560 @@
+DEEPER RESEARCH 2 — FOUR TOPICS FROM AUTHORITATIVE PUBLIC SOURCES
+Nielsen Norman Group, Material 3, Apple HIG, WCAG 2.2, Refactoring UI, Linear, Stripe,
+Vercel/Geist, GOV.UK, Atlassian Design System — read 2026-09-14. Continues site/deeper.txt
+(which covered state completeness, information hierarchy/action priority, and visual
+character) without repeating it. Every rule below is either fetched verbatim from the
+cited page or, where a fetch was blocked (mostly JS-rendered design-system SPAs),
+corroborated through a named secondary source — flagged inline wherever that happened.
+Where a number could not be sourced at all (Refactoring UI's and Stripe's specific motion
+numbers), that gap is reported rather than invented.
+
+##############################################################################
+## TOPIC 1 — KANBAN AND BOARD UX FOR A PIPELINE WITHOUT DRAG-AND-DROP
+##############################################################################
+Kladra's quotations/dispatches/projects boards are structured pipelines, not freeform
+canvases, and CLAUDE.md forbids drag-and-drop and bulk edit outright — every move must be
+an action (menu/button), never a drag gesture.
+
+1. Column count ceiling: 3-7 columns is the practical limit for a board that still reads
+   as one scannable workflow (kanban-method consensus, corroborated across multiple vendor
+   guides). KLADRA: keep quotations/dispatches/projects boards in this band — don't split a
+   stage into finer sub-stages just to make status changes more granular.
+
+2. Column "age" signal: Jira renders a card's time-in-column as a row of dots with the
+   exact day count on hover; kanban-aging tools default their color-banding thresholds to
+   7/14/21 days. KLADRA: put a literal small age chip ("6d") on quotation/dispatch/project
+   cards, not just a colour fade — a number reads at both 1366px and 375px, and it is not
+   an internal code, so it doesn't collide with the no-IDs-on-screen rule.
+
+3. WIP-signal starting point: a commonly cited rule of thumb for a column's WIP limit is
+   team size + 1 (Atlassian, quoted via Multiboard). Jira turns a column's header red once
+   its configured limit is exceeded but never blocks new cards from entering — the signal
+   stays purely informational, never a gate. KLADRA: if a rep's queue column ever gets a
+   "loaded" tint, it must stay non-blocking, consistent with no-bulk-edit and no forced
+   workflow gates.
+
+4. Card-vs-list choice: Material's own guidance is to use a card for heterogeneous,
+   multi-action content and a plain list for homogeneous content with few actions.
+   KLADRA: validates the board-of-cards choice for quotations/dispatches/projects, since
+   each item differs in client, amount, owner and date rather than being homogeneous rows.
+
+5. Card action cap: Material caps supplemental card actions at two, plus an overflow menu.
+   KLADRA: a board card should expose at most ~2 quick actions and a "more" menu — this
+   reinforces the existing single-item, no-bulk-edit posture rather than fighting it.
+
+6. Card field cap: Jira's default card shows type icon + issue key + summary + assignee
+   avatar, with up to three optional custom fields; Trello's card front shows only name +
+   due date + a row of small count icons (labels/checklist/attachments), with everything
+   else on the back. KLADRA: because Kladra never shows internal codes/IDs, drop the "key"
+   field entirely — a card's identity line is the client/project name only. Cap the card at
+   roughly four fields: status glyph + title(client) + owner avatar + one more (amount or
+   date); notes/history stay behind the existing drawer, not on the card face.
+
+7. Empty column: NN/g's three empty-state rules apply directly — say why it's empty in
+   words ("no dispatches scheduled"), teach what would appear there, and give a real action
+   button, never a bare rectangle. GOV.UK's tag guidance adds: start with the smallest
+   number of statuses that might work, add more only if research shows a need — i.e. don't
+   invent extra badges to fill a thin, empty-looking column. KLADRA: an empty pipeline stage
+   needs its own one-line explanation plus the relevant create action, so it reads as a
+   real, finished state rather than a loading failure.
+
+8. Many columns on a laptop (1366px): Atlassian's own grid foundation states fluid,
+   horizontally-scrolling grids are the sanctioned pattern for content that "expands
+   horizontally, such as kanban boards" — not wrapping or reflowing columns. Material's
+   "expanded" window-size breakpoint (840-1199dp) is the class at which multi-pane/
+   multi-column layouts are the designed-for case, and 1366 CSS px sits comfortably above
+   it. KLADRA: at 1366px, show all board columns side by side with horizontal scroll as the
+   overflow behaviour, not a stage-picker or tabs; if a board ever grows past what fits,
+   Trello's precedent — a per-column collapse to name+count, still visible, not a saved
+   personal view — is the right escape hatch, since it doesn't violate no-view-
+   customization.
+
+9. Horizontal-scroll affordance: NN/g's eye-tracking on Apple's own filmstrip UI found
+   users "never glanced" at a hover-only scroll arrow, while a permanently visible sliver
+   of the next item's edge worked; separately, NN/g measures that users give the left half
+   of a screen roughly 80% of fixations versus ~20% for the right half. KLADRA: the board
+   row should always show a visible sliver of the next column's edge as the scroll cue —
+   never a hover-only arrow parked at the far right, which sits exactly where attention
+   almost never lands.
+
+10. Moves by action, not drag — this is spec-sanctioned, not a workaround: WCAG 2.5.7
+    Dragging Movements (AA) requires every drag-based function to also work via a single
+    pointer without dragging, and the W3C's own worked example is literally a kanban move:
+    "a pop-up menu after tapping or clicking on items for moving the selected element to
+    another column." KLADRA: the existing no-drag-and-drop rule is not merely compliant
+    with WCAG 2.5.7, it IS the sanctioned pattern the spec itself illustrates with a kanban
+    board.
+
+11. Concrete shape for the move menu: Atlassian's accessibility guidelines for their own
+    drag system specify putting the move action inside the card's existing "more actions"
+    (…) menu when one exists (never give a card both a drag handle AND a separate actions
+    menu); list each destination directly as a menu item for simple moves, or open a dialog
+    when the move needs extra input; return focus to the trigger after the move; and
+    announce the change via a screen-reader live region worded like "Task 'X' moved to
+    list 'Y' from 'Z'." KLADRA: this is a direct blueprint for Kladra's "Move to…" action —
+    live inside the card's existing overflow menu, list the other pipeline stages by name,
+    keep focus on the trigger, and pair the SSE-driven board update with an announced
+    confirmation naming both stages.
+
+12. Feedback at the moment of the move: Atlassian's design guidance calls for an optimistic
+    UI update (the board reflects the new state immediately) plus a brief (~700ms)
+    background flash on the card in its new location so the eye catches where it landed.
+    KLADRA: even though the move is triggered by menu rather than drag, the same feedback
+    principle is what keeps a menu-driven move feel fast instead of clunky.
+
+13. Boards on a phone (375px): two documented mobile-kanban shapes exist — (a) one stage
+    at a time with an explicit tab/picker to switch stages, or (b) one full column filling
+    the screen with the next column's edge peeking in as a swipe cue (practitioner-level
+    source, flagged as such, not a formal design-system page). Material's "compact"
+    window-size class (0-599dp) is the explicit baseline for single-column, touch-first
+    layouts, and 375px sits well inside it. KLADRA: adopt shape (a) — one stage at a time
+    plus a tap-driven stage picker — since a tap-to-pick control is itself another instance
+    of "action, not gesture," and is clearer than an edge-peek that a user could mistake
+    for a drag affordance; never attempt two board columns side by side at 375px.
+
+Sources: w3.org/WAI/WCAG22/Understanding/dragging-movements.html · atlassian.design/
+components/pragmatic-drag-and-drop/accessibility-guidelines · atlassian.design/components/
+pragmatic-drag-and-drop/design-guidelines · nngroup.com/articles/horizontal-scrolling/ ·
+nngroup.com/articles/horizontal-attention-leans-left/ · nngroup.com/articles/empty-state-
+interface-design/ · nngroup.com/articles/status-tracker-progress-update/ · design-
+system.service.gov.uk/components/task-list/ · design-system.service.gov.uk/components/tag/
+· m1.material.io/components/cards.html · multiboard.dev/posts/effective-setting-wip-limits
+· multiboard.dev/posts/best-practices-kanban-columns · developer.android.com/codelabs/
+adaptive-material-guidance · atlassian.design/foundations/grid · m3.material.io/
+foundations/layout/breakpoints · support.atlassian.com/trello/docs/collapse-or-expand-a-
+list · support.atlassian.com/jira/kb/days-in-column-setting-is-missing-from-boards/ ·
+kanbanzone.com/2020/card-aging-fun-and-helpful-visual-signal-for-kanban/ · trello.com/
+guide/trello-101 · github.com/der-faebu/kanban (issues #71, #73 — practitioner source,
+flagged).
+
+##############################################################################
+## TOPIC 2 — TARGET SIZE AND SPACING (FITTS'S LAW, WCAG 2.5.8)
+##############################################################################
+Applies to icon-only buttons in dense table rows and drawer heads, row actions, filter
+chips, and the phone's thumb zone.
+
+1. WCAG 2.5.8 Target Size (Minimum), Level AA — exact floor: 24×24 CSS pixels for any
+   non-inline, non-user-agent-controlled target. Five exceptions: Spacing, Equivalent
+   (a same-function 24px+ control exists elsewhere), Inline, Essential, and User Agent
+   Control. KLADRA: this is the legal floor for every row-action icon, drawer-head icon,
+   chip and dropdown trigger — treat it as a hard minimum to reason against, not a nicety.
+
+2. The spacing exception's exact geometry: an undersized target still passes if a 24px-
+   diameter circle centered on it doesn't intersect the equivalent circle around its
+   neighbour — WCAG's own worked example shows six 20×20px icons passing with 4px gaps and
+   failing with none. KLADRA: simplest compliant approach — don't lean on the exception at
+   all; build the click/tap area to ≥24×24px even when the visible glyph is 16px.
+
+3. WCAG 2.5.5 Target Size (Enhanced), Level AAA — exact floor: 44×44 CSS pixels, with the
+   same four exceptions minus the spacing carve-out; the Understanding page's own rationale
+   names frequent, hard-to-undo, and edge-positioned controls as the ones that most benefit
+   from the larger size. KLADRA: use 44×44px — not the bare 24px AA floor — for destructive/
+   non-undoable row actions and for the drawer's close button, since both match AAA's own
+   stated rationale exactly.
+
+4. WCAG 2.5.7 Dragging Movements, Level AA: every drag-based function must also work via a
+   single pointer without dragging (see Topic 1, rule 10). KLADRA: confirms the no-drag-and-
+   drop rule sidesteps a whole compliance burden, not just a style preference.
+
+5. Apple's minimum tap target: 44×44 points (developer.apple.com/design/tips/, "Hit
+   Targets"). This coincides with WCAG's own AAA number. KLADRA: use 44px as the
+   "comfortable" tier above the 24px legal floor, specifically for anything a rep taps on a
+   phone or tablet in the yard.
+
+6. Material's minimum touch target: 48×48dp, explicitly separated from the 24×24dp visual
+   icon size — Google's own accessibility docs: "an icon may appear to be 24×24dp, but the
+   padding surrounding it comprises the full 48×48dp touch target," roughly a 9mm physical
+   target regardless of screen size. KLADRA: render the icon glyph small (16-20px) for
+   density, but pad the clickable box to 48px on touch surfaces and 24px minimum everywhere
+   else — never shrink the hit box to match the glyph.
+
+7. Material/Google's spacing number: adjacent touch targets should be separated by 8dp or
+   more "to ensure balanced information density and usability." KLADRA: use ≥8px of true
+   gap between adjacent icon-only action buttons in a table row or drawer head, on top of
+   whatever the 24px-circle spacing exception separately requires for undersized icons.
+
+8. Fitts's Law formula (NN/g): T = a + b·log2(2D/W) — movement time depends on distance to
+   the target (D) and target width (W); NN/g states directly that bigger targets both cut
+   movement time and cut error rates, and that closer targets are faster to acquire.
+   KLADRA: two independent, additive design levers — (a) make the target bigger (the 24/44/
+   48px numbers above) and (b) make it closer (keep row actions right where the eye already
+   is at the row; keep a drawer's primary action near where the drawer opened, not a reach
+   across the panel).
+
+9. Fitts's-Law corollary: corners act as an effectively infinite target (the pointer can't
+   overshoot past a screen edge), so edge/corner placement is "free" extra hit area; cluster
+   frequently-chained actions to minimize cumulative distance across a task. KLADRA: in a
+   drawer head with several icon actions, put close at the panel's corner/edge and keep the
+   most-used action (e.g. edit) nearest the content, not furthest from where the eye already
+   is.
+
+10. Row actions inside a short table row (36-48px): the visible glyph can stay small, but
+    its hit area should be vertically centered on it and never shrink below 24×24px even
+    when the row itself is only 36px tall; where the row is 44-48px, the row height itself
+    already satisfies the floor. KLADRA: apply this literally to the leads/companies/
+    projects/quotations/dispatches list row actions.
+
+11. Drawer/panel header controls (close, more-actions) should target AAA's 44px tier, not
+    the bare 24px AA floor, precisely because they are frequent, edge-positioned, and (for
+    "more actions") potentially destructive downstream — the exact profile WCAG's own AAA
+    rationale names. KLADRA: size Kladra's drawer-head close and overflow buttons to 44×44px
+    hit areas.
+
+12. Chips: a filter chip that's visually ~32px tall generally already clears the 24px floor
+    vertically; the risk is horizontal crowding when chips wrap — apply the same ≥8px gap
+    rule between adjacent chips, and give any small "×" remove-glyph inside a chip its own
+    24px (ideally 44px, since removing a filter is frequent and low-friction-but-easy-to-
+    mis-tap) hit area distinct from the chip body's own click target.
+
+13. Thumb-zone research (Steven Hoober, UXmatters — the canonical field study, 1,333 mobile
+    users, that most "thumb zone" pieces trace back to): 49% hold and tap one-handed, 36%
+    cradle with the other hand, 15% use both thumbs; of one-handed users, 67% use the right
+    thumb. Reach splits into three zones by vertical thirds: easy (bottom), stretch
+    (middle), hard/requires-regrip (top). KLADRA: on the 375px acceptance width, treat the
+    bottom third as the natural zone for the primary, frequent action (save, log a visit,
+    assign) and the top third as the place for low-frequency controls (back, overflow) —
+    not the reverse.
+
+14. Corollary: a top-right primary action on a phone screen compounds two penalties at
+    once — it sits in the hard-to-reach zone for the majority right-thumb one-handed user,
+    and it maximizes Fitts's-Law distance from a thumb resting near the bottom. KLADRA: the
+    phone layout's primary CTAs (submit a quotation, confirm a dispatch) should anchor to
+    the bottom of the viewport, not inherit the desktop table's top-right toolbar habit.
+
+Sources: w3.org/TR/WCAG22/#target-size-minimum · w3.org/WAI/WCAG22/Understanding/target-
+size-minimum.html · w3.org/TR/WCAG22/#target-size-enhanced · w3.org/WAI/WCAG22/
+Understanding/target-size-enhanced.html · w3.org/TR/WCAG22/#dragging-movements ·
+nngroup.com/articles/fitts-law/ · developer.apple.com/design/tips/ · m3.material.io/
+components/icon-buttons/specs · support.google.com/accessibility/android/answer/7101858 ·
+uxmatters.com/mt/archives/2013/02/how-do-users-really-hold-mobile-devices.php (Steven
+Hoober's field study).
+
+##############################################################################
+## TOPIC 3 — MOTION RESTRAINT IN PRODUCTIVITY SOFTWARE
+##############################################################################
+Extends, not replaces, the numbers already on record (100ms hover/menus, 150-250ms
+dialogs/drawers, exactly two gradients site-wide, no looping motion).
+
+1. Material 3's exact duration tokens (ms), from Google's own material-components-android
+   repo (the live m3.material.io site is a JS SPA that did not yield body text; this GitHub
+   doc was fetched directly and cross-verified against a secondary compilation that matched
+   exactly): short1=50, short2=100, short3=150, short4=200 · medium1=250, medium2=300,
+   medium3=350, medium4=400 · long1=450 … long4=600 · extraLong1=700 … extraLong4=1000.
+   KLADRA: Kladra's 100ms hover/menu number sits exactly at M3 short2; its 150-250ms
+   dialog/drawer number sits inside M3's medium1-medium2 band, at the fast edge —
+   appropriate for a dense utility tool. Nothing in Kladra should ever reach M3's long/
+   extra-long band (450ms+) — those are for large hero transitions Kladra doesn't have.
+
+2. Material 3's easing curves (same source): standard = cubic-bezier(0.2,0,0,1) for
+   on-screen utility motion; standard-decelerate = cubic-bezier(0,0,0,1) for entrances;
+   standard-accelerate = cubic-bezier(0.3,0,1,1) for exits; two further "emphasized" curves
+   exist for brand moments. KLADRA: use standard-decelerate on drawer/dialog open and
+   standard-accelerate on close; skip the emphasized curves entirely — they're for
+   expressive brand surfaces, not a 14-person ops tool.
+
+3. Material's own stated principle: duration should increase as the animated element's
+   area/traversal increases — i.e. a hover colour-change and a full drawer slide should not
+   share one duration even if both are "under 300ms." KLADRA: keep the hover/menu (100ms)
+   and dialog/drawer (150-250ms) numbers distinct rather than collapsing to one value.
+
+4. Apple HIG (quoted via useyourloaf.com, since developer.apple.com's motion page is a JS
+   SPA that returned only its title): "Don't add motion for the sake of adding motion.
+   Gratuitous or excessive animation can distract people and may make them feel
+   disconnected or physically uncomfortable." KLADRA: extends the existing no-looping-
+   motion rule to "no motion without a state-change reason," for every hover/toast/drawer.
+
+5. Apple HIG, same source: motion must never be the *only* channel carrying information,
+   since not everyone experiences it the same way. KLADRA: anything Kladra communicates via
+   motion (e.g. a row animating out on archive) must also be communicated without motion
+   (toast text, colour) so it survives reduced-motion mode and RTL mirroring intact.
+
+6. WCAG 2.2 SC 2.3.3 Animation from Interactions, Level AAA (fetched verbatim): "Motion
+   animation triggered by interaction can be disabled, unless the animation is essential to
+   the functionality or the information being conveyed." KLADRA: honouring prefers-reduced-
+   motion for every interaction-triggered animation (menu, drawer, hover-lift) satisfies
+   this AAA criterion for free — none of Kladra's motion (drawer slide, menu open, hover-
+   lift) meets the "essential" bar for exemption.
+
+7. WCAG 2.2 SC 2.2.2 Pause, Stop, Hide, Level A (fetched verbatim): any moving, blinking, or
+   auto-updating content that starts automatically, lasts more than five seconds, and runs
+   alongside other content needs a pause/stop/hide mechanism or a frequency control, unless
+   essential. KLADRA: this is a hard A-level requirement bearing directly on Kladra's one
+   SSE live-updates route — any view that keeps auto-refreshing in place for more than five
+   seconds needs a pause/stop/hide affordance or a frequency control unless the live update
+   is judged essential to the screen's function.
+
+8. prefers-reduced-motion (MDN, fetched verbatim): detects a user setting to minimize non-
+   essential motion, specifically because "animations such as scaling or panning large
+   objects can be vestibular motion triggers." KLADRA: audit dialog/drawer entrances for
+   scale/pan transforms specifically and gate them behind
+   @media (prefers-reduced-motion: reduce).
+
+9. The standard reduced-motion technique is to swap the motion *vocabulary*, not just
+   shorten duration — MDN's own worked example replaces a scale-based "pulse" with an
+   opacity-based crossfade under the reduce query. KLADRA: under reduced motion, drawers/
+   dialogs should crossfade in place rather than play the same slide at a shorter duration.
+
+10. Vercel's first-party Web Interface Guidelines (fetched verbatim, vercel.com/design/
+    guidelines — the same document backing this repo's installed web-design-guidelines
+    skill): "Never transition: all. List only intended properties (typically opacity,
+    transform)." And: "Prioritize GPU-accelerated properties (transform, opacity) & avoid
+    properties that trigger reflows/repaints (width, height, top, left)." KLADRA: every
+    Kladra transition must name explicit properties, never `all`, and animate opacity/
+    transform only — never width/height/top/left for a drawer or panel opening.
+
+11. Vercel, same document: "Only animate when it clarifies cause & effect or when it adds
+    deliberate delight" and "Animations are cancelable by user input. Avoid autoplay except
+    for muted, non-essential loops. Autoplay lasting over 5 seconds must include pause/stop/
+    hide controls." KLADRA: confirms the existing no-looping-motion rule is industry
+    standard, not idiosyncratic to Kladra, and requires every animation to be interruptible
+    — clicking through a mid-transition drawer must never be blocked.
+
+12. Emil Kowalski — design engineer at Linear, previously Vercel, author of the Sonner/Vaul
+    libraries widely used in the shadcn ecosystem — "7 Practical Animation Tips" (fetched
+    verbatim): "UI animations should generally stay under 300ms," with a worked example
+    that "a 180ms select animation feels more responsive than 400ms," and "don't animate
+    from scale(0) — use 0.9+ as the starting scale." KLADRA: a hard 300ms ceiling for
+    anything not already pinned by the 100ms/150-250ms numbers on record (e.g. dropdown/
+    select open); never animate a popover in from zero scale.
+
+13. Kowalski, same source: "Use ease-out for elements entering or exiting the screen; avoid
+    ease-in for UI animations." KLADRA: pairs with M3's standard-decelerate — use a
+    decelerate/ease-out-style curve for both open and close, rather than switching to a
+    slow-starting ease-in on exit.
+
+14. Kowalski's frequency rule — the most direct authoritative answer to "what should never
+    animate in a data-dense tool": "Remove animations if interactions occur tens, maybe
+    even hundreds of times a day," since motion makes a high-frequency interface feel
+    slower, not faster. KLADRA: rep-facing high-frequency actions (opening the same lead
+    card, dismissing a toast, scanning queue rows dozens of times a shift) should carry
+    little or no transition — a direct argument against animating anything in the queue/day
+    views reps touch constantly.
+
+15. NN/g, "Executing UX Animations: Duration and Motion Characteristics" (fetched
+    verbatim): "Simple feedback animations, such as showing a checkbox or toggle switch,
+    should be roughly 100ms." "When animation involves substantial screen changes, such as
+    when a modal window moves into view, a duration of 200-300ms can be appropriate." "At
+    500ms, animations start to feel like a real drag for users." KLADRA: independently
+    confirms the numbers already on record — 100ms hover/menu matches NN/g's "simple
+    feedback" band, 150-250ms dialog/drawer matches NN/g's modal band, and 500ms+ should
+    never appear anywhere in Kladra.
+
+16. NN/g, "Animations are Distracting!" (fetched verbatim, the explicit source this
+    research brief asked for): "Moving UI elements attract attention, which often means
+    distracting users from accomplishing their primary goals." KLADRA: direct authority for
+    extending no-decorative-charts/no-looping-motion to KPI cards and notification badges —
+    nothing there should move unless reporting an actual state change the user needs right
+    now, and this specifically argues against ticking/counting-up number animations on KPI
+    cards: a number should display its new value directly, not animate through intermediate
+    ones, on a screen meant for fast, repeated scanning.
+
+17. GAP — Refactoring UI: the book is known to cover animation timing/easing/what-to-
+    animate, confirmed via two independent public chapter-summary repos and a detailed
+    third-party review, but no publicly citable page reproduces an actual ms or easing
+    number. Not used as a sourced number here — flagged rather than invented.
+
+18. GAP — Stripe: only secondhand characterizations were found ("Stripe uses standardized
+    tokens for durations, easings, and choreographies"), with no citable primary Stripe
+    design-system page or number. Linear and Vercel (via Kowalski, who has worked design-
+    engineering roles at both) are the two of the three named companies with genuinely
+    concrete, citable motion rules — see rules 12-14 above.
+
+Sources: w3.org/TR/WCAG22/#animation-from-interactions · w3.org/TR/WCAG22/#pause-stop-hide
+· developer.mozilla.org (prefers-reduced-motion) · github.com/material-components/
+material-components-android (docs/theming/Motion.md) · vercel.com/design/guidelines ·
+emilkowal.ski/ui/7-practical-animation-tips · nngroup.com/articles/animation-duration/ ·
+nngroup.com/videos/distracting-animations/ · useyourloaf.com/blog/reducing-motion-of-
+animations/ (quoting Apple HIG, whose own page is a JS SPA).
+
+##############################################################################
+## TOPIC 4 — DATA-DENSE BILINGUAL (ARABIC RTL) DASHBOARDS AND TABLES
+##############################################################################
+Covers numerals/tabular figures, mirroring charts and icons, mixed-direction text in
+cells, and Arabic typography sizing/line-height versus Latin. Kladra's Western-digit
+choice (words.md) is not re-litigated here — flagged once, below, as a deliberate
+divergence from one common regional default, not a defect.
+
+1. Numbers are a "weak" bidi type and always render left-to-right even inside RTL flow
+   (W3C bidi-basics; corroborated by rtlstyling.com "RTL Styling 101" and Microsoft Learn's
+   "Text directionality") — this is automatic in any bidi-aware renderer, no markup needed
+   on the digits themselves. KLADRA: amounts, phone numbers and dates inside Arabic-locale
+   rows need no extra handling beyond dir="rtl" on the row/cell wrapper; don't wrap number
+   spans in dir="ltr" unless they sit adjacent to a Latin substring that needs isolation
+   (rule 11).
+
+2. Don't mix numeral systems — pick one (Hindi-Arabic ٠١٢ or Western 0123) and stay
+   consistent site-wide (rtlstyling.com). FLAG, not a fight: Kladra's Western-digit choice
+   (words.md) diverges from the default many Gulf/KSA government and print contexts use
+   (Hindi-Arabic numerals), but is fine as a deliberate, 100%-consistent choice — which is
+   exactly what this source says matters most.
+
+3. Use CSS tabular (fixed-width) figures for numeric table columns — font-variant-numeric:
+   tabular-nums (MDN) — direction-agnostic. KLADRA: apply tabular-nums to amount/quantity/
+   date columns across every list surface in both locales so digit columns stay visually
+   aligned regardless of dir.
+
+4. A number is a self-contained LTR run sitting inside an RTL row: the column still
+   occupies the visually-first (rightmost) position for that field in Arabic, but the
+   digits inside keep reading left-to-right (inferred from W3C bidi-basics; no single
+   design system states this as a numbered rule — flagged as inference). KLADRA: verify
+   with shot-looker that amount/quantity columns don't get their digit order reversed when
+   a row flips to dir="rtl" — only the column's position in the row should move.
+
+5. Bar/line chart axes do NOT mirror in RTL: AG Charts' own RTL docs state "the axis
+   positions and directions are not changed in RTL mode... users should manually set Axis
+   Placement... explicitly [if they want it]"; Apple's archived HIG lists "Graphs (x- and
+   y-axes always appear in the same orientation)" among content that must not flip. Only
+   chart-adjacent UI mirrors — AG Charts: legend layout, series order, tooltip and context-
+   menu layout all mirror. KLADRA: P13's metrics bar/line charts keep identical axis
+   orientation and category order in en and ar; only the legend/tooltip chrome around them
+   mirrors.
+
+6. Donut/ring share-of-total charts follow the same "graph" rule as bar/line and do not
+   mirror — but this is distinct from a literal linear PROGRESS bar, which Material's
+   archived Bidirectionality guideline says does reverse fill direction in RTL ("a progress
+   bar shows 0% on the right, 100% on the left, and fills right to left") because it
+   represents reading-direction completion, not a data comparison. KLADRA: DESIGN.md's
+   ring/donut charts should not mirror between locales; record this distinction explicitly
+   in SPEC.md §4 since the two component types are easy to conflate, and if Kladra ever
+   ships a literal "3 of 5 steps" progress bar, that one component should reverse fill
+   direction per locale while ring/donut charts do not.
+
+7. Circular/clock-like indicators never mirror — clocks keep turning clockwise, loading
+   spinners keep spinning clockwise, in both directions (Material archived guideline;
+   Apple's archived HIG lists "Clocks" explicitly). KLADRA: any loading spinner is pixel-
+   identical between en/ar builds.
+
+8. Icons depicting physical/real-world objects, media/playback, and graphs never mirror —
+   Apple's archived HIG, verbatim list: "Video controls and timeline indicators; Images,
+   unless they communicate a sense of direction, such as arrows; Clocks; Music notes and
+   sheet music; Graphs" — plus "phone numbers and country codes are always left-to-right"
+   even mid-Arabic-sentence. Material adds: "Physical keyboards and media players look the
+   same everywhere in the world, so they should not be mirrored," and camera/checkmark
+   icons stay unmirrored intentionally. KLADRA: checkmarks (done/verified), camera/
+   attachment icons, and any depicted physical object must not flip; phone-number fields
+   stay LTR-formatted even inside an Arabic sentence.
+
+9. Directional/navigational icons DO mirror — Material: "Back and forward navigation
+   buttons are reversed... an icon that shows forward movement should be mirrored,"
+   including breadcrumb chevrons, text-alignment/indent icons, and pagination next/previous
+   arrows. KLADRA: drawer close/back arrows, table pagination chevrons, and text-align icons
+   must flip between en and ar — verify with shot-looker at both locales per WORKFLOW §3.
+
+10. Trend/sparkline arrows on KPI cards should follow the "graph" rule (5-6), NOT the
+    "navigation icon" rule (9) — i.e. they should not flip, since they represent data/time
+    direction rather than spatial navigation. This is an inference from the same sources,
+    not a rule any single source states by that exact name — flagged as a judgment call.
+    KLADRA: record as a DEFAULT in SPEC.md §4 — a "+12% ↗" trend indicator on a KPI card
+    keeps its arrow direction in Arabic, unlike a breadcrumb or back-arrow, which does flip.
+
+11. Contain a Latin substring inside Arabic-flowing text with bidi isolation — the <bdi>
+    element or dir="auto" — rather than relying on the surrounding paragraph's direction
+    alone. W3C's "How to use Unicode controls for bidi text" gives a worked example of
+    trailing punctuation landing on the wrong side of Arabic text until wrapped; W3C's
+    "Inline markup and bidirectional text in HTML" instructs to "tightly wrap every
+    opposite-direction phrase in markup that sets its base direction," specifically
+    recommending <bdi> when the run's direction isn't known ahead of time — MDN confirms
+    the same technique for exactly this case: "an Arabic quotation embedded in an English
+    string" or the reverse, and for dynamically-inserted, direction-unknown text such as a
+    database value. KLADRA: wrap company names, contact names, emails, and reference codes
+    rendered inside Arabic-flowing table cells, toast messages and drawer titles in <bdi>
+    (e.g. <bdi>{company.name}</bdi>) rather than leaving them as plain text nodes — this
+    matters most wherever trailing punctuation, a comma, or a unit like "SAR" follows the
+    Latin substring, since that's exactly where reordering bugs surface.
+
+12. WCAG 2.2 SC 3.1.2 Language of Parts exempts proper names and technical terms from
+    needing an explicit language attribute (fetched verbatim): "except for proper names,
+    technical terms, words of indeterminate language, and words or phrases that have become
+    part of the vernacular of the immediately surrounding text." KLADRA: Latin company names
+    and reference/quotation codes count as proper names/technical terms — no need to wrap
+    every one in lang="en". But any genuine untranslated English microcopy leaking into the
+    Arabic UI is both a words.md violation (npm run check:messages) and arguably a 3.1.2
+    miss if left unmarked — treat stray language-mixing beyond proper nouns/codes as a bug
+    signal, not a style choice.
+
+13. Colour-meaning conventions are direction-agnostic — WCAG 2.2's Use of Color criterion
+    (fetched verbatim) makes no mention of direction/RTL/LTR anywhere in its text: "Color is
+    not used as the only visual means of conveying information..." KLADRA: status pills
+    need the same icon+shape+text redundancy alongside colour in both en and ar, and the
+    colour-to-meaning mapping itself (red = risk, etc.) does not change or mirror between
+    locales — only the pill's internal icon/label order mirrors with the rest of the row.
+
+14. Mirroring is whole-component, not text-only: Material's mirroring principle states "an
+    RTL layout is the mirror image of an LTR layout, affecting layout, text, and graphics"
+    — meaning icon/label internal order should flip via logical CSS properties (margin-
+    inline-start, not margin-left), not per-icon manual repositioning. GOV.UK's own open
+    backlog issue (#252, fetched) is a concrete cautionary real-world example of getting
+    this wrong: GOV.UK currently "insert[s] RTL content into the same layout used by left-
+    to-right languages instead of mirroring the entire interface," producing bugs like
+    "page metadata appears reversed (value appears before key) due to left floats," an
+    indent component "on the wrong side," and dates "scrambled due to trying to
+    automatically interpolate LTR content into an RTL context." KLADRA: build KPI-card and
+    status-pill internals with logical properties so icon-left/label-right in en becomes
+    icon-right/label-left in ar automatically, as part of the component; never interpolate
+    a raw LTR-formatted date/number string into Arabic flow without isolation (rule 11) —
+    that is the literal bug GOV.UK has open against itself.
+
+15. Slashes don't mirror — Material's archived guideline: "Most RTL countries do not
+    mirror slashes. Leave images with slashes as-is for RTL locales." KLADRA: date-range
+    strings, "N/A," or any slash-containing content keeps its orientation in Arabic.
+
+16. Arabic body text needs materially more line-height than Latin at the same nominal
+    size — two independent Arabic-typography writeups give concrete ratios (voxire.com:
+    "1.7 to 1.85 line-height for Arabic body text, vs 1.5 to 1.6 for Latin," and "1.3 to
+    1.4 vs 1.1 to 1.2" for headings, with Arabic sometimes needing 1-2px larger point size
+    depending on the typeface; freezil.com, independently: "increase the line-height on the
+    Arabic by 10-15% relative to the Latin," flagging Arabic body text under 14pt as a
+    common mistake), structurally explained by W3C's Arabic & Persian Layout Requirements
+    ("Arabic ascenders and descenders extend much further than those of the Latin script,"
+    plus diacritic vertical room), and confirmed at the font-engineering level by Google
+    Fonts' own metrics guide (tall scripts including Arabic may need vertical metrics to
+    "exceed 130%" versus the "120-130%" standard for Latin, to avoid interline glyph
+    collisions). KLADRA: define a separate, measurably taller leading token for the ar
+    locale — roughly +10-20% over the en value at the same font-size step — rather than
+    inheriting Latin line-height; this matters most in dense table rows and any two-line-
+    clamped drawer/cell text, where Arabic looks cramped at Latin leading.
+
+17. Arabic "Regular"/"Bold" at the same CSS font-weight number often doesn't look
+    equivalently weighted next to the paired Latin face — a practitioner guide (free-
+    calligraphygenerator.com) states: "The Arabic 'Regular' may look heavier than the
+    English 'Regular,' or the Arabic 'Bold' may be much darker... compare stroke weight
+    rather than font labels." Flagged: this is a real, corroborated claim but from a
+    specialist practitioner source, not a flagship W3C/Apple/Material page — no single
+    canonical numbered source was found despite searching. KLADRA: do a side-by-side visual
+    weight check of the Arabic webfont against the Latin UI font at each declared weight
+    token (400/500/600/700), especially in status pills and headers where boldness carries
+    meaning; if Arabic 700 reads disproportionately heavier, consider mapping Arabic one
+    step down (Arabic 600 paired with Latin 700) rather than sharing the literal weight
+    value across locales.
+
+18. GAP — GOV.UK has no published, concrete Arabic typography guidance despite extensive
+    searching; its only substantive RTL-adjacent content is the open backlog issue (#252,
+    rule 14) documenting known unresolved bugs rather than prescribing good practice.
+    KLADRA: don't look to GOV.UK for positive Arabic typographic guidance — but its bug
+    list is a useful literal checklist to test Kladra against in shot-looker/Playwright
+    runs (logical-property CSS, date-string interpolation, float-based layout, icon
+    direction).
+
+Sources: w3.org/International/questions/qa-bidi-unicode-controls · w3.org/International/
+articles/inline-bidi-markup/ · w3.org/WAI/WCAG21/Understanding/language-of-parts ·
+w3.org/WAI/WCAG21/Understanding/use-of-color.html · w3.org/TR/alreq/ (Arabic & Persian
+Layout Requirements) · rtlstyling.com/posts/rtl-styling/ · developer.apple.com (archived
+HIG, SupportingRight-To-LeftLanguages) · m1.material.io/usability/bidirectionality.html
+(Material's archived guideline; current m3.material.io RTL page is a JS SPA, corroborated
+via search-index snippets of the live page) · ag-grid.com/charts/vue/rtl/ ·
+googlefonts.github.io/gf-guide/metrics.html · voxire.com (Arabic RTL Typography for Web
+Design) · freezil.com (Arabic typography for non-Arabic designers) ·
+freecalligraphygenerator.com (Arabic and English Font Pairing) · github.com/alphagov/
+govuk-design-system-backlog/issues/252.
+
+##############################################################################
+## NOTE ON SOURCE ACCESS
+##############################################################################
+Several flagship design-system pages (m3.material.io, developer.apple.com's HIG, GOV.UK's
+Arabic guidance) are client-rendered SPAs that returned only a page title to a direct
+fetch; every number attributed to them above was corroborated through either a primary
+GitHub source (Material's own component-library repo), an archived predecessor page still
+served as static HTML (m1.material.io), or a named secondary source quoting the live page
+verbatim (e.g. useyourloaf.com for Apple's motion guidance) — never invented to fill a gap.
+Two numbers were searched for and explicitly not found (Refactoring UI's and Stripe's own
+specific motion timings, Topic 3 rules 17-18) and are reported as gaps rather than guesses.

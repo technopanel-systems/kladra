@@ -1,0 +1,25 @@
+TITLE: Inline Editing
+CATEGORY: Interaction
+URL: https://designmotionhq.com/patterns/inline-editing
+
+PROBLEM: Turning static text into an editable field usually breaks one of three things at once — nobody can tell it's editable, the swap to an input shifts the layout, or the save/cancel rules are inconsistent across the app — and any one of those erodes trust in the edit.
+
+RULES:
+- Signal editability at rest: a pencil icon on hover and/or a soft background tint. With zero signal, users don't discover the feature and file support tickets asking "how do I rename a doc?" instead.
+- Zero layout shift on swap: the input must reuse the exact same font-size, padding and box as the static text, with only the border changing (transparent to accent, e.g. teal) — video explicitly frames the goal as Cumulative Layout Shift = 0.000, captioned "Nothing moved." A "bad swap" that changes font-size or padding by even a few px ("+3 px") breaks the illusion — "one jump and the illusion collapses."
+- Keyboard semantics are fixed: Enter always commits, Escape always cancels — universal agreement, non-negotiable. Blur (clicking away) is the contested one: some products save on blur, others discard — pick one rule per product and never mix it screen to screen.
+- Save optimistically: update the on-screen text immediately when the user commits, before the server confirms. If the request fails, roll back the value, but keep the user's draft text available and say why it failed (e.g. "Couldn't save — draft kept").
+- Match the edit mode to the cost of a mistake: make every cell directly editable (click-to-edit anywhere) when a typo is cheap and easy to fix; require an explicit "Edit" action/button when a mistake is expensive (e.g. financial records) — video frames this as "1 click + 1 write = typos ship instantly" (every-cell mode) vs "edit is a decision — typos get caught" (explicit-edit mode).
+
+DO / DON'T:
+- Do: signal editability on hover with a pencil icon or soft background tint.
+- Do: update the UI immediately (optimistic), then roll back and keep the draft if the save fails.
+- Do: keep font, size, and padding identical between the static text and the input it becomes.
+- Don't: leave editable text with zero affordance so users cannot tell it's editable.
+- Don't: change what blur does from one screen to the next (save here, discard there) — pick one rule app-wide.
+
+VIDEO ADDS: Concrete before/after diff panel showing font-size 16→16, padding 10→10, border 2px transparent→teal (the "good swap") versus a "bad swap" panel showing a +3px shift when those values aren't matched. A synced doc-app/spreadsheet demo shows the same edit committing in two panes at once, with an inline "Saved on blur" vs "Discarded on blur" badge and Enter/Esc key-hint chips under the input. The optimistic-save sequence shows "Update first. Ask later." with a "client updated → server" network timeline strip and, on failure, a "Couldn't save — draft kept" toast with the draft text preserved. The edit-mode comparison renders two real table mockups side by side: a spreadsheet-style "every cell" editable grid versus an "explicit edit" invoice row (ACM-104) with a dedicated Edit button, each annotated with the typo-risk captions. Closing frame: "Inline editing is a system" with four tag chips — Affordance, Zero shift, Enter+Esc, Optimistic — confirming these four rules are meant to travel together.
+
+KLADRA: Directly applicable to record drawers (company/project/quotation/dispatch title and simple text fields), the coordinator's queue, and any list row where a title or short field is safe to edit without a full form. Concrete uses: quotation line labels, project/company names, dispatch notes — candidates for click-to-edit with zero layout shift, matching Kladra's existing card/input styling (font-size, padding) rather than swapping to a differently-sized input. The Enter/Escape convention and "pick one blur rule" fits Kladra's "every state has a word" ethos — the save/fail state should say why, not just revert silently. Optimistic save pairs naturally with Kladra's single SSE route for live updates: update locally, reconcile via SSE, roll back with a toast on failure. Edit-mode choice matters for money-bearing fields: quotation totals, dispatch quantities and financial fields should likely use the explicit "Edit" action (higher cost of typo), while low-risk fields (notes, labels) can be always-editable. CONFLICT: none directly, but note the pattern's own "related patterns" list surfaces "Bulk Actions" as a sibling pattern — Kladra explicitly has no bulk edit, so if this pattern is ever generalized into a bulk-inline-edit-across-rows feature, that would conflict; single-field inline edit itself does not conflict with any standing rule (not drag-and-drop, not a saved view, not a refresh button).
+
+PRIORITY: high — this is a core, everyday interaction for every editable record in Kladra (titles, notes, statuses) and the zero-layout-shift + optimistic-save + one-blur-rule discipline directly prevents a common source of "did my edit save?" confusion for non-technical users like Faisal and Rawan.

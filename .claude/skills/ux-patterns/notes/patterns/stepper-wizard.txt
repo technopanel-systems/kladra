@@ -1,0 +1,26 @@
+TITLE: Stepper Wizard
+CATEGORY: Forms
+URL: https://designmotionhq.com/patterns/stepper-wizard
+
+PROBLEM: A long form of a dozen or more fields in one scrolling wall triggers fatigue before the user even starts; splitting it into a small number of meaningfully-grouped steps lowers the cognitive load before it becomes a wall at all.
+
+RULES:
+- Chunk long forms into small groups: three fields read effortlessly, twelve in a row trigger scroll fatigue. Sheet's opening demo: a 12-field "Checkout" wall (tagged UNCHUNKED, red) versus the same fields split into a 4-step flow (tagged CHUNKED, green), each step showing only 2-3 fields — captioned "chunking lowers cognitive load."
+- Group fields by context/meaning, not by an arbitrary field count. Sheet's concrete 4-step split for a checkout: Personal (name, email, phone), Shipping (address, city, ZIP), Payment (card number, expiry, CVC), Review (summary of everything, "ready to submit" badge) — captioned "each step earns its own screen — random splits feel arbitrary."
+- Always show progress, and pick one indicator style consistently: sheet shows three interchangeable options — a linear progress bar labeled "Step 1 of 4" at 25% fill, numbered dots (1-2-3-4, checkmarking completed steps), or step-name labels (Personal/Shipping/Payment/Review with the current one highlighted). At step 4 of 4 the bar nears full and the labels show three checked plus the current step highlighted, captioned "users need to feel the end getting close."
+- Validate inside each step, not at the end: block the Next button while the current step's field is still invalid, and show the error immediately (sheet's "INLINE · INSTANT" example: an email field flagged invalid the moment it's malformed, Next disabled). Contrast with the bad pattern (sheet's "FINAL · COLLAPSE" example): completing all four steps only to hit a red banner at the Review step reading essentially "email invalid in step 1 — go back," forcing the user to retrace the whole flow.
+- Persist entered data across step changes, Back navigation, and page refresh (sheet's "05 · STATE" frames show Back/Refresh icons on the step card header, and a Shipping/Payment step reopened after going back still shows the previously typed address and card number pre-filled) — losing the form once loses the user.
+
+DO / DON'T:
+- Do: split forms into steps grouped by meaning (Personal, Payment, Review), not by an arbitrary field count.
+- Do: show a progress indicator and validate each field within its own step.
+- Do: save entered data so Back and Refresh never wipe the user's progress.
+- Don't: surface a step-one error only once the user reaches the final step.
+- Don't: let a refresh or the Back button discard everything already typed.
+- Don't: stack twelve fields into one scrolling wall when they can be chunked into steps.
+
+VIDEO ADDS: The concrete 4-step grouping for a real form (Personal / Shipping / Payment / Review) with exactly which fields belong in each step, the three interchangeable progress-indicator styles shown side by side (linear bar with percentage, numbered dots with checkmarks, step-name labels), the direct inline-instant-validation vs. final-collapse-validation comparison as two competing flows (one blocks Next immediately, the other lets you reach step 4 before failing you back to step 1), and the explicit state-persistence demonstration (Back/Refresh icons on the step header, previously entered address and masked card number still populated after navigating back) — none of the specific 4-step grouping, the three indicator variants, or the persistence proof are in the page text.
+
+KLADRA: Directly applicable to any multi-field creation flow in Kladra — most likely a new quotation/dispatch request dialog, a new project/company intake form, or an onboarding flow for a new rep — anywhere a form has enough fields to warrant chunking. Concretely: group by task (e.g. Company & Contact / Project Details / Line Items / Review, not an arbitrary field count), pick one progress indicator and use it consistently (step labels probably read best given Kladra's "every state has a word" ethos — avoid a bare dot-only indicator with no text), validate and block Next per step rather than dumping errors at a final review screen, and persist in-progress state so a rep who navigates back mid-quotation doesn't lose typed line items. No conflict with standing decisions: a stepper is not a saved view, not bulk edit, not drag-and-drop. Motion for step transitions should stay within Kladra's 150-250ms dialog/drawer budget if the wizard runs inside a dialog or drawer (matches likely implementation, since Kladra uses request dialogs). RTL note (not covered by the page): a horizontal linear progress bar or numbered-dot sequence must run reversed (logical CSS, right-to-left fill) in the Arabic locale to match Kladra's existing "logical CSS for RTL" rule — worth confirming this explicitly since neither the text nor the video addresses direction.
+
+PRIORITY: high — Kladra's quotation and dispatch creation flows are exactly the kind of multi-field, multi-context forms this pattern targets, and the per-step validation plus state-persistence rules directly prevent a real failure mode (a rep losing a half-entered quotation on Back or refresh) that would otherwise cost real time for a 14-person team.

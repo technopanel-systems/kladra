@@ -1,0 +1,25 @@
+TITLE: Kanban UX Tips
+CATEGORY: interaction / board
+URL: https://www.youtube.com/shorts/HNbb5t_iDBM (YouTube Shorts channel @designmotionhq_yt; not one of the 76 designmotionhq.com/patterns/<slug> pages — closest neighbor is the general drag-and-drop pattern, not a kanban-specific one)
+
+PROBLEM: A kanban board built as plain draggable divs gives no feedback about what's being held, where it will land, or what just happened — the user either fights the UI or loses trust in it after one bad drop.
+
+RULES:
+- PICK UP — "Three signals. One grab." Grabbing a card must fire three simultaneous signals: cursor changes, the card visually lifts, and the background/board dims/fades. Line: "No signal, feels stuck." A card ("Design review") is shown lifting off a column of cards (Audit dashboard / Onboard new client / API docs draft) with the drop-shadow and cursor change visible.
+- DROP ZONE — "Drop zones speak first." Two distinct hover feedbacks depending on target type: hovering a column shows an insertion line (where in the ordered list the card will land); hovering a freeform zone/canvas shows a fill highlight instead. Line: "No preview equals blind drop."
+- SNAP OR FREE — "Snap matches structure. Free matches canvas." A structured list (kanban) should snap cards to defined column positions; a freeform canvas (the video's example: Figma) should allow drop anywhere. Line: "Pick the wrong one and users fight your UI" — i.e., don't apply free-canvas physics to a structured list or vice-versa.
+- UNDO — "Bad drop. Toast. Five seconds to undo." A toast ("Moved to Done") appears after every drop with an undo action and a 5-second window. Line: "5 seconds to take it back, saves the panic."
+- Card content anatomy visible throughout: title, small status/type icon, and a short trailing metadata row are the only things shown on each card in every shot — no more than that fits before the card gets busy.
+
+DO / DON'T:
+- Do: fire cursor + lift + background-dim together the instant a card (or in Kladra's case, an action target) is engaged — a single signal alone reads as broken.
+- Do: show exactly where an item will land before it lands (insertion line for ordered columns).
+- Do: give every state-change (a card moving between columns) a toast with an undo window, not a silent, unannounced move.
+- Don't: mix "snap to structure" and "free placement" behavior on the same board — pick one model and keep it consistent with what the board actually represents (an ordered pipeline, not a freeform canvas).
+- Don't: move an item between states without an undo path — the video frames this explicitly as what prevents "panic."
+
+VIDEO ADDS: the exact "three signals" checklist (cursor / lift / background fade) as the definition of correct pickup feedback; two named, distinct hover previews (insertion line vs. fill highlight) tied to two different target types; the concrete 5-second undo window number; the snap-vs-free framing as an explicit two-option decision rather than a single universal rule.
+
+KLADRA: Kladra's own project/dispatch/quotation boards are exactly this "structured pipeline" kanban surface, so this short is a direct hit despite being absent from the 76 pattern pages. STRAIGHT CONFLICT with Kladra's standing "no drag-and-drop" rule: every core mechanic in this short (grab, drop zone preview, snap-to-column) assumes physical dragging, which Kladra has explicitly ruled out. The pattern must be translated, not adopted: (1) the "three signals" idea maps to Kladra's action-based move instead — selecting "Move to…" (menu/button) should give equivalent affordance feedback: the target column highlights/previews before commit, matching the spirit of "drop zones speak first" without any drag; (2) the "insertion line" idea has no equivalent when moves are by action, since there's no continuous pointer position to preview against — skip it, note it does not translate; (3) the undo-toast-with-5-second-window pattern applies directly and cleanly: any board move made via a button/menu action should still surface a toast with an undo action, which is squarely inside Kladra's existing toast/undo vocabulary and creates zero conflict; (4) "snap matches structure" reinforces that Kladra's boards are the structured-list case, so a moved card must land at a defined, deterministic position (e.g., end of target column) — there is no freeform-canvas case in Kladra to weigh against it. Card anatomy (title + one status glyph + one metadata line, nothing more) is a useful density check for Kladra's own board cards regardless of the drag conflict.
+
+PRIORITY: high — Kladra's boards are a core, daily surface for Rawan and Abdulrahman, and the biggest value here is exactly the translation work: taking the undo-toast and target-preview signals from a drag-based pattern and reproducing their intent through Kladra's action-based move, while explicitly rejecting the physical-drag mechanics that generated them.

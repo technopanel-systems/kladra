@@ -1,0 +1,27 @@
+TITLE: Focus States
+CATEGORY: navigation
+URL: https://designmotionhq.com/patterns/focus-states
+
+PROBLEM: Pressing Tab should show exactly where keyboard focus went — removing the outline, misordering the DOM, or leaking focus out of a modal all break this silently.
+
+RULES:
+- `outline: none` isn't a style choice — removing the default focus ring without a replacement is an accessibility failure.
+- A proper focus ring needs three things: 2px thickness, 2px offset, and enough contrast to stay visible on both light and dark backgrounds (video shows the literal CSS and a 3:1 contrast callout, tested on both a light and dark "Sign in" button).
+- `:focus-visible` tells mouse and keyboard apart: a click gets no ring, a Tab press gets one — so keyboard users get the ring without cluttering the pointer experience (video's exact rule: `button:focus-visible { outline: 2px solid #1488A6; }`, captioned "Click, no ring. Tab, ring.").
+- Focus follows DOM order, not visual layout — reordering columns with CSS while the DOM stays in visual-source order makes Tab teleport across the page; keep visual order and DOM order in sync (video shows a 4-card KPI grid where CSS-reordered focus jumps diagonally, red dashed path, vs DOM-matched focus moving in a clean line, teal path).
+- Inside a modal, trap the focus: Tab cycles through the dialog and wraps around; Escape closes it and hands focus back to the element that opened it (video: a "Delete account?" dialog where Tab cycles Cancel↔Delete only, and Escape returns focus to the triggering button, captioned "Escape hands focus back").
+- A skip link jumps past dozens of nav links in one keypress — keep it invisible until focused, and make it the first focusable element on the page (video: "Skip to main content" appears only once Tab reaches it, jumping straight to "Latest releases," captioned "Invisible until focused").
+
+DO / DON'T:
+- Do: replace a removed outline with a custom ring — 2px thick, offset, contrasting on every background.
+- Do: use `:focus-visible` so keyboard users get a ring while mouse clicks stay clean.
+- Do: place a skip link as the first focusable element, hidden until focused.
+- Don't: set `outline: none` without shipping a visible replacement.
+- Don't: reorder content with CSS and let DOM order drift from visual order.
+- Don't: let a modal leak focus to the page behind it, or drop focus when it closes.
+
+VIDEO ADDS: Every rule pairs a broken demo (ringless "Sign in" button, generic "Kill it? Ship a better one." caption) with the fixed version showing the actual ring dimensions and hex color (`#1488A6`) annotated directly on the button. The DOM-vs-visual-order demo is the standout: identical 4-KPI-card grids (Revenue/Orders/Customers/Refunds) with focus order numbered 1-4, one following a crossing red dashed path (broken) and one following a clean teal path matching visual left-to-right/top-to-bottom order. Closing line: "Focus is a feature," under a UX-engineering "A11Y" tag.
+
+KLADRA: Directly governs Kladra's keyboard accessibility across every screen — the search palette, list filters, record drawers (focus trap on open/close is exactly what a drawer needs), and destructive-action confirmations (the modal focus-trap example is literally a delete-account dialog, the same shape as Kladra's destructive-actions flows). The :focus-visible + 2px ring rule should be one token in DESIGN.md applied everywhere, not decided per component. No conflict with any standing decision — pure accessibility correctness. RTL: focus ring offset/thickness is symmetric so needs no logical-CSS change, but DOM-order-matches-visual-order becomes more important in RTL since visual left-to-right reading direction flips — Kladra's Arabic layouts must keep logical (not physical) source order so Tab still follows the reading direction.
+
+PRIORITY: high — focus handling touches every interactive surface in Kladra (drawers, dialogs, palette, forms) and is exactly the kind of silent accessibility bug that's invisible until someone tries the keyboard — directly relevant to Kladra's four named users all eventually using Tab/Enter/Escape.

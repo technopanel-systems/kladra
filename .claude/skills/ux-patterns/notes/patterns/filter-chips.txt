@@ -1,0 +1,27 @@
+TITLE: Filter Chips
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/filter-chips
+
+PROBLEM: A list of 200 results should narrow to 12 in three taps, but if chips don't clearly show their state or update the count live, users can't tell whether tapping did anything.
+
+RULES:
+- Give every chip three distinct visual states: idle (surface + border, tappable), active (filled + check, clearly selected), disabled (dimmed, no results behind it) — if active looks like idle, the filter feels broken.
+- Make combination logic legible: OR within a group widens the net (more colors selected = more matches), AND across groups narrows it (video: selecting Red+Blue within Color → "40 chairs match, wider"; adding Medium within Size on top → "31 chairs match, tighter").
+- Update the result count on the same frame as the tap — if the number doesn't move, users read it as "nothing happened" and tap twice (video shows the count jumping live: "48 results" → tapping Lumbar support → "19 results").
+- Always ship a single clear-all reset, paired with a live count, so stacked filters never trap users (video: "0 filters" after Clear all, versus a stacked "4 filters" bar before it).
+- When chips overflow, keep them in one horizontal scrolling row with a right-edge fade hinting at more — wrapping into a multi-row wall buries results below the fold (video's explicit comparison: "Wraps into a wall" flagged red vs "One scrolling row" flagged green, both on a 10-chip mobile filter panel).
+- Pin active filters in a sticky summary bar on top so users always see why the list shrank (video: "ACTIVE FILTERS · 3 · Herman Miller ×, $1k-$2k ×, Mesh back ×" pinned above the results grid).
+
+DO / DON'T:
+- Do: update the result count instantly on every tap, same frame as the state change.
+- Do: give each chip clearly distinct idle, active, and disabled states.
+- Do: offer a single clear-all reset paired with a live result count.
+- Don't: let active chips look identical to idle ones.
+- Don't: wrap overflowing chips into a multi-row wall.
+- Don't: leave the count unchanged after a tap.
+
+VIDEO ADDS: Shows the three chip states as literal labeled swatches (Idle: "surface + border. Tappable, not chosen." / Active: "teal fill + check. Clearly selected." / Disabled: "dimmed. No results behind it."). A red toast-style callout appears when a tap produces no count change: "Mesh back — no count change → users tap twice," directly dramatizing the failure mode. The mobile-overflow comparison runs four phone widths side by side, two wrapping (bad) and two single-row-with-fade (good). Closing line: "Filters are a system."
+
+KLADRA: Directly applicable to every filterable list in Kladra — companies, projects, quotations, dispatches, the coordinator's queue. CONFLICT to flag plainly: filter chips are a fixed, session-scoped narrowing of the CURRENT list (not persisted), which is fine — but if any implementation lets a user name and re-apply a chip combination later, that becomes a saved view, which Kladra bans. Keep filter chips ephemeral (reset on leaving the screen or on Clear all) and never add a "save this filter" affordance. The idle/active/disabled three-state rule reinforces "every state has a word, never colour alone" — active state should carry a checkmark/icon, not rely on fill color alone. No other conflicts; the live count and single clear-all reset are clean, valuable, low-risk additions.
+
+PRIORITY: high — every list screen in Kladra likely needs filters, the three-state chip and live-count rules are concrete and easy to get wrong, and the one real risk (filters drifting into saved views) is easy to guard against by design.

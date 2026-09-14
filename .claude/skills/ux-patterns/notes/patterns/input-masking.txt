@@ -1,0 +1,27 @@
+TITLE: Input Masking
+CATEGORY: Forms
+URL: https://designmotionhq.com/patterns/input-masking
+
+PROBLEM: A long raw digit string (like a 16-digit card number) is unreadable and untrustworthy to type and check by eye, but auto-formatting it while typing easily breaks the caret position, validates too early, or persists the display formatting into the stored data.
+
+RULES:
+- Group long digit runs into fixed chunks with separators as the user types — the example groups a 16-digit card number four-by-four ("4242 4242 4242 4242"), turning an unreadable run into scannable chunks.
+- Detect a value's type from its leading character(s) and surface a matching visual mark inline as the user types — example: card brand by leading digit, 4 = Visa, 5 = Mastercard, 3 = Amex, each shown with its brand mark next to the input.
+- Preserve caret position through auto-inserted separators: when a space/dash is auto-inserted, the caret must stay immediately after the character the user just typed, not jump to the end of the field — video explicitly compares "caret jumps" (bad, red) vs "caret held" (good, green) on the same input state ("4242 4").
+- Validate on blur, not on keystroke: don't flag "Invalid card number" while the user is still mid-entry (typing "4242 42" is not yet a complete/invalid number, it's incomplete) — stay neutral while typing, validate once the field loses focus, and confirm success (green check, "Looks good") once it's valid.
+- Strip and reformat pasted junk: if a pasted value already contains its own separators (e.g. "4242-4242-4242-4242"), clean the extraneous characters and re-apply your own grouping rather than rejecting the paste or leaving the wrong separator style. Video tags this "dashes removed · re-grouped."
+- Show formatted, store raw: render the grouped/spaced value to the user, but persist only the unformatted digit string as the stored value — video shows this explicitly as a "What the user sees" panel ("4242 4242 4242 4242") mapping to a "What you store" JSON panel (`{"cardNumber": "4242424242424242"}`).
+
+DO / DON'T:
+- Do: group long numbers into fixed chunks so they stay readable as they're typed.
+- Do: detect the value's type from its leading digit(s) and show a matching brand/type mark inline.
+- Do: reformat pasted values (strip their separators, re-apply your own) instead of erroring on them.
+- Don't: let the caret jump to the end of the field when a separator is auto-inserted.
+- Don't: flag a validation error on the first keystroke instead of waiting for blur.
+- Don't: save the formatting characters (spaces/dashes) with the value — keep the stored data raw.
+
+VIDEO ADDS: A concrete brand-detection table (4→Visa, 5→Mastercard, 3→Amex) with the input's brand badge updating live as the leading digit changes from 4 to 5. Side-by-side "caret jumps" vs "caret held" states rendered on the identical partial value "4242 4" showing the cursor's exact position (right after the "4" vs. pushed to line end). The validate-on-blur sequence shows three states in order: mid-typing "4242 42" tagged "typing…"/neutral, then a red "Invalid card number" only after blur is implied premature, then a settled green "Looks good" once complete and blurred, captioned "Premature" vs "Patient." The paste-cleanup demo shows an actual pasted string "4242-4242-4242-4242" transforming into "4242 4242 4242 4242" with an on-screen note "dashes removed · re-grouped." The show-formatted/store-raw panel is the clearest text-vs-video gap: it renders literal JSON (`"cardNumber": "4242424242424242"`) proving the stored value has zero formatting characters, something the text only states as a rule without showing the shape of the data.
+
+KLADRA: Applies wherever Kladra collects structured numeric/text input that benefits from chunking — most plausibly phone numbers (Saudi format, e.g. grouped as +966 5X XXX XXXX) in company/contact fields, quotation/dispatch reference numbers if they exist, and any measurement or dimension fields (panel sizes, quantities) that read better grouped. It does NOT apply to internal codes or IDs since Kladra's standing rule is "no internal codes or IDs on screen" — so this pattern should never be used to dress up an internal ID with masking, only genuine user-facing data like phone numbers. The store-raw/show-formatted split matters directly for Zod validation and Drizzle storage: keep phone numbers and any masked field raw (digits only) in the database, format only at render time — this also simplifies bidi/RTL handling since raw Western-digit strings avoid mixed-direction formatting characters embedded in stored data. Validate-on-blur (not on keystroke) fits Kladra's form UX generally and works naturally with server actions where validation happens on submit/blur, not per keystroke. No conflict with standing Kladra decisions — this is a forms-input-quality pattern orthogonal to drag-and-drop, bulk edit, saved views, motion timing, or gradients.
+
+PRIORITY: medium — Kladra likely has few masked-input fields (mainly phone numbers), so this pattern is narrow in surface area, but where it applies (phone entry in company/contact forms, the request dialogs) the caret-position and validate-on-blur rules are easy to get wrong and directly affect data quality for a small team keying in customer details by hand.

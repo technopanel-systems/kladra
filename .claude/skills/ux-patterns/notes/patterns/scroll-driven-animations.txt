@@ -1,0 +1,26 @@
+TITLE: Scroll-Driven Animations
+CATEGORY: Motion
+URL: https://designmotionhq.com/patterns/scroll-driven-animations
+
+PROBLEM: Motion tied to scroll position has traditionally needed a JavaScript scroll listener and manual position math, when the same effect (and better) is now available as a couple of CSS declarations the browser drives natively.
+
+RULES:
+- `animation-timeline: scroll()` hands control of an animation's progress to the scrollbar itself — the scroll position becomes the animation's clock, no `scroll` event listener, no `IntersectionObserver`, just two lines of CSS.
+- `animation-range` sets exactly where in the scroll the animation starts and ends — e.g. `animation-range: entry 0% entry 100%;` fires only while the element is entering the viewport; the sheet's viewport diagram marks "entry 100%" (element fully in) and "exit 0%" (element starting to leave) as the range's reference points.
+- `view()` is the per-element variant — each element (card, image, list row) gets its own animation timeline the moment it scrolls into view, independently, "entirely on autopilot." Sheet shows a list (Weekly Stats, Hero Section, Auto-Animate, Get Started) each animating in on scroll, captioned "Each element animates on scroll into view."
+- Parallax that used to take roughly 30 lines of JS plus a scroll-event listener collapses to pure CSS: give layers different speeds via `animation-timeline`/`animation-range`, zero JS dependencies.
+- The side-by-side code comparison: old JS approach is `window.addEventListener('scroll', () => { const rect = el.getBoundingClientRect(); ... // 8 more lines })`; new CSS approach is three lines — `animation-timeline: scroll(); animation-range: 0% 100%; translate: 0 var(--offset);` — marked with a checkmark as the preferred approach.
+- Layer scroll-timelines on top of `position: sticky` to build shrinking headers, reading-progress bars, and sidebars that transform as the page scrolls (sheet shows a sidebar nav with a progress-highlighted current section, captioned "Combine everything").
+- The static-vs-animated demo runs the identical scroll on two stacked card lists side by side — one stays static, one animates in — to show it's the same scroll input producing a "dead" vs "alive" result purely from CSS.
+
+DO / DON'T:
+- Do: reach for `animation-timeline: scroll()` and `view()` to tie motion to scroll position natively.
+- Do: combine sticky positioning with a scroll timeline for shrinking headers and reading-progress bars.
+- Don't: hand-roll parallax or scroll-reveal with a scroll listener and `getBoundingClientRect()` — CSS now does this on its own.
+- Don't: pull in a JS animation library for effects the browser already handles in a couple of CSS lines.
+
+VIDEO ADDS: The exact CSS (`animation-timeline: scroll()`, `animation-range: entry 0% entry 100%`, `translate: 0 var(--offset)`), the viewport diagram showing entry/exit percentage markers, the explicit JS-vs-CSS code block comparison (roughly 10 lines of scroll-listener JS reduced to 3 lines of CSS, with the CSS block checkmarked as correct), and the "Combine everything" sidebar-with-progress-highlight example — none of these concrete snippets or the entry/exit diagram appear in the page text.
+
+KLADRA: Directly relevant to any long scrolling surface: the coordinator's queue, long companies/projects/quotations lists, the report builder, and possibly a landing/dashboard page with stat cards that could reveal on scroll. Could replace any JS scroll-listener code for reveal-on-scroll or a shrinking list header with pure CSS `animation-timeline`/`view()` — lighter and simpler than a hand-rolled IntersectionObserver hook. No conflict with Kladra's standing decisions: this is implementation-only (JS-vs-CSS motion mechanism), not a new interaction pattern. Caution: Kladra's motion budget (100ms hover/menus, 150-250ms dialogs/drawers) is about duration, not scroll-tied animation, so any scroll-in effect should stay subtle and non-repeating (matches the "no looping motion" rule) — a one-time entrance on first view into the queue or report builder, not a replay every scroll pass.
+
+PRIORITY: low — Kladra is a dense, data-first CRM, not a marketing site; scroll-driven reveal animation is a nice-to-have for a queue or dashboard entrance at most, and adding motion to list rows risks conflicting with the "no chart/motion for decoration" ethos (P13) if used cosmetically rather than to answer a question.

@@ -1,0 +1,25 @@
+TITLE: Gestalt Laws
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/gestalt-laws
+
+PROBLEM: The same set of elements reads as chaos or clicks instantly depending on five pre-attentive perception rules the layout either respects or ignores.
+
+RULES:
+- Closure: the eye completes incomplete shapes — icons and outlines still register even with gaps; not every line needs to be drawn (video: a ring with a gap still reads as "a circle").
+- Similarity: elements sharing a property (color, shape, size) read as one group — recoloring rows instantly splits a flat grid into Navigation/Content/Actions (video: 16 identical grey dots relabeled into blue/green/purple rows, captioned "Change one property. Instant hierarchy.").
+- Continuity: the eye follows the smoothest path — aligning items on a shared axis lets it flow; scattered placement forces it to jump (video: a scattered nav "Home/Products/About/Blog/Contact" at random angles, captioned "Scattered. No flow," next to the same items in a clean vertical list, captioned "Aligned. Effortless.").
+- Figure-Ground: blurring/dimming the background pushes a modal forward as the focal "figure" — what makes a dialog feel deliberate instead of floating (video: a mobile screen with a background list blurred behind a sharp foreground card).
+- Common Region: a shared border or container groups elements even far apart — wrapping settings in a card signals belonging without moving them closer (video: three setting rows — Profile/Notifications/Privacy — each getting its own bordered card, captioned "Cards create meaning.").
+
+DO / DON'T:
+- Do: give related items a shared property (color, shape, size) so they read as one group at a glance.
+- Do: align related controls on a common axis so the eye flows down a single clean path.
+- Do: wrap loosely-placed elements in a bordered card when proximity alone can't group them.
+- Don't: scatter navigation or list items at varied angles and positions.
+- Don't: lean on a modal alone without dimming what's behind it.
+
+VIDEO ADDS: Opens with an abstract triangle-of-circles illustration where three pac-man-style wedges imply a triangle that isn't actually drawn, captioned "Your brain sees a shape that doesn't exist" — this is the purest, most literal demonstration of Closure in the whole set. Each of the five laws gets a "SECRET 0X" numbered badge and its own before/after or labeled demo (matching the descriptions above almost value for value, but rendered as real UI mockups — icon rows, dot grids, nav lists, card-wrapped settings — rather than described abstractly). Closing frame lists all five as a literal legend (Closure, Similarity, Continuity, Figure-Ground, Common Region) with icons.
+
+KLADRA: This is the perceptual theory underneath several patterns already logged: Similarity explains why status badges/colors need to be systematic (color-accessibility.txt), Continuity explains why list/table columns need consistent alignment (data-table.txt's tabular-numeral rule), Figure-Ground explains why dialogs/drawers need a scrim (already implied by bottom-sheets.txt and Kladra's own dialog/drawer patterns), and Common Region explains why grouping fields into bordered cards (record drawer sections, settings groups) reads as "these belong together" without extra spacing tricks. No conflict with any standing decision — this is foundational visual-perception theory, not a feature. Most valuable as a lens for reviewing existing Kladra screens (is a group of related fields visually one group?) rather than a new component to build.
+
+PRIORITY: medium — genuinely useful as a review lens for Kladra's layouts (record drawers, list groupings, dialogs) but it's underlying theory rather than a concrete component spec, so it informs other patterns more than it stands alone.

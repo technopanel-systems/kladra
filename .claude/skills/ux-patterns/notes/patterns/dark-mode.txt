@@ -1,0 +1,25 @@
+TITLE: Dark Mode
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/dark-mode
+
+PROBLEM: Naively inverting a light UI to black-on-white-text reads as cheap; a considered dark palette needs layered surfaces, desaturated accents and calibrated text opacity.
+
+RULES:
+- Base on near-black, not pure black: video gives an exact 3-step elevation scale — Base #121212, Surface #1E1E1E, Elevated #2C2C2C — each step lighter as it elevates, the way shadows read in light mode.
+- Desaturate accent colors by roughly 20%: video shows two button pairs, each 100% saturation → 80% saturation (labeled "-20%"): #FF3366 → #CC4477 (Subscribe) and #00FF88 → #00CC6A (Confirm).
+- Never pure white text: video flags #FFFFFF "HARSH" (red) — "creates eye strain... reduces reading comfort over time" — against #E8E8E8 "COMFORTABLE" (green), captioned as 90% white.
+- Build text hierarchy with opacity, not new colors: video's summary panel gives two concrete tiers — Headline at 90% white, Body text at 70% white.
+
+DO / DON'T:
+- Do: base the darkest layer on a near-black grey like #121212, then lighten each surface as it elevates.
+- Do: desaturate accent colors (~20%) so buttons and highlights sit calmly against the background.
+- Do: dim body text to a soft off-white (~90%) and use opacity tiers to separate emphasis levels (headline 90%, body 70%).
+- Don't: use pure black (#000000) as the background — it flattens elevation and hides shadows.
+- Don't: ship fully saturated accent colors — they buzz and read as cheap on dark UI.
+- Don't: set text to pure white (#FFFFFF) — the glare fatigues the eyes over time.
+
+VIDEO ADDS: the exact three-step elevation hex scale (#121212 / #1E1E1E / #2C2C2C), the exact -20% desaturation deltas with before/after hex pairs, and the two named opacity tiers (headline 90%, body 70%) — none of which the plain text spells out numerically.
+
+KLADRA: Kladra is dark by default already (CLAUDE.md stack line) — this is the direct spec-check for that surface: confirm the app's base/surface/elevated tokens follow a near-black 3-step scale rather than pure black, confirm accent/status colors are desaturated rather than neon, and confirm body/headline text sits at calibrated off-white opacities rather than pure #FFF. Directly relevant to DESIGN.md's identity tokens. No CONFLICT — pure token-calibration, orthogonal to drag-and-drop/bulk-edit/density/motion rules; it only touches "exactly two gradients" in that any accent gradient must also be desaturated, not neon.
+
+PRIORITY: high — Kladra ships dark by default for all fourteen users; getting the elevation scale, accent saturation and text-opacity tiers right is a foundational DESIGN.md-level check, not a nice-to-have.

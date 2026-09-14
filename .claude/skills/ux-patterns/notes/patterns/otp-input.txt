@@ -1,0 +1,26 @@
+TITLE: OTP Input
+CATEGORY: Forms
+URL: https://designmotionhq.com/patterns/otp-input
+
+PROBLEM: A six-box OTP field built as six independent inputs breaks on paste, loses focus discipline, and gives no feedback on success or failure, turning a single verification step into a fight with the UI.
+
+RULES:
+- Treat paste as the primary path: when a code is pasted into any box, strip everything but digits (`value.replace(/\D/g, "")`) and distribute the result across all six boxes in one action.
+- Auto-advance focus as each digit lands; make backspace on an empty box jump back to the previous box and clear it, so fixing a typo never traps the cursor.
+- Model the field as one string, not six independent values — `useState("847291")` beats `useState(["","","","","",""])`; the boxes are only a rendered view of one source of truth. Sheet shows the array form struck through against the string form.
+- On mobile, wire `inputmode="numeric"` and `autocomplete="one-time-code"` so the OS offers the SMS code as a one-tap autofill suggestion above the keyboard. Sheet shows an iOS-style "Your code is 847291" suggestion bar above the numeric keypad.
+- Throttle resend behind a visible countdown (sheet shows both 0:30 and 0:14 examples, generically "30s"); without it, impatient users spam the button and the server returns 429 Too Many Requests, temporarily banning them. Sheet compares "no timer" (button always live, leads to 429) against "iOS timer" (button disabled with a live countdown, "re-enables when it hits zero").
+- Give instant feedback on submit: a wrong code shakes and clears back to focus (sheet shows all six boxes flash red with "Wrong code — shake & refocus"); a correct code locks each box green with a check mark and a "Verified" state.
+
+DO / DON'T:
+- Do: store the full code as a single string and render the six boxes as a view of it.
+- Do: strip non-digits from pasted input and spread the code across every box automatically.
+- Do: gate the resend button behind a visible countdown timer to avoid rate-limit bans.
+- Don't: rely on one wide input — pasted codes with spaces overflow and choke it.
+- Don't: leave a wrong code sitting silently — shake, clear, and refocus instead.
+
+VIDEO ADDS: The literal code used throughout (847291) and the exact regex (`value.replace(/\D/g, "")`); the struck-through `useState(["","","","","",""])` vs `useState("847291")` comparison frame; a rendered iOS-style SMS autofill suggestion bar; two concrete countdown values (0:30 and 0:14) with the button visibly disabled until zero, plus the specific failure mode named (HTTP 429 Too Many Requests, temporary ban) when no timer exists; and the two terminal states rendered pixel-for-pixel — all six boxes red and shaking on a wrong code, all six green with checks and a "Verified" pill on a correct one.
+
+KLADRA: Kladra's SPEC lists Auth.js credentials with database sessions, not OTP/SMS login, so this pattern has no current login surface — but the same "one string, six boxes" state model and paste-friendly design applies to any short numeric code entry Kladra might add later (e.g. a manager PIN confirmation on a destructive action, or a phone-verification step if WhatsApp/SMS notifications are added). The countdown-gated resend is the more broadly reusable idea: any "resend" or "retry" action in Kladra (resend a quotation, retry a failed dispatch notification) should disable itself behind a visible timer rather than let a rep hammer it. CONFLICT: none of the standing decisions block this — no drag-and-drop/bulk-edit/saved-views issues apply, and the countdown itself is not a "refresh button" (it's a disabled-until-ready control, not a manual re-fetch).
+
+PRIORITY: low — Kladra has no OTP flow today per the stack (Auth.js credentials + database sessions); keep this pattern on file for the "disable + countdown before resend" idea, useful anywhere a resend/retry action exists, but it is not solving an active Kladra screen.

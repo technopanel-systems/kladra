@@ -1223,3 +1223,115 @@ were already green — a demo record that had been impossible for five phases an
 had ever read in order until the dispatch trail did, and a test that could have signed in as the
 wrong person and reported an empty drawer as a broken one. The pattern is worth keeping: the
 reading proposes, and the building finds.
+
+## §8 Depth (P13-G6) — designmotionhq: what was studied, what was taken, what was refused
+
+**How it was asked.** Before G6 the founder sent designmotionhq's free *Design System
+Blueprint* PDF and the site behind it. He likes how the PDF looks, and the studio's whole
+pitch is "UI that doesn't look AI-made". He does not want to buy its paid Claude Code plugin,
+so only public material was read:
+- every one of the 76 free pattern breakdowns, each with a contact sheet of its video;
+- the PDF;
+- the public description of the plugin's eight skills;
+- the studio's YouTube shorts on topics the patterns do not cover;
+- the standards behind them, for seven deeper topics: WCAG 2.2, NN/g, Material 3, Apple HIG,
+  Atlassian, Vercel's interface guidelines, and published Arabic typography practice.
+
+Instagram and TikTok need a login and were not read. All of it, in Kladra's words and with
+every URL, is the `ux-patterns` project skill (`.claude/skills/ux-patterns/`). The G6 builders
+and reviewers load it, and `lens.md` in it is the walk every S12 state gets.
+
+**What it confirmed.** More than half of the library re-derives rules this file already holds:
+- dark is not inverted light, and neither theme uses pure black or pure white;
+- one accent, on one control;
+- every state has a word, never colour alone;
+- skeletons in the content's own shape;
+- hover gated on `hover: hover`, and never the only way to reach an action;
+- 44px for a thumb;
+- motion at 100 / 150 / 200, entering on ease-out, and never looping;
+- numbers at the end of their column in tabular figures;
+- tokens named by role;
+- a pie that breaks past six slices;
+- a chart whose sentence is its takeaway;
+- moving a card by action, not by drag. WCAG 2.5.7 uses exactly that as its worked example.
+
+Where an outside source independently arrives at a rule that was chosen for Kladra's own
+reasons, the rule becomes easier to hold and harder to erode. That is the main value of the
+reading.
+
+**Taken.** Each of these is built by the S12 slice whose screens it touches. That slice
+records its D number in SPEC §4.
+- **A screen is six states.** Loading, empty, partial, error, success and offline. The S12.0
+  inventory asks which of the six each screen can reach and whether each is drawn.
+- **Empty has four kinds.** First use says where the work starts. No results offers the way
+  out. Filtered out says how many are hidden and how to show them. Could not load is an error.
+- **Severity picks the surface.**
+  - A field's problem goes under the field. A refused submit goes in the footer, with focus on
+    the first field it names.
+  - A failure toast stays until it is closed. A success leaves after about four seconds.
+  - No more than three toasts are visible.
+  - On a phone, no toast covers the bottom bar or a sheet's primary action.
+- **Busy is not disabled.** A control that is working keeps its place and focus and says so. A
+  control that cannot be used says why, or stays live and points at what is missing.
+- **When a field is checked.** A format field (phone, email) is checked when it is left. After
+  it has shown an error it re-checks as it is typed. Red means finished and wrong, never not
+  finished yet.
+- **Motion numbers the bands lacked.**
+  - A tooltip waits 300ms.
+  - An exit is about 150ms against a 200ms entrance.
+  - A disclosure animates `grid-template-rows`, with its chevron on the same curve.
+  - A transition names its properties and moves only opacity and transform.
+  - Under reduced motion a slide becomes a crossfade.
+  - Motion on something pressed all day stays at the fast end.
+- **Targets.** 24px is the floor for anything pressable on a desk (WCAG 2.5.8). 44px for the
+  drawer's close and overflow, for a destructive row action and for the × that removes a
+  filter. At least 8px between adjacent icon buttons.
+- **A board moved by action.**
+  - The move sits in the card's overflow menu and names the columns.
+  - Focus returns to the menu's trigger, the move is announced, and the card flashes where it
+    lands.
+  - On a desk the scroll cue is a visible sliver of the next column, never a hover-only arrow.
+  - On a phone, one stage at a time with a stage picker.
+- **The labelled group, from the PDF.** A small muted label sits above a bordered inset group.
+  It serves the request dialogs' sections, the drawer's detail blocks and the admin forms. An
+  eyebrow is a sentence-case word in a muted or accent tone, never uppercase and never tracked.
+- **Words.** A search placeholder names what the box searches. A destructive button names its
+  verb, Cancel is the default beside it, and it never takes the primary slot. The red on a
+  screen is counted: the one brand control and what went wrong, nothing else.
+- **Arabic leading and weight.** The Arabic shots are read for cramped two-line text and for a
+  weight that looks heavier than the Latin beside it. A fix is a `:lang(ar)` token, not a
+  second size.
+- **The lineup test.** For type, colour, space and finish, the reader asks whether what the
+  screen does is written here or is a default the kit or a model fell back on. Then: would
+  this screenshot be picked out as Kladra among ten AI-built CRMs? A screen that passes every
+  rule and still reads as a template is a severity-2 finding. This is what the founder's "built
+  by one hand" means, turned into a question a reader can answer.
+
+**Refused, by class.** The full list with each reason is `refused.md` in the skill.
+- **Anything on the Never list, however it is dressed.** Drag between columns, row checkboxes
+  and select-all, filter presets saved by name, a "Refresh page" way out.
+- **Motion that decorates.** Hover lift, scale and tilt, springs and overshoot, a list that
+  staggers in, a shimmering skeleton, confetti at the end of a flow, a completion meter or a
+  countdown that ticks.
+- **Surfaces that separate by glow.** Tinted shadows, parallax, a mesh gradient, grain,
+  gradient text, a third gradient.
+- **Density as a setting.** Linear's 32px rows, the library's three-height density control.
+- **Machinery for problems Kladra does not have.** Undo stacks and delayed send, typed
+  confirmation and deletion cool-offs (nothing a user can reach is irreversible), optimistic
+  saves (a write holds its row before it decides), steppers for a paper the coordinator reads
+  whole, uploads, sliders, ratings, one-time codes.
+- **The PDF's own identity.** Violet, Inter, uppercase tracked eyebrows, two-tone headings.
+  The identity is Sandstone, chosen by the founder in S1, and Arabic has neither case nor
+  letter-spacing that leaves its joins intact.
+
+**Considered and kept as it is.**
+- **Chart axes in Arabic.** The standards (Apple's archived guidance, AG Charts) keep a chart's
+  axes unmirrored in RTL. Kladra puts the oldest month at the inline start, so a chart reads in
+  the direction of the table and the sentence beside it (§1b), and every chart spec asserts
+  that. It is recorded, not reopened. An Arabic reader who finds the months backwards is the
+  one who reopens it.
+- **Exit easing.** §1b's ease-in on exit is kept against the advice to ease out both ways,
+  because an exit of 150ms or less reads the same either way.
+- **Card shadow.** The site's "one shadow per page" is kept apart from `card-face`'s soft
+  shadow, which S1 chose. What was taken from it is the restraint: nothing gains a shadow by
+  being important.

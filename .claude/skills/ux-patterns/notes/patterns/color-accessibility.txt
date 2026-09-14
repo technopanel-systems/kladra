@@ -1,0 +1,26 @@
+TITLE: Color Accessibility
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/color-accessibility
+
+PROBLEM: The exact same text color can be crisp on one background and invisible on another, and most "decorative" muted grays quietly fail contrast — plus color-only status cues disappear for color-blind users.
+
+RULES:
+- Contrast is a ratio, not a color: the same off-white (#F0F0F0) reads crisp on a dark panel and disappears on a light one — the background decides legibility.
+- Know WCAG thresholds: 4.5:1 for body text, 3:1 for large text. Below 3:1 text goes from "large-only legible" to flat-out invisible. Video shows a graded row of ratios — 15:1, 7:1, 4.5:1, 3:1, 1.5:1 — tagged AAA / AAA / AA / fail / fail.
+- Most failures hide in "decorative" muted grays: nav links, card labels, secondary headings routinely sit at 1.5–2:1 and quietly fall below the line.
+- Never encode meaning with color alone — for the ~8% of users with color vision deficiency, a red error and a green success collapse into the same muddy tone. Video runs the same form through Protanopia, Deuteranopia, and Tritanopia simulations, each flagged "SAME COLOR."
+- Add a second signal alongside every color cue: an icon on error text, trend arrows on stat changes, or textures/patterns in charts — so the message survives when color doesn't.
+- A full remediation pass is cheap: darken/lighten muted text until it clears the ratio, then add an icon to each state — same layout, dramatically more readable (video's before/after dashboard: "3 issues found" gains a warning icon, "Continue" gains a checkmark icon, contrast ratios overlaid: 2.5:1 FAIL → 4.8:1 AA).
+
+DO / DON'T:
+- Do: check every text-on-background pair against WCAG — 4.5:1 body, 3:1 large text.
+- Do: pair color with an icon, label, or pattern so state survives color blindness.
+- Do: lighten/darken "muted" secondary text until it clears the contrast threshold.
+- Don't: rely on red-vs-green alone to separate errors from success.
+- Don't: ship low-contrast grays for nav links and card labels just because they look sleek.
+
+VIDEO ADDS: Shows a literal graded list of text rows at 15:1 down to 1.5:1 with color-coded AAA/AA/fail badges (green/amber/red dot), captioned "Most apps fail both" over a form with two red "FAIL" badges on a 1.9:1 and 1.5:1 pairing. A three-way color-blindness simulation renders identical submit-button rows (olive/mustard/teal in real vision) collapsing to visually identical colors under each deficiency type, each explicitly labeled with the failure percentage (Protanopia "No red," Deuteranopia "No green," Tritanopia "No blue," with a "SAME COLOR" flag on the pair that collapses). A "7.1:1 Contrast" rule-card states "Critical UI text — users need to read this clearly on every device, in every lighting condition." The before/after dashboard comparison shows a vertical divider between "BEFORE" (plain colored badges) and "AFTER" (badges + icon + ratio callouts), both showing the same $12,450 / 2,847 numbers to isolate exactly what changed.
+
+KLADRA: Directly enforces Kladra's own standing rule "every state has a word, never colour alone" — this pattern is the accessibility justification and the concrete ratio targets (4.5:1 body / 3:1 large / prefer 7:1 for critical UI text) behind it. Applies everywhere Kladra shows status (lead stage badges, quotation status, dispatch status, toasts, error states) and especially matters given Kladra is dark-by-default — dark UIs are exactly where "muted gray" text most often quietly fails contrast, so every muted/secondary text token in DESIGN.md should be checked against these ratios in both light and dark theme. No conflict with any standing decision; this pattern is direct backup for one already in place.
+
+PRIORITY: high — Kladra already mandates "every state has a word, never colour alone"; this pattern supplies the numeric contrast targets needed to verify DESIGN.md's dark-mode token set actually meets WCAG, which is otherwise easy to get wrong by eyeballing.

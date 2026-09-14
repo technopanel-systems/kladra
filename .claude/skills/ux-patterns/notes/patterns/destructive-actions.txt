@@ -1,0 +1,27 @@
+TITLE: Destructive Actions
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/destructive-actions
+
+PROBLEM: A red button plus an "Are you sure?" modal is not a real safeguard — danger needs its own design language across gesture, wording, placement, color budget, geography, and time.
+
+RULES:
+- Hold-to-confirm turns the gesture itself into the safeguard: a ring fills over ~300ms of a held press; releasing early cancels the action entirely and nothing fires (video shows the literal ring filling 0→300ms with a countdown, and a "Released early — never fired" / "Nothing deleted" outcome).
+- Name the action on the button itself — "Delete project" / "Keep project" beats generic "Yes"/"No," because the verb is the warning and nobody reads "Are you sure?" (video shows eye-tracking-style callouts: "'Yes' → clicked blind" vs "'Delete project' → read first").
+- Never place a destructive button where the confirm button usually sits — muscle memory clicks primary spots blind (video literally swaps position: "Delete in primary spot" flagged bad/red vs "Delete moved away" flagged good/teal, captioned "Muscle memory clicks blind").
+- Red is a budget: spend it on destruction only. A red logout button cries wolf, so the real delete then looks routine (video counts "RED ELEMENTS: 5" in a cluttered settings page vs "RED ELEMENTS: 1" in a disciplined one).
+- Bury deletion in a bordered, labeled "Danger Zone" at the bottom of the page — geography itself becomes friction that slows the hand.
+- Give irreversible deletions a cooldown: schedule with a grace period (video shows two examples, 14 days and 3 days, each with a "Cancel deletion" button and a countdown).
+
+DO / DON'T:
+- Do: name the destructive action on the button so the verb itself warns.
+- Do: reserve red for destructive actions only, and add friction (hold gesture or danger zone).
+- Do: give irreversible deletions a cancelable cooldown.
+- Don't: place destructive buttons where confirm usually sits.
+- Don't: rely on a generic "Are you sure?" dialog nobody reads.
+- Don't: spread red across logout, badges, and alerts until delete looks routine.
+
+VIDEO ADDS: Explicitly numbers six named patterns as a checklist (Hold-to-confirm, Labels, Placement, Red budget, Danger zone, Cooldown) each with a one-line rule ("the ring replaces the dialog," "away from the primary spot," "spend red on destruction only," "cornered, labeled, last," "14 days to change your mind"). Every pattern gets a paired before/after mock with the failure explicitly named (a dialog crossed out in red vs the hold-ring version). Closing frame literally titles the whole pattern "Destructive Actions: Danger is a design language."
+
+KLADRA: Directly applicable to every delete/cancel/archive flow in Kladra — leads, quotations, dispatches, companies/projects. The hold-to-confirm gesture is the strongest fit for touch/mobile (reps in the field); on desktop, the labeled-button + moved-placement + red-budget + danger-zone rules apply most. The cooldown/undo idea is the same "echo the count, offer undo" idea flagged as valuable in bulk-actions.txt (even though bulk selection itself conflicts with Kladra's rules, single-record undo does not) — converge on: destructive single-record actions in Kladra should skip a plain "Are you sure?" modal in favor of a named-verb button + a short undo window (toast with "Deleted — Undo," not necessarily 14 days, tuned to what's actually reversible in Kladra's data model). No conflict with any standing decision. RTL: hold-ring fill direction and danger-zone border are direction-neutral; button label swapping needs mirrored logical spacing only.
+
+PRIORITY: high — Kladra has real destructive actions (delete quotation, archive lead/project, cancel dispatch) and this pattern gives a concrete, conflict-free replacement for the generic confirm-modal Kladra should actively avoid.

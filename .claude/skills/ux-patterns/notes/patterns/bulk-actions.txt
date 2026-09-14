@@ -1,0 +1,26 @@
+TITLE: Bulk Actions
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/bulk-actions
+
+PROBLEM: A lone header checkbox isn't enough for bulk selection — without a real system (states, counts, persistence, undo) it silently misleads or loses work.
+
+RULES:
+- The header checkbox needs three states: empty, indeterminate (partial, shown as a dash), and checked. Clicking while partial must resolve to select-all, never to clear.
+- Name the number: when select-all only grabs rows on screen, offer "Select all 247 matching" instead of a bare "all" that hides true scope (video: "Six on screen. 247 in the table.").
+- Keep the count honest as filters change — the label should re-read live (video shows it dropping from 247 matching to 96 matching when a Plan filter is applied).
+- Selection is state, not the DOM: shift-click picks a range, and selected ids must survive paging because they live in application state (`selectedIds`), not the visible rows.
+- For destructive bulk actions, skip the confirm modal: echo the exact count, run the action immediately, and offer a 10-second undo with a draining countdown ring rather than an "Are you sure?" dialog.
+
+DO / DON'T:
+- Do: give the header checkbox all three states and let the partial dash resolve to select-all.
+- Do: spell out the exact count in the affordance ("Select all 247 matching").
+- Do: swap destructive confirm dialogs for an undo window that echoes what was deleted.
+- Don't: ship a two-state header checkbox that skips the indeterminate dash.
+- Don't: label bulk selection with a vague "all" that hides row count.
+- Don't: store selection in the DOM, where paging silently resets it.
+
+VIDEO ADDS: Shows the three checkbox states as literal side-by-side chips (empty/partial/checked) each captioned "2 of 5 → the dash." The select-all demo shows the exact affordance text change: "6 selected" with a "Select all 247 matching" link, and after filtering to Plan=Pro, "96 selected... matching = 96." A shift-click demo highlights a teal-bordered contiguous range and shows the literal `selectedIds` array (`usr_4c1a, usr_9f38, usr_73a1, usr_x2b0`) persisting under a page-2/3 pager, captioned "selection lives in state." The undo demo shows "247 members deleted" with an "Undo" button and a red diagonal strike animating across the row list captioned "reversible beats careful," contrasted against a static "Are you sure?" confirm dialog on an empty "No members left in this view" state, explicitly framed as the worse pattern.
+
+KLADRA: DIRECT CONFLICT with Kladra's standing "no bulk edit" rule — this entire pattern (multi-row selection, select-all-matching, bulk delete) is the thing Kladra has explicitly ruled out. Say "conflicts with X" plainly: do not build multi-select checkboxes, select-all-matching, or bulk delete anywhere in Kladra. Transferable ideas that don't require bulk selection: the indeterminate-checkbox *pattern itself* is a general checkbox-state lesson (three states, not two) that could apply if Kladra ever has a single tri-state toggle elsewhere; the "echo the count + offer undo instead of a confirm modal" idea is valuable independent of bulk actions — it applies directly to Kladra's single-record destructive actions (archive a lead, delete a quotation line item): skip "Are you sure?", act immediately, and show a 10-second undo toast naming exactly what happened.
+
+PRIORITY: low for the pattern as a whole (it conflicts with a banned feature) but the undo-instead-of-confirm idea is worth carrying into destructive-actions work as a medium-priority sub-idea — flagged here, detailed fully under destructive-actions.txt.

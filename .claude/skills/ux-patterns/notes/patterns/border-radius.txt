@@ -1,0 +1,26 @@
+TITLE: Border Radius
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/border-radius
+
+PROBLEM: Two visually similar cards differ by one CSS rule — nested corner radii that don't line up read as "off," while concentric ones read as expensive.
+
+RULES:
+- Nested corners follow math: inner radius = outer radius − padding. Video's worked example: outer 16px, padding 8px → inner 8px ("16 - 8 = 8 ✓").
+- Pull every radius value from one scale rather than picking per-component numbers: 4 · 8 · 12 · 16 · 24 (px).
+- Scale radius with element size: tooltip ~4px, input ~8px, card ~12px, modal ~16px, panel ~24px.
+- Radius carries personality: small/sharp reads corporate, large/round reads friendly — pick the range matching brand tone (video shows a slider from "Serious" to "Playful" mapped to the radius scale).
+- The gap between "something's wrong here" and "polished" is exactly this: off-scale, non-concentric corners vs. scale-derived, concentric ones.
+
+DO / DON'T:
+- Do: derive inner radius from outer radius minus padding so nested corners stay concentric.
+- Do: commit to one radius scale and reuse it everywhere.
+- Do: scale radius with element size — larger surfaces get larger corners.
+- Don't: pick radius values at random per component.
+- Don't: nest a rounded card inside another without adjusting the inner corner.
+- Don't: mix an oversized playful radius into a serious brand, or the reverse.
+
+VIDEO ADDS: Shows the literal broken case first (an "Edit Profile" modal labeled with mismatched Outer 16px / Inner 8px / Button 8px that doesn't visually resolve) then the corrected math annotated directly on the card edges (outer 16px arrow, padding 8px arrow, inner 8px arrow) with a green checkmark once 16-8=8 is confirmed. The radius scale is shown as five stacked components (Tooltip 4px, Input 4px [sic, video shows 4px not 6px], Card 12px, Modal 16px, Panel 24px) with size increasing top to bottom. The corporate-vs-friendly comparison uses two identical profile cards side by side, one sharp-cornered labeled "CORPORATE" in blue, one heavily rounded labeled "FRIENDLY" in pink, with a draggable Serious↔Playful slider under them.
+
+KLADRA: Direct input to DESIGN.md's token system — Kladra should have one radius scale (this pattern's 4/8/12/16/24 is a reasonable starting scale) applied consistently across shadcn/Radix component overrides (tooltips, inputs, cards, dialogs/drawers, panels), with nested elements (e.g. a badge inside a card, a button inside a drawer) using the inner-radius-equals-outer-minus-padding rule so concentric corners actually line up. Given Technopanel is an industrial B2B cladding company (not consumer-friendly), the corporate/sharper end of the personality slider is the more defensible default — worth flagging to Jerom as a §4 default if DESIGN.md doesn't already fix this. No conflict with any standing decision; pure visual-token hygiene, and RTL-neutral (radius is not directional unless asymmetric, which this pattern doesn't recommend).
+
+PRIORITY: medium — a real, cheap correctness fix for anywhere Kladra nests rounded elements, but it's a token-scale decision made once in DESIGN.md rather than a recurring per-screen concern.

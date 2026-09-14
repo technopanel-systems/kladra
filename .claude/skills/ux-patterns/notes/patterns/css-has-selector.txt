@@ -1,0 +1,27 @@
+TITLE: CSS Has Selector
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/css-has-selector
+
+PROBLEM: :has() lets CSS react to state that already lives in the DOM (checked, invalid, open, child count) without mirroring that state into JavaScript.
+
+RULES:
+- Parent selector: `.plan:has(:checked) { border-color: var(--accent) }` — the whole card styles off its own radio/checkbox, "0 lines of JavaScript." Video's own compatibility badge: supported since 2023 in Chrome 105, Safari 15.4, Firefox 121, Edge 105.
+- Validation without a handler: `.field:has(:user-invalid) { border-color: var(--error) }`, escalating to `form:has(:user-invalid) button { opacity: .4; pointer-events: none }` — greys out and disables submit while any field is invalid, "0 onChange · 0 useState."
+- Layout follows the DOM: `.app:has(aside) { grid-template-columns: 280px 1fr }` — a sidebar rendering grows the grid column with no `showSidebar` prop threaded through.
+- Quantity queries in pure CSS: `.plans:has(> :nth-child(n + 5)) { --density: compact }` — video shows 4 children rendering "wide" density vs 5 children snapping to "compact," with no JS counting.
+- Modal locks the document: `body:has(dialog[open]) { overflow: hidden }` plus a second rule dimming the app behind it — "1 attribute · 2 rules" — and it reverts itself on close with no cleanup effect.
+- Use `:user-invalid`, not `:invalid`, so errors show after the user leaves the field, not on first paint.
+
+DO / DON'T:
+- Do: reach for :has() when the state already lives in the DOM (checked, open, invalid, child count).
+- Do: use :user-invalid instead of :invalid so errors show after the user leaves the field.
+- Do: put the rule on the container so border, label and icon all update from one selector.
+- Don't: mirror DOM state into React state just to toggle a class the browser can already compute.
+- Don't: write a cleanup effect for scroll lock or dimming that a body:has(dialog[open]) rule undoes by itself.
+- Don't: count children in JavaScript to pick a layout when a quantity query does it in one rule.
+
+VIDEO ADDS: the exact CSS one-liners for all five techniques (card-checked, form-invalid, sidebar-layout, quantity-query, dialog-lock), the browser-support badge (Chrome 105/Safari 15.4/Firefox 121/Edge 105), and a closing "five selectors, zero JavaScript" recap listing all five rules together — the text states the ideas, the video is the literal code.
+
+KLADRA: request/edit forms (disable submit via `form:has(:user-invalid) button` instead of derived React state), the record drawer's own open/close dimming (`body:has(dialog[open])` could replace a manual scroll-lock effect), selected-row styling in lists, and any layout reacting to a sidebar/drawer being present. No CONFLICT — this is an implementation technique, not a UX decision; it doesn't touch drag-and-drop, bulk edit, saved views, density, or the 100ms/150-250ms motion timing at all.
+
+PRIORITY: medium — a genuine implementation win (less derived state, fewer effects) for Kladra's Tailwind v4 + Radix stack, but it's a technique to apply opportunistically during build, not a UX pattern that changes any screen's design.

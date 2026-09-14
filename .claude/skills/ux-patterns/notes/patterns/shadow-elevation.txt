@@ -1,0 +1,25 @@
+TITLE: Shadow Elevation
+CATEGORY: Visual
+URL: https://designmotionhq.com/patterns/shadow-elevation
+
+PROBLEM: Shadows are usually treated as decoration (one flat drop-shadow value copy-pasted everywhere), when they should encode hierarchy — how elevated something looks should track how important it is.
+
+RULES:
+- Real depth comes from stacking three shadow layers, not one blur: a tight contact shadow, a mid-distance shadow, and a wide soft glow, layered together. Sheet builds this up live on a "Premium Card": layer 1 (CONTACT) ≈ `0 1px 3px rgba(0,0,0,.4)` — "tight shadow anchors it," making the card feel physically placed rather than floating; layer 2 (implicit mid shadow) ≈ `0 8px 24px rgba(0,0,0,.2)`; layer 3 (GLOW) ≈ `0 0 40px rgba(139,92,246,.15)` — a low-opacity colored blur in the brand accent (purple here), labeled "colored glow adds brand."
+- Combined CSS shown in the sheet's code panel: a `box-shadow` with the three stacked values above, plus a `transform: perspective(1000px) rotateX(2deg) translateZ(20px);` for a genuine 3D lift (ELEVATION badge) — small rotation plus depth translation, not just a flat shadow, making the surface read as tilted toward the viewer, tagged "3D lift creates depth."
+- The card's own build-up copy quantifies the payoff: "3 layers" of shadow depth, "+40% impact" versus a flat card.
+- Match the glow's accent hue to the product's category so elevation reinforces brand identity: sheet's "Tint Your Glow" frame shows the same card pattern with three different tinted glows — a Creative App card with a purple/violet glow, a Fintech card with a blue glow ("Balance $12,480"), and a Health App card with a green glow ("8,421 steps") — each using the identical three-layer shadow recipe but a different accent color in the outer glow layer.
+- Elevation is a hierarchy signal: the more elevated an element, the more important it reads. Sheet demonstrates this on a two-tier pricing card pair — the $9 basic plan stays visually FLAT (no shadow), the $29 PRO plan FLOATS (full three-layer elevation) — so the premium tier reads as more important purely through shadow depth, no extra copy needed.
+
+DO / DON'T:
+- Do: layer three shadows — tight contact, mid-distance, and wide soft spread — for believable depth.
+- Do: tint the glow to the brand accent so elevation reinforces identity.
+- Do: reserve the strongest elevation for the elements that matter most.
+- Don't: rely on a single flat drop shadow for every surface.
+- Don't: treat shadows as decoration — they communicate depth and hierarchy.
+
+VIDEO ADDS: The exact three-layer `box-shadow` recipe and its approximate values (contact `0 1px 3px rgba(0,0,0,.4)`, mid `0 8px 24px rgba(0,0,0,.2)`, glow `0 0 40px rgba(139,92,246,.15)`), the accompanying `transform: perspective(1000px) rotateX(2deg) translateZ(20px)` for the 3D lift, the quantified "+40% impact" claim for going from flat to three-layer, and the direct pricing-tier demonstration (flat $9 card vs. floating $29 PRO card) plus three tinted-glow examples per product category (purple/creative, blue/fintech, green/health) — none of these values or the tiered pricing-card demo appear in the page text.
+
+KLADRA: Kladra is dark by default, which is exactly where colored glows read well (dark surfaces make a low-opacity accent glow visible; on light theme the same glow would need retuning or omitting). Applies to record drawers and dialogs (should sit visibly "above" the list behind them via a stronger shadow stack, not a flat 1px border), and to distinguishing an active/selected board card or the primary CTA button from ordinary content. CONFLICT: Kladra's standing decision allows exactly two gradients (the primary action and the logo mark) — a tinted glow shadow is not a gradient (it is a `box-shadow`, not a `background-image` or `linear-gradient`), so a purple/brand-accent glow on drawers or the primary button likely does not violate the two-gradient rule, but it sits close to that boundary and should be treated as decoration budget, not a third "gradient-like" effect — worth flagging for founder confirmation before adding a tinted glow anywhere beyond the two sanctioned gradients. The flat-vs-floating hierarchy technique (no shadow for a background list row, three-layer shadow for an open drawer/dialog/dropdown) is safe and matches Kladra's existing 150-250ms dialog motion budget — elevation change can pair with that transition. No conflict with "no chart for decoration" since this governs surfaces, not data visualization.
+
+PRIORITY: medium — Kladra already needs elevation for drawers, dialogs, and dropdowns over list content, so the three-layer shadow recipe (contact + mid + optional restrained glow) is directly reusable as a design-token addition; the colored-glow-per-context idea is lower priority and should be scoped tightly against the two-gradient rule before use.

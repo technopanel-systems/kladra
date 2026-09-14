@@ -1,0 +1,27 @@
+TITLE: Design Tokens
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/design-tokens
+
+PROBLEM: A rebrand or theme change means hunting down 47 hardcoded values, or changing 1 token — the difference is whether the system was ever tokenized.
+
+RULES:
+- Name tokens by meaning, not value: `color-primary` survives a rebrand; `color-blue-500` becomes a lie the moment blue turns teal (video's literal before/after: fragile names `color-blue-500`/`color-red-500` vs resilient `color-primary`/`color-error`, with a rebrand test that breaks 5 fragile references but 0 resilient ones).
+- Structure tokens in three layers: primitives (raw values, e.g. `blue-500: #3B82F6`) → semantic (meaning, e.g. `primary: blue-500`) → component (usage, e.g. `btn-bg: primary`), each layer referencing the one above.
+- Change one primitive and it cascades through every component pointing to it — the video's own stat: "47 → 1, source of truth."
+- Define a scale and snap everything to it: the video's own 4-point spacing scale runs 4/8/12/16/24/32/48, and a component's stray 13px padding/17px gap gets snapped to 12px/16px.
+- Dark mode is not inverted colors — it's swapping one alias-token set for another; same components, same semantic names, different primitive values underneath (video shows a light/dark toggle where the same "Continue" button and card swap tokens, not just colors).
+- Tokens are the single source of truth for color, spacing, and type — the design system is only as strong as they are.
+
+DO / DON'T:
+- Do: name tokens by role (`color-primary`, `spacing-md`, `font-body`) so they hold through a rebrand.
+- Do: layer tokens primitives → semantic → component so one change cascades.
+- Do: snap arbitrary spacing/font sizes onto a fixed scale.
+- Don't: bake literal values into names like `color-blue-500` or `spacing-16`.
+- Don't: treat dark mode as inverting colors instead of swapping token sets.
+- Don't: hardcode raw values across components instead of referencing tokens.
+
+VIDEO ADDS: Shows the literal fragile-vs-resilient token table (5 rows each) with a "REBRAND" stress test running live — the fragile column shows "5 references updated" in red (i.e. still broken references), the resilient column shows "0 changes needed" in green. Shows the 4-point spacing scale as a literal ruler (4/8/12/16/24/32/48px ticks) with a card component's padding/gap snapping from unlabeled to a teal-highlighted "12px" and "16px" match. Shows the three-layer token architecture as an actual dependency diagram: Primitives (`blue-500 #3B82F6`, `gray-100`, `space-4`) → Semantic (`primary`, `surface`, `spacing-md`) → Component (`btn-bg`, `card-bg`, `card-padding`), with connecting lines. Shows a literal light/dark toggle on one card, with the raw alias values printed underneath (`--surface: #FFFFFF` → `--surface: #1C1C1C`, `--primary` unchanged). Big stat callout: "47 → 1, source of truth."
+
+KLADRA: This is the architectural companion to design-system-kit.txt — same subject (tokens) but focused specifically on the naming/layering discipline (semantic-over-literal names, primitive→semantic→component layering) and on dark mode as a token-swap, which is exactly how Kladra's "dark by default" + light-theme-in-testing requirement (shot-looker screenshots at dark AND light) must work: one semantic token set, two primitive value sets, not two hand-maintained component sets. Directly actionable for DESIGN.md's token architecture with zero conflicts. The 4pt spacing scale matches design-system-kit.txt's spacing rule — treat as one confirmed rule, not two separate findings.
+
+PRIORITY: high — gives Kladra's DESIGN.md the concrete naming/layering architecture (semantic names, 3-layer structure, dark mode as token-swap) needed to support both locales and both themes without duplicated component styles.

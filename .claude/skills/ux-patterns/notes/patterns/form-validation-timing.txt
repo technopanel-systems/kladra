@@ -1,0 +1,25 @@
+TITLE: Form Validation Timing
+CATEGORY: forms
+URL: https://designmotionhq.com/patterns/form-validation-timing
+
+PROBLEM: The same validation error is either too late (only on submit) or too early (on every keystroke) — the timing of when it fires matters as much as the message itself.
+
+RULES:
+- Validating on submit is too late: users fill ten fields, commit, then get hit with a wall of errors all at once (video: a 5-field form where every field flags red simultaneously on Submit, captioned "Too late.").
+- Validating on every keystroke is too early: it flags a field wrong before the user has even finished typing the word (video: "ale" already shows "Invalid email" mid-word, captioned "Correct, but cruel.").
+- The sweet spot is on blur: check the field the moment focus leaves it, so feedback lands after they're done typing but before submit (video: typing "alex" shows nothing, then tabbing away triggers "Looks good ✓", captioned "Check on blur.").
+- Once a field has errored, switch that field to live validation so the error clears the instant it's corrected (video: an errored email field re-validates live as the user fixes it, transitioning "ON ERROR → LIVE," captioned "After an error, go live.").
+- Success is feedback too — a green check confirms a field is right, not only flags when something's wrong (video: "alex@email.com ✓ Looks good" shown as the positive state, captioned "Confirm right, not only wrong.").
+
+DO / DON'T:
+- Do: validate a field on blur, once the user has moved on from it.
+- Do: after a field errors, revalidate live so the message clears the moment it's fixed.
+- Do: confirm correct fields with a green check, not just flag broken ones.
+- Don't: hold every error until submit and reveal them all at once.
+- Don't: fire red errors on each keystroke before the user finishes typing.
+
+VIDEO ADDS: Runs the same email field through all three timing strategies side by side with a literal counter of validation checks fired: "3 checks fired, 1 per key" for on-keystroke (bad), vs the on-blur version firing once, after Tab. The on-submit demo shows a full 5-field signup form (name/email/password/country/phone) all turning red simultaneously the instant Submit is clicked. The escalate-to-live demo explicitly shows a small state-machine badge "ON ERROR → LIVE" attached to the field. Opening line sets the whole premise: "Still typing. Already wrong?"
+
+KLADRA: Applies to every form in Kladra with more than one field — lead/company creation, quotation line items, request dialogs. This is the timing half of what form-field-states.txt covers structurally (which states exist) — the two should be read together: validate on blur, escalate to live after an error, confirm success in-field per form-field-states.txt's error/success state designs. Also connects to error-states.txt's "inline validation kills 80% of errors" stat and disabled-buttons.txt's "keep the button live, validate on click/blur" rule — treat on-blur-then-live-on-error as the one timing rule threading through all of these, not a separate decision each time. No conflict with any standing decision.
+
+PRIORITY: high — a small, concrete timing rule (blur-first, then live-on-error) that applies to every multi-field form in Kladra and prevents both the "wall of errors on submit" and "yelling mid-keystroke" failure modes.

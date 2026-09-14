@@ -156,7 +156,8 @@ below by number.
                   in §1. Both themes, both directions, 375 and 1366, before beside after for every screen. Not done
                   until a stranger would say the whole product was built by one hand, this month.
                   - [ ] S12.0 The cold inventory: every state in the shots manifest, per role, judged and ranked here
-                        with what falls short of what, and the reshape each one gets.
+                        with what falls short of what, and the reshape each one gets — walked through `ux-patterns`'
+                        `lens.md` (six states, the schema-browser smell, the lineup test), which every S12 brief cites.
                   - [ ] S12.1 The shell: rail, top bar, bottom bar, search palette, bell and notifications, sign-in,
                         error and missing screens, the view-as banner.
                   - [ ] S12.2 Companies and contacts: list, strip, drawer, forms, hand-over, share, archive.
@@ -176,9 +177,16 @@ as panels so the flag compares the whole thing; S1 grows into the identity itsel
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
 everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). G2's three slices are merged (S2, S3,
-S4) with their review fixes (D186). G3's S5, S7 and S10 are merged; the critic's fifteen findings on S5 and S7 are being
-fixed, and G4's S6 and S8 are being built. Owed before G4 closes: the Arabic reviewer over every namespace G2–G4 touched,
-the reliance card wired onto the team tab, and the full suite. The dev database is `seed:demo` on 0026; `seed:volume` after
+S4) with their review fixes (D186). G3 (S5, S7, S10), G4 (S6, S8) and G5 (S9, S11) are merged with their review fixes
+(D181–D194) and two Arabic passes over every namespace they touched; their full suite is green (the two failures it found
+were tests reading Arabic the reviewers had reworded: «المبلغ» now also begins «المبلغ كاملًا», and a per-cent sign beside an
+isolated figure is said as «بالمئة» because it would read «%17»). Before G6 the founder sent designmotionhq's Blueprint PDF and
+site; its 76 free patterns, the PDF, the public framework of its paid plugin (not bought), its shorts and the standards behind
+them are read, and kept as the `ux-patterns` skill with DESIGN §8 saying what was taken and refused.
+G6 starts with S12.0, the cold inventory, read from a fresh `shots/now` set against DESIGN §1, §1b, §6 and §8 through the
+skill's `lens.md`. When the machine is
+short of memory the full suite runs as four `npx playwright test` calls over a quarter of `tests/*.spec.ts` each, a
+fresh test server for each, because one seventy-minute run was killed twice. The dev database is `seed:demo` on 0026; `seed:volume` after
 it puts the volume back. A dev server that has served a session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
@@ -195,6 +203,7 @@ it puts the volume back. A dev server that has served a session's edits is resta
 | @axe-core/playwright (`tests/axe.spec.ts`, S1) | One spec walks every screen for every role in both locales and fails on a WCAG 2 A/AA violation; scoped to the screen, Radix's known false positives disabled by name with the issue beside each. |
 | Playwright `edge` project (S11) | `channel: "msedge"` against the installed Edge, running only `tests/edge.spec.ts`, so the matrix gains Edge without tripling the suite. |
 | shadcn chart + recharts (S1) | Bars, pies and rings drawn in the language (DESIGN §1b). |
+| ux-patterns (project skill, `.claude/skills/ux-patterns/`, P13 before G6) | The lens G6 reads and builds with: designmotionhq's 76 free pattern breakdowns and their videos, its Blueprint PDF, the public framework of its paid plugin, its shorts, and the standards behind them (WCAG 2.2, NN/g, Material 3, Apple HIG), each held against DESIGN — what confirms a rule, what adds a number, what is refused and why (DESIGN §8). `lens.md` is the walk every state gets; `notes/` keeps every reading so nothing is read twice. |
 
 Removed in P13, with the reason: **playwright-testing** (24 KB of generic page-object advice that
 contradicts `tests/helpers`' fixture style; the house style is the helpers and §3) · **shadcn skill**
@@ -1156,3 +1165,5 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 220 A sticky bar inside a card that hides its overflow sticks to the card, not to the page. (P13-S7)
 - [x] 221 A count drawn beside a capped list counted the rows it drew, not the day. (P13 G2 review)
 - [x] 222 A spec that says a shared reader sees no action row outlived the slice that gave him one. (P13 G3)
+- [x] 223 A browser that translates the page rewrites text React owns; the founder's Edge dropdowns were that. (P13-S11)
+- [x] 224 One seventy-minute suite on a dev server is a run the machine kills; four short ones are a gate. (P13 G5)

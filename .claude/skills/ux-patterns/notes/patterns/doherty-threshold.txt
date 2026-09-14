@@ -1,0 +1,26 @@
+TITLE: Doherty Threshold
+CATEGORY: feedback
+URL: https://designmotionhq.com/patterns/doherty-threshold
+
+PROBLEM: Cross 400ms of silence after any interaction and users mentally check out — perceived speed, not raw speed, is what a UI actually controls.
+
+RULES:
+- The Doherty Threshold is 400ms: respond faster and attention holds, respond slower and engagement starts breaking (video's own big stat: "400ms — After this, your user disconnects").
+- Response time splits into zones: under 200ms feels instant, 200–400ms is tolerable, over 400ms starts breaking engagement (video shows a Submit button responding in 75ms, well inside the "instant" zone, as the positive example).
+- What matters is perceived speed — real work can take longer as long as the interface reacts within the threshold; the reaction itself (not the finished result) is what must land under 400ms.
+- Skeleton loading paints placeholder shapes the instant a screen opens so it never looks frozen (video: "without" shows a blank 390ms wait, "with" shows an immediate skeleton shape at the same 390ms mark, captioned "Feels — 390ms").
+- Optimistic UI updates the screen as if the action already succeeded, then reconciles only if the server rejects it (video: "without" shows a 180ms spinner before a heart fills; "with" shows the heart filling at 0ms, captioned "Response: 0ms").
+- Progress feedback (spinners, progress bars, inline status) keeps an unavoidable wait feeling responsive instead of stalled (video: a 2000ms upload "without" shows a static spinner the whole time; "with" shows a progress bar climbing to "Complete! 100%").
+
+DO / DON'T:
+- Do: give visible feedback within 400ms of any interaction, even if it's just a skeleton or acknowledgment.
+- Do: update the interface optimistically for actions that almost always succeed.
+- Do: show progress feedback whenever real work must exceed the threshold.
+- Don't: leave the screen blank or frozen while data loads.
+- Don't: wait for a server round-trip before giving any visual response.
+
+VIDEO ADDS: Every rule gets a paired "WITHOUT / WITH" demo with the exact millisecond number stamped on each: skeleton loading (390ms either way, but one shows nothing and one shows shape), optimistic UI (180ms spinner-then-heart vs instant 0ms heart), progress feedback for a fast action (0ms instant checkmark) and for a slow one (2000ms spinner vs 2000ms progress bar reaching 100%). Big closing stat: "<400ms or the illusion of it," directly stating that perceived response, not real completion, is the target.
+
+KLADRA: This is the numeric backbone connecting several already-noted patterns: it's the "why" behind Kladra's skeleton and toast requirements ("skeletons do not pulse" is Kladra's own refinement on top of this pattern's skeleton-loading rule), and behind-the-button.txt's optimistic-UI-for-cheap-actions-only rule uses the same 400ms logic in reverse (money actions are allowed to exceed 400ms because they need real confirmation, but must show progress feedback throughout so the wait doesn't feel frozen). Sets a hard, testable number for every Kladra interaction: any click, filter, or record open should visibly react within 400ms (ideally under 200ms), with skeletons/progress bars covering anything that takes longer. No conflict — Kladra's "no number tickers or looping motion" rule means progress feedback should be a determinate bar/label where possible, not an indeterminate looping spinner, for actions with a known duration (e.g. file uploads/exports), reserving spinners for genuinely unknown-duration waits.
+
+PRIORITY: high — a concrete, universal timing budget (400ms threshold, feedback required) that governs nearly every interaction in Kladra and directly underpins its skeleton/toast/motion rules already in place.

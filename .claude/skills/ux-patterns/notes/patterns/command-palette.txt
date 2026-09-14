@@ -1,0 +1,27 @@
+TITLE: Command Palette
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/command-palette
+
+PROBLEM: A ⌘K box that only does exact substring search feels broken — a real command palette is a small system: fuzzy matching, structure, full keyboard control, and graceful async/nesting.
+
+RULES:
+- Use fuzzy subsequence matching, not exact substring search — typing "stg" should still surface "Settings", "Storage", "Staging". Exact matching returns nothing and feels broken (video shows "stg" → exact match "No results" vs fuzzy match highlighting s-t-g inside each word).
+- Group results into labeled sections (Recent, Actions, Pages) so a long flat list becomes scannable structure instead of a wall of items.
+- Make it fully keyboard-driven: arrows move the highlight, Enter runs the selected command, Esc closes — never force the user back to the mouse.
+- Never open to a blank void — prefill recent or suggested commands so there's a starting point before typing anything.
+- For async commands, show an inline spinner and keep the palette open; load results in place rather than freezing the screen.
+- Support nested commands: one command can drill into a sub-menu with a breadcrumb-style header, and Esc walks back exactly one level (not closing the whole palette).
+
+DO / DON'T:
+- Do: match queries as fuzzy subsequences so "stg" still finds "Settings".
+- Do: prefill recent/suggested commands so the palette opens with something to act on.
+- Do: drive everything from the keyboard — arrows, Enter, Esc.
+- Don't: require exact substring matches.
+- Don't: open to a blank "No results" void.
+- Don't: freeze the whole screen while an async command loads.
+
+VIDEO ADDS: Side-by-side "Exact match" (red-bordered, "No results" for "stg") vs "Fuzzy match" (teal-bordered, three highlighted results) makes the core rule concrete rather than abstract. Shows the flat-list-to-grouped transformation directly: an unlabeled list of 6 items vs the same items under "RECENT / ACTIONS / PAGES" headers. Shows a full keyboard-hint row (↑ ↓ / ↵ Enter / Esc) mapped to "Navigate with arrows... / Open settings / Deploy staging / Toggle dark mode / New document [highlighted] / Profile page." The empty-state comparison shows "BLANK VOID" (a literal empty search box, nothing to select) against a prefilled "RECENT COMMANDS" list. The async demo shows a "switch" query with a spinner inline next to "Switch project..." while the palette stays fully interactive, captioned "Results load in place." The nested-command demo shows "Change theme" expanding into a sub-panel with an "Esc — back one level" hint pinned at the top.
+
+KLADRA: Kladra explicitly has "the search palette" listed as a first-class surface to check patterns against. Every rule here applies directly: fuzzy matching over exact substring, Recent/Actions/Pages-style grouping (for Kladra: maybe Recent companies/projects, Actions like "New quotation," and direct record jumps), full keyboard control, and a non-empty default state (recent records or common actions) rather than a blank box. The nested-command idea maps to drilling from a company into its projects/quotations without leaving the palette. No conflict with any standing decision — command palettes are explicitly not in the banned list (not bulk edit, not drag-and-drop, not a saved view). RTL: fuzzy-match highlighting and keyboard arrow direction (↑/↓ stay vertical, unaffected by RTL) need no special handling, but the query input and result text must use logical alignment for Arabic.
+
+PRIORITY: high — Kladra already plans a search palette; this pattern is a near-complete, low-risk spec for it (fuzzy match, grouping, keyboard-only control, non-empty default state) with no conflicts to resolve.

@@ -1,0 +1,29 @@
+TITLE: Visual Hierarchy
+CATEGORY: Visual
+URL: https://designmotionhq.com/patterns/visual-hierarchy
+
+PROBLEM: Without a deliberate hierarchy, every element competes for attention equally and the user has no cue for what to look at first, so five separate signals (size, color, contrast, whitespace, weight) need to stack toward one focal point.
+
+RULES:
+- Size sets the entry point: make the primary/headline element roughly 2x the size of body text so the eye lands there first. Sheet shows a "Monthly Revenue" headline against smaller body copy, plus a bar-chart legend running Lighter → Body → Heading → Accent as bars grow taller and more saturated — the same size/weight escalation applied to a chart, not just text.
+- Spend color like currency: keep the interface neutral (grayscale/white) and reserve exactly one accent color for the single most important action or item. Sheet contrasts a nav bar with every link in a different color (red/orange/purple/green — visual noise) against the same nav with all links neutral except one purple "Pricing" link, captioned "one accent color, only where it matters." Same treatment shown on stat cards: red/green/purple mixed metric values (bad) vs. all-white neutral values with only one purple accent number (good).
+- Contrast separates roles: pair a bold heading against muted/lighter body text, or a filled primary button against an outlined/ghost secondary button. Sheet shows exact weight/style/color tokens side by side: "Bold 800" vs "Light 300", "Filled" vs "Outlined", "#FFFFFF" vs "#4a4a4a" — captioned "bigger difference = stronger signal," meaning the gap between the two must be large enough to read instantly, not subtle.
+- Whitespace is a signal, not filler: give the hero/primary element generous breathing room and keep secondary items compact. Sheet compares a cramped card (no spacing) against a spaced one, captioned "not empty, intentional" — the point is that empty space is deliberately allocated to the important element, not evenly distributed.
+- Font weight builds reading order independent of size: heavy weight (800) for headings, regular (400) for body, light (300) for captions/meta text. Sheet shows a card listing these three numeric weights directly next to labeled heading/body/caption text, plus a fourth "You read this first" emphasis block demonstrating the weight jump pulls the eye before the paragraph below it.
+- No single rule carries a layout alone — size, color, contrast, whitespace, and weight must stack together to produce one clear focal point; the closing frame lists all five as a checklist (Size, Color, Contrast, Whitespace, Weight) under "Five rules. One clear hierarchy."
+
+DO / DON'T:
+- Do: reserve one accent color for the single action you want users to take.
+- Do: make the headline roughly 2x the size of surrounding body text.
+- Do: give the most important element more padding/whitespace than everything else.
+- Do: pair a heavy-weight heading (800) with regular body (400) and light captions (300).
+- Do: make contrast differences big enough to read instantly (e.g., #FFFFFF vs #4a4a4a, not two similar grays).
+- Don't: color every element differently — it turns hierarchy into visual noise.
+- Don't: lean on size alone; combine it with weight, contrast, and spacing.
+- Don't: cram everything at equal emphasis so nothing stands out.
+
+VIDEO ADDS: A full before/after dashboard comparison ("no hierarchy" cramped sidebar+cards vs "clear hierarchy" version) opening the piece; the bar-chart legend literally naming Lighter/Body/Heading/Accent as an escalating visual scale; the rainbow-nav-vs-one-accent-nav comparison and the matching red/green/purple-vs-neutral-plus-one-accent stat-card comparison; the exact token pairs for contrast (Bold 800/Light 300, Filled/Outlined, #FFFFFF/#4a4a4a); the cramped-vs-spaced card pair captioned "not empty, intentional"; the numeric weight scale (800/400/300) shown attached to real heading/body/caption text plus a "You read this first" emphasis demo; and the closing five-item checklist icon row (Size, Color, Contrast, Whitespace, Weight). None of the specific hex/weight numbers are given in the page text.
+
+KLADRA: Governs the overall visual language across every screen — dashboards (which metric or chart is the one thing a manager should see first, echoing Kladra's own P13 "no chart for decoration" rule), record drawers (which field or status is the primary read), list/board rows (which column or badge should dominate), and CTAs everywhere (only the primary button should carry the accent). Kladra's "exactly two gradients (the primary action and the logo mark)" rule already embodies the "spend color like currency" principle at the gradient level — this pattern reinforces extending that same restraint to flat accent color use generally: one accent, reserved, not sprinkled across badges/links/icons. The "every state has a word, never colour alone" rule already means status badges carry text, so color-as-hierarchy here should layer on top of (not replace) that text signal. RTL: font-weight and size hierarchy transfer directly; whitespace/padding should use logical properties so breathing room stays correctly positioned when mirrored. CONFLICT: none — this is a general visual-design discipline, not a feature, and does not touch drag-and-drop/bulk-edit/saved-views/comments/density.
+
+PRIORITY: high — this is a foundational cross-cutting principle (not one screen) that directly supports the front-end re-audit Kladra is about to undergo; the one-accent-color rule is the most concrete, immediately auditable rule (count how many colors carry meaning per screen).

@@ -1,0 +1,363 @@
+=== page 1 ===
+T H E C O M P L E T E G U I D E
+Design System
+Blueprint
+A visual guide to building
+consistent & scalable UI
+by @designmotionhq
+Colors
+Typography
+Spacing
+Components
+Motion
+
+=== page 2 ===
+0 1 — I N T R O D U C T I O N
+What is a
+Design System?
+A design system is a single source of truth — a collection of
+reusable components, guided by clear standards, that can
+be assembled to build any number of applications.
+Products
+Apps, websites, dashboards
+Components
+Buttons, cards, modals, inputs
+Patterns
+Layout, navigation, forms
+Foundations
+Colors, typography, spacing, motion
+47%
+Faster development
+33%
+Fewer inconsistencies
+2×
+Faster onboarding
+Sources: Figma Design Systems Report 2024, Brad Frost — Atomic Design
+@designmotionhq
+02
+
+=== page 3 ===
+0 2 — F O U N D A T I O N S
+Color
+System
+Define a semantic color palette. Don't use raw hex values — use tokens with meaningful names.
+P R I M A R Y S C A L E
+900
+800
+700
+600
+500
+400
+300
+200
+100
+S E M A N T I C T O K E N S
+bg.primary
+#09090B
+bg.surface
+#131316
+border.default
+#27272A
+text.primary
+#FAFAFA
+text.muted
+#A1A1AA
+brand.primary
+#6366F1
+status.success
+#22C55E
+status.error
+#EF4444
+💡
+Pro tip
+Always use semantic tokens (e.g. text.primary) instead of raw values. This makes theme switching trivial.
+#312E81
+#3730A3
+#4338CA
+#4F46E5
+#6366F1
+#818CF8
+#A5B4FC
+#C7D2FE
+#E0E7FF
+@designmotionhq
+03
+
+=== page 4 ===
+0 3 — F O U N D A T I O N S
+Typography
+Scale
+Use a modular scale for consistent hierarchy. Each step should feel intentional.
+Aa
+48px
+800
+text-5xl
+Aa
+36px
+700
+text-4xl
+Aa
+28px
+700
+text-3xl
+Aa
+22px
+600
+text-2xl
+Aa
+18px
+400
+text-lg
+Aa
+15px
+400
+text-base
+Aa
+13px
+400
+text-sm
+Aa
+11px
+500
+text-xs
+F O N T W E I G H T S
+Regular 400
+Medium 500
+Semibold 600
+Bold 700
+Extrabold 800
+L I N E H E I G H T S
+Headings: 1.1–1.3
+Body: 1.5–1.7
+UI Labels: 1.0–1.2
+Tighter line-height for large text,
+looser for small readable text.
+@designmotionhq
+04
+
+=== page 5 ===
+0 4 — F O U N D A T I O N S
+Spacing
+& Grid
+A 4px base unit creates rhythm. Every margin, padding, and gap should be a multiple of 4.
+S PAC I N G S C A L E ( B A S E : 4 P X )
+space-1
+4px
+space-2
+8px
+space-3
+12px
+space-4
+16px
+space-6
+24px
+space-8
+32px
+space-12
+48px
+space-16
+64px
+8 P X G R I D
+C O L U M N G R I D ( 1 2 - C O L )
+Columns: 12
+Gutter: 16–24px
+Margin: 24–48px
+@designmotionhq
+05
+
+=== page 6 ===
+0 5 — C O M P O N E N T S
+UI
+Components
+Components are the building blocks. Define every state — default, hover, active, disabled, focus.
+B U T T O N S
+Primary
+Secondary
+Ghost
+Destructive
+Small
+Medium
+Large
+I N P U T S
+Email
+you@example.com
+Name
+John Doe
+C A R D
+Card Title
+Short description of the card content goes
+here.
+Action
+BADGES
+New
+Active
+Pending
+Error
+Default
+Disabled
+Disabled
+Not editable
+@designmotionhq
+06
+
+=== page 7 ===
+0 6 — F O U N D A T I O N S
+Icons &
+Iconography
+Icons should be consistent in style, weight, and size. Pick one library and stick with it.
+I C O N S I Z E S
+16px
+Inline
+20px
+Default
+24px
+Navigation
+32px
+Feature
+48px
+Hero
+STYLE RULES
+2px stroke weight (consistent)
+Rounded caps & joins
+Optical alignment on grid
+24×24 default bounding box
+Use currentColor for fills
+R E C O M M E N D E D S E T S
+Lucide
+Clean, consistent, open-source
+Phosphor
+6 weights, flexible
+Heroicons
+By Tailwind team
+Radix Icons
+Minimal, 15×15 grid
+⚡
+Touch targets matter
+Even if your icon is 20px, the interactive area should be at least 44×44px for accessible tap targets.
+@designmotionhq
+07
+
+=== page 8 ===
+0 7 — M O T I O N
+Motion &
+Animation
+Motion brings UI to life. Keep it purposeful — every animation should inform, not distract.
+E A S I N G C U R V E S
+ease-out
+Enter/appear
+ease-in-out
+Move/resize
+ease-in
+Exit/leave
+D U R AT I O N S C A L E
+100ms
+Micro — hover, toggle, fade
+200ms
+Small — button press, tooltip
+300ms
+Medium — modal, dropdown
+400ms
+Large — page transition, slide
+500ms
+XL — complex orchestration
+🎯
+Purposeful
+Guide attention, show relationships
+⚡
+Fast
+Never block the user. 300ms max
+for interactions.
+🌊
+Natural
+Follow physics. Ease-out for enters,
+ease-in for exits.
+Time
+Progress
+Time
+Progress
+Time
+Progress
+@designmotionhq
+08
+
+=== page 9 ===
+0 8 — B E S T P R A C T I C E S
+Do's &
+Don'ts
+✓
+Do: Use consistent spacing
+✗
+Don't: Eyeball spacing randomly
+✓
+Do: Limit your color palette
+✗
+Don't: Use every color you like
+✓
+Do: Use a type scale
+Heading
+Body text with clear hierarchy
+✗
+Don't: Use arbitrary font sizes
+heading
+body that's almost the same size
+✓
+Do: Document component states
+Default
+Hover
+✗
+Don't: Only design the happy path
+???
+✓
+Do: Use semantic color tokens
+color: var(--text-primary)
+✗
+Don't: Hardcode hex values
+color: #1a1a2e
+Disabled
+Default only
+@designmotionhq
+09
+
+=== page 10 ===
+0 9 — A C T I O N P L A N
+Design System
+Checklist
+Use this checklist to audit or build your design system from scratch.
+F O U N DAT I O N S
+Define color palette (primary, neutral, semantic)
+Set up typography scale (sizes, weights, line-heights)
+Establish spacing system (4px or 8px base)
+Create grid system (columns, gutters, breakpoints)
+Choose icon library & define sizing rules
+C O M P O N E N T S
+Build atomic components (Button, Input, Badge)
+Define all states (default, hover, active, disabled, focus)
+Create composite components (Card, Modal, Dropdown)
+Document props and variants for each component
+Add responsive behavior rules
+D O C U M E N TAT I O N
+Write usage guidelines for each component
+Add code examples & copy-paste snippets
+Define naming conventions (BEM, tokens)
+Create a contribution guide for the team
+M O T I O N & P O L I S H
+Define easing curves & duration scale
+Add transition rules for interactive elements
+Set up dark/light theme tokens
+Create loading & empty states
+@designmotionhq
+10
+
+=== page 11 ===
+I share daily tips on design systems, motion
+design & UI on Instagram.
+instagram.com/designmotionhq
+10K+
+Followers
+∞
+Free tips
+Want more
+design content?
+Follow @designmotionhq
+@designmotionhq
+© 2026 @designmotionhq

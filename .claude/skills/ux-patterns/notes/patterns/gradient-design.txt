@@ -1,0 +1,24 @@
+TITLE: Gradient Design
+CATEGORY: visual
+URL: https://designmotionhq.com/patterns/gradient-design
+
+PROBLEM: A gradient can look premium or cheap purely based on how far it travels across the hue wheel, which direction lightness moves, and whether it sits under text.
+
+RULES:
+- Cheap-looking gradients usually travel too far across the hue wheel: neighboring hues (teal→cyan) blend cleanly; opposites (orange→blue) create a muddy gray dead zone in the middle. Video's specific number: stay within 60° of hue travel (video shows a color wheel with a 60° arc marked "Harmonious" vs a 180°-apart pairing marked "Muddy").
+- Keep lightness moving in one direction — a gradient that gets darker, then lighter, then darker again reads as banding.
+- Gradients work best as ambiance, not surface: a soft radial glow behind content beats a full-bleed linear wash on top of it.
+- Subtle grain (2–3% noise) on top of a gradient hides banding on cheap displays and adds perceived texture.
+- Direction matters: video's own 4-rule checklist names 135° as "The Premium Angle" specifically, shown against flatter 0°/45°/90° options.
+- Mesh gradients (3 color points blended, not a simple 2-stop linear) read as more premium than a flat 2-color gradient.
+- Never put body text directly in a gradient's mid-transition zone — contrast there is unpredictable; gradient text should be reserved for large, short headline-style text only, not body copy (video's own fail case: "Premium Design" gradient-filled headline flagged "UNREADABLE" when contrast drops mid-transition, vs body text kept solid-color "Text Only" next to a small gradient accent).
+
+DO / DON'T:
+- Do: stay within 60° of hue travel, add 2–3% noise, and test on a low-quality screen.
+- Don't: put body text directly on a gradient's mid-transition zone — contrast is unpredictable there.
+
+VIDEO ADDS: Shows a direct "CHEAP" (red-orange-to-green button, harsh transition) vs "PREMIUM" (indigo-to-blue button, smooth) comparison up front. Renders the color wheel with an actual 60° arc marked on it, plus two swatch pairs each tagged "Harmonious" (green check) or a muddy dead-zone pairing (red X, "180° apart"). Shows a 2×2 grid of direction options (0°, 45°, 90°, 135°) with 135° singled out and labeled "The Premium Angle." Shows three mesh-gradient panels with visible color-point dots (captioned "Mesh — 3 color points") culminating in a full card mockup ("Acme Creative Studio") using a mesh background behind real UI content. Shows the gradient-text fail/pass pair explicitly: "Premium Design" unreadable mid-gradient vs a small gradient-filled label next to solid-color body text, captioned "Gradient text: [X] Unreadable / [OK] body text." Closing checklist: "4 GRADIENT RULES — 60° Hues, 135° Direction, Mesh Points, Text Only."
+
+KLADRA: DIRECT CONFLICT with Kladra's standing rule "exactly two gradients (the primary action and the logo mark)." This pattern's own examples use gradients far more liberally than that — gradient buttons, gradient card headers/banners, gradient text, mesh-gradient backgrounds — all of which Kladra has explicitly ruled out beyond its two allowed spots. Say "conflicts with X" plainly: do not add mesh backgrounds, gradient text, or gradient card surfaces anywhere in Kladra. What IS transferable within the two allowed gradients: the 60°-hue-travel rule and the ~135° direction rule are good constraints for making Kladra's one primary-action gradient and one logo-mark gradient look premium rather than muddy, and the "never put body text in the mid-transition zone" rule is a real contrast risk if the primary-action button's label sits on the gradient. Apply the quality rules to the two permitted gradients only.
+
+PRIORITY: medium — most of this pattern conflicts with Kladra's two-gradients cap and should be explicitly rejected as a general technique, but the hue-travel/direction/text-contrast rules are worth applying narrowly to keep Kladra's one primary-action gradient from looking muddy or the label unreadable.

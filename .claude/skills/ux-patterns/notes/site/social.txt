@@ -1,0 +1,110 @@
+designmotionhq — SOCIAL / VIDEO PRESENCE
+What was reachable with a plain fetch or web search, what was login/WAF-blocked, and every
+extra tip found that is not already one of the 76 pattern-page titles (full list in
+R/slugs.txt). No scraping service or account-based tool was used anywhere below — only
+curl with a browser UA, the TikTok/Instagram public oEmbed endpoints, and web search.
+
+## BLOCKED
+
+Instagram — instagram.com/designmotionhq/
+  `curl -sL -A "Mozilla/5.0..."` returns HTTP 200 but the response is Instagram's generic
+  client-rendered app shell (622KB of JS bootstrap, no og:title/og:description, no
+  biography/follower JSON embedded) — the page requires a logged-in session to server-
+  render any profile data. The deprecated public oEmbed endpoint
+  (api.instagram.com/oembed/?url=...) also just redirects into the same login-walled shell.
+  RESULT: blocked. Stopped there — no login, no third-party IG scraping API used.
+
+TikTok — tiktok.com/@designmotionhq
+  `curl -sL -A "Mozilla/5.0..."` returns a 1.4KB WAF/bot-challenge page ("Please wait...")
+  from TikTok's own anti-bot JS challenge (slardar/waf-aiso script) — no profile HTML at all.
+  The public oEmbed endpoint DOES resolve for the bare profile URL
+  (www.tiktok.com/oembed?url=https://www.tiktok.com/@designmotionhq) and confirms the
+  account exists ("Designmotionhq's Creator Profile", embed_type "profile") but returns no
+  post list, no captions, no follower count — oEmbed only ever returns a generic embed
+  widget for a profile, not content.
+  RESULT: blocked for content. Account existence only, confirmed via oEmbed. Stopped
+  there — no individual TikTok video URLs were known to try per-post oEmbed (which does
+  return a caption/title field when a specific video URL is available), and no scraping
+  service was used to discover post URLs.
+
+## REACHABLE
+
+YouTube Shorts — youtube.com/@designmotionhq_yt/shorts
+  A plain curl (browser UA) DOES return a server-rendered page (987KB) with a channel
+  bio of just "www.designmotionhq.com" and accessibility labels for ~26 visible Shorts
+  (title + view count each, e.g. "53 مشاهدة" = "53 views" — the page rendered in Arabic
+  locale by default, view counts are low, tens to low hundreds, consistent with a
+  secondary/repost channel rather than the primary Instagram/TikTok audience). This is the
+  SAME creator (bio links to the same domain used across the whole site) reposting the
+  same short-form tip format seen in the pattern-page videos.
+  Video titles/captions found (source: YouTube Shorts channel page, read 2026-09-14):
+    "Build a design system in 60 seconds"
+    "Card input IX tips #animation #uidesignlearning #design"
+    "Did you know ? #motiongraphics #motion #design"
+    "Did you know these design tricks ? #design #uidesignlearning #motiongraphics #animation"
+    "Dropdown are essentials but needs to follow theses rules. #design #motiondesign #uiux"
+    "Empty state should not be empty #design #uidesignlearning #motiongraphics"
+    "Fitt's law applied to design. #uidesignlearning"
+    "Form input validation is the key for good UX #design #motiondesign #uiux"
+    "Grid system is the key to good responsive design. #design #animation #uidesignlearning"
+    "How to design the perfect gradient"
+    "Kanban UX tips #uidesignlearning #animation #design"
+    "Modals are the key for important actions #design #animation #coding"
+    "Optimistic UI bet on success #design #motiondesign #uiux"
+    "Red is a budget. Spend it on destruction only" (+ a second cut with hashtags)
+    "Right-click is a system." / "Right-click is a system: context menu UX"
+    "Saved. It wasn't. Autosave UX done right"
+    "Skeleton loading: turn waiting into anticipation"
+    "Slider input UX tips #design #animation #uidesignlearning"
+    "Star rating IX tips #animation #uidesignlearning #design"
+    "Swipe gesture actions UX tips #design #motiondesign #uiux"
+    "Toasts make you app feel reactive. #design #motiondesign #uiux"
+    "Toggles UX deserve all those rules #design #motiondesign #uiux"
+    "UI/UX tips #uidesignlearning #design #animation"
+    "Undo on delete actions #design #motiondesign #uiux" (x2 cuts)
+    "#animation #remotion #pathfinder" (a tool/technique short about the Remotion React
+      video library and SVG "pathfinder" boolean operations — a production-technique tip
+      for the creator's own animated videos, not a UI pattern for end products)
+
+### Cross-checked against the 76 pattern slugs (R/slugs.txt) — most titles map 1:1 onto an
+existing pattern page (dropdown-design, empty-states, form-validation-timing, grid-system,
+gradient-design, modal-hierarchy, optimistic-ui, destructive-actions, context-menu,
+autosave-ux, skeleton-loading, range-sliders, star-rating, swipe-actions,
+toast-notifications, toggle-anatomy, undo-ux, design-system-kit) — confirming the Shorts
+channel is mostly a repost feed of the same 76 breakdowns, not a separate body of tips.
+
+### GENUINELY EXTRA — not a title or an obvious synonym of any of the 76 slugs:
+  1. "Fitt's law applied to design" — Fitts's Law (target size vs. distance trades off
+     against speed/accuracy of pointing) is not one of the 76 pattern titles at all
+     (closest neighbors — golden-ratio, proximity-rule, gestalt-laws, von-restorff,
+     serial-position, peak-end-rule, doherty-threshold, zeigarnik-effect — cover other
+     named psychology/UX laws but not this one). Directly relevant to Kladra: click
+     targets on dense tables/kanban cards, icon-only action buttons, and touch targets on
+     tablet use in the yard should be sized/spaced by Fitts's Law, not just by the type
+     scale. See deeper.txt for the authoritative NN/g source and concrete numbers.
+  2. "Kanban UX tips" — no kanban-specific slug exists among the 76 (closest is the
+     general drag-and-drop pattern). Kladra's own project/dispatch board is exactly a
+     kanban surface, so this is a direct gap worth flagging even though the specific tip
+     content of the short itself could not be read (captions only, not video/transcript).
+  3. "Card input IX tips" (sic, likely "UX tips") — ambiguous: could mean payment/credit-
+     card number input UX, or "card" as in the perfect-card-style content card. Neither
+     matches the 76 slugs (input-masking is the closest neighbor for formatted-input UX).
+     Flagged as extra but low-confidence on exact content since only the caption, not the
+     video, was reachable.
+
+## NOT FOUND / NO PRESENCE DETECTED
+Web search (see queries below) turned up no designmotionhq-specific results on Threads, X,
+Pinterest, Dribbble, or Medium — those handles either don't exist or are not indexed.
+No podcast appearances, written interviews, or third-party articles quoting designmotionhq
+were found. No Product Hunt listing, no Reddit discussion, no G2/Capterra review of UX
+Engine were found (searches for "designmotionhq" + interview/review/Product Hunt/Reddit
+returned only unrelated UX-tool results, none about this creator). The account appears to
+operate almost entirely through its own owned site (designmotionhq.com) plus Instagram/
+TikTok/a secondary YouTube Shorts mirror, with no third-party press footprint discovered
+through legitimate public search as of 2026-09-14.
+
+Queries run: "designmotionhq UI UX designer Instagram TikTok"; "\"designmotionhq\"
+site:youtube.com OR site:threads.net OR site:x.com OR site:dribbble.com OR
+site:medium.com"; "\"@designmotionhq\" pinterest OR threads OR substack"; "designmotionhq
+\"Fitts's law\" OR \"Kanban\" UI tips"; "\"designmotionhq\" UX Engine review OR interview
+OR \"Product Hunt\" OR reddit".

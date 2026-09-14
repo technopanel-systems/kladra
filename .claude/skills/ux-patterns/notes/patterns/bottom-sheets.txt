@@ -1,0 +1,27 @@
+TITLE: Bottom Sheets
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/bottom-sheets
+
+PROBLEM: On tall phones, menus anchored top-right sit in a dead zone the thumb can't reach one-handed.
+
+RULES:
+- Screens keep getting taller while thumbs stay the same length, turning the top of the display into a dead zone for one-handed use.
+- Anchor menus and primary actions to the bottom of the screen (thumb's natural rest position), not the top-right corner most navs default to.
+- Unlike a full modal that blocks everything, a bottom sheet keeps the underlying page visible so users never lose their place/context.
+- Add snap points so the sheet can rest half-open (peek) or expand to full height, matching how much content is actually needed.
+- Support drag-to-dismiss — a downward gesture matches the sheet's own direction and needs no small close target.
+- Dim the background with a scrim and lock body scroll so only the sheet moves, keeping focus on the active task.
+
+DO / DON'T:
+- Do: place primary actions within thumb reach at the bottom of the screen.
+- Do: keep the page visible behind the sheet to preserve context.
+- Do: offer snap points and drag-to-dismiss for flexible, gesture-friendly height.
+- Don't: bury frequent menus in the top-right dead zone on tall phones.
+- Don't: block the whole screen with a full modal when a sheet would do.
+- Don't: leave the background scrollable while the sheet is open.
+
+VIDEO ADDS: Opens with a literal thumb-reach diagram over a phone (top menu greyed as unreachable, bottom third highlighted teal as "comfort zone"). Directly contrasts "Full modal" (marked red, context lost, page dims entirely) vs "Bottom sheet" (marked teal, "Context stays" — the page listing is still visible above the sheet). Shows snap-point states explicitly: a Library list peeking with a "Now Playing" mini-bar, expanding to a full Details sheet, with a "Drag to dismiss" label and downward arrow. Shows the scrim+scroll-lock state as a darkened, "PAGE LOCKED" badge over the background feed while the sheet is interactive. Closing line: "Build for the thumb."
+
+KLADRA: Directly applicable to Kladra's phone-width layouts (375px is one of the required shot-looker widths) — any action sheet, filter panel, or quick-action menu on mobile should be a bottom sheet, not a dropdown pinned top-right. Record drawers themselves are probably closer to a side/bottom drawer already per DESIGN.md; this pattern argues the mobile variant of any drawer or action menu should open from the bottom with drag-to-dismiss, snap points, and a scrim. No conflict with drag-and-drop ban — drag-to-dismiss is a dismissal gesture on the sheet's own handle, not reordering/moving content, so it's a different mechanic; worth naming this distinction explicitly if it comes up in review. RTL: bottom sheets are vertical (no left/right concern), so no logical-CSS risk.
+
+PRIORITY: medium — Kladra is Riyadh-based with reps in the field on phones, so mobile action reachability matters, but Kladra's drawer pattern is likely already bottom/side-anchored per DESIGN.md; this pattern mainly confirms the mobile variant and adds the drag-to-dismiss/snap-point vocabulary.

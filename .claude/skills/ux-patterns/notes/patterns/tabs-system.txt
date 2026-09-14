@@ -1,0 +1,33 @@
+TITLE: Tabs System
+CATEGORY: Navigation
+URL: https://designmotionhq.com/patterns/tabs-system
+
+PROBLEM: Tabs are usually built as a single dumb widget, but they actually have to solve five separate problems at once (the indicator, overflow, keyboard, mobile, and content transition) or switching tabs feels like a jump instead of a move.
+
+RULES:
+- The active-tab indicator (underline/pill) must slide between tabs, never teleport/hard-cut. Sheet gives the exact spring: damping 22, stiffness 200, with content fade at 180ms and an ease-out curve on the indicator itself; contrasted against a 0ms hard cut labeled as the mistake. One frame calls the good version "smooth slide · 200ms."
+- Indicator timing should be slow in, fast out, matched to the content fade rather than animated independently.
+- When tabs overflow one screen (sheet shows 8 tabs in 1 screen), never wrap to a second line. Scroll the row horizontally, add edge fades to signal more content off-screen, and add chevron buttons for desktop pointer users (captioned "scroll horizontal," "edge fades," "chevrons on desktop," with "don't wrap to 2 lines" as the explicit anti-pattern, shown crossed out in red).
+- Full keyboard operability: Left/Right arrows move between tabs, Home jumps to the first tab, End jumps to the last, and Tab exits the tab list to the next focusable group (e.g., the panel's own "Save changes" button) rather than cycling through tabs again.
+- The focus ring and the active-tab indicator must never share a color, or keyboard users cannot tell "where I am" (focus) from "what's selected" (active) — sheet shows a dashed blue focus ring vs. a solid pink/red active underline, captioned "focus never the same as active."
+- On tab switch, content must never hard-cut. Fade out, pause about 80ms, then fade in — and panel heights must match/interpolate so nothing shifts vertically ("container height interpolates — no layout shift").
+- Mobile is not a shrunk desktop tab bar: under 5 tabs, use a segmented control; over 5 tabs, use a bottom sheet (a scrollable list of options) instead of cramming a horizontal bar. Sheet explicitly flags shrinking the desktop bar down as "never do this" with a red X over a tiny illegible tab strip.
+- Mobile touch targets must be ≥44px, and design for the thumb zone first (bottom of screen reachable by thumb), captioned "touch targets ≥44px · thumb zone first."
+
+DO / DON'T:
+- Do: slide the active indicator with a spring (damping 22 / stiffness 200) synced to a 180ms content fade.
+- Do: scroll an overflowing tab row horizontally with edge fades and desktop-only chevron buttons.
+- Do: support arrow keys, Home, End, and a Tab key that exits the tab group to the next control.
+- Do: give the focus ring and the active indicator visually distinct colors.
+- Do: fade out, pause (~80ms), fade in on content switch, and interpolate panel height so nothing jumps.
+- Do: use a segmented control under 5 tabs and a bottom sheet over 5 tabs on mobile.
+- Don't: hard-cut the indicator (0ms jump) between tabs.
+- Don't: wrap an overflowing tab row onto a second line.
+- Don't: hard-cut panel content on switch.
+- Don't: reuse the shrunk-down desktop tab bar on mobile — it's the pattern's single "never do this," shown with a crossed-out illegible tiny tab strip.
+
+VIDEO ADDS: The exact spring values (damping 22, stiffness 200), the 180ms content-fade number, the "hard cut · 0ms" vs "smooth slide · 200ms" comparison, the literal "8 tabs · 1 screen" overflow demo with scroll/edge-fade/chevron labels, a rendered keyboard row (arrow keys, Home, End, Tab) with a live "Save changes" button as the Tab-exit target, a side-by-side dashed-blue focus ring vs solid active underline, three rendered mobile variants (under-5 segmented control, over-5 with a red-X'd shrunk bar marked "never do this," and the correct one) with "touch targets ≥44px · thumb zone first" caption, and a three-pane content-fade demo (bad hard cut / good fade-pause-fade / height-interpolation with "container height interpolates — no layout shift"). None of these numbers or the mobile bottom-sheet-over-5 threshold appear in the page text.
+
+KLADRA: Directly applies to any tabbed surface — the company/project/quotation record drawer likely uses tabs (e.g. Overview / Activity / Documents / Notes-equivalent), the coordinator's queue if it has status tabs, and the "work tabs" mentioned in recent commits (month/today/team). Also the settings or admin screens if tabbed. On the phone layout (375px) this pattern's mobile guidance (segmented control under 5, never a shrunk desktop bar) is directly actionable. The focus-ring-vs-active-color rule reinforces Kladra's "every state has a word, never colour alone" principle — worth checking that Kladra's active-tab and focus-ring tokens are visually distinct, not just semantically different. RTL: an overflow-scrolling tab row must use logical direction (scroll start/end, not left/right) so edge fades and chevrons flip correctly in Arabic. CONFLICT: none of the core indicator/overflow/keyboard/content rules conflict with standing decisions. The "bottom sheet over 5 tabs" mobile pattern is a new UI primitive not otherwise established in Kladra (no bottom-sheet pattern documented) — flagging it as something to decide on, not a hard conflict, since it's not in the "Never" list; if Kladra doesn't want a bottom-sheet primitive, a segmented control that itself scrolls horizontally is a viable substitute for >5 tabs.
+
+PRIORITY: high — tabs are a core navigation primitive very likely used in record drawers and dashboards across Kladra, and the concrete spring/timing/keyboard numbers are directly implementable with minimal ambiguity.

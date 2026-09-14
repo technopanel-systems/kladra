@@ -1,0 +1,28 @@
+TITLE: Range Sliders
+CATEGORY: Forms
+URL: https://designmotionhq.com/patterns/range-sliders
+
+PROBLEM: A finger dragging a slider can't reliably land on an exact value, so a thin, unfilled track with a tiny hit area turns a simple input into a guessing game.
+
+RULES:
+- Dragging is imprecise — a finger can't reliably land on an exact value, so the readout flickers between adjacent numbers (e.g. 47 vs 48). Design around that imprecision rather than pretending it doesn't exist. Sheet opens on a raw 49% drag example to establish the baseline problem.
+- Fill the track: the filled length left of the thumb is the value, readable at a glance. A bare, unfilled track forces users to eyeball the thumb position and guess. Sheet compares an unfilled track (labeled "hard to read at a glance") against a filled one (labeled "value reads from the fill").
+- Make the whole row draggable, not just the track. A 4px hairline is a moving target cursors keep missing; expand the hit area to the full row so grabbing the slider is effortless. Sheet explicitly labels a thin "4px track" as a failure case against a "full-row hit area" success case.
+- Snap to steps when clean values matter — free continuous dragging lands on ugly numbers like 47.3; snapping to defined increments (with visible tick marks) keeps values round. Sheet shows a continuous slider stuck at "47.3" (red) beside a stepped one that snaps cleanly to "50" (green) with visible tick marks at 0/25/50/75/100.
+- Float the value in a tooltip above the thumb while dragging, so the exact number stays visible right where the eye already is. Sheet shows a live "62%" bubble tracking above the thumb during drag.
+- Support a two-thumb range with a filled band between the handles for min/max cases like price filters (sheet shows a "$20–$80" price-range slider with both thumbs and labels), and make it keyboard-operable: arrow keys step by one, Home and End jump to the extremes.
+- Real-world examples shown at 1x thumb, single value: Volume (70), Rating (4/5), Price ($50) — each rendered as a compact labeled slider, confirming the fill+label pattern generalizes across unit types.
+
+DO / DON'T:
+- Do: show a filled track plus a live readout so the value is legible without guessing.
+- Do: expand the drag target to the full row instead of just the thin track.
+- Do: snap to steps and float a value tooltip above the thumb while dragging.
+- Don't: rely on a 4px hairline as the only hit target.
+- Don't: leave a slider continuous when users need clean, round values.
+- Don't: ship a slider that can't be driven with arrow keys, Home, and End.
+
+VIDEO ADDS: The literal 4px hairline-vs-full-row hit-area comparison rendered as two mini sliders side by side; a continuous-vs-stepped comparison with real numbers (47.3 red/messy vs 50 green/clean) and rendered tick marks at 0/25/50/75/100; a live floating-tooltip drag showing "62%" tracking the thumb; a complete two-thumb range slider with a filled center band and $20/$80 end labels; and an explicit keyboard-operability frame showing arrow-left, arrow-right, Home, and End as labeled key affordances driving the same slider — none of the specific numbers, tick positions, or the keyboard-key frame appear in the page text.
+
+KLADRA: Applies wherever Kladra needs a numeric range input rather than a typed number — most plausibly a price/budget filter or quotation value range in search/filter controls, or a percentage-based field (discount, margin, completion) inside a request dialog or project form. If Kladra has no filter surface using sliders today, this is a "keep on file" pattern rather than an active fix. Where used, the full-row hit area and keyboard operability (arrows/Home/End) matter most for the phone layout (375px) reps use in the field. No conflict with standing decisions — sliders are a form control, unrelated to drag-and-drop/bulk-edit/saved-views/density; motion for the value tooltip should be instant-follow (not a separate animated transition) to match Kladra's restrained motion language.
+
+PRIORITY: low — no evidence yet that Kladra has a range-filter or percentage-slider surface; useful reference if/when a price, discount, or completion-percentage control is added, but not an active gap today.

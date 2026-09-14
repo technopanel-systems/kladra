@@ -1,0 +1,159 @@
+DEEPER TOPICS FOR A DATA-DENSE BILINGUAL CRM
+First: the full list of candidate topics surfaced by researching designmotionhq, with a
+one-line note on why each matters for Kladra. Then the three chosen for deeper research,
+each with concise, concrete, sourced rules.
+
+## CANDIDATE TOPICS (from everything read above)
+1. State completeness — loading, empty, partial, error, success, offline (named directly
+   as a UX Engine skill; every Kladra list/drawer/board needs all six, not just the happy
+   path). CHOSEN — see below.
+2. Intent discovery before designing a screen (who uses it day-to-day, worst mistake they
+   could make) — largely already Kladra's own process (WORKFLOW's Faisal/Rawan/Abdulrahman/
+   Jerom rule), so it is reinforcement rather than a gap. Not expanded further here.
+3. Information hierarchy and action priority — primary/secondary/tertiary action ranking,
+   destructive-action placement and confirmation, scanning patterns on dense tables
+   (exactly what Kladra's leads/projects/dispatches/queue tables need). CHOSEN — see below.
+4. Visual character axes and avoiding generic AI/template aesthetics, plus the "lineup
+   test" — the founder explicitly likes designmotionhq's own look and wants Kladra's front
+   end "re-audited and reshaped," so how to make deliberate, non-default choices is
+   directly on the critical path. CHOSEN — see below.
+5. Fitts's Law / target size and spacing for click/tap accuracy — relevant to icon-only
+   row actions, kanban cards, and any tablet use; found as a genuine content gap on the
+   creator's YouTube Shorts (see social.txt). Worth a future pass but not expanded here to
+   stay within three.
+6. Semantic color tokens named by role, not value (bg.primary/text.muted/status.error
+   pattern from the free Blueprint PDF) — already effectively Kladra's approach via
+   DESIGN.md tokens; treated as reinforcement, not expanded.
+7. Motion restraint — two-speed transitions (150ms color, 300ms transform), asymmetric
+   easing (ease-out enters / ease-in exits), a duration ladder capped at ~300–500ms for any
+   interaction — concrete numbers already captured in site-ui.txt and content.txt (from the
+   free Blueprint PDF); not re-expanded as a third topic since the numbers are already on
+   record with sources.
+8. RTL/bidi correctness for Arabic — already governed by Kladra's own `words.md` rule
+   (both locales, placeholder isolation, Western digits); out of scope here since it's
+   already a first-class, enforced concern, not a gap this research needs to fill.
+
+## TOPIC 1 — STATE COMPLETENESS (loading / empty / partial / error / success / offline)
+Source: Nielsen Norman Group, "Designing Empty States in Complex Applications: 3
+Guidelines" (nngroup.com/articles/empty-state-interface-design/, read 2026-09-14).
+
+Concrete rules:
+- Never render a truly blank container. An empty table/list/drawer must always say WHY it
+  is empty (no data yet vs. a filter matched nothing vs. an error) — NN/g's example line,
+  "There are no records to display for the selected date range," explicitly confirms the
+  system finished loading rather than leaving the user unsure if it's still working. Rule
+  for Kladra: every empty state names its cause in one line before anything else.
+- An empty state should teach, not just apologize: state what COULD appear there and HOW
+  the user populates it (NN/g cites "Star your favorites to list them here" as the model —
+  it explains the feature while explaining the emptiness). For Kladra: an empty leads
+  board says what a lead looks like and links straight to "add a lead," not just "No leads."
+- Give a direct pathway, not vague instruction: a real button/link into the exact next
+  action, not text like "send a request to view details" with no way to do it from the
+  empty state itself.
+- Never let an inaccurate status message get replaced later by content — NN/g flags this
+  as trust-damaging ("No records" flashing then being replaced by real rows moments later
+  reads as a bug). This means Kladra must distinguish the LOADING state from the EMPTY
+  state as two genuinely different renders, never collapse them into one "no rows yet"
+  placeholder that a race condition can leave stranded.
+- Loading state: use a real progress indicator (skeleton matching the final layout, not a
+  generic spinner) — this is both an NN/g "visibility of system status" point and a
+  concrete Stripe/Linear/Vercel technique found in this research ("skeletons that match
+  the layout they're replacing, not generic spinners" — mantlr.com/blog/stripe-linear-
+  vercel-premium-ui, read 2026-09-14) — and is exactly what the homepage's own before/after
+  comparison names as the fix ("5-row skeleton matching the final layout").
+- Error state (NN/g's error-message guidance, same family of articles): plain language, no
+  error codes, and structured to answer three questions in order — what happened, why, and
+  what to do about it. A Kladra error toast/banner that only says "Something went wrong"
+  fails this rule; it must name the action that failed and the next step.
+- Partial and offline states are the two most commonly skipped of the six (not covered in
+  the empty-state article specifically, but implied by "guarantee all six" framing on
+  designmotionhq's own product page — see content.txt): a partial state (some rows loaded,
+  more failed, or a sync is mid-flight) needs its own visible marker distinct from both
+  "loading" and "success," and an offline state needs to say the data may be stale rather
+  than silently showing the last-known cache as if it were live — both are easy to forget
+  precisely because they are not the default path a developer tests.
+
+## TOPIC 2 — INFORMATION HIERARCHY AND ACTION PRIORITY
+Sources: Nielsen Norman Group, "Button States: Communicate Interaction" and NN/g's visual-
+hierarchy material (nngroup.com, read 2026-09-14); Apple Human Interface Guidelines on
+alerts/action sheets and destructive actions (developer.apple.com/design/human-interface-
+guidelines, via codershigh.github.io mirror and developer.apple.com, read 2026-09-14).
+
+Concrete rules:
+- Three tiers of visual weight, not more: PRIMARY (solid fill, brand color, one per
+  screen/section — the single action the screen wants taken), SECONDARY (outline/border,
+  medium weight — common but not the goal action, e.g. Cancel), TERTIARY (text-only or
+  ghost, least weight — optional/supplementary, e.g. "view more"). Never give two actions
+  in the same view equal solid-fill weight — this is precisely the failure mode
+  designmotionhq's own homepage names as the generic-AI-table symptom: "Edit and Delete
+  equally weighted on every row" (see content.txt). For Kladra's row actions specifically:
+  the primary task action gets the visible button; everything else, especially anything
+  destructive, moves to an overflow (kebab) menu — matching both NN/g's tiering and
+  designmotionhq's "With UX Engine" fix ("Destructive in overflow + typed confirmation").
+- Destructive actions need friction proportional to how undoable and how common they are
+  (Apple HIG): a destructive action that is COMMON and UNDOABLE (e.g. deleting one email)
+  should NOT interrupt with a confirmation dialog — the user already intends it and can
+  undo it, so a confirmation only adds friction without adding safety; but a destructive
+  action that is RARE and IRREVERSIBLE (e.g. deleting a customer/lead permanently) must
+  interrupt, and Apple's own pattern is a destructive-styled button (visually marked, e.g.
+  red) paired with a Cancel button set as the DEFAULT (so an accidental Enter/Return does
+  not confirm the destructive path). Kladra rule: an archive or status change that can be
+  undone from the same screen needs no modal; a hard delete of a project, quotation, or
+  contact does, and Cancel — never Delete — is the button that responds to Enter.
+- Scanning-pattern implication for dense tables: since color and size carry hierarchy (NN/
+  g), a data table's status column should never rely on color alone to separate meaning
+  (this is also the exact fix designmotionhq names: "status pill: icon + label, colorblind-
+  safe" replacing "'Active' status as green text only") — every status in Kladra's leads/
+  projects/dispatches tables needs an icon or label riding with the color, not color alone,
+  which is also a WCAG 1.4.1 (Use of Color) requirement, not just a style preference.
+- Search/primary-task placement: when a screen's dominant job is finding something (a
+  leads list, the queue), the search input itself should be the most prominent control on
+  the page, not tucked into a "Filter" dropdown — directly stated as both the "before" flaw
+  and the "after" fix in designmotionhq's own comparison table (content.txt) and consistent
+  with NN/g's general finding that prominent, unhidden search reduces abandonment on data-
+  heavy screens.
+
+## TOPIC 3 — VISUAL CHARACTER AND AVOIDING GENERIC/TEMPLATE AESTHETICS
+Sources: designmotionhq's own public "Visual Character" skill description (content.txt,
+their words: "one explicit decision per axis: type, color, space, finish... the lineup
+test: would this screenshot be recognizable among ten AI-generated UIs for the same
+prompt?"); a design-writing piece analyzing Stripe/Linear/Vercel's premium-UI craft
+(mantlr.com/blog/stripe-linear-vercel-premium-ui, read 2026-09-14); WCAG 2.2 Success
+Criterion 1.4.3 Contrast (Minimum) (w3.org/WAI, figures corroborated via testparty.ai and
+colorcontrast.org, read 2026-09-14).
+
+Concrete rules:
+- Make one deliberate decision per axis instead of accepting the framework default on all
+  of them at once. The four axes named by designmotionhq map directly onto decisions
+  Kladra's DESIGN.md should already record explicitly rather than leave implicit:
+  TYPE (which typeface, which weights actually ship, is there an eyebrow/label treatment),
+  COLOR (how restrained the accent is, whether status needs its own hue or reuses accent/
+  danger only — designmotionhq itself uses exactly one accent + one danger color, no
+  separate "success green"), SPACE (the base rhythm — 4px vs 8px, how generous or tight
+  section/card padding is), FINISH (radius, border weight, shadow usage — designmotionhq
+  uses exactly one radius (16px) and reserves shadow for a single hero element per screen).
+- "An unmodified shadcn install looks like every other unmodified shadcn install" —
+  premium/distinctive UI comes from tuning the primitives (typography, motion curves,
+  border/shadow treatment, empty-state and skeleton design) to the product, not from
+  swapping in more components. Concrete technique list found: use a single typeface family
+  system-wide (no mixed display fonts), cap the type scale at 4–6 sizes, define and reuse
+  one set of motion curves/durations everywhere rather than relying on browser/library
+  transition defaults, and give every interactive element all six interaction states
+  (default, hover, focus, active, disabled, loading) rather than styling only the default
+  and hover states and leaving the rest to fall back on browser defaults.
+- The "lineup test" as a concrete review step: before shipping a screen, ask whether it
+  would be picked out of ten other AI-generated screens built from the same prompt. This
+  is directly usable as a literal question in Kladra's own screen-review pass (WORKFLOW §3)
+  — not a metaphor, an actual yes/no check a reviewer can apply to a screenshot.
+- Restraint is itself a character choice, and it is verifiably accessible, not just tasteful:
+  measured directly from designmotionhq's own CSS variables in this research (site-ui.txt),
+  their body-copy muted text (#9494a8 on #0b0d10 background) is a 6.54:1 contrast ratio and
+  their dimmest meta text (#7d828a) is 5.03:1 — both comfortably clear of the WCAG AA
+  minimum (4.5:1 for normal text) and the muted tone is close to the AAA threshold (7:1),
+  while still reading as "quiet." This is a useful existence proof for Kladra's own dark
+  theme: a three-step text ladder (full white-ish / muted / dim) can carry hierarchy
+  without dropping any tier below WCAG AA, and aiming the muted tier toward 7:1 rather than
+  the 4.5:1 floor is worth doing deliberately in a dark theme since low-contrast dark-on-
+  dark text is measurably harder to read than the same ratio in light mode (colorcontrast.
+  org's dark-mode guide, read 2026-09-14, recommends targeting AAA-level 7:1+ for dark-mode
+  body text specifically, not just meeting the AA floor).

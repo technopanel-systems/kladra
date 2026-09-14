@@ -1,0 +1,28 @@
+TITLE: Toast Notifications
+CATEGORY: Feedback
+URL: https://designmotionhq.com/patterns/toast-notifications
+
+PROBLEM: Toasts are meant to inform without interrupting, but sloppy placement, timing, stacking or color choices turn them into something that blocks work, disappears too fast for a real problem, or is unreadable to colorblind users.
+
+RULES:
+- Position deliberately: bottom-right on desktop, top edge on mobile. Screen center is explicitly off-limits — sheet captions it "center · blocks content" and the on-screen line reads "Center blocks what users are actually doing," because a centered toast covers the very content the user is working on and intercepts clicks.
+- Match dismiss timing to severity: routine info auto-dismisses in ~4s (sheet shows "File uploaded" example labeled "4S · AUTO-DISMISS"), warnings hold ~7s ("Session expiring" labeled "7S · HOLDS LONGER"), and critical errors ("Payment failed") stay until the user acknowledges them, labeled "UNTIL ACKNOWLEDGED."
+- Cap the visible stack at 3 toasts. Sheet shows the exact spring used to shuffle them: damping 20, stiffness 180, captioned "MAX 3 VISIBLE." Newest enters at the bottom, older ones float upward and out (or queue) rather than piling up indefinitely.
+- Always give a way out: a close (x) button on desktop, swipe-to-dismiss on mobile, and hover-to-pause so the countdown timer freezes while the user is reading (sheet shows all three labeled "CLICK," "SWIPE," "HOVER" against their respective actions: "Always offer a way out," "Gesture on mobile," "Timer freezes until you leave").
+- Color-code by type (info/blue, success/green, warning/yellow, error/red) but never rely on color alone — pair every toast with a matching icon and a left accent border, because the sheet cites "6% of users can't tell them apart" (colorblindness) as the reason.
+
+DO / DON'T:
+- Do: anchor toasts bottom-right on desktop, top edge on mobile.
+- Do: scale dismiss time to severity — ~4s info, ~7s warning, hold errors until acknowledged.
+- Do: cap the stack at 3 visible toasts with spring-based reflow (damping 20 / stiffness 180), queuing the rest.
+- Do: pause the auto-dismiss timer on hover.
+- Do: give every toast type a distinct icon and accent-border color, not color alone.
+- Don't: place toasts center-screen, where they block active content and clicks.
+- Don't: auto-dismiss critical errors — hold until acknowledged.
+- Don't: show more than 3 toasts at once without queuing.
+
+VIDEO ADDS: The exact per-severity timings (4s / 7s / "until acknowledged") attached to concrete example messages (File uploaded, Session expiring, Payment failed), the exact stacking spring values (damping 20, stiffness 180) and the "max 3 visible" cap, the three named exit mechanisms (click close, swipe on mobile, hover-to-pause) each shown as a live interaction, the explicit "6% of users can't tell them apart" colorblindness statistic behind the icon+border rule, and the desktop-bottom-right vs mobile-top-edge vs forbidden-center layout comparison rendered as three device mockups. None of the concrete seconds, spring numbers, or the 6% statistic are in the page text.
+
+KLADRA: Directly governs Kladra's toast/notification system — confirmations after server actions (save, dispatch created, quotation sent), the coordinator's queue actions, and any error surfaced after a write. Kladra's CLAUDE.md already specifies motion timing for hover/menus (100ms) and dialogs/drawers (150–250ms) but nothing for toast dismiss duration or stacking spring — this pattern's 4s/7s/until-acknowledged tiering and damping-20/stiffness-180 stacking spring are good concrete defaults to adopt for the notification system. The "every state has a word, never colour alone" Kladra principle already matches this pattern's icon+border rule exactly — good confirmation, no new work implied. Applies on the phone layout too (375px, reps in the field) where swipe-to-dismiss and top-edge placement matter. RTL: accent border should use logical `border-inline-start` not `border-left` so it stays on the correct side in Arabic. CONFLICT: none — no drag-and-drop, bulk edit, saved views, or comments are implicated; toasts are already an established Kladra surface (mentioned directly in the KLADRA conflict-check list), and hover-to-pause is a refinement, not a "refresh button" or excluded pattern.
+
+PRIORITY: high — toasts are an explicit named surface in Kladra's own screen inventory, every server action needs a confirmation/error toast, and this pattern gives ready-to-use timing and stacking numbers Kladra currently lacks.

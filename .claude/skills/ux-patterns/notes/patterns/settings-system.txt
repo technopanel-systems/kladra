@@ -1,0 +1,28 @@
+TITLE: Settings System
+CATEGORY: Forms
+URL: https://designmotionhq.com/patterns/settings-system
+
+PROBLEM: A settings page looks harmless in the common case, but breaks down once it has forty options and a delete button, because most settings pages are a flat list dumped straight from the data schema instead of a designed system.
+
+RULES:
+- Match the apply model to the blast radius: low-risk toggles (compact mode, sound effects) commit instantly and show a brief "Saved" confirmation inline; identity-level fields (email) require an explicit Save/Cancel with a real click, surfaced via an "unsaved changes — Cancel / Save" banner while editing. Sheet caption: "instant for preferences, explicit for identity."
+- Group settings by task, not by data table/org chart. Sheet's before/after: a flat "Workspace settings" list of 18+ undifferentiated rows (e.g. "Setting 9 — Digest frequency," "Setting 14 — Locale override," "Setting 18 — Sound volume") becomes a grouped page with clear sections — EMAIL (addresses, two-factor auth), NOTIFICATIONS (push alerts, mentions, quiet hours), BILLING (payment method, invoices, advanced) — captioned "group by task, not by table."
+- Make settings searchable: power users type rather than scroll. Sheet shows a search box in the settings sidebar; typing "digest" instantly filters the whole page down to the one matching row (Email digest), captioned "nobody scrolls to row 40" and "type to filter, enter to jump."
+- Give every changed value a visible modified indicator plus a per-setting reset, so one override can be undone without resetting everything else. Sheet shows an Appearance panel with a "2 modified" badge, changed rows (Theme: Dark, Font size: 16px, Line height: 1.3) each next to their default, a live JSON diff underneath, and captions "changed, visibly" / "undo is one click away." A secondary state shows "39 settings hidden — Show advanced" for collapsing the long tail.
+- Quarantine destructive actions: put delete-type actions behind a visual wall/divider at the bottom of the page (after less-severe actions like "export workspace data" and "transfer ownership"), and gate the actual delete behind typing the exact resource name in a confirm dialog ("Delete acme-workspace? This cannot be undone. Type the workspace name to confirm"). Caption: "quarantine the destructive" / "friction scales with severity."
+- Collapse advanced/rare options behind an expandable "Advanced" section so the common path stays short while depth is one click away.
+- The full recap checklist shown at the end: (1) instant vs. explicit apply model, (2) group by task, (3) searchable, (4) reset per setting, (5) danger zone actions behind a wall.
+
+DO / DON'T:
+- Do: match a setting's apply model to its stakes — instant for low-risk toggles, explicit save for identity fields.
+- Do: require typing the resource name before an irreversible delete goes through.
+- Do: surface a reset affordance next to any value the user has changed.
+- Don't: pour every option into one flat list ordered by the underlying schema.
+- Don't: let irreversible actions fire on a single unguarded click.
+- Don't: bury settings in nested menus when a search box would find them instantly.
+
+VIDEO ADDS: The concrete grouped taxonomy (EMAIL / NOTIFICATIONS / BILLING sections replacing an 18-row flat list), the exact modified-state UI (a "2 modified" badge, a live JSON settings diff, "39 settings hidden / Show advanced"), the search-to-filter interaction with a real query ("digest") narrowing instantly, the layered danger-zone friction (non-destructive actions like export/transfer above a divider, then the delete button, then a type-to-confirm dialog naming the exact resource), and the instant-vs-explicit Save/Cancel banner mechanic — none of these specific UI mechanics or the exact grouping taxonomy are spelled out in the page text.
+
+KLADRA: Directly applicable if/when Kladra ships an admin settings screen (users, integrations, workspace-level preferences for Jerom as admin) — group by task (account, notifications, team, danger zone) rather than a flat list; use instant-apply toggles for low-stakes preferences and explicit Save/Cancel for identity fields like email; add a modified indicator with per-field reset if the settings page grows past a handful of fields; and quarantine any destructive admin action (e.g. removing a team member, deleting a company/project) behind a visual divider plus a type-to-confirm dialog. CONFLICT: none of the core rules — grouping, apply model, danger-zone friction — conflict with Kladra's standing decisions. However, the "searchable settings" rule assumes a settings page long enough to need search (40 rows); Kladra is a 14-person shop with presumably few settings, so a dedicated settings search box may be over-engineering unless the settings list actually grows that large — apply the grouping and danger-zone rules first, defer search until needed. No conflict with "no saved views" (this is settings search, not a saved view) or "no bulk edit" (per-setting reset is not bulk).
+
+PRIORITY: medium — Kladra likely has at least a minimal admin/account settings surface (auth, maybe notification preferences) where the apply-model and danger-zone-quarantine rules apply immediately and cheaply; the grouping and search rules become relevant only if/when the settings surface grows, so this is useful guidance to keep in reserve rather than build out now.

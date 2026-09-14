@@ -1,0 +1,28 @@
+TITLE: Landing Page Skeleton
+CATEGORY: Content
+URL: https://designmotionhq.com/patterns/landing-page-skeleton
+
+PROBLEM: Most landing pages that fail to convert skip or reorder one of five proven sections (usually burying proof or skipping pain) rather than getting any single section's copy wrong.
+
+RULES:
+- Fixed 5-section order: Hero, Proof, Problem, Solution, CTA — high-converting pages consistently map to this order; the pattern frames deviating from the order (not just missing a section) as the common failure.
+- Hero must answer three questions within about 3 seconds of landing: What do you offer, Who is it for, Why should I care — via headline + subhead + exactly one CTA, nothing else competing for attention.
+- No hero carousels/sliders: a rotating hero hides the one message that matters behind a timer the visitor doesn't control.
+- Proof goes immediately after the hero, not at the bottom of the page — visitors decide trust almost immediately, so proof needs to appear before they've formed a judgment. Composition: logos ("trusted by teams at ..."), one testimonial, one hard number (example on screen: "2,847 teams shipping with us").
+- Problem section must agitate the pain before the Solution section pitches the fix — name the real cost in time, money, and frustration; no felt pain means no motivation to read about the cure.
+- Solution section sells outcomes, not features, capped at exactly three benefits, each framed as a concrete result ("save 10 hours a week," "2x your conversion rate") rather than a feature description ("advanced automation").
+- Final CTA repeats the exact same button — same color, same copy — at both the top (hero) and the bottom of the page; repetition catches the scroller who wasn't ready to convert on the first CTA.
+
+DO / DON'T:
+- Do: lead the hero with a headline, subhead, and a single clear call to action.
+- Do: place proof (logos, testimonial, a key metric) directly below the hero.
+- Do: frame benefits as concrete outcomes and cap them at three.
+- Don't: use carousels or sliders in the hero — they hide the one message that matters.
+- Don't: bury social proof at the bottom of the page where nobody scrolls to it.
+- Don't: jump straight to the solution before establishing the pain it solves.
+
+VIDEO ADDS: A literal wireframe skeleton (5 numbered sections stacked in a phone-width frame) used as the recurring "map" the video returns to between sections. Concrete hero copy example rendered as a real mockup: headline "Ship landing pages in minutes.", subhead "For devs who skip 2,000+ teams trust us.", single "Start free →" button, with a "No hero carousels" warning badge overlaid on a rejected version. Proof section shown as a real composed block: a logo row ("Trusted by teams at" LUMEN, VERTEX, NORTH+, ACME, FLOW), a 5-star testimonial quote ("Cut our launch time in half"), and the specific hard number "2,847 — Teams shipping with us." Problem section shows three concrete pain-stat cards with real numbers: "3 weeks to ship a homepage," "$8,400 freelancer invoice," "12 rounds of design revisions" — demonstrating the "name the real cost" rule with actual dollar/time figures rather than describing it abstractly. Solution section shows three outcome bullets with the third one visually greyed/redacted, reinforcing the hard cap of three. Final CTA panel shows the identical button (same teal color, same "Start free →" copy, same "Ready to ship?" microcopy) rendered at both the top and bottom mockup side by side, pixel-matching to prove "same button" literally means identical, not just similar.
+
+KLADRA: Kladra is an internal CRM/ops tool with no marketing landing page in its own product surface (Jerom, not prospects, is the audience for the app itself), so the 5-section skeleton as a whole does not map onto any Kladra screen. However, two sub-rules generalize usefully beyond landing pages: (1) "agitate the problem before the solution" and "sell outcomes not features" are copy-writing disciplines that could inform empty-state and onboarding copy inside Kladra (e.g. an empty dispatches board explaining the cost of not tracking dispatches, framed as an outcome once used) — but Kladra explicitly avoids salesy dressing, so this should stay understated, not marketing-toned; (2) the "no carousels" and "repeat the same CTA identically" discipline is a reminder that any call-to-action inside Kladra (e.g. "Create quotation" appearing in more than one place) should use identical copy and color everywhere it appears, never a slightly different variant. If Technopanel ever builds a public marketing site for itself (separate from Kladra), this skeleton would apply there directly. No conflict with standing Kladra decisions since this pattern doesn't touch drag-and-drop, bulk edit, saved views, density, or motion timing.
+
+PRIORITY: low — Kladra has no landing/marketing page in scope; only the general copywriting disciplines (outcome-framed microcopy, consistent CTA repetition) carry over, and only lightly.

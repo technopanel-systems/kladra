@@ -1,0 +1,27 @@
+TITLE: Serial Position
+CATEGORY: Content
+URL: https://designmotionhq.com/patterns/serial-position
+
+PROBLEM: Users remember the first and last items of any ordered list far better than what's in between, so putting your most important content or action in the middle quietly kills its recall.
+
+RULES:
+- Recall is U-shaped (the "serial position effect"): the first items (primacy) and the last items (recency) of a sequence are remembered; the middle is forgotten. Sheet's 9-item recall-test bar chart: item 1 recalled at 88%, item 9 at 78%, the middle items sag to roughly 20-30% — labeled "PRIMACY #1 / MIDDLE #2-8 / RECENCY #9."
+- Treat the first and last slot in any sequence as bookends: put your highest-value content there, never in the buried middle.
+- Navbars: put the logo first (primacy) and the primary CTA last (recency); secondary links belong in the forgettable middle. Sheet's navbar mockup measures this directly: Logo (primacy) 89% recall, middle nav links 12%, CTA (recency) 76% — captioned "strongest links → edges, weakest → middle."
+- Landing pages: open with the strongest USP, close with the strongest proof (testimonial, metric, guarantee) — sheet shows a card layout with "Ship code 10x faster" as the opening USP card and a testimonial as the closing proof card, with the mid-page value-prop card visually de-emphasized. Caption: "Don't bury the gold in the middle."
+- Onboarding flows: slide 1 should hook, the last slide should deliver the payoff; middle steps just carry setup nobody recalls verbatim. Sheet shows a "Welcome" first slide and a "You're set" final slide as the two bright/full-opacity steps, with the intervening step dots faded. Caption: "Slide 1 hooks. Slide N pays off" / "Magic at the bookends. Filler in the middle."
+- Item order is a design decision, not an afterthought: anything important placed in the low-recall middle silently loses impact.
+- Opening frame example: a 9-item sidebar nav (Home pinned as primary at top, Sign up pinned as highest-emphasis at bottom, six items dimmed in between) captioned "You'll only remember 1 & 9."
+
+DO / DON'T:
+- Do: anchor the single most important item at both the start and the end of a sequence.
+- Do: order menus so the logo leads and the primary CTA closes.
+- Do: open with the best value proposition and finish with the strongest proof.
+- Don't: bury critical CTAs or key information in the middle of a list, where recall is lowest.
+- Don't: order items arbitrarily and assume every position is remembered equally.
+
+VIDEO ADDS: The actual recall percentages behind the U-shape (88% at position 1, ~78% at position 9, dropping to roughly 20-30% in the middle of a 9-item test), the navbar-specific recall numbers (logo 89% / middle links 12% / CTA 76%), and three concrete applied mockups (navbar, landing page, onboarding) each captioned with the takeaway line — none of the percentages appear in the page text, only the qualitative rule.
+
+KLADRA: Applies wherever Kladra presents an ordered sequence a person is meant to remember or act on: the top nav/shell (put the most identifying element first, primary action/account control last — Kladra's shell nav should not bury a frequently-needed link in the middle of a long list), onboarding or first-run flows for a new rep/coordinator, the stepper-wizard-style request/quotation creation flow (first step should hook, last step should deliver the payoff/confirmation), and the report builder's or dashboard's card ordering (most important KPI first and last, not sandwiched). Also relevant to how record-drawer tabs or a quotation's line-item review order fields — least-forgettable ends for the field or number the coordinator most needs to check. No conflict with standing decisions: this is about ordering existing content, not adding saved views, bulk edit, drag-and-drop, or motion — pure information-architecture guidance.
+
+PRIORITY: medium — genuinely useful for how the shell nav, onboarding, and multi-step flows (stepper-wizard) are ordered, but it is a content-ordering heuristic rather than a component to build; worth applying as a review lens when structuring nav and step sequences rather than a standalone build task.

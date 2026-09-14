@@ -1,0 +1,27 @@
+TITLE: Von Restorff Effect
+CATEGORY: Visual
+URL: https://designmotionhq.com/patterns/von-restorff
+
+PROBLEM: When every option looks the same, users have no reason to pick any one of them — the isolation (von Restorff) effect says the item that visually breaks the pattern is the one people notice, remember, and choose.
+
+RULES:
+- The isolation effect: what's visually different from its surroundings gets noticed and remembered automatically. Sheet demonstrates this with a plain word list (apple, banana, cherry, fig, grape, kiwi in gray) where only "VIOLET" is set apart in purple with brackets — captioned "what's different gets remembered."
+- It only works against a uniform baseline. Three identical pricing cards ($9/$19/$49, same style) give the eye nowhere to land, captioned "nobody clicks" — contrast is relative, so keep everything else visually calm and change exactly one thing.
+- In pricing, isolate the target plan: scale it up, add a "Most Popular" badge, apply a distinct gradient/color (purple), and dim or gray out the alternatives so the choice steers itself. Sheet's before/after pricing comparison claims "3x more conversions" (large orange "3x" callout) once the middle Pro plan is isolated this way, and a follow-up frame explicitly labels the isolated card "The target."
+- Break the pattern with a single CTA: one "Get Started"/primary nav button lifted by color and weight while every other nav link stays neutral/gray — captioned "different color. different weight," with a note that heat maps concentrate attention right on that one button while nav links recede.
+- In forms, emphasize the primary action (e.g., a purple "Sign Up" button) and keep secondary elements (input fields, labels) muted/neutral, so the next step is never ambiguous.
+- Differentiate with more than color alone: combine scale, elevation/shadow, and glow so the standout reads reliably even for colorblind users — never rely on a color shift by itself.
+
+DO / DON'T:
+- Do: isolate the one action you want taken, using scale, color, and a badge against an otherwise uniform baseline.
+- Do: keep everything surrounding the highlighted element visually quiet.
+- Do: limit emphasis to a single element per view — one target plan, one primary CTA, one main form button.
+- Don't: highlight two or three elements at once — competing emphasis cancels the effect entirely.
+- Don't: ship identical options and hope users pick the one you want.
+- Don't: lean on color alone; pair it with scale or elevation so the contrast holds even without color.
+
+VIDEO ADDS: The literal "nobody clicks" three-identical-cards opener vs. the "3x more conversions" isolated-Pro-card result (scaled up, Most Popular badge, purple gradient, other two cards dimmed) with a large "3x" callout; the word-list demonstration proving isolation works on plain text, not just UI chrome ("VIOLET" bracketed among six gray color words); a second pricing example ($9/$29/$99 tiers) with the isolated Pro card explicitly labeled "The target" via a small tag pointing at it; a full nav-bar mock showing one purple "Get Started" button against gray nav links, captioned "different color. different weight."; and a sign-up form mock (Create Account / email / password / purple Sign Up button) as the forms application of the same rule. The closing checklist names three concrete Kladra-relevant surfaces directly: Pricing ("isolate the target plan"), Navigation ("one CTA breaks the pattern"), Forms ("highlight the primary action"). None of the "3x" figure or the word-list demo appear in the page text.
+
+KLADRA: Directly reinforces (does not add new information beyond) Kladra's existing "spend color like currency" instinct — the pattern's mechanism is: pick exactly one element per view to isolate (primary CTA in a request dialog/form, the recommended or urgent record in a list, the single most important stat on a dashboard) and keep everything else uniform so that one item reads instantly. Practical Kladra surfaces: the primary submit button in every request dialog/form (already should be the one accent-colored button per Kladra's two-gradients rule — this pattern confirms that's correct and warns against also accent-coloring a second button on the same screen); a dashboard's single most important KPI card if one exists; possibly an overdue/urgent row in the coordinator's queue or a dispatch list, where scale+badge+color could mark the one item needing attention right now (paired with a text label per Kladra's "every state has a word" rule, satisfying the pattern's own "more than color alone" caution). CONFLICT: none directly, but the pattern's example mechanism (scaling up one card, badging it "Most Popular") is a marketing/landing-page technique — inside Kladra's CRM record lists this must not turn into a de facto "saved view" or bulk-highlight feature; the isolation should be applied per-view to a single primary action or a single genuinely urgent record (backed by real data, e.g. an overdue date), never as a promotional/decorative badge, to stay inside the "no chart for decoration" and "no internal codes" spirit.
+
+PRIORITY: medium — the CTA/form-button application is high-value and already implicit in Kladra's two-gradient rule, but the pricing-card-style "isolate the target plan" mechanic doesn't map directly onto a CRM's list/board/drawer surfaces the way it does onto marketing pages, so its broader applicability inside Kladra is narrower than the general visual-hierarchy pattern.

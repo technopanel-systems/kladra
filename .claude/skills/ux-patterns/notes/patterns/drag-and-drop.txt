@@ -1,0 +1,27 @@
+TITLE: Drag and Drop
+CATEGORY: interaction
+URL: https://designmotionhq.com/patterns/drag-and-drop
+
+PROBLEM: A dragged card that snaps into place with no feedback feels like nothing happened, and a fumbled drop with no way back turns a small mistake into lost state.
+
+RULES:
+- Confirm pickup with three cues at once: a slight scale-up, a deeper shadow, and a small tilt — together they read instantly as "I'm holding this."
+- Drop zones speak first: reveal where the item will land before release, not after — a drag should never feel like a guess.
+- Match the drop-zone cue to its scope: an insertion line to slot between existing items, a filled highlight to land inside a whole column.
+- On structured surfaces (kanban board), snap to the nearest valid slot; reserve free positioning for canvases where any coordinate is valid.
+- While dragging on a snapping surface, expose the valid target slots as dashed outlines so the destination is never ambiguous.
+- Pair every drop with a short undo toast (~5 seconds) so a wrong move costs one click, not a redo (video: "Moved to Done" toast with an "Undo" action, captioned "Bad drop. Toast. Five seconds to undo.").
+
+DO / DON'T:
+- Do: confirm pickup with scale, shadow, and tilt together.
+- Do: highlight the exact drop target during the drag, before release.
+- Do: offer a brief undo after a drop.
+- Don't: snap a released card into place with no lift or shadow.
+- Don't: force pixel-precise placement when snapping to a valid slot would do the work.
+- Don't: make a wrong drop permanent with no way to reverse it.
+
+VIDEO ADDS: Shows a kanban board (Todo/In Progress/Done) with a card mid-drag, three cursor-adjacent labels appearing one by one: "Cursor changes" → "Card lifts" → "Background fades," summed as "Three signals = 'I'm holding this.'" Shows two drop-zone treatments side by side on the same board: an insertion line between cards ("Between items → line") vs a filled column highlight ("Whole column → fill"). Directly contrasts a Kanban board (labeled "Structured? Snap.") against a freeform canvas (labeled "Canvas? Free.") using the same card, with dashed slot outlines only appearing on the structured version. Shows the exact undo toast UI: "Moved to Done / Tap Undo to send it back" with a circular countdown ring next to the Undo button.
+
+KLADRA: DIRECT, EXPLICIT CONFLICT with Kladra's standing "no drag-and-drop" rule — say "conflicts with X" plainly: Kladra should not build a draggable kanban board or reorderable list anywhere. Transferable ideas that don't require dragging: if Kladra ever needs to move a card between states (e.g. a lead's stage, a dispatch's status), the same feedback vocabulary applies via buttons/menus instead of a drag gesture — an explicit "Move to Done" action can still show a highlighted destination preview and a 5-second undo toast, carrying forward the drop-zone-preview and undo ideas without the forbidden gesture. The undo-toast idea also converges with destructive-actions.txt and bulk-actions.txt's "echo the action, offer undo" pattern — treat this as one recurring cross-cutting idea (see index), not three separate findings.
+
+PRIORITY: low as a whole pattern (its core mechanic is banned), but the undo-toast sub-idea is worth carrying forward at medium priority into any state-change action (lead stage, dispatch status) via buttons, not drag.

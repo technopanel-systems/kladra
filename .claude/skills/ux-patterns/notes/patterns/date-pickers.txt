@@ -1,0 +1,25 @@
+TITLE: Date Pickers
+CATEGORY: forms
+URL: https://designmotionhq.com/patterns/date-pickers
+
+PROBLEM: Picking the same date can take six clicks or one, depending purely on whether the picker leads with presets, spans months, and works from the keyboard.
+
+RULES:
+- Presets cover ~90% of cases: offer Today, Yesterday, Last 7 days, Last 30 days, Last quarter as one-click options; reserve a custom range for the rest (video's own tally: "6 clicks · 5 seconds" for the old way vs "1 click · 1 second" with presets).
+- For custom ranges, make selection legible: hover paints a live preview, first click locks the start, second click locks the end, and edges stay draggable to refine without restarting.
+- Show two months side by side so a range can cross a month boundary naturally — never force repeated "next" clicks; widen to three months on large screens.
+- Support the full keyboard: arrows move focus across the grid, typing the date directly works, Enter confirms, Escape closes, Page Up jumps a month, Shift+Page Up jumps a year.
+- Mobile is not a shrunk popover — use a full-screen sheet that scrolls vertically, keep "today" anchored near the top, and place a large confirm button at the bottom within thumb reach.
+
+DO / DON'T:
+- Do: lead with presets for common ranges, keep custom for exceptions.
+- Do: render two calendar months at once so ranges can span the boundary.
+- Do: wire up the full keyboard — typing, arrows, Enter/Escape, month/year jumps.
+- Don't: force repeated "next" clicks to reach a month a few weeks away.
+- Don't: shrink the desktop popover onto mobile instead of using a full-screen sheet.
+
+VIDEO ADDS: Opens with a direct comparison — "The old way" (6 clicks, 5 seconds, clicking through month-by-month) vs "The right way" (a presets list, 1 click, 1 second). Shows the hover→click→drag range flow as three labeled stages with a live "May 5 → May 18 · 14 days" summary bar updating in real time. Shows the single-month-forces-4-clicks failure explicitly ("Don't make users click Next four times") against the two-month view solving it in one glance. Shows literal keyboard hint row (←/→/↑/↓, Home, End, Enter, Esc, PgUp, PgDn) captioned "Every keystroke matters." The mobile comparison marks a shrunk desktop popover red ("Tiny, cramped") against a full-screen sheet green, with callouts "Touch target ≥ 44px" and "Confirm action visible."
+
+KLADRA: Applies anywhere Kladra needs a date/date-range input — dispatch scheduling, quotation validity windows, report date ranges, lead follow-up dates. This is a natural fit but requires FULL Arabic/Hijri and RTL handling not covered by the source (English/Gregorian only, US-style Sun-first week) — Kladra's own words.md rules on Western digits and bidi apply directly here since date pickers are a classic place numbers and RTL layout collide; two-month-side-by-side must mirror to RTL (rightmost month = earliest, or vice versa per convention — needs an explicit decision). No conflict with "no saved views" since presets here are fixed quick-ranges, not user-created saved filters — worth stating that distinction explicitly if raised in review. Full-screen mobile sheet aligns with the bottom-sheets pattern already noted. CONFLICT: the rule "edges stay draggable to refine without restarting" is a drag interaction on the range's start/end handles — it reads more like text-selection dragging than the list/card drag-and-drop Kladra bans, but it is still literal dragging on screen; if that reading feels too permissive, the safe fallback is click-to-reopen-an-edge instead of drag-to-adjust it.
+
+PRIORITY: high — Kladra needs date/range pickers in real workflows (dispatch, quotations, reports) and the preset-first, keyboard-complete, full-screen-mobile rules are concrete and directly transferable, with RTL/Hijri as the one open question to resolve in DESIGN.md.

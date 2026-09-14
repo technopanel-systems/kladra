@@ -1,0 +1,27 @@
+TITLE: Star Rating
+CATEGORY: Interaction
+URL: https://designmotionhq.com/patterns/star-rating
+
+PROBLEM: A five-star widget looks trivial to build, but breaks in three places most implementations skip: hover preview, snapping back to the committed value, and honestly rendering fractional averages instead of rounding them up.
+
+RULES:
+- Preview on hover, don't wait for the click: stars should fill ahead of the cursor so the user sees the value they're about to commit. Sheet contrasts a "Marcus Webb" card that only reacts on click (bad — no preview) against a "Priya Nair" card that previews on hover (good), captioned "hover to preview your rating."
+- Keep the hover preview state visually separate from the committed/saved value, using two logical layers: a PREVIEW LAYER that disappears the moment the pointer leaves, and a COMMITTED LAYER underneath holding the actual saved rating. Sheet shows the preview layer at 3 stars filled while hovering, then demonstrates the pointer leaving snaps the display back to the true committed value (captioned "leaves → snaps back to 3") — a naive build leaves the display stuck on the last hovered star instead.
+- For averages, render fractional stars honestly rather than rounding up. Sheet's explicit comparison: a true average of 4.4 rendered as "what most apps show" — all five stars fully filled, captioned "4.4 rounded up to 5 full stars" (a lie) — versus "the truth": four full stars plus a fifth star clipped/filled to 44%, captioned "4 full + one star filled 44%." A second example shows a true average of 1.6 to reinforce that low averages get misrepresented too, not just high ones.
+- Stagger the fill roughly 30ms per star, left to right, when a rating commits — sequential fill feels alive; all five stars popping simultaneously reads as flat and dead. Sheet directly contrasts "all at once" (five stars appearing together) against a "30ms stagger" version with a visible "+30ms" per-star delay marker.
+- Use fractional fill for input precision too, not just for displaying averages — whole-star jumps in the input itself read as clumsy next to a smooth half/fractional-star landing.
+- Pair the star input with a separate summary view: an average ring (e.g. "4.5/5" in a circular ring) plus a distribution breakdown (bar per star count, 5-star down to 1-star) so the aggregate score is legible at a glance, distinct from the input stars themselves. Sheet's caption: "stars to rate, a ring to summarize."
+
+DO / DON'T:
+- Do: fill stars ahead of the cursor on hover so the value previews before commit.
+- Do: render partial fills so a 4.4 average shows four full stars plus a 44%-filled fifth.
+- Do: stagger the fill roughly 30ms per star, left to right, when a rating commits.
+- Don't: round averages up to full stars — it misrepresents the real score.
+- Don't: leave the hover preview stuck on the last hovered value after the pointer leaves.
+- Don't: pop all five stars simultaneously — it reads as flat and dead.
+
+VIDEO ADDS: The exact two-layer preview/committed architecture and its snap-back behavior on pointer-leave, the concrete before/after honesty comparison at two real average values (4.4 shown as fake-rounded-to-5 vs. true 4-full-plus-44%, and 1.6 as a second worked example), the literal "+30ms" per-star stagger timing marker, and the separate summary-ring-plus-distribution-bars example (4.5/5 ring with a five-row percentage breakdown) — none of the exact percentages, the 30ms figure's visual proof, or the summary-ring layout are in the page text (the text does state "~30ms" as a number, but the video shows it applied).
+
+KLADRA: Kladra has no product reviews or customer-facing ratings, so the literal star-rating widget has no obvious surface today. The transferable principles are narrower but still relevant if Kladra ever scores something on a bounded scale — e.g. lead quality, a rep's reliance-on-coordinator score, or a dispatch reliability rating (the repo currently has a `reliance-card.tsx` component under team, which is exactly the kind of score-like widget this would inform): honest fractional display instead of rounding a score up, a visible-vs-committed distinction if the score is ever interactively set (hover preview before commit), and pairing an input with a separate summary visualization (ring + distribution) rather than only a raw number. No conflict with standing decisions — hover-preview-then-commit is not drag-and-drop or bulk edit, and the 30ms stagger is well inside Kladra's 100ms hover/menu motion budget. If any such score becomes user-settable, the "no colour alone" rule extends naturally: pair the star/ring fill with a numeric label, not just color.
+
+PRIORITY: low — no literal star-rating surface exists in Kladra's domain (B2B CRM, not a review platform); worth keeping only as a reference for the honest-fractional-average and preview-vs-committed principles if a bounded score widget (lead quality, reliance score) is designed later.

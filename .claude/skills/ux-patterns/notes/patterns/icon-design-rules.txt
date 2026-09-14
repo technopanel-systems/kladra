@@ -1,0 +1,28 @@
+TITLE: Icon Design Rules
+CATEGORY: Visual
+URL: https://designmotionhq.com/patterns/icon-design-rules
+
+PROBLEM: An icon set drawn to identical pixel math (same box, same stroke "by the numbers") still reads as cheap and inconsistent because the eye judges icons optically, not mathematically.
+
+RULES:
+- Optical sizing: circular and organic shapes (circle, star, blob) must be drawn 5-8% larger than square/rect icons in the same set, or they read smaller than their neighbours even at identical bounding-box size. Video caption: "Math says 64. Eyes say 70." (i.e. a 64px math-correct circle should look like it's ~70px to read as equal).
+- Grid alignment: snap every icon shape to a 24px grid (drop to 16px grid for dense/compact UI) — sub-pixel drift blurs edges and kills crispness at small sizes.
+- Stroke consistency: hold one stroke weight — 2px — across the entire icon set; mixing weights (e.g. some icons 1.5px, some 2px, some 2.5px) reads as icons pulled from four different libraries.
+- Bounding box: every icon sits in the same fixed container regardless of the shape inside it, so mixed shapes (circle, square, triangle, star) still line up and size evenly in a toolbar.
+- Fill vs outline: pick filled or outline as a set-wide commitment, never mixed per icon at random — a mixed set has no visual rule holding it together.
+
+DO / DON'T:
+- Do: scale circular/organic icons 5-8% larger than square ones so they optically match.
+- Do: snap every icon to a 24px grid (16px for dense UI).
+- Do: hold one stroke weight (2px) across the whole set.
+- Do: keep bounding boxes identical across every icon regardless of the shape drawn inside.
+- Do: commit to either fill or outline for the whole set.
+- Don't: size icons by raw math alone — equal boxes make round shapes look small.
+- Don't: mix fill and outline styles at random within one set.
+- Don't: let icons float at loose/inconsistent sizes — it makes toolbars unreadable.
+
+VIDEO ADDS: Each of the 5 rules is shown as a side-by-side "DIY" (wrong, red-tagged) vs "SYSTEM" (right, green-tagged) comparison using the same five-icon set (heart, search/magnifier, bell, envelope, star) so the difference is visible at a glance — in the DIY panel the star/circle looks visibly smaller/misaligned next to the square icons, in the SYSTEM panel they read as one even row. Each panel is tagged with a colored "RULE" chip and an "AVOID" chip repeating the two do/don't lines as on-screen text. The stroke-consistency panel is a full toolbar row (heart, bell, search, star, envelope) demonstrating that one weight reads as one coherent set. The closing frame states "5 RULES - 1 SYSTEM: Optical beats math. Grid beats eye." with five colored labels (OPTICAL, GRID, STROKE, BBOX, FILL) and a save/follow CTA — confirming these five rules are meant to be applied together as one icon system, not picked individually.
+
+KLADRA: Kladra's icon usage spans the shell nav, list/board row action icons, drawer field icons, status badges, toasts and the search palette — all using shadcn/Radix icons (lucide, typically 1.5-2px stroke by default). Concrete application: (1) audit whether Lucide's default stroke width is held constant everywhere it's used vs. any place a thicker/thinner variant sneaks in (e.g. a custom SVG logo mark or a hand-drawn icon); (2) if any circular/organic icon (e.g. a status dot, avatar ring, or a round badge icon) sits next to square icons in the same row (e.g. nav rail, toolbar), check it doesn't look undersized — bump 5-8% if so; (3) snap custom icons (if any are hand-built, not from the Lucide/shadcn set) to a 24px grid, 16px in dense contexts like table row actions; (4) keep every icon's clickable/visual container the same size across a toolbar so a star/flag icon and a square icon align. No conflict with standing Kladra decisions — this is a pure visual-consistency rule, orthogonal to density/motion/bulk-edit rules. It does touch "no internal codes or IDs on screen" only tangentially (not applicable here).
+
+PRIORITY: medium — Kladra mostly inherits icon consistency for free from using one icon library (Lucide via shadcn), so the main risk is a handful of custom/non-library icons (logo mark, custom status glyphs) drifting from the set's grid/stroke/fill rules; worth a one-time audit pass rather than an ongoing concern.
