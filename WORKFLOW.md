@@ -161,8 +161,10 @@ as panels so the flag compares the whole thing; S1 grows into the identity itsel
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
 front end. The six other defaults stand as D167–D172. "12D" was a heading in the founder's brief and
 everything it held is built or in S2. G1 is done: S0 (0025) and S1 (Sandstone). G2's three slices are merged (S2, S3,
-S4); its review passes and the group's full suite are next. The dev database is `seed:demo` on 0025; `seed:volume` after it puts the volume back. A dev server that has served a
-session's edits is restarted, not reused.
+S4) with their review fixes (D186). G3's S5, S7 and S10 are merged; the critic's fifteen findings on S5 and S7 are being
+fixed, and G4's S6 and S8 are being built. Owed before G4 closes: the Arabic reviewer over every namespace G2–G4 touched,
+the reliance card wired onto the team tab, and the full suite. The dev database is `seed:demo` on 0026; `seed:volume` after
+it puts the volume back. A dev server that has served a session's edits is restarted, not reused.
 
 ## §1 Toolbox — what is installed, and why each earns its place
 
