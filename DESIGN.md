@@ -1341,15 +1341,15 @@ records its D number in SPEC §4.
   staggers in, a shimmering skeleton, confetti at the end of a flow, a completion meter or a
   countdown that ticks.
 - **Surfaces that separate by glow.** Tinted shadows, parallax, a mesh gradient, grain,
-  gradient text, a third gradient.
+  gradient text, any gradient in the running app (§1).
 - **Density as a setting.** Linear's 32px rows, the library's three-height density control.
 - **Machinery for problems Kladra does not have.** Undo stacks and delayed send, typed
   confirmation and deletion cool-offs (nothing a user can reach is irreversible), optimistic
   saves (a write holds its row before it decides), steppers for a paper the coordinator reads
   whole, uploads, sliders, ratings, one-time codes.
 - **The PDF's own identity.** Violet, Inter, uppercase tracked eyebrows, two-tone headings.
-  The identity is Sandstone, chosen by the founder in S1, and Arabic has neither case nor
-  letter-spacing that leaves its joins intact.
+  The identity is Stone (§1, the founder's restyle of 2026-09-14), and Arabic has neither case
+  nor letter-spacing that leaves its joins intact.
 
 **Considered and kept as it is.**
 - **Chart axes in Arabic.** The standards (Apple's archived guidance, AG Charts) keep a chart's
@@ -1359,6 +1359,19 @@ records its D number in SPEC §4.
   one who reopens it.
 - **Exit easing.** §1b's ease-in on exit is kept against the advice to ease out both ways,
   because an exit of 150ms or less reads the same either way.
-- **Card shadow.** The site's "one shadow per page" is kept apart from `card-face`'s soft
-  shadow, which S1 chose. What was taken from it is the restraint: nothing gains a shadow by
-  being important.
+- ~~**Card shadow.**~~ Reopened by the restyle and removed: `card-face` has a hairline and no
+  shadow, and only what floats casts one (§1). The restraint the site taught stands.
+
+**The restyle's audit of these rules (founder, 2026-09-14: "they are not absolute").** Every
+rule the restyle collided with was judged on its reason, not its age:
+- *Kept, check changed:* one brand control per screen — `controls.spec` finds it by
+  `data-variant="brand"`, `one-look` refuses the brand fill written by hand.
+- *Kept:* nothing lifts or scales on hover; logical CSS only; Western digits; dark by default;
+  the red is the brand; theme-color, the offline page and the PWA canvas equal the canvas token.
+- *Removed:* "exactly two gradients" (the running app has none; the installed icon keeps its
+  own), and a card's resting shadow.
+- *Changed:* a state as a tinted pill → a dot and its word (§6); Readex Pro and Plex Mono → Plex
+  Sans with Noto Sans Arabic, figures in tabular sans; Sandstone's warm chroma, 12/16 radii and
+  a dark rail in both themes → near-neutral Stone, 8/12/6 radii, a rail that follows the theme.
+  The legibility reason behind Readex (an Arabic name on a phone stays legible) was kept as a
+  check and passed at 375 in Arabic.
