@@ -155,9 +155,51 @@ below by number.
                   merely acceptable now is rebuilt. The libraries adopted are used where they fit, each use recorded
                   in §1. Both themes, both directions, 375 and 1366, before beside after for every screen. Not done
                   until a stranger would say the whole product was built by one hand, this month.
-                  - [ ] S12.0 The cold inventory: every state in the shots manifest, per role, judged and ranked here
+                  - [x] S12.0 The cold inventory: every state in the shots manifest, per role, judged and ranked here
                         with what falls short of what, and the reshape each one gets — walked through `ux-patterns`'
                         `lens.md` (six states, the schema-browser smell, the lineup test), which every S12 brief cites.
+                        **Done**: 44 states × 8 shots (`shots/now`), three cold readers, claims checked in code by the
+                        session. One hand already: sign-in, missing, add company, new project, the report dialog, the
+                        coordinator's day and queue, the quotations list, the rep's metrics, the team tab, leads, the
+                        archive. Ranked, most severe first (owner):
+                        1 · Every dialog, sheet and drawer blurs the page behind it (`backdrop-blur-xs` in the kit's
+                            three overlays) — the glass S1 took out, on every overlay state. (K)
+                        1 · A board at 375 is two columns and an edge that peeks, its header cut («SENT BAC»); on a desk
+                            two of the quotation board's six columns are out of view with no sliver to say so. (K)
+                        1 · Admin lookups: eleven kinds wrap to two lines at 1366 and four at 375 — `FilterRow` wraps. (K)
+                        1 · The dispatch drawer has no figure strip and no m² at its head; the quotation drawer beside it
+                            leads with both (P8: m² is the headline of both). (S12.5)
+                        2 · Uppercase, tracked, 11px labels — the eyebrow §8 refuses — on `StandingStrip` (every drawer
+                            head, the queue, team work, admin use), `Board` headers, and both totals blocks. (K, S12.4, S12.5)
+                        2 · Avatars: none in the company, project, day, stuck, duplicate, users, targets, use and
+                            holidays rows, and none at a drawer's head — while leads, the team tab, the archive and the
+                            targets history draw them (§1b: 24 in a row, 40 at a drawer's head). (every slice)
+                        2 · A record's trail comes last in the quotation and dispatch drawers; §6 puts it under the
+                            actions. (S12.4, S12.5)
+                        2 · The action that ends something stands at the weight of Edit: Archive (company), Mark lost
+                            (project), Withdraw (quotation), Deactivate beside Edit and Reset password (users). (S12.2,
+                            S12.3, S12.4, S12.9)
+                        2 · The search palette opens blank — no recent records. (S12.1)
+                        2 · Duplicates: Keep this one is the brand button on both sides of every pair. (S12.8)
+                        2 · The quotation request's Width cell reads «1…» at 1366. (S12.4)
+                        3 · Off-scale `text-[Npx]` across the shell; a tooltip that fires at 0ms; `transition-all` in
+                            the kit's button, badge and tabs; an idle filter chip with no edge; the error screen's
+                            gradient spelt differently from `brand-grad`. (K, S12.1)
+                        3 · An unread notification is told apart by a dot alone; sign-in greys its button while it works
+                            (busy is not disabled). (S12.1)
+                        3 · Reports: the Recorded-by-Kladra counts are not doors, the calendar's figure has no word, two
+                            filter rows with nothing to say they are two. Lead form: three groups, three treatments. (S12.8)
+                        3 · Archive: "Folded into …" names a company and is not a door. (S12.9)
+                        Questions left to the slice, not findings: a won project's past follow-up still reads red
+                        (`pendingFollowUpSql` clears only a lost one) — S12.3 decides whether a won job's date still
+                        chases anyone; two of team work's five figures carry no tone — S12.7 checks it is deliberate.
+                        Every state shot only loaded: each slice shoots its empty, refused, loading and offline states.
+                        Waves (≤3 builders, no file in two): 1 · K, S12.1, S12.9 — 2 · S12.2, S12.3, S12.8 —
+                        3 · S12.4, S12.5, S12.6+S12.7 — then S12.10.
+                  - [ ] S12.K The kit, first, because every slice stands on it: the three overlays without blur, exits
+                        faster than entrances, named transitions; tooltips at 300ms; the figure label in sentence case
+                        on the scale; the board one stage at a time on a phone with a stage picker and a sliver on a
+                        desk; a filter row that scrolls in one line; an idle chip with an edge.
                   - [ ] S12.1 The shell: rail, top bar, bottom bar, search palette, bell and notifications, sign-in,
                         error and missing screens, the view-as banner.
                   - [ ] S12.2 Companies and contacts: list, strip, drawer, forms, hand-over, share, archive.
