@@ -38,10 +38,21 @@ import type { ActionResult } from "@/lib/types";
  *
  * And that sentence lands under the answer, not only in a toast — the same rule
  * as PromptDialog: the field is where the eye is and where the fix has to
- * happen. A refusal about the act itself, with no field to point at, is a toast.
+ * happen. A refusal about the act itself, with no field to point at, is written
+ * in the footer, where the eye already is and the dialog stays open (DESIGN §8:
+ * a refused submit goes in the footer) — it was a toast, which left the question
+ * on screen with its answer somewhere else.
+ *
+ * Opened by its own trigger, or by the screen that hosts it (P13-G6): a row's or
+ * a drawer's menu item is gone the moment the menu closes, so it cannot own a
+ * trigger, and the screen passes `open` instead and hands focus back with
+ * `useOpener`. `destructive` presses a button in the tint, never the brand, for
+ * the act that takes something away.
  */
 export function ConfirmDialog({
   trigger,
+  open: hostedOpen,
+  destructive = false,
   title,
   description,
   confirmLabel,
@@ -51,7 +62,12 @@ export function ConfirmDialog({
   children,
   onOpenChange,
 }: {
-  trigger: ReactNode;
+  /** What opens it. A confirmation a menu item asks has none; its screen passes `open`. */
+  trigger?: ReactNode;
+  /** Set by the screen that hosts it; left out, the dialog keeps its own. */
+  open?: boolean;
+  /** The act takes something away: the confirm button is in the tint. */
+  destructive?: boolean;
   title: string;
   description: string;
   confirmLabel: string;
@@ -61,12 +77,14 @@ export function ConfirmDialog({
   onDone?: () => void;
   /** The question this confirmation also has to ask, between text and buttons. */
   children?: ReactNode;
-  /** So a caller can clear what it asked when the dialog closes. */
+  /** So a caller can clear what it asked when the dialog closes — and, hosted, close it. */
   onOpenChange?: (open: boolean) => void;
 }) {
   const guarded = useWireGuard();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = hostedOpen ?? ownOpen;
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [formRefusal, setFormRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function confirm() {
@@ -76,7 +94,7 @@ export function ConfirmDialog({
       if (!result.ok) {
         const atField = result.fieldErrors ? Object.values(result.fieldErrors)[0] : null;
         setRefusal(atField ?? null);
-        if (!atField) toast.error(result.error);
+        setFormRefusal(atField ? null : result.error);
         return;
       }
       toast.success(successMessage);
@@ -86,8 +104,9 @@ export function ConfirmDialog({
   }
 
   function change(next: boolean) {
-    setOpen(next);
+    if (hostedOpen === undefined) setOwnOpen(next);
     setRefusal(null);
+    setFormRefusal(null);
     onOpenChange?.(next);
   }
 
@@ -123,7 +142,13 @@ export function ConfirmDialog({
             ) : null}
           </FormBody>
         ) : null}
-        <FormFooter pending={pending} onCancel={() => change(false)} confirmLabel={confirmLabel} />
+        <FormFooter
+          error={formRefusal}
+          pending={pending}
+          onCancel={() => change(false)}
+          confirmLabel={confirmLabel}
+          confirmVariant={destructive ? "destructive" : "brand"}
+        />
       </form>
     </ResponsiveDialog>
   );

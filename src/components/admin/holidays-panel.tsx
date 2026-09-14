@@ -5,7 +5,10 @@ import { useCallback, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { addNonWorkingAction, removeNonWorkingAction } from "@/actions/admin";
-import { HostedConfirm, sendForm, useOpener, useRowFlash } from "@/components/admin/row-kit";
+import { sendForm } from "@/components/admin/send-form";
+import { useOpener } from "@/components/ui-ext/use-opener";
+import { useRowFlash } from "@/components/ui-ext/use-row-flash";
+import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { DatePicker } from "@/components/ui-ext/date-picker";
@@ -157,7 +160,7 @@ export function HolidaysPanel({
       )}
 
       {subject ? (
-        <HostedConfirm
+        <ConfirmDialog
           open={asking}
           onOpenChange={setAsking}
           destructive

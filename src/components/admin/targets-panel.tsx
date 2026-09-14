@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { setTargetAction } from "@/actions/admin";
-import { useRowFlash } from "@/components/admin/row-kit";
+import { useRowFlash } from "@/components/ui-ext/use-row-flash";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { Button } from "@/components/ui/button";

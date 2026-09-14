@@ -11,13 +11,10 @@ import {
   updateUserAction,
 } from "@/actions/admin";
 import { startViewingAction } from "@/actions/view-as";
-import {
-  HostedConfirm,
-  RowMenu,
-  sendForm,
-  useOpener,
-  useRowFlash,
-} from "@/components/admin/row-kit";
+import { sendForm } from "@/components/admin/send-form";
+import { RowMenu } from "@/components/ui-ext/row-menu";
+import { useOpener } from "@/components/ui-ext/use-opener";
+import { useRowFlash } from "@/components/ui-ext/use-row-flash";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
@@ -270,7 +267,7 @@ export function UsersPanel({
             open={act === "password"}
             onOpenChange={closeTo}
           />
-          <HostedConfirm
+          <ConfirmDialog
             open={act === "active"}
             onOpenChange={closeTo}
             destructive={subject.active}
@@ -336,7 +333,7 @@ function ViewAs({ user, meId }: { user: AdminUser; meId: string }) {
 
 /**
  * A new password, typed by the admin and read out (S7). Opened from the row's
- * menu, so by state rather than by a trigger of its own (see `HostedConfirm`).
+ * menu, so by state rather than by a trigger of its own (see `ConfirmDialog` with `open`).
  * A refusal about the password is said under the password; one about the whole
  * attempt — the wire, an account that is gone — in the footer.
  */

@@ -5,13 +5,11 @@ import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { saveLookupAction, setLookupActiveAction } from "@/actions/admin";
-import {
-  HostedConfirm,
-  RowMenu,
-  sendForm,
-  useOpener,
-  useRowFlash,
-} from "@/components/admin/row-kit";
+import { sendForm } from "@/components/admin/send-form";
+import { RowMenu } from "@/components/ui-ext/row-menu";
+import { useOpener } from "@/components/ui-ext/use-opener";
+import { useRowFlash } from "@/components/ui-ext/use-row-flash";
+import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
 import { Empty } from "@/components/ui-ext/empty";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
@@ -194,7 +192,7 @@ export function LookupsPanel({
               refresh();
             }}
           />
-          <HostedConfirm
+          <ConfirmDialog
             open={act === "active"}
             onOpenChange={closeTo}
             destructive={subject.active}
