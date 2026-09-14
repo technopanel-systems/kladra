@@ -69,12 +69,17 @@ async function Band() {
         </span>
       </h2>
 
+      {/* One layout in both languages (P13-G6): the lead's own words first,
+          then Acknowledge — at the inline end of the card on a desk, and under
+          the words on a phone, at the same end, where the thumb is. Nothing
+          about it wraps by width, so a longer English line cannot move the
+          button to a different place from the Arabic one. */}
       <ul className="flex flex-col gap-2">
         {leads.map((lead) => (
           <li
             key={lead.id}
             data-lead={lead.id}
-            className="row-door flex flex-col gap-2 rounded-xl border border-line bg-state-wait p-3 md:flex-row md:items-center md:gap-4"
+            className="row-door flex flex-col gap-3 rounded-xl border border-line bg-state-wait p-3 md:flex-row md:items-center md:gap-4 md:p-4"
           >
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <Avatar id={lead.id} name={lead.name} kind="company" ring="wait" />
@@ -85,10 +90,11 @@ async function Band() {
                     href={`/companies?open=${lead.id}`}
                     scroll={false}
                     aria-label={t("companies.openCompany", { name: lead.name })}
-                    className="flex min-w-0 items-center gap-1.5 font-medium"
+                    className="flex min-w-0 items-center gap-2 font-medium"
                   >
-                    <span className="min-w-0 truncate">
-                      <bdi>{lead.name}</bdi>
+                    {/* Cut at the name's own end, not the page's (S12.1). */}
+                    <span dir="auto" className="min-w-0 truncate">
+                      {lead.name}
                     </span>
                     <LinkPending />
                   </Link>
@@ -98,7 +104,7 @@ async function Band() {
                     so it starts where the row starts (rules/words.md). */}
                 <Prose line text={lead.query} className="text-sm text-muted-foreground" />
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5">
+                  <span className="flex items-center gap-2">
                     <Avatar id={lead.fromId} name={lead.fromName} size="sm" />
                     {t("leads.fromPersonShort", { name: lead.fromName })}
                   </span>
@@ -110,14 +116,14 @@ async function Band() {
                     <DayText day={lead.givenOn} locale={locale} />
                   </span>
                   {lead.city ? (
-                    <>
+                    // The dot and the city wrap together, so a city never
+                    // starts a line with nothing to say what it follows.
+                    <span className="inline-flex items-center gap-2 whitespace-nowrap">
                       <span aria-hidden="true" className="text-faint">
                         ·
                       </span>
-                      <span>
-                        <bdi>{lead.city}</bdi>
-                      </span>
-                    </>
+                      <bdi>{lead.city}</bdi>
+                    </span>
                   ) : null}
                 </div>
               </div>

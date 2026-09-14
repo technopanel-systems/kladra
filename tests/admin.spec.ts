@@ -43,7 +43,7 @@ function card(page: Page, name: string): Locator {
  * sight and the rest behind its menu, which is named for the row.
  */
 async function fromRowMenu(page: Page, t: Translate, within: Locator, name: string, item: string) {
-  await within.getByRole("button", { name: t("admin.moreFor", { name }) }).click();
+  await within.getByRole("button", { name: t("common.moreFor", { name }) }).click();
   await page.getByRole("menuitem", { name: item, exact: true }).click();
 }
 
@@ -196,7 +196,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     // row's menu button, not to the page (lens G: Esc returns to the opener).
     await expect(ask).toHaveCount(0);
     await expect(
-      row(page, person).getByRole("button", { name: t("admin.moreFor", { name: person }) }),
+      row(page, person).getByRole("button", { name: t("common.moreFor", { name: person }) }),
     ).toBeFocused();
 
     const after = await one<{ password_hash: string }>(
@@ -222,7 +222,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     // His own account: the action refuses it, so the menu says so first, on an
     // item that cannot be pressed (D119) — never a live item that fails.
     const me = await personName("jerom@technopanel.com.sa", locale);
-    await row(page, me).getByRole("button", { name: t("admin.moreFor", { name: me }) }).click();
+    await row(page, me).getByRole("button", { name: t("common.moreFor", { name: me }) }).click();
     const own = page.getByRole("menu").getByRole("menuitem").last();
     await expect(own).toHaveText(t("admin.deactivate"));
     await expect(own).toHaveAttribute("aria-disabled", "true");
@@ -232,7 +232,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
 
     // The act that locks somebody out is the menu's last item, apart behind a
     // divider and in the tint — never on the row beside the ones pressed daily.
-    await row(page, person).getByRole("button", { name: t("admin.moreFor", { name: person }) }).click();
+    await row(page, person).getByRole("button", { name: t("common.moreFor", { name: person }) }).click();
     const menu = page.getByRole("menu");
     const last = menu.getByRole("menuitem").last();
     await expect(last).toHaveText(t("admin.deactivate"));
@@ -246,7 +246,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     // Still on the list, marked by a word rather than by a colour (S7, DESIGN §4),
     // and offered the way back where the way out was.
     await expect(row(page, person)).toContainText(t("admin.inactive"));
-    await row(page, person).getByRole("button", { name: t("admin.moreFor", { name: person }) }).click();
+    await row(page, person).getByRole("button", { name: t("common.moreFor", { name: person }) }).click();
     await expect(page.getByRole("menu").getByRole("menuitem").last()).toHaveText(t("admin.activate"));
     await page.keyboard.press("Escape");
     const still = await query("select 1 from users where email = $1::text", [email]);
@@ -470,8 +470,9 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     await expect(drawer).toBeVisible(COLD);
     await drawer
       .getByRole("group", { name: t("drawer.companyActions") })
-      .getByRole("button", { name: t("drawer.archive") })
+      .getByRole("button", { name: t("common.moreFor", { name: target.name }) })
       .click();
+    await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
     const ask = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name: target.name }) });
     // Without a reason it is refused, in the app's words (S16, D87) …
     await ask.getByRole("button", { name: t("drawer.archive") }).click();

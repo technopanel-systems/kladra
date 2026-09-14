@@ -1,7 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
-import { useActionState, useMemo, useRef, useState, type ReactNode } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { updateCompanyAction } from "@/actions/companies";
@@ -12,7 +11,6 @@ import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/types";
 
@@ -62,31 +60,28 @@ function draftOf(company: CompanyEditable): CompanyDraft {
 
 export function EditCompanyDialog({
   company,
-  trigger,
+  open,
+  onOpenChange,
 }: {
   company: CompanyEditable;
-  trigger?: ReactNode;
+  /** The drawer's menu opens it (P13-G6), so the drawer holds whether it is open. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
   const { lookups, failed } = useFormLookups(open);
 
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       title={t("forms.editCompany")}
+      context={company.name}
       description={t("forms.editCompanyHint")}
-      trigger={
-        trigger ?? (
-          <Button variant="ghost">
-            <Pencil aria-hidden="true" />
-            {t("common.edit")}
-          </Button>
-        )
-      }
     >
       {failed ? (
+        // The lists did not come, so there is no form to fill: said where the
+        // form would be, in the body's own padding (DESIGN §8, severity).
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
@@ -97,8 +92,8 @@ export function EditCompanyDialog({
           key={company.id}
           company={company}
           lookups={lookups}
-          onSaved={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
+          onSaved={() => onOpenChange(false)}
+          onCancel={() => onOpenChange(false)}
         />
       ) : (
         <DialogFormSkeleton rows={5} />

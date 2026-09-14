@@ -172,11 +172,14 @@ test("marketing is a rep in everything: its day carries a month, its rail the ch
     const drawer = page.getByRole("dialog", { name: customer.name });
     await expect(drawer).toBeVisible(COLD);
     await expect(drawer.getByRole("button", { name: t("common.addReport") }).first()).toBeVisible();
-    await expect(
-      drawer
-        .getByRole("group", { name: t("drawer.companyActions") })
-        .getByRole("button", { name: t("common.edit") }),
-    ).toBeVisible();
+    // Edit is in the drawer's More menu (P13-G6 S12.2).
+    await drawer
+      .getByRole("group", { name: t("drawer.companyActions") })
+      .getByRole("button", { name: t("common.moreFor", { name: customer.name }) })
+      .click();
+    await expect(page.getByRole("menuitem", { name: t("common.edit"), exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("menu")).toHaveCount(0);
 
     await drawer.getByRole("tab", { name: t("common.projects") }).click();
     await expect(
@@ -353,8 +356,11 @@ test("the sales manager moves a lead onto the floor that will price it", async (
       await expect(drawer).toBeVisible(COLD);
       // Its own customer, every other button on the drawer its own — and this
       // one gone, because whose floor a company sits on is the manager's answer
-      // (SPEC §3, which overrules D51).
-      await expect(drawer.getByRole("button", { name: t("drawer.handOver") })).toHaveCount(0);
+      // (SPEC §3, which overrules D51). Its More menu has Edit, and not this.
+      await drawer.getByRole("button", { name: t("common.moreFor", { name: lead.name }) }).click();
+      await expect(page.getByRole("menuitem", { name: t("common.edit"), exact: true })).toBeVisible();
+      await expect(page.getByRole("menuitem", { name: t("drawer.handOver"), exact: true })).toHaveCount(0);
+      await page.keyboard.press("Escape");
     });
 
     await test.step("2 · the manager opens the same drawer and it is there", async () => {
@@ -362,7 +368,8 @@ test("the sales manager moves a lead onto the floor that will price it", async (
       await page.goto(`/${locale}/companies?open=${lead.id}`);
       const drawer = page.getByRole("dialog").first();
       await expect(drawer).toBeVisible(COLD);
-      await drawer.getByRole("button", { name: t("drawer.handOver") }).click();
+      await drawer.getByRole("button", { name: t("common.moreFor", { name: lead.name }) }).click();
+      await page.getByRole("menuitem", { name: t("drawer.handOver"), exact: true }).click();
     });
 
     await test.step("3 · it asks who, and says what travels with the company", async () => {

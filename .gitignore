@@ -66,3 +66,6 @@ yarn-error.log*
 .claude/worktrees/
 # playwright-cli session settings written by a screenshot agent
 .playwright/
+
+# The founder's reference videos for the G6 restyle: read locally, never committed.
+/UX-VIDEO/

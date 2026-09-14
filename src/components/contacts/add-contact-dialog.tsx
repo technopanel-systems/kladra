@@ -38,13 +38,19 @@ import type { ActionResult } from "@/lib/types";
 
 export function AddContactDialog({
   companyId,
+  companyName,
   country,
   trigger,
+  onAdded,
 }: {
   companyId: string;
+  /** Named under the title: on a phone the sheet covers the drawer it came from (D129). */
+  companyName: string;
   /** ISO code of the company's country, for reading the phone (D89). */
   country: string;
   trigger?: ReactNode;
+  /** The new contact's id, so the list can mark the row it just gained. */
+  onAdded?: (contactId: string) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -52,14 +58,15 @@ export function AddContactDialog({
   const { lookups, failed } = useFormLookups(open);
 
   const onCreated = useCallback(
-    (name: string) => {
+    (name: string, contactId: string | undefined) => {
       toast.success(t("forms.added", { name }));
       setOpen(false);
+      if (contactId) onAdded?.(contactId);
       // No navigation: the drawer is already where the new contact belongs, so
       // the screen re-reads itself rather than asking anyone to refresh.
       router.refresh();
     },
-    [router, t],
+    [router, t, onAdded],
   );
 
   return (
@@ -67,6 +74,7 @@ export function AddContactDialog({
       open={open}
       onOpenChange={setOpen}
       title={t("forms.addContact")}
+      context={companyName}
       description={t("forms.addContactHint")}
       trigger={
         trigger ?? (
@@ -107,7 +115,7 @@ function ContactForm({
   /** ISO code of the company's country, for reading the phone (D89). */
   country: string;
   lookups: FormLookups;
-  onCreated: (name: string) => void;
+  onCreated: (name: string, contactId: string | undefined) => void;
   onCancel: () => void;
 }) {
   const t = useTranslations();
@@ -126,7 +134,7 @@ function ContactForm({
 
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
 
-  useActionOutcome(state, () => onCreated(submitted.current));
+  useActionOutcome(state, (data) => onCreated(submitted.current, data?.contactId));
 
   return (
     <form
@@ -162,7 +170,7 @@ function ContactForm({
           country={country}
         />
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <Checkbox
             id="contact-is-main"
             checked={isMain}

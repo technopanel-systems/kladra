@@ -100,6 +100,16 @@ async function faisalHoldsTheContact(companyId: string, phone: string): Promise<
   return rows.length > 0;
 }
 
+/**
+ * Chooses one item from a drawer's More menu. Past Add report and Add project,
+ * everything a company drawer offers — Edit, Sharing, Hand over, Archive — is
+ * in that one menu at the end of the action row (P13-G6 S12.2, DESIGN §6).
+ */
+async function fromMore(page: Page, within: Locator, menuLabel: string, item: string): Promise<void> {
+  await within.getByRole("button", { name: menuLabel }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+}
+
 /** Picks a specific person out of a share/hand-over picker (tests/marketing.spec.ts). */
 async function pickPerson(page: Page, combobox: Locator, name: string): Promise<void> {
   await combobox.click();
@@ -149,7 +159,12 @@ test("two reps on one customer: a shared company, a shared project, and taking t
       const drawer = dialogNamed(page, fixture.company);
       await expect(drawer).toBeVisible(COLD);
 
-      await drawer.getByRole("button", { name: t("drawer.share.action") }).click();
+      await fromMore(
+        page,
+        drawer,
+        t("common.moreFor", { name: fixture.company }),
+        t("drawer.share.action"),
+      );
       const share = page.getByRole("dialog", { name: t("drawer.share.companyTitle") });
       await expect(share).toBeVisible();
 
@@ -240,8 +255,10 @@ test("two reps on one customer: a shared company, a shared project, and taking t
       await expect(rows.getByText(t("drawer.mainContact"))).toHaveCount(2);
 
       // And only the row Saad just added is his to touch. Faisal's main
-      // contact stays Faisal's.
-      await expect(rows.getByRole("button", { name: t("common.edit"), exact: true })).toHaveCount(1);
+      // contact stays Faisal's: one of the two rows has a menu to touch it by.
+      await expect(
+        rows.getByRole("button", { name: t("common.moreFor", { name: fixture.contactName }) }),
+      ).toHaveCount(1);
     });
 
     await test.step("4 · Saad tries the work he has not been given: no project of his own, no log, no quotation", async () => {
@@ -249,10 +266,18 @@ test("two reps on one customer: a shared company, a shared project, and taking t
 
       // A company share carries reading, his own contacts and his own reports
       // (D147, D176) — so the action row holds Add report and nothing that
-      // works the customer: no New project, no Edit, no Archive.
+      // works the customer: no New project, no Edit, no Archive. Its More menu
+      // holds the one thing a sharer may do to the share itself: leave it.
       const actions = drawer.getByRole("group", { name: t("drawer.companyActions") });
       await expect(actions.getByRole("button", { name: t("common.addReport") })).toBeVisible();
-      await expect(actions.getByRole("button")).toHaveCount(1);
+      const more = actions.getByRole("button", { name: t("common.moreFor", { name: fixture.company }) });
+      await expect(actions.getByRole("button")).toHaveCount(2);
+      await more.click();
+      const menu = page.getByRole("menu");
+      await expect(menu.getByRole("menuitem")).toHaveCount(1);
+      await expect(menu.getByRole("menuitem")).toHaveText(t("drawer.share.leave"));
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
 
       await drawer.getByRole("tab", { name: t("common.projects") }).click();
       await expect(
@@ -277,7 +302,7 @@ test("two reps on one customer: a shared company, a shared project, and taking t
       await expect(project).toBeVisible(COLD);
 
       // Sharing is in the project drawer's menu since P13-G6 S12.3.
-      await project.getByRole("button", { name: t("projects.moreFor", { name: fixture.project }) }).click();
+      await project.getByRole("button", { name: t("common.moreFor", { name: fixture.project }) }).click();
       await page.getByRole("menuitem", { name: t("drawer.share.action"), exact: true }).click();
       const share = page.getByRole("dialog", { name: t("drawer.share.projectTitle") });
       await pickPerson(page, share.getByRole("combobox", { name: t("drawer.share.projectWho") }), saadName);
@@ -337,7 +362,13 @@ test("two reps on one customer: a shared company, a shared project, and taking t
     await test.step("6 · Faisal takes Saad off the company; the project goes with it, and what Saad made stays", async () => {
       await page.goto(`/${locale}/companies?open=${companyId}`);
       const drawer = dialogNamed(page, fixture.company);
-      await drawer.getByRole("button", { name: t("drawer.share.action") }).click();
+      await expect(drawer).toBeVisible(COLD);
+      await fromMore(
+        page,
+        drawer,
+        t("common.moreFor", { name: fixture.company }),
+        t("drawer.share.action"),
+      );
       const share = page.getByRole("dialog", { name: t("drawer.share.companyTitle") });
 
       await share
@@ -490,7 +521,7 @@ test("a company handed to the rep who already holds his own people there", async
     await page.goto(`/${locale}/companies?open=${target.id}`);
     const drawer = page.getByRole("dialog").first();
     await expect(drawer).toBeVisible(COLD);
-    await drawer.getByRole("button", { name: t("drawer.handOver") }).click();
+    await fromMore(page, drawer, t("common.moreFor", { name: target.name }), t("drawer.handOver"));
 
     const dialog = page.getByRole("dialog", {
       name: t("drawer.handOverTitle", { name: target.name }),

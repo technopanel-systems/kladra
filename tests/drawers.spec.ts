@@ -35,11 +35,18 @@ import { test, expect } from "./helpers/i18n";
  * dialog at the very moment the new one appears. The title does move — and a
  * title is what "a dialog opened" means to the person reading the screen.
  */
-async function pressAndExpectADialog(page: Page, button: Locator, what: string): Promise<void> {
+async function pressAndExpectADialog(
+  page: Page,
+  button: Locator,
+  what: string,
+  menuItem?: string,
+): Promise<void> {
   const title = page.getByRole("dialog").getByRole("heading").first();
   const before = (await title.textContent())?.trim() ?? "";
   expect(before, `no drawer title to compare against before pressing ${what}`).not.toBe("");
   await button.click();
+  // A row's menu holds the trigger itself: the dialog is the item's (S12.2).
+  if (menuItem) await page.getByRole("menuitem", { name: menuItem, exact: true }).click();
   await expect(title, `pressing ${what} opened no dialog`).not.toHaveText(before);
 }
 
@@ -64,6 +71,7 @@ async function openDrawerAndPress(
   tab: string,
   buttonName: string,
   what: string,
+  menuItem?: string,
 ): Promise<void> {
   await page.goto(list);
   // The row's link is named by everything in it — the company and its city and
@@ -81,23 +89,32 @@ async function openDrawerAndPress(
 
   const button = drawer.getByRole("button", { name: buttonName, exact: true }).first();
   await expect(button, `${what} is not on this drawer`).toBeVisible();
-  await pressAndExpectADialog(page, button, what);
+  await pressAndExpectADialog(page, button, what, menuItem);
 }
 
 /**
  * The name of one of Faisal's companies that has both a contact and a project.
  * A name, not an id: a drawer is opened by pressing its row (DESIGN.md — no
- * internal ids on screen), and that is the navigation this spec needs.
+ * internal ids on screen), and that is the navigation this spec needs. With it,
+ * the name of one contact of his own there: a contact's Edit is in that
+ * contact's own menu, and the menu is named by the contact.
  */
-async function faisalCompanyWithRows(): Promise<string> {
+async function faisalCompanyWithRows(): Promise<{ name: string; contact: string }> {
   const faisal = await userId("faisal@technopanel.com.sa");
-  const rows = await query<{ name: string }>(
-    `select companies.name
+  const rows = await query<{ name: string; contact: string }>(
+    `select companies.name,
+            (select contacts.name from contacts
+              where contacts.company_id = companies.id
+                and contacts.rep_id = $1::uuid
+                and contacts.archived_at is null
+              order by contacts.is_main desc, contacts.name
+              limit 1) as contact
        from companies
       where companies.rep_id = $1::uuid
         and companies.archived_at is null
         and (select count(*) from contacts
               where contacts.company_id = companies.id
+                and contacts.rep_id = $1::uuid
                 and contacts.archived_at is null) > 0
         and (select count(*) from projects
               where projects.company_id = companies.id
@@ -112,21 +129,26 @@ async function faisalCompanyWithRows(): Promise<string> {
         "scripts/seed-demo.ts changed and this spec no longer presses the triggers it was written for.",
     );
   }
-  return rows[0].name;
+  return rows[0];
 }
 
 test("every button a drawer hands the kit still opens its dialog", async ({ page, locale, t }) => {
   await login(page, locale, "faisal");
 
-  const company = await faisalCompanyWithRows();
+  const { name: company, contact } = await faisalCompanyWithRows();
   const companies = `/${locale}/companies`;
 
   await test.step("the tabs that have rows in them", async () => {
-    const press = (tab: string, button: string, what: string) =>
-      openDrawerAndPress(page, companies, company, tab, button, what);
+    const press = (tab: string, button: string, what: string, menuItem?: string) =>
+      openDrawerAndPress(page, companies, company, tab, button, what, menuItem);
 
     await press(t("common.contacts"), t("drawer.addContact"), "Add contact");
-    await press(t("common.contacts"), t("common.edit"), "Edit contact");
+    await press(
+      t("common.contacts"),
+      t("common.moreFor", { name: contact }),
+      "Edit contact",
+      t("common.edit"),
+    );
     await press(t("common.projects"), t("drawer.newProject"), "New project");
   });
 
@@ -338,7 +360,7 @@ test("the project drawer shows Add report, keeps the rest in its menu, and puts 
   });
 
   const actions = drawer.getByRole("group", { name: t("projects.projectActions") });
-  const more = actions.getByRole("button", { name: t("projects.moreFor", { name: project.name }) });
+  const more = actions.getByRole("button", { name: t("common.moreFor", { name: project.name }) });
 
   await test.step("one action in sight, and the menu beside it", async () => {
     const report = actions.getByRole("button", { name: t("common.addReport"), exact: true });

@@ -99,7 +99,7 @@ export function ContactFields({
 
   return (
     <>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("name")}>{t("common.name")}</Label>
         <Input
           id={id("name")}
@@ -119,7 +119,7 @@ export function ContactFields({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("phone")}>
           {t("common.phone")}
           <span aria-hidden="true" className="text-brand">
@@ -148,7 +148,7 @@ export function ContactFields({
             {phoneError}
           </p>
         ) : normalized ? (
-          <p className="flex items-center gap-1.5 text-xs text-faint">
+          <p className="flex items-center gap-2 text-xs text-faint">
             {t("forms.phoneStoredAs")}
             <span dir="ltr" className="num">
               {normalized}
@@ -162,7 +162,7 @@ export function ContactFields({
         {belowPhone}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("position")}>{t("common.position")}</Label>
         <SearchableSelect
           id={id("position")}
@@ -178,7 +178,7 @@ export function ContactFields({
         <input type="hidden" name={names.position} value={value.position} />
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("email")}>{t("common.email")}</Label>
         <Input
           id={id("email")}
@@ -203,7 +203,7 @@ export function ContactFields({
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("notes")}>{t("common.notes")}</Label>
         <Textarea
           id={id("notes")}

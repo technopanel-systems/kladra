@@ -118,7 +118,11 @@ async function byClick(page: Page, trigger: Locator, kind: Kind, choose: boolean
   const popup = await popupOf(page, trigger);
   await expect(popup).toBeVisible();
   await expect(popup).toBeInViewport();
-  const choice = popup.locator(CHOICE[kind]).first();
+  // A row's own menu (a drawer's More) has no checked choice to find, only
+  // acts; where nothing is chosen, any item on screen is the proof it opened.
+  const choice = popup
+    .locator(kind === "menu" && !choose ? '[role="menuitem"], [role="menuitemradio"]' : CHOICE[kind])
+    .first();
   await expect(choice).toBeVisible();
   if (choose) {
     // Playwright's click refuses an element something else is covering, so this
@@ -207,9 +211,15 @@ function newestDialog(page: Page): Locator {
 
 /**
  * A dialog opened by the keyboard and closed, then by a click, walked for every
- * kind inside it, and closed. `need` is what that form must have in it.
+ * kind inside it, and closed. `need` is what that form must have in it. `via`
+ * is the menu the opener lives in, when it is an item of one (a company
+ * drawer's More, P13-G6 S12.2): opened the same way first, each time.
  */
-async function dialog(page: Page, opener: Locator, need: readonly Kind[]): Promise<void> {
+async function dialog(page: Page, opener: Locator, need: readonly Kind[], via?: Locator): Promise<void> {
+  if (via) {
+    await via.focus();
+    await page.keyboard.press("Enter");
+  }
   await expect(opener).toBeVisible();
   await opener.focus();
   await page.keyboard.press("Enter");
@@ -218,6 +228,7 @@ async function dialog(page: Page, opener: Locator, need: readonly Kind[]): Promi
   await page.keyboard.press("Escape");
   await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
 
+  if (via) await via.click();
   await opener.click();
   const form = newestDialog(page);
   await expect(form).toBeVisible();
@@ -310,18 +321,23 @@ for (const locale of LOCALES) {
       await open(page, t, locale, "/companies");
       await dialog(page, page.getByRole("button", { name: t("forms.addCompany"), exact: true }).first(), ["picker"]);
 
-      const share = (drawer: Locator) => drawer.getByRole("button", { name: t("drawer.share.action"), exact: true });
+      const more = (drawer: Locator) =>
+        drawer.getByRole("group", { name: t("drawer.companyActions") }).locator(TRIGGER.menu);
+      const share = page.getByRole("menuitem", { name: t("drawer.share.action"), exact: true });
       const company = await recordWith(page, t, locale, "/companies", (drawer) => drawer.locator(TRIGGER.date));
-      // The drawer's own date picker saves the day pressed, so it is opened and closed.
-      expect(await everyKind(page, company, false)).toContain("date");
-      if (await share(company).isVisible()) await dialog(page, share(company), ["picker"]);
+      // The drawer's own date picker saves the day pressed, so it is opened and
+      // closed; its More menu holds acts, so it is opened and left.
+      const kinds = await everyKind(page, company, false);
+      expect(kinds).toContain("date");
+      expect(kinds).toContain("menu");
+      await dialog(page, share, ["picker"], more(company));
 
       // Mark lost is the last item in the project drawer's menu since P13-G6 S12.3,
       // and the dialog it opens is hosted by the drawer, so it is opened from the menu.
-      const more = (drawer: Locator) => drawer.locator('[data-slot="row-menu"]');
-      const project = await recordWith(page, t, locale, "/projects", more);
+      const projectMore = (drawer: Locator) => drawer.locator('[data-slot="row-menu"]');
+      const project = await recordWith(page, t, locale, "/projects", projectMore);
       expect(await everyKind(page, project, false)).toContain("date");
-      await more(project).click();
+      await projectMore(project).click();
       await page.getByRole("menuitem", { name: t("common.markLost"), exact: true }).click();
       const lost = newestDialog(page);
       await expect(lost).toBeVisible();
@@ -373,9 +389,13 @@ for (const locale of LOCALES) {
       await open(page, t, locale, "/leads");
       expect(await everyKind(page, page.locator("main"), true)).toContain("picker");
 
-      const handOver = (drawer: Locator) => drawer.getByRole("button", { name: t("drawer.handOver"), exact: true });
-      const company = await recordWith(page, t, locale, "/companies", handOver);
-      await dialog(page, handOver(company), ["picker"]);
+      // Hand over is in the company drawer's More menu, which a manager has on
+      // every company he can move (P13-G6 S12.2).
+      const more = (drawer: Locator) =>
+        drawer.getByRole("group", { name: t("drawer.companyActions") }).locator(TRIGGER.menu);
+      const company = await recordWith(page, t, locale, "/companies", more);
+      const handOver = page.getByRole("menuitem", { name: t("drawer.handOver"), exact: true });
+      await dialog(page, handOver, ["picker"], more(company));
     });
 
     test("every popup on Jerom's screens opens in Edge by click and by keyboard, and takes a choice", async ({

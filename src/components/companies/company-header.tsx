@@ -1,7 +1,15 @@
 "use client";
 
-import { CalendarClock, Pencil, Plus } from "lucide-react";
-import { useId, useState, useTransition } from "react";
+import {
+  Archive,
+  CalendarClock,
+  Pencil,
+  Plus,
+  UserRoundMinus,
+  UserRoundPlus,
+  UsersRound,
+} from "lucide-react";
+import { Component, useRef, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -10,6 +18,7 @@ import { setCompanyFollowUpAction } from "@/actions/companies";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { ReportButton } from "@/components/reports/report-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
+import { useFailureToast } from "@/components/companies/failure-toast";
 import { HandOverDialog } from "@/components/companies/hand-over-dialog";
 import { ShareCompanyDialog } from "@/components/companies/share-company-dialog";
 import {
@@ -18,23 +27,23 @@ import {
 } from "@/components/companies/edit-company-dialog";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetDescription,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Sqm } from "@/components/ui-ext/figures";
 import { NoteBlock } from "@/components/ui-ext/note-block";
+import { RowMenu, type RowMenuEnd, type RowMenuItem } from "@/components/ui-ext/row-menu";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
+import { StateBadge } from "@/components/ui-ext/state-badge";
 import { RecordPanel } from "@/components/ui-ext/record-panel";
+import { useOpener } from "@/components/ui-ext/use-opener";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import type { PickerOption } from "@/lib/picker-option";
 import type { Sharer } from "@/lib/shares";
 import type { CompanyStanding } from "@/lib/standing";
-import { followUpClass, TONE_TEXT } from "@/lib/state-tone";
+import { followUpClass, type StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -43,14 +52,15 @@ import { cn } from "@/lib/utils";
  * projects — is server rendered and arrives here as `children`, so the client
  * bundle carries only what actually needs a browser.
  *
- * Two rules from DESIGN §2 shape this file: work happens in a drawer over the
- * list, and the primary action sits at the TOP. The next-follow-up date sits
- * above the actions because it is the one thing a rep changes on nearly every
- * visit (SPEC §3 / D9).
+ * The header is DESIGN §6's drawer hierarchy, in that order (P13-G6): who this
+ * is — the company's avatar, its name, its city, category and source — and how
+ * it is standing; the follow-up date, the one fact a rep changes on nearly
+ * every visit (SPEC §3, D9); then the actions — Add report, the one brand
+ * button, Add project beside it, and everything rarer in one menu, last and
+ * apart, with Archive after its divider. What happened last is the tabs below.
  */
 
 /* ---- the sheet ----------------------------------------------------------- */
-
 
 /**
  * Driven by `?open=<id>` (SPEC §3: the open drawer lives in the URL, so a
@@ -82,9 +92,85 @@ export function CompanyDrawerFrame({ children }: { children: ReactNode }) {
       {/* The one drawer that becomes a bottom sheet on a phone: it opens
           over a list of cards a rep keeps his place in (D128). */}
       <RecordPanel phoneSheet>
-        <div className="flex min-h-0 flex-1 flex-col scroller">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col scroller">
+          <DrawerTrouble>{children}</DrawerTrouble>
+        </div>
       </RecordPanel>
     </Sheet>
+  );
+}
+
+/**
+ * A company that could not be read fails in its own panel (DESIGN §8: a part
+ * that failed says so in its own place and does not blank the whole screen).
+ *
+ * Without it a query that threw inside the drawer reached the screen's boundary
+ * and replaced the LIST with the error card, so the rep lost his place, his
+ * search and his chip over one customer. Try again re-reads the page in a
+ * transition and lets the drawer render again when the answer is in. A redirect
+ * or a not-found is the router's, not a failure, and is passed on.
+ */
+function DrawerTrouble({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const boundary = useRef<TroubleBoundary>(null);
+  return (
+    <TroubleBoundary
+      ref={boundary}
+      retry={() =>
+        startTransition(() => {
+          router.refresh();
+          boundary.current?.reset();
+        })
+      }
+    >
+      {children}
+    </TroubleBoundary>
+  );
+}
+
+function isRouterSignal(error: unknown): boolean {
+  const digest = typeof error === "object" && error !== null && "digest" in error ? error.digest : null;
+  return (
+    typeof digest === "string" &&
+    (digest.startsWith("NEXT_REDIRECT") || digest.startsWith("NEXT_HTTP_ERROR_FALLBACK"))
+  );
+}
+
+class TroubleBoundary extends Component<
+  { retry: () => void; children: ReactNode },
+  { error: unknown }
+> {
+  state: { error: unknown } = { error: null };
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error };
+  }
+
+  reset() {
+    this.setState({ error: null });
+  }
+
+  render() {
+    const { error } = this.state;
+    if (error === null) return this.props.children;
+    if (isRouterSignal(error)) throw error;
+    return <DrawerFailed retry={this.props.retry} />;
+  }
+}
+
+function DrawerFailed({ retry }: { retry: () => void }) {
+  const t = useTranslations();
+  return (
+    <div role="alert" data-slot="drawer-failed" className="flex flex-col items-start gap-4 p-4 pe-12">
+      <div className="flex flex-col gap-2">
+        <SheetTitle className="text-base">{t("drawer.companyFailed")}</SheetTitle>
+        <SheetDescription>{t("shell.failedBody")}</SheetDescription>
+      </div>
+      <Button type="button" variant="brand" onClick={retry}>
+        {t("shell.tryAgain")}
+      </Button>
+    </div>
   );
 }
 
@@ -106,7 +192,13 @@ export type DrawerCompany = {
   nextFollowUp: string | null;
   /** The earliest open project's date, when one is set — what the list may be showing instead (D94). */
   projectFollowUp: { day: string; project: string } | null;
+  /** A lead its holder has not yet said he has (D157): the amber ring and its word. */
+  leadWaiting: boolean;
+  /** Off the floor already: nothing to archive. */
+  archived: boolean;
 };
+
+type Act = "edit" | "share" | "handOver" | "archive";
 
 export function CompanyHeader({
   company,
@@ -124,8 +216,8 @@ export function CompanyHeader({
   /**
    * Whether the person reading this owns the floor it is on. A manager reads
    * every company and works none (S8, D42): he gets the same header with the
-   * date as a sentence instead of a picker and no action row under it, rather
-   * than a row of buttons that answer "Not allowed" (DESIGN §5).
+   * date as a sentence instead of a picker and no work in the action row,
+   * rather than buttons that answer "Not allowed" (DESIGN §5).
    */
   mine: boolean;
   /**
@@ -138,7 +230,7 @@ export function CompanyHeader({
    * The people this company can be handed to, or null for a reader who may not
    * move it. Whose customer this is and what happened with him are two
    * questions (D42, D50): the manager answers the first and writes none of the
-   * second, so this can be here while the action row below is not.
+   * second, so the menu can hold this while the row holds no work.
    */
   handOverTo: PickerOption[] | null;
   /**
@@ -161,29 +253,42 @@ export function CompanyHeader({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const ids = useId();
   const [pending, startTransition] = useTransition();
   const guarded = useWireGuard();
+  const failed = useFailureToast();
   const [day, setDay] = useState<string | null>(company.nextFollowUp);
+  const saving = useRef(false);
 
-  const followUpLabelId = `${ids}-follow-up`;
+  const followUpLabelId = `company-follow-up-${company.id}`;
   const today = todayRiyadh();
   const overdue = day !== null && day < today;
   const dueToday = day === today;
 
   // Row colour is how long something has waited (DESIGN §1, §6): late is red,
-  // due today is amber, otherwise faint. The word beside it carries the same
-  // meaning for anyone who does not see colour.
+  // due today is amber, otherwise faint. The words are beside the avatar.
   const tone = followUpClass(day, today);
 
+  /*
+   * The ring the row in the list carries, and the word for it beside the name
+   * (DESIGN §1b). Amber for a lead nobody has said he has — it wins over a late
+   * date, because a customer nobody has taken yet cannot be late to anybody —
+   * and red for a follow-up that is late. Both words stay when both are true.
+   */
+  const ring: StateTone | undefined = company.leadWaiting ? "wait" : overdue ? "bad" : undefined;
+
   function save(next: string | null) {
+    // Busy is not disabled (DESIGN §8): the picker stays where it is and a
+    // second choice while the first is out does nothing.
+    if (saving.current) return;
+    saving.current = true;
     const previous = day;
     setDay(next);
     startTransition(async () => {
       const result = await guarded(setCompanyFollowUpAction)(company.id, next);
+      saving.current = false;
       if (!result.ok) {
         setDay(previous);
-        toast.error(result.error);
+        failed(result, () => save(next));
         return;
       }
       // Cleared is only cleared if nothing else drives the row (D94).
@@ -198,6 +303,48 @@ export function CompanyHeader({
     });
   }
 
+  /*
+   * One menu for everything rarer than a report and a project (P13-G6, the row
+   * menu S12.9 moved into the kit). Edit, then the two facts about belonging —
+   * Sharing and Hand over, side by side because a reader comparing them is
+   * comparing the right pair: one moves the customer and the other does not
+   * (D147). The act that takes something away is last, behind its divider, in
+   * the tint: Archive for its rep, Take myself off for somebody put on it. Each
+   * item is there exactly when the action behind it would accept the press, from
+   * the same predicates the drawer was already asking.
+   */
+  const [act, setAct] = useState<Act | null>(null);
+  const remember = useOpener(act !== null);
+  const choose = (next: Act) => (opener: HTMLElement | null) => {
+    remember(opener);
+    setAct(next);
+  };
+  const closeTo = (open: boolean) => {
+    if (!open) setAct(null);
+  };
+
+  const onIt = sharers.some((person) => person.id === me);
+  const items: RowMenuItem[] = [];
+  if (mine) items.push({ label: t("common.edit"), icon: Pencil, onSelect: choose("edit") });
+  if (shareWith) {
+    items.push({ label: t("drawer.share.action"), icon: UsersRound, onSelect: choose("share") });
+  }
+  if (handOverTo) {
+    items.push({ label: t("drawer.handOver"), icon: UserRoundPlus, onSelect: choose("handOver") });
+  }
+  const end: RowMenuEnd | undefined =
+    mine && !company.archived
+      ? { label: t("drawer.archive"), icon: Archive, destructive: true, onSelect: choose("archive") }
+      : shareWith === null && onIt
+        ? {
+            label: t("drawer.share.leave"),
+            icon: UserRoundMinus,
+            destructive: true,
+            onSelect: choose("share"),
+          }
+        : undefined;
+  const menu = items.length > 0 || end !== undefined;
+
   // Context, not news. It stays a quiet line under the name — and the rep's
   // own name comes off it when he is reading his own company, because he knows.
   const meta: { label: string; value: string | null }[] = [
@@ -208,27 +355,57 @@ export function CompanyHeader({
   ];
 
   return (
-    <div className="flex flex-col gap-3 border-b border-line px-4 pt-4 pb-3">
-      <div className="flex flex-col gap-1 pe-10">
-        <SheetTitle className="text-lg leading-tight font-semibold">{company.name}</SheetTitle>
-        <SheetDescription className="sr-only">{t("drawer.aboutCompany")}</SheetDescription>
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-          {meta
-            .filter((item) => Boolean(item.value))
-            .map((item, index) => (
-              <span key={item.label} className="inline-flex items-center gap-2">
-                {index > 0 ? (
-                  <span aria-hidden="true" className="text-faint">
-                    ·
+    <div className="flex flex-col gap-4 border-b border-line p-4">
+      {/* Who: the company's own square, in its own tint, with the ring the
+          list's row carries and the word for it beside the name. */}
+      <div className="flex items-start gap-3 pe-10">
+        <Avatar id={company.id} name={company.name} kind="company" size="lg" ring={ring} />
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <SheetTitle className="text-lg leading-tight font-semibold">{company.name}</SheetTitle>
+            {company.leadWaiting ? (
+              <StateBadge tone="wait">{t("leads.notAcknowledged")}</StateBadge>
+            ) : null}
+            {overdue ? <StateBadge tone="bad">{t("common.overdue")}</StateBadge> : null}
+            {dueToday ? <StateBadge tone="wait">{t("common.dueToday")}</StateBadge> : null}
+          </div>
+          <SheetDescription className="sr-only">{t("drawer.aboutCompany")}</SheetDescription>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            {meta
+              .filter((item) => Boolean(item.value))
+              .map((item, index) => (
+                <span key={item.label} className="inline-flex items-center gap-2">
+                  {index > 0 ? (
+                    <span aria-hidden="true" className="text-faint">
+                      ·
+                    </span>
+                  ) : null}
+                  <span>
+                    <span className="sr-only">{item.label}: </span>
+                    <bdi>{item.value}</bdi>
                   </span>
-                ) : null}
-                <span>
-                  <span className="sr-only">{item.label}: </span>
-                  {item.value}
                 </span>
-              </span>
-            ))}
-        </p>
+              ))}
+          </p>
+          {/* Who else is on it: a fact about belonging, read by everybody who
+              can open the drawer (D147). The controls that change it are in
+              the menu below. */}
+          {sharers.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {t("drawer.share.onCompany")}:{" "}
+              {sharers.map((person, index) => (
+                <span key={person.id}>
+                  {index > 0 ? (
+                    <span aria-hidden="true" className="text-faint">
+                      {" · "}
+                    </span>
+                  ) : null}
+                  <bdi>{person.name}</bdi>
+                </span>
+              ))}
+            </p>
+          ) : null}
+        </div>
       </div>
 
       {/* How this customer is GOING, before anything about what he is
@@ -264,23 +441,15 @@ export function CompanyHeader({
         ]}
       />
 
-      {/* The follow-up date, at the top, with its picker (SPEC §3 / D9). */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-line bg-surface-2 px-3 py-2">
+      {/* The follow-up date, at the top, with its picker (SPEC §3 / D9). For
+          its rep the picker IS the date — one control that says the day and
+          changes it, where there were a date and a second button that said
+          it again; everybody else reads it as a sentence. */}
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line bg-surface-2 px-3 py-2">
         <CalendarClock aria-hidden="true" className="size-4 text-muted-foreground" />
         <span id={followUpLabelId} className="text-sm font-medium">
           {t("common.nextFollowUp")}
         </span>
-        {day ? (
-          <DayText day={day} locale={locale} className={cn("text-sm", tone)} />
-        ) : (
-          <span className={cn("text-sm", tone)}>{t("drawer.noFollowUp")}</span>
-        )}
-        {overdue ? (
-          <span className={cn("text-xs font-medium", TONE_TEXT.bad)}>{t("common.overdue")}</span>
-        ) : null}
-        {dueToday ? (
-          <span className={cn("text-xs font-medium", TONE_TEXT.wait)}>{t("common.dueToday")}</span>
-        ) : null}
         {mine ? (
           <div
             role="group"
@@ -288,9 +457,17 @@ export function CompanyHeader({
             aria-busy={pending || undefined}
             className="ms-auto"
           >
-            <DatePicker value={day} onChange={save} />
+            <DatePicker
+              value={day}
+              onChange={save}
+              className={cn("w-auto", day ? tone : null)}
+            />
           </div>
-        ) : null}
+        ) : day ? (
+          <DayText day={day} locale={locale} className={cn("ms-auto text-sm", tone)} />
+        ) : (
+          <span className="ms-auto text-sm text-muted-foreground">{t("drawer.noFollowUp")}</span>
+        )}
         {/* The list colours the row by the earlier of the company's date and
             its projects' (least(...) in followups.ts). When a project's is the
             earlier, say so here, or the picker above looks like it lies (D94). */}
@@ -304,116 +481,99 @@ export function CompanyHeader({
         ) : null}
       </div>
 
-      {/* Whose company this is, and who else is on it — the two facts about
-          belonging, with the two controls that change them beside them rather
-          than in the row of work below (DESIGN §5). Sharing sits next to Hand
-          over because a reader comparing the two is comparing exactly the
-          right pair: one moves the customer, the other does not (D147). */}
-      {sharers.length > 0 || shareWith || handOverTo ? (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          {sharers.length > 0 ? (
-            <p className="min-w-0 text-xs text-muted-foreground">
-              {t("drawer.share.onCompany")}:{" "}
-              {sharers.map((person, index) => (
-                <span key={person.id}>
-                  {index > 0 ? (
-                    <span aria-hidden="true" className="text-faint">
-                      {" · "}
-                    </span>
-                  ) : null}
-                  <bdi>{person.name}</bdi>
-                </span>
-              ))}
-            </p>
-          ) : null}
-          {/* It draws nothing at all for a reader who neither grants a share
-              nor is on one himself, so the condition lives in one place. */}
-          <ShareCompanyDialog
-            companyId={company.id}
-            companyName={company.name}
-            sharers={sharers}
-            people={shareWith}
-            me={me}
-          />
-          {handOverTo ? (
-            <HandOverDialog
+      {reports || mine || menu ? (
+        <div
+          role="group"
+          aria-label={t("drawer.companyActions")}
+          className="flex items-center gap-2"
+        >
+          {/* One primary action, and the one brand gradient with it (DESIGN §1):
+              a report on this customer, the popup opening on him (SPEC §3 P13). */}
+          {reports ? (
+            <ReportButton
               companyId={company.id}
               companyName={company.name}
-              people={handOverTo}
+              variant="brand"
+              icon
+            >
+              {t("common.addReport")}
+            </ReportButton>
+          ) : null}
+
+          {/* Secondary, beside it. Named in the title: on a phone the sheet
+              covers the drawer, and "Add project" alone says nothing about
+              where (P11H). Requesting a quotation is not here — it needs a
+              project and lines, so it belongs on the Quotations tab. */}
+          {mine ? (
+            <NewProjectDialog
+              companyId={company.id}
+              companyName={company.name}
+              trigger={
+                <Button variant="outline">
+                  <Plus aria-hidden="true" />
+                  {t("drawer.newProject")}
+                </Button>
+              }
             />
           ) : null}
+
+          {menu ? (
+            <span className="ms-auto flex">
+              <RowMenu
+                label={t("common.moreFor", { name: company.name })}
+                items={items}
+                end={end}
+                size="head"
+              />
+            </span>
+          ) : null}
         </div>
-      ) : null}
-
-      {mine || reports ? (
-      <div
-        role="group"
-        aria-label={t("drawer.companyActions")}
-        className="flex flex-wrap items-center gap-2"
-      >
-        {/* One primary action, and the one brand gradient with it (DESIGN §1):
-            a report on this customer, the popup opening on him (SPEC §3 P13). */}
-        {reports ? (
-          <ReportButton
-            companyId={company.id}
-            companyName={company.name}
-            variant="brand"
-            icon
-          >
-            {t("common.addReport")}
-          </ReportButton>
-        ) : null}
-
-        {mine ? (
-        <>
-        {/* Named in the title: on a phone the sheet covers the drawer, and
-            "Add project" alone says nothing about where (P11H). */}
-        <NewProjectDialog
-          companyId={company.id}
-          companyName={company.name}
-          trigger={
-            <Button variant="outline">
-              <Plus aria-hidden="true" />
-              {t("drawer.newProject")}
-            </Button>
-          }
-        />
-
-        {/* Requesting a quotation is NOT here. It needs a project and a set of
-            lines, so it belongs beside the quotations it makes — the Quotations
-            tab below, and the project drawer. Four buttons is already the most
-            this row can carry on a phone. */}
-
-        <EditCompanyDialog
-          company={company.editable}
-          trigger={
-            <Button variant="ghost">
-              <Pencil aria-hidden="true" />
-              {t("common.edit")}
-            </Button>
-          }
-        />
-
-        {/* Last, and quiet: archiving is rare, and it is the one action here
-            that takes the company off the floor (SPEC §3 — archive, never
-            delete). */}
-        <ArchiveCompanyDialog companyId={company.id} companyName={company.name} />
-        </>
-        ) : null}
-      </div>
       ) : null}
 
       {/* What he wrote about this customer, read back to him (D136). Below the
           actions, because the primary action is at the top of a drawer
           (DESIGN §2) and a note of four thousand characters would otherwise
-          push Add report off an 88dvh sheet; and clamped for the same reason, with
-          Edit — already in the row above — as the way to the whole of it. */}
+          push Add report off an 88dvh sheet; and clamped for the same reason,
+          with Edit in the menu above as the way to the whole of it. */}
       <NoteBlock
         title={t("common.notes")}
         text={company.notes}
         slot="company-notes"
         className="line-clamp-4"
       />
+
+      {/* The dialogs the menu opens, mounted once and told which (DESIGN §5). */}
+      {mine ? (
+        <EditCompanyDialog company={company.editable} open={act === "edit"} onOpenChange={closeTo} />
+      ) : null}
+      {shareWith || onIt ? (
+        <ShareCompanyDialog
+          companyId={company.id}
+          companyName={company.name}
+          sharers={sharers}
+          people={shareWith}
+          me={me}
+          open={act === "share"}
+          onOpenChange={closeTo}
+        />
+      ) : null}
+      {handOverTo ? (
+        <HandOverDialog
+          companyId={company.id}
+          companyName={company.name}
+          people={handOverTo}
+          open={act === "handOver"}
+          onOpenChange={closeTo}
+        />
+      ) : null}
+      {mine && !company.archived ? (
+        <ArchiveCompanyDialog
+          companyId={company.id}
+          companyName={company.name}
+          open={act === "archive"}
+          onOpenChange={closeTo}
+        />
+      ) : null}
     </div>
   );
 }

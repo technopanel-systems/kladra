@@ -107,7 +107,7 @@ export function UsersPanel({
     const name = personNameFrom(user, locale);
     return (
       <RowMenu
-        label={t("admin.moreFor", { name })}
+        label={t("common.moreFor", { name })}
         items={[
           { label: t("common.edit"), icon: Pencil, onSelect: choose(user, "edit") },
           { label: t("admin.resetPassword"), icon: KeyRound, onSelect: choose(user, "password") },

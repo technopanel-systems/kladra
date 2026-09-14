@@ -290,8 +290,9 @@ test("a company filed as marketing's stays editable by the rep it is handed to",
 
     await drawer
       .getByRole("group", { name: t("drawer.companyActions") })
-      .getByRole("button", { name: t("common.edit") })
+      .getByRole("button", { name: t("common.moreFor", { name: company.name }) })
       .click();
+    await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
     const form = page.getByRole("dialog", { name: t("forms.editCompany") });
     await expect(form).toBeVisible(COLD);
 

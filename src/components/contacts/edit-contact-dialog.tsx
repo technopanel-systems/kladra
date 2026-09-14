@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef, useState, type ReactNode } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { FormLookups } from "@/actions/forms";
@@ -14,7 +14,6 @@ import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useFormLookups } from "@/components/ui-ext/form-lookups";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/types";
 
@@ -48,24 +47,29 @@ function draftOf(contact: ContactEditable): ContactDraft {
 export function EditContactDialog({
   contact,
   country,
-  trigger,
+  open,
+  onOpenChange,
+  onSaved,
 }: {
   contact: ContactEditable;
   /** ISO code of the company's country, for reading the phone (D89). */
   country: string;
-  trigger?: ReactNode;
+  /** The contact's menu opens it, so the list holds whether it is open (P13-G6). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** After the save lands, so the list can mark the row that changed. */
+  onSaved?: (contactId: string) => void;
 }) {
   const t = useTranslations();
-  const [open, setOpen] = useState(false);
   const { lookups, failed } = useFormLookups(open);
 
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       title={t("forms.editContact")}
+      context={contact.name}
       description={t("forms.editContactHint")}
-      trigger={trigger ?? <Button variant="outline">{t("common.edit")}</Button>}
     >
       {failed ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
@@ -77,8 +81,11 @@ export function EditContactDialog({
           contact={contact}
           country={country}
           lookups={lookups}
-          onSaved={() => setOpen(false)}
-          onCancel={() => setOpen(false)}
+          onSaved={() => {
+            onOpenChange(false);
+            onSaved?.(contact.id);
+          }}
+          onCancel={() => onOpenChange(false)}
         />
       ) : (
         <DialogFormSkeleton rows={4} />

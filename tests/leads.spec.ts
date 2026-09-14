@@ -595,7 +595,9 @@ test("the manager handing an unanswered lead over from the drawer is the same mo
       await page.goto(`/${locale}/companies?open=${lead.id}`);
       const drawer = page.getByRole("dialog").first();
       await expect(drawer).toBeVisible(COLD);
-      await drawer.getByRole("button", { name: t("drawer.handOver") }).click();
+      // Hand over is in the drawer's menu since P13-G6 S12.2.
+      await drawer.getByRole("button", { name: t("common.moreFor", { name: lead.name }) }).click();
+      await page.getByRole("menuitem", { name: t("drawer.handOver"), exact: true }).click();
 
       const dialog = page.getByRole("dialog", { name: t("drawer.handOverTitle", { name: lead.name }) });
       await expect(dialog).toBeVisible();

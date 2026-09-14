@@ -184,10 +184,10 @@ function CompanyForm({
     duplicate === null ? null : (
       <div
         role="status"
-        className={cn("flex items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs", TONE_CLASS.wait)}
+        className={cn("flex items-start gap-2 rounded-lg px-3 py-2 text-xs", TONE_CLASS.wait)}
       >
-        <Info className="mt-px size-3.5 shrink-0" />
-        <span className="flex min-w-0 flex-col gap-0.5">
+        <Info aria-hidden="true" className="mt-px size-4 shrink-0" />
+        <span className="flex min-w-0 flex-col gap-1">
           {duplicate.archived ? (
             <span>
               {t("forms.duplicateArchived", {
@@ -271,7 +271,7 @@ function CompanyForm({
         />
 
         <div className="flex flex-col gap-4 border-t border-line pt-4">
-          <div className="flex flex-col gap-0.5">
+          <div className="flex flex-col gap-1">
             <h3 className="text-sm font-medium">{t("forms.contactHeading")}</h3>
             <p className="text-xs text-muted-foreground">{t("forms.contactHeadingHint")}</p>
           </div>

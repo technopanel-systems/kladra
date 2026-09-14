@@ -25,7 +25,6 @@
   "openCompany": "فتح {name}",
   "drawerDescription": "مشروع لدى {company}",
   "projectActions": "إجراءات المشروع",
-  "moreFor": "خيارات أخرى: {name}",
   "noFollowUp": "لا يوجد موعد متابعة",
   "followUpSet": "تم تحديد المتابعة في {date}.",
   "followUpCleared": "تم مسح موعد المتابعة.",

@@ -25,7 +25,6 @@
   "openCompany": "Open {name}",
   "drawerDescription": "Project at {company}",
   "projectActions": "Project actions",
-  "moreFor": "More for {name}",
   "noFollowUp": "No follow-up set",
   "followUpSet": "Follow-up set for {date}.",
   "followUpCleared": "Follow-up cleared.",

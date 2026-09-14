@@ -1,10 +1,8 @@
 "use client";
 
-import { Archive } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { archiveContactAction } from "@/actions/contacts";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
 
 /**
@@ -12,31 +10,30 @@ import { useRouter } from "@/i18n/navigation";
  * duplicate check and stays on every activity they were named in, so a visit
  * logged two years ago still says who the rep met.
  *
- * Quiet, and last in the row: a rep archives a contact perhaps twice a year,
- * when someone leaves the customer.
+ * Last in the contact's menu, behind its divider, in the tint (P13-G6): a rep
+ * archives a contact perhaps twice a year, when someone leaves the customer,
+ * and it sat as a button beside Edit on every card. The list hosts it, so it
+ * has no trigger of its own.
  */
 export function ArchiveContactDialog({
   contactId,
   contactName,
+  open,
+  onOpenChange,
 }: {
   contactId: string;
   contactName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
 
   return (
     <ConfirmDialog
-      trigger={
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <Archive aria-hidden="true" className="size-3.5" />
-          {t("drawer.archive")}
-        </Button>
-      }
+      open={open}
+      onOpenChange={onOpenChange}
+      destructive
       title={t("drawer.archiveContactTitle", { name: contactName })}
       description={t("drawer.archiveContactWarning")}
       confirmLabel={t("drawer.archive")}

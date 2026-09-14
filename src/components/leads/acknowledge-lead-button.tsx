@@ -1,10 +1,11 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useTransition } from "react";
+import { useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { acknowledgeLeadAction } from "@/actions/companies";
+import { useFailureToast } from "@/components/companies/failure-toast";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
@@ -21,6 +22,11 @@ import { useRouter } from "@/i18n/navigation";
  * sentence the action asks (`mayWrite`), so the button is never a door the
  * server would shut (DESIGN §5). Pressing it takes the notice off his bell,
  * takes the row off his day, and tells the person who filed it.
+ *
+ * Busy is not disabled (DESIGN §8, S12.1): while the write is out the button
+ * keeps its place and its focus, says so in words and to a screen reader, and a
+ * second press does nothing. A refusal stays on screen until it is closed, with
+ * Try again when the server was not reached.
  *
  * The drawer is server rendered, so one refresh redraws the band, the bell and
  * the list behind it from the queries that drew them (SPEC §3: no refresh
@@ -42,13 +48,18 @@ export function AcknowledgeLeadButton({
   const t = useTranslations();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const working = useRef(false);
   const guarded = useWireGuard();
+  const failed = useFailureToast();
 
   function acknowledge() {
+    if (working.current) return;
+    working.current = true;
     startTransition(async () => {
       const result = await guarded(acknowledgeLeadAction)(companyId);
+      working.current = false;
       if (!result.ok) {
-        toast.error(result.error);
+        failed(result, acknowledge);
         return;
       }
       toast.success(t("leads.acknowledgedToast"));
@@ -57,9 +68,15 @@ export function AcknowledgeLeadButton({
   }
 
   return (
-    <Button type="button" size="sm" variant="outline" disabled={pending} onClick={acknowledge}>
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      aria-busy={pending || undefined}
+      onClick={acknowledge}
+    >
       <Check aria-hidden="true" />
-      {t("leads.acknowledge")}
+      {pending ? t("common.saving") : t("leads.acknowledge")}
       {companyName ? (
         <span className="sr-only">
           {" "}

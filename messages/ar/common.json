@@ -83,6 +83,7 @@
   "close": "إغلاق",
   "markLost": "تسجيل كخاسر",
   "reason": "السبب",
+  "moreFor": "خيارات أخرى: {name}",
   "markAllRead": "تمييز الكل كمقروء",
   "today": "اليوم",
   "workingDays": "{count, plural, zero {لا أيام عمل} one {يوم عمل واحد} two {يوما عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}",

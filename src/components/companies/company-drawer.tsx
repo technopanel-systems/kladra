@@ -1,23 +1,17 @@
-import { ChevronRight, FileText, Pencil, Plus, Star } from "lucide-react";
+import { ChevronRight, FileText, Plus } from "lucide-react";
 import { optionValue } from "@/lib/picker-option";
 import { Suspense } from "react";
-import type { ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList, type ActivityEntry } from "@/components/activities/activity-list";
 import { CompanyDrawerFrame, CompanyHeader } from "@/components/companies/company-header";
 import { AcknowledgeLeadButton } from "@/components/leads/acknowledge-lead-button";
-import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
-import { ArchiveContactDialog } from "@/components/contacts/archive-contact-dialog";
-import { EditContactDialog } from "@/components/contacts/edit-contact-dialog";
-import { MakeMainButton } from "@/components/contacts/make-main-button";
+import { ContactList } from "@/components/contacts/contact-list";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Empty } from "@/components/ui-ext/empty";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Prose } from "@/components/ui-ext/prose";
-import { PhoneLinks } from "@/components/ui-ext/phone-links";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,9 +97,11 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
 
   if (!company) {
     return (
-      <div className="flex flex-col gap-2 p-4">
-        <SheetTitle className="text-base">{t("common.nothingYet")}</SheetTitle>
-        <SheetDescription>{t("drawer.companyGone")}</SheetDescription>
+      <div data-slot="company-gone" className="flex flex-col gap-2 p-4 pe-12">
+        {/* What happened, then what is left to do — not "Nothing here yet",
+            which promises something is coming. */}
+        <SheetTitle className="text-base">{t("drawer.companyGone")}</SheetTitle>
+        <SheetDescription>{t("drawer.companyGoneMeans")}</SheetDescription>
       </div>
     );
   }
@@ -200,12 +196,6 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
       label: row.name,
     }));
 
-  const addContactTrigger = (
-    <Button variant="outline">
-      <Plus aria-hidden="true" />
-      {t("drawer.addContact")}
-    </Button>
-  );
   const newProjectTrigger = (
     <Button variant="outline">
       <Plus aria-hidden="true" />
@@ -253,6 +243,8 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             cityText: company.cityText,
             notes: company.notes,
           },
+          leadWaiting: company.lead !== null && !company.lead.acknowledged,
+          archived: Boolean(company.archivedAt),
         }}
         standing={company.standing}
         mine={mine}
@@ -281,7 +273,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
            the reader was on. The slot is how a walk names it (P12-8). */
         <div
           data-slot="folded-band"
-          className="mx-4 mt-3 flex flex-col gap-1 rounded-lg bg-surface-2 px-3 py-2.5 text-xs"
+          className="mx-4 mt-4 flex flex-col gap-1 rounded-xl bg-surface-2 p-3 text-xs"
         >
           <span className="font-medium">
             {t("duplicates.foldedInto", {
@@ -312,33 +304,40 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         keeping its origin" (§3 P13): who filed it, the source it was filed
         under, and what the customer originally asked for, which is the one
         thing about him nobody can reconstruct later.
+
+        One layout in both languages (P13-G6): the sentence first, then the
+        button — at the inline end on a desk, under the words on a phone. It
+        was a wrapping row, so the English origin line, longer than the Arabic,
+        pushed Acknowledge ABOVE the customer's words while the Arabic kept it
+        beside them. "Not acknowledged" is not repeated here: it is the word
+        beside the drawer's avatar, which wears the amber ring for it.
       */}
       {company.lead ? (
         <div
           data-slot="lead-origin"
           className={cn(
-            "mx-4 mt-3 flex flex-col gap-2 rounded-lg px-3 py-2.5",
+            "mx-4 mt-4 flex flex-col gap-2 rounded-xl p-3 md:flex-row md:items-center md:gap-4",
             company.lead.acknowledged ? "bg-surface-2" : TONE_CLASS.wait,
           )}
         >
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="text-xs font-medium">
               {t("leads.origin", { name: company.lead.fromName, source: company.leadSourceName })}
             </span>
-            {company.lead.acknowledged ? null : company.lead.mine ? (
-              <AcknowledgeLeadButton companyId={company.id} />
-            ) : (
-              // A manager reading somebody else's lead is told the state and
-              // offered nothing: the answer is the holder's to give.
-              <span className="text-xs font-medium">{t("leads.notAcknowledged")}</span>
-            )}
+            {/* The customer's own words, in whichever language he used. */}
+            <Prose line text={company.lead.query} className="text-xs" />
           </div>
-          {/* The customer's own words, in whichever language he used. */}
-          <Prose line text={company.lead.query} className="text-xs" />
+          {/* Only its holder answers it; anybody else is told the state beside
+              the avatar and offered nothing (D157). */}
+          {!company.lead.acknowledged && company.lead.mine ? (
+            <div className="flex shrink-0 justify-end">
+              <AcknowledgeLeadButton companyId={company.id} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      <Tabs defaultValue="activity" className="gap-3 px-4 py-3">
+      <Tabs defaultValue="activity" className="gap-3 px-4 py-4">
         <TabsList className="w-full">
           <TabsTrigger value="activity">{t("drawer.activity")}</TabsTrigger>
           <TabsTrigger value="contacts">{t("common.contacts")}</TabsTrigger>
@@ -369,127 +368,33 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           />
         </TabsContent>
 
-        <TabsContent value="contacts" className="flex flex-col gap-3">
-          {/* Not `mine`: two reps on one customer have each met people there,
-              and the same person on both lists is not a duplicate (SPEC §3).
-              This is the one write a company share carries. */}
-          {keepsContacts ? (
-            <div className="flex">
-              <AddContactDialog
-                companyId={company.id}
-                country={company.countryCode}
-                trigger={addContactTrigger}
-              />
-            </div>
-          ) : null}
-          {contacts.length === 0 ? (
-            <EmptyPanel sentence={t("drawer.emptyContacts")} />
-          ) : (
-            <>
-              <ul className="flex flex-col gap-2">
-                {contacts.map((row) => {
-                  // A contact belongs to whoever added him, and only he edits,
-                  // archives or makes him the main one — the same answer
-                  // `assertContactMine` gives, so a shared company offers
-                  // nothing on the other rep's rows that the action would
-                  // refuse (D147, DESIGN §5).
-                  const myContact = mayWrite(user, row.repId);
-                  return (
-                  <li key={row.id} className="card-face flex flex-col gap-1.5 p-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">
-                        <bdi>{row.name}</bdi>
-                      </span>
-                      {/* Whose person this is, and only where the answer is not
-                          obvious. Two reps on one customer each keep their own
-                          contacts (§3, D147) and a fold puts both lists on one
-                          record — so the same buyer, with the same number, is
-                          two rows here, and without a name on them the drawer
-                          reads as a screen showing one person twice. On a
-                          company one person keeps people on, saying it on every
-                          row would be a word that never varies. */}
-                      {manyKeepers ? (
-                        <span className="text-xs text-muted-foreground">
-                          {t("drawer.contactKeptBy", { name: row.repName })}
-                        </span>
-                      ) : null}
-                      {row.isMain ? (
-                        <Badge variant="secondary" className="gap-1">
-                          <Star aria-hidden="true" />
-                          {t("drawer.mainContact")}
-                        </Badge>
-                      ) : myContact ? (
-                        <MakeMainButton contactId={row.id} name={row.name} />
-                      ) : null}
-                      {/* Pushed to the far edge: a rep reads the name and the
-                          number, and only occasionally comes here to change
-                          one. A manager reading the floor gets the name and the
-                          number and nothing to press (D42), and so does a rep
-                          reading the row his colleague added (D147). */}
-                      {myContact ? (
-                      <span className="ms-auto flex items-center gap-1">
-                        <EditContactDialog
-                          country={company.countryCode}
-                          contact={{
-                            id: row.id,
-                            name: row.name,
-                            phone: row.phone,
-                            position: row.position,
-                            email: row.email,
-                            notes: row.notes,
-                          }}
-                          trigger={
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                            >
-                              <Pencil aria-hidden="true" className="size-3.5" />
-                              {t("common.edit")}
-                            </Button>
-                          }
-                        />
-                        <ArchiveContactDialog contactId={row.id} contactName={row.name} />
-                      </span>
-                      ) : null}
-                    </div>
-                    {row.position ? (
-                      <span className="text-xs text-muted-foreground">
-                        <span className="sr-only">{t("common.position")}: </span>
-                        {row.position}
-                      </span>
-                    ) : null}
-                    {/* What was written about this person — which floor he
-                        sits on, when he is reachable — read back on his own
-                        card (D136). A line under the name, not a paragraph. */}
-                    {row.notes ? (
-                      <Prose
-                        line
-                        text={row.notes}
-                        slot="contact-notes"
-                        className="line-clamp-2 text-xs text-muted-foreground"
-                      />
-                    ) : null}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                      {/* A tap opens WhatsApp and the handset dials; the number
-                          itself is the link text, so it is always readable
-                          (SPEC §3, D98). */}
-                      <PhoneLinks name={row.name} phone={row.phoneNormalized} />
-                      {row.email ? (
-                        <a
-                          href={`mailto:${row.email}`}
-                          className="truncate text-muted-foreground hover:underline"
-                        >
-                          {row.email}
-                        </a>
-                      ) : null}
-                    </div>
-                  </li>
-                  );
-                })}
-              </ul>
-            </>
-          )}
+        <TabsContent value="contacts">
+          {/* Not `mine` for adding: two reps on one customer have each met
+              people there, and the same person on both lists is not a
+              duplicate (SPEC §3) — the one write a company share carries. A
+              contact belongs to whoever added him, and only he edits, archives
+              or makes him the main one: the answer `assertContactMine` gives,
+              asked per row here so a shared company offers nothing on the
+              other rep's cards that the action would refuse (D147, DESIGN §5). */}
+          <ContactList
+            companyId={company.id}
+            companyName={company.name}
+            country={company.countryCode}
+            mayAdd={keepsContacts}
+            manyKeepers={manyKeepers}
+            rows={contacts.map((row) => ({
+              id: row.id,
+              name: row.name,
+              repName: row.repName,
+              isMain: row.isMain,
+              mine: mayWrite(user, row.repId),
+              phone: row.phone,
+              phoneNormalized: row.phoneNormalized,
+              position: row.position,
+              email: row.email,
+              notes: row.notes,
+            }))}
+          />
         </TabsContent>
 
         <TabsContent value="projects" className="flex flex-col gap-3">
@@ -511,7 +416,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                   <li key={row.id}>
                     <Link
                       href={`/projects?open=${row.id}`}
-                      className="card-face flex items-center gap-3 p-3 transition-colors hover:bg-surface-2"
+                      className="card-face hover-tint flex items-center gap-3 p-3"
                     >
                       <span className="flex min-w-0 flex-1 flex-col gap-1">
                         <span className="flex flex-wrap items-center gap-2">
@@ -532,9 +437,22 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
                               "—"
                             )}
                           </span>
-                          <span>
+                          {/* The date in its waiting colour and, where it is
+                              late or due, the word that colour stands for. */}
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-2",
+                              row.followUpState === "overdue" && TONE_TEXT.bad,
+                              row.followUpState === "today" && TONE_TEXT.wait,
+                            )}
+                          >
                             <span className="sr-only">{t("common.nextFollowUp")}: </span>
                             <DayText day={row.nextFollowUp} locale={locale} />
+                            {row.followUpState === "overdue" ? (
+                              <span className="font-medium">{t("common.overdue")}</span>
+                            ) : row.followUpState === "today" ? (
+                              <span className="font-medium">{t("common.dueToday")}</span>
+                            ) : null}
                           </span>
                         </span>
                         {row.lostAt ? (
@@ -613,36 +531,47 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
  * him where he started; the second worked. Anything that opens a dialog is
  * rendered in one position, whatever the list underneath it says (D35).
  */
-function EmptyPanel({ sentence, action }: { sentence: string; action?: ReactNode }) {
-  return (
-    <Empty size="panel" action={action}>
-      {sentence}
-    </Empty>
-  );
+function EmptyPanel({ sentence }: { sentence: string }) {
+  return <Empty size="panel">{sentence}</Empty>;
 }
 
 /**
  * Never a blank panel (DESIGN §2). The sheet is already open and already has a
  * name for assistive technology while the query is still running — Radix wants
  * a title from the first frame, not the second.
+ *
+ * In the drawer's own shape (DESIGN §1b, P13-G6): the avatar's 40px square
+ * beside the name and its line, the strip of four figures, the follow-up
+ * panel, the two buttons and the menu's place at the far end, the tabs, and
+ * cards of the history's height. It stood in with a bar of 48 where the strip
+ * is 64 and three buttons in a row that now holds two, so the drawer jumped as
+ * the company arrived.
  */
 function CompanyDrawerSkeleton({ title, description }: { title: string; description: string }) {
   return (
-    <div aria-busy="true" className="flex flex-col gap-4 p-4">
+    <div role="status" aria-busy="true" data-slot="company-drawer-skeleton" className="flex flex-col">
       <SheetTitle className="sr-only">{title}</SheetTitle>
       <SheetDescription className="sr-only">{description}</SheetDescription>
-      <Skeleton className="h-6 w-2/3" />
-      <Skeleton className="h-3 w-1/2" />
-      <Skeleton className="h-12 w-full rounded-[calc(var(--radius)+4px)]" />
-      <div className="flex gap-2">
-        <Skeleton className="h-8 w-20 rounded-lg" />
-        <Skeleton className="h-8 w-28 rounded-lg" />
-        <Skeleton className="h-8 w-32 rounded-lg" />
+      <div className="flex flex-col gap-4 border-b border-line p-4">
+        <div className="flex items-start gap-3 pe-10">
+          <Skeleton className="size-10 shrink-0 rounded-md" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+        <Skeleton className="h-16 w-full rounded-xl" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-28 rounded-lg" />
+          <Skeleton className="h-8 w-28 rounded-lg" />
+          <Skeleton className="ms-auto size-6 rounded-md" />
+        </div>
       </div>
-      <Skeleton className="h-8 w-full rounded-lg" />
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 p-4">
+        <Skeleton className="h-9 w-full rounded-lg" />
         {[0, 1, 2].map((row) => (
-          <Skeleton key={row} className="h-20 w-full rounded-[calc(var(--radius)+4px)]" />
+          <Skeleton key={row} className="h-20 w-full rounded-xl" />
         ))}
       </div>
     </div>

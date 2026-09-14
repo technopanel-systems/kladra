@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useId, useState } from "react";
-import { UsersRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { shareCompanyAction, unshareCompanyAction } from "@/actions/shares";
@@ -10,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
@@ -41,6 +41,10 @@ import type { ActionResult } from "@/lib/types";
  * answer, and the names are already in the line behind it. Rendering him a
  * panel with a picker he cannot use, or a footer whose Save saves nothing,
  * would be a screen offering work that is not there (DESIGN §5).
+ *
+ * Both shapes open from the drawer's menu since P13-G6 — Sharing for whoever
+ * may grant, Take myself off for a reader who was put on it — so the drawer
+ * hosts them (`open`) and hands focus back to the menu's button.
  */
 export function ShareCompanyDialog({
   companyId,
@@ -48,6 +52,8 @@ export function ShareCompanyDialog({
   sharers,
   people,
   me,
+  open,
+  onOpenChange,
 }: {
   companyId: string;
   companyName: string;
@@ -61,17 +67,11 @@ export function ShareCompanyDialog({
   people: PickerOption[] | null;
   /** The reader, so the row that is his own knows that it is. */
   me: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-
-  const trigger = (
-    <Button type="button" variant="ghost" size="sm" className="ms-auto text-muted-foreground">
-      <UsersRound aria-hidden="true" />
-      {t("drawer.share.action")}
-    </Button>
-  );
 
   if (people === null) {
     // Neither grants nor is on it: the header says who is, in words, and there
@@ -79,7 +79,9 @@ export function ShareCompanyDialog({
     if (!sharers.some((person) => person.id === me)) return null;
     return (
       <ConfirmDialog
-        trigger={trigger}
+        open={open}
+        onOpenChange={onOpenChange}
+        destructive
         title={t("drawer.share.leaveTitle", { name: companyName })}
         description={t("drawer.share.leaveCompanyWarning")}
         confirmLabel={t("drawer.share.leave")}
@@ -93,8 +95,7 @@ export function ShareCompanyDialog({
   return (
     <ResponsiveDialog
       open={open}
-      onOpenChange={setOpen}
-      trigger={trigger}
+      onOpenChange={onOpenChange}
       title={t("drawer.share.companyTitle")}
       context={companyName}
       description={t("drawer.share.companyMeans")}
@@ -104,7 +105,7 @@ export function ShareCompanyDialog({
         companyName={companyName}
         sharers={sharers}
         people={people}
-        onClose={() => setOpen(false)}
+        onClose={() => onOpenChange(false)}
       />
     </ResponsiveDialog>
   );
@@ -166,15 +167,19 @@ function ShareCompanyBody({
           <ul className="flex flex-col gap-2">
             {sharers.map((person) => (
               <li key={person.id} className="card-face flex items-center gap-3 p-3">
-                {/* A name is a run of its own script inside a line that runs the
-                    page's way (rules/words.md). */}
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  <bdi>{person.name}</bdi>
+                <Avatar id={person.id} name={person.name} size="sm" />
+                {/* A name cut to fit is cut at its own end, not the page's
+                    (S12.1): the box takes the name's direction. */}
+                <span className="flex min-w-0 flex-1">
+                  <span dir="auto" className="min-w-0 truncate text-sm font-medium">
+                    {person.name}
+                  </span>
                 </span>
                 {/* Taking somebody off is a change to a permission, so it asks
                     first — the same confirmation archiving uses, not a second
                     one that disagrees about how big the change is. */}
                 <ConfirmDialog
+                  destructive
                   trigger={
                     <Button
                       type="button"
@@ -203,7 +208,7 @@ function ShareCompanyBody({
           </ul>
         )}
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label id={`${ids}-who`}>{t("drawer.share.companyWho")}</Label>
           <SearchableSelect
             aria-labelledby={`${ids}-who`}

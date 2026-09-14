@@ -84,7 +84,7 @@ export function CompanyFields({
 
   return (
     <>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("name")}>
           {t("common.company")}
           <span aria-hidden="true" className="text-brand">
@@ -113,7 +113,7 @@ export function CompanyFields({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor={id("category")}>{t("common.category")}</Label>
           <SearchableSelect
             id={id("category")}
@@ -135,7 +135,7 @@ export function CompanyFields({
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor={id("lead-source")}>{t("common.leadSource")}</Label>
           <SearchableSelect
             id={id("lead-source")}
@@ -159,7 +159,7 @@ export function CompanyFields({
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor={id("country")}>{t("common.country")}</Label>
           <SearchableSelect
             id={id("country")}
@@ -175,7 +175,7 @@ export function CompanyFields({
           <input type="hidden" name="countryId" value={value.countryId} />
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor={id("city")}>{t("common.city")}</Label>
           {inSaudi ? (
             <>
@@ -213,7 +213,7 @@ export function CompanyFields({
         </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <Label htmlFor={id("notes")}>{t("common.notes")}</Label>
         <Textarea
           id={id("notes")}

@@ -1,6 +1,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { addDays, todayRiyadh } from "@/lib/dates";
 import { login } from "./helpers/auth";
+import { one, personName, userId } from "./helpers/db";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 import { pickFirst } from "./helpers/pick";
 import { answerReport } from "./helpers/report";
@@ -33,6 +34,8 @@ import { answerReport } from "./helpers/report";
 /** Days are compared as strings everywhere; both are Riyadh days. */
 const today = todayRiyadh();
 const tomorrow = addDays(today, 1);
+
+const COLD = { timeout: 30_000 };
 
 function fixtures(locale: Locale) {
   return {
@@ -69,11 +72,25 @@ function dialogNamed(page: Page, name: string): Locator {
   return page.getByRole("dialog", { name });
 }
 
+/**
+ * Chooses one item from the menu named "More for {name}". A company drawer
+ * keeps Add report and Add project in sight and everything else in that one
+ * menu; a contact row keeps its Edit, Make main and Archive in its own
+ * (P13-G6 S12.2, DESIGN §6).
+ */
+async function fromMenu(page: Page, t: Translate, within: Locator, name: string, item: string): Promise<void> {
+  await within.getByRole("button", { name: t("common.moreFor", { name }) }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+}
+
 /** Every archive asks first; the question names the thing (SPEC §3, D24). */
 async function confirmArchive(page: Page, t: Translate, name: string): Promise<void> {
   const confirm = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name }) }).or(
     page.getByRole("dialog", { name: t("drawer.archiveContactTitle", { name }) }),
   );
+  // Asked once it is up: from a menu, the question opens as the menu finishes
+  // closing, and a count taken before then finds no reason box to fill.
+  await expect(confirm).toBeVisible();
   // A company asks why (S16, D87); a contact does not.
   const why = confirm.getByLabel(t("drawer.archiveReason"));
   if ((await why.count()) > 0) await why.fill("Closed down — rep.spec");
@@ -295,7 +312,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     const drawer = dialogNamed(page, fixture.company);
 
     // The company: the same fields as adding one, opened on what is there.
-    await drawer.getByRole("button", { name: t("common.edit"), exact: true }).click();
+    await fromMenu(page, t, drawer, fixture.company, t("common.edit"));
     const companyForm = dialogNamed(page, t("forms.editCompany"));
     await expect(companyForm.getByLabel(t("common.company"))).toHaveValue(fixture.company);
     await companyForm.getByLabel(t("common.company")).fill(fixture.renamed);
@@ -307,7 +324,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     const renamed = dialogNamed(page, fixture.renamed);
     await renamed.getByRole("tab", { name: t("common.contacts") }).click();
     const khalid = renamed.getByRole("listitem").filter({ hasText: fixture.contact });
-    await khalid.getByRole("button", { name: t("common.edit"), exact: true }).click();
+    await fromMenu(page, t, khalid, fixture.contact, t("common.edit"));
     const contactForm = dialogNamed(page, t("forms.editContact"));
     await expect(contactForm.getByLabel(t("common.phone"))).toHaveValue(fixture.phone);
     await pickFirst(contactForm.getByLabel(t("common.position")));
@@ -321,7 +338,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
       .click();
     const sheet = dialogNamed(page, fixture.project);
     // Edit is in the drawer's menu since P13-G6 S12.3, with Add report the one button in sight.
-    await sheet.getByRole("button", { name: t("projects.moreFor", { name: fixture.project }) }).click();
+    await sheet.getByRole("button", { name: t("common.moreFor", { name: fixture.project }) }).click();
     await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
     const projectForm = dialogNamed(page, t("projects.editProject"));
     // numeric(12,2) comes back "1200.00"; the rep typed 1200 and should see it.
@@ -352,7 +369,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     // The first contact added is main on its own (D18), so the new one is the
     // only row offering to take over.
     const second = drawer.getByRole("listitem").filter({ hasText: fixture.secondContact });
-    await second.getByRole("button", { name: t("drawer.makeMain") }).click();
+    await fromMenu(page, t, second, fixture.secondContact, t("drawer.makeMain"));
     await expect(
       page.getByText(t("drawer.mainSet", { name: fixture.secondContact })),
     ).toBeVisible();
@@ -361,7 +378,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     // Archiving the main contact hands the badge back to the oldest remaining
     // one (D18) rather than refusing — the person who left is exactly the one a
     // rep wants gone.
-    await second.getByRole("button", { name: t("drawer.archive") }).click();
+    await fromMenu(page, t, second, fixture.secondContact, t("drawer.archive"));
     await confirmArchive(page, t, fixture.secondContact);
     await expect(page.getByText(t("drawer.archived", { name: fixture.secondContact }))).toBeVisible();
 
@@ -380,7 +397,7 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     const sheet = dialogNamed(page, fixture.project);
 
     // Both are offered, in the drawer's menu, and they say different things.
-    await sheet.getByRole("button", { name: t("projects.moreFor", { name: fixture.project }) }).click();
+    await sheet.getByRole("button", { name: t("common.moreFor", { name: fixture.project }) }).click();
     await expect(page.getByRole("menuitem", { name: t("common.markLost"), exact: true })).toBeVisible();
     await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
     await confirmArchive(page, t, fixture.project);
@@ -395,10 +412,14 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
   await test.step("10 · The company is archived: off the list, still on file, and closed to new work", async () => {
     await page.goto(`/${locale}/companies?open=${companyId}`);
     const drawer = dialogNamed(page, fixture.renamed);
-    await drawer
-      .getByRole("group", { name: t("drawer.companyActions") })
-      .getByRole("button", { name: t("drawer.archive") })
-      .click();
+    await expect(drawer).toBeVisible();
+    await fromMenu(
+      page,
+      t,
+      drawer.getByRole("group", { name: t("drawer.companyActions") }),
+      fixture.renamed,
+      t("drawer.archive"),
+    );
     await confirmArchive(page, t, fixture.renamed);
     await expect(page.getByText(t("drawer.archived", { name: fixture.renamed }))).toBeVisible();
 
@@ -453,7 +474,6 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
     // He reads it: the history is the report (S27), so the log has to be there.
     await expect(drawer.getByRole("tab", { name: t("drawer.activity") })).toBeVisible();
     // And the date is a sentence rather than a picker.
-    await expect(drawer.getByRole("group", { name: t("drawer.companyActions") })).toHaveCount(0);
     await expect(drawer.getByRole("button", { name: t("common.pickDate") })).toHaveCount(0);
 
     for (const label of [
@@ -468,13 +488,22 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
       ).toHaveCount(0);
     }
 
+    // What a manager does to a customer is decide who holds it and who else
+    // reads it (D42, D147) — so the action row is one More menu, and that menu
+    // holds those two and nothing that works the customer.
+    const actions = drawer.getByRole("group", { name: t("drawer.companyActions") });
+    await expect(actions.getByRole("button")).toHaveCount(1);
+    await actions.getByRole("button").click();
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveText([
+      t("drawer.share.action"),
+      t("drawer.handOver"),
+    ]);
+    await page.keyboard.press("Escape");
+    await expect(menu).toHaveCount(0);
+
     await drawer.getByRole("tab", { name: t("common.contacts") }).click();
-    for (const label of [
-      t("drawer.addContact"),
-      t("drawer.makeMain"),
-      t("common.edit"),
-      t("drawer.archive"),
-    ]) {
+    for (const label of [t("drawer.addContact"), t("drawer.makeMain"), t("common.edit"), t("drawer.archive")]) {
       await expect(
         drawer.getByRole("button", { name: label, exact: true }),
         `${label} is offered on somebody else's contact`,
@@ -560,7 +589,66 @@ test("a stale or foreign ?open= leaves the list standing", async ({ page, locale
       // of the page aria-hidden behind it.
       expect(response?.status()).toBe(200);
       await expect(page.getByText(t("drawer.companyGone"))).toBeVisible();
+      // Said as what may have happened, not as "nothing here yet".
+      await expect(page.getByText(t("drawer.companyGoneMeans"))).toBeVisible();
     });
   }
+});
+
+/**
+ * Two of the four kinds of empty on the companies list (DESIGN §8, P13-G6
+ * S12.2). A chip that empties a search says how many companies it is holding
+ * back and hands them back, keeping the search; and a floor with nothing on it
+ * is one sentence naming whose floor it is, with no chips and no search box
+ * over nothing.
+ */
+test("an empty companies list says which empty it is", async ({ page, locale, t }) => {
+  await test.step("filtered out: how many the chip hides, and the way to show them", async () => {
+    await login(page, locale, "faisal");
+
+    // One of his companies the overdue chip does not hold: read off the list
+    // itself, so the fixture is whatever the list says today.
+    const doorsOn = async (path: string) => {
+      await page.goto(`/${locale}/companies${path}`);
+      const table = page.getByRole("table").first();
+      await expect(table).toBeVisible(COLD);
+      return table
+        .locator('a[href*="open="]')
+        .evaluateAll((links) =>
+          links.map((link) => new URL(link.getAttribute("href") ?? "", location.href).searchParams.get("open")),
+        );
+    };
+    const all = await doorsOn("");
+    const overdue = new Set(await doorsOn("?filter=overdue"));
+    const calm = all.find((id) => id && !overdue.has(id));
+    expect(calm, "every company of Faisal's is overdue, so no chip can hide one").toBeTruthy();
+    const { name } = await one<{ name: string }>("select name from companies where id = $1::uuid", [calm]);
+
+    // The same search without the chip: what the chip is hiding.
+    await page.goto(`/${locale}/companies?q=${encodeURIComponent(name)}`);
+    const matched = await page.getByRole("table").first().locator('a[href*="open="]').count();
+    expect(matched).toBeGreaterThan(0);
+
+    await page.goto(`/${locale}/companies?q=${encodeURIComponent(name)}&filter=overdue`);
+    await expect(page.getByText(t("companies.filteredOut", { count: matched }))).toBeVisible(COLD);
+    const showAll = page.getByRole("link", { name: t("companies.clearFilter") });
+    await showAll.click();
+    await expect(page).not.toHaveURL(/[?&]filter=/, COLD);
+    await expect(page).toHaveURL(/[?&]q=/);
+    await expect(
+      page.getByRole("link", { name: t("companies.openCompany", { name }) }).filter({ visible: true }).first(),
+    ).toBeVisible(COLD);
+  });
+
+  await test.step("first use: a floor with nothing on it is one sentence", async () => {
+    // The manager holds no companies in the seed: his own floor, read as one.
+    const email = "abdulrahman@technopanel.com.sa";
+    const [id, name] = await Promise.all([userId(email), personName(email, locale)]);
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/companies?rep=${id}`);
+    await expect(page.getByText(t("companies.emptyFloor", { name }))).toBeVisible(COLD);
+    await expect(page.getByRole("searchbox", { name: t("companies.searchLabel") })).toHaveCount(0);
+    await expect(page.getByRole("group", { name: t("common.followUps") })).toHaveCount(0);
+  });
 });
 

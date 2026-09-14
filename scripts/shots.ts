@@ -193,6 +193,15 @@ function dialogWithText(key: string, params?: Record<string, string | number>): 
   };
 }
 
+/** This translated text as part of a longer one: a dialog's description is
+ *  its context line and its sentence in one element, so an exact match on the
+ *  sentence alone never finds it. */
+function textWithin(key: string): Wait {
+  return async (page, T) => {
+    await page.getByText(T(key)).first().waitFor({ state: "visible" });
+  };
+}
+
 function dialogVisible(): Wait {
   return async (page) => {
     await page.getByRole("dialog").first().waitFor({ state: "visible" });
@@ -312,9 +321,75 @@ function slowNetwork(): Step {
 
 /** From the open project drawer, its menu, and one item in it. */
 function projectMenuItem(key: string): Step {
-  return chain(clickButtonByPrefix("projects.moreFor"), async (page, T) => {
+  return chain(clickButtonByPrefix("common.moreFor"), async (page, T) => {
     await page.getByRole("menuitem", { name: T(key), exact: true }).click();
   });
+}
+
+/**
+ * A skeleton kept on screen after its answer arrives (S12.2), so it can be shot.
+ *
+ * A streamed fallback stands for as long as the server's queries take — three
+ * hundred milliseconds against a seeded dev database — and nothing in the
+ * browser can hold it: a held response shows the OLD screen, and a throttled
+ * one arrives in one piece. So a watcher is set before the press: when React
+ * takes the skeleton out, a copy goes back where it was and everything after it
+ * in that container is hidden. What is shot is the skeleton's own markup, in
+ * its own place, under the real shell. The page is closed after the capture.
+ */
+function keepSkeleton(selector: string): Step {
+  return async (page) => {
+    await page.evaluate((wanted) => {
+      const style = document.createElement("style");
+      style.textContent =
+        "[data-kept-parent] > :not([data-kept-skeleton]) { display: none !important; }";
+      document.head.append(style);
+      new MutationObserver((records) => {
+        if (document.querySelector("[data-kept-skeleton]")) return;
+        for (const record of records) {
+          for (const node of record.removedNodes) {
+            if (!(node instanceof HTMLElement)) continue;
+            // The skeleton itself, or a wrapper React took out with it inside.
+            const found = node.matches(wanted) ? node : node.querySelector(wanted);
+            if (!found || !(record.target instanceof HTMLElement) || !record.target.isConnected) continue;
+            const copy = found.cloneNode(true) as HTMLElement;
+            copy.setAttribute("data-kept-skeleton", "");
+            record.target.setAttribute("data-kept-parent", "");
+            record.target.insertBefore(copy, record.target.firstChild);
+            return;
+          }
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    }, selector);
+  };
+}
+
+/** A capture that starts at the top of a long phone page, brought to the part it is about. */
+function scrollToSelector(selector: string): Step {
+  return async (page) => {
+    await page.locator(selector).first().scrollIntoViewIfNeeded();
+  };
+}
+
+/** The first row of the companies list itself — not a lead card in the band above it. */
+function openFirstCompany(): Step {
+  return async (page) => {
+    await page.locator('[data-slot="company-list"] a[href*="open="]:visible').first().click();
+  };
+}
+
+/** The company drawer's own menu, from the first row of the list behind it. */
+function openCompanyMenu(): Step {
+  return chain(openFirstCompany(), async (page, T, prefix, width) => {
+    await dialogWithText("drawer.activity")(page, T, prefix, width);
+    await page.getByRole("dialog").first().locator('[data-slot="row-menu"]').first().click();
+  });
+}
+
+function chooseMenuItem(key: string): Step {
+  return async (page, T) => {
+    await page.getByRole("menuitem", { name: T(key), exact: true }).click();
+  };
 }
 
 function typeInPalette(term: string): Step {
@@ -413,6 +488,10 @@ const MANIFEST: StateDef[] = [
     key: "companies-empty",
     identity: "rep",
     path: "/companies?q=zzzzqqq",
+    // A rep who searches is already at the box, so the answer is under his
+    // thumb; a shot that loads the address lands at the top of a long phone
+    // page, and is brought to where he would be (S12.2).
+    steps: scrollToSelector('[data-slot="company-list"]'),
     waitFor: textVisible("shell.searchNoResults", { q: "zzzzqqq" }),
   },
   {
@@ -430,6 +509,213 @@ const MANIFEST: StateDef[] = [
     path: "/companies",
     steps: clickButton("forms.addCompany"),
     waitFor: dialogWithText("forms.contactHeading"),
+  },
+  /* The companies screen's other states (S12.2): loading, filtered out, the
+     drawer's menu and every dialog it opens, a refused add, the duplicate
+     warning and a wire cut under Save. Nothing is confirmed: Save on an empty
+     form is refused before anything is read, and the cut Save never arrives. */
+  {
+    role: "rep",
+    key: "companies-loading",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(keepSkeleton('[data-slot="companies-skeleton"]'), async (page, T) => {
+      await page.getByRole("link", { name: T("common.companies"), exact: true }).first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="companies-skeleton"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "companies-filtered",
+    identity: "rep",
+    // A search his floor answers, under a chip that hides every answer.
+    path: "/companies?q=%D9%85%D8%A4%D8%B3%D8%B3%D8%A9&filter=today",
+    steps: scrollToSelector('[data-slot="company-list"]'),
+    waitFor: async (page, T) => {
+      await page
+        .locator('[data-slot="empty"]')
+        .getByRole("link", { name: T("companies.clearFilter"), exact: true })
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "company-drawer-loading",
+    identity: "rep",
+    path: "/companies",
+    // A drawer whose answer beats the first paint never draws its skeleton at
+    // all, so the next row is tried, closed first, until one does.
+    steps: chain(keepSkeleton('[data-slot="company-drawer-skeleton"]'), async (page) => {
+      const skeleton = page.locator('[data-slot="company-drawer-skeleton"]');
+      const rows = page.locator('[data-slot="company-list"] a[href*="open="]:visible');
+      for (let index = 0; index < 6; index += 1) {
+        await rows.nth(index).click();
+        const seen = await skeleton
+          .waitFor({ state: "visible", timeout: 3_000 })
+          .then(() => true)
+          .catch(() => false);
+        if (seen) return;
+        await page.keyboard.press("Escape");
+        await page.getByRole("dialog").waitFor({ state: "hidden" });
+      }
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="company-drawer-skeleton"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "company-drawer-lead",
+    identity: "rep",
+    path: "/companies",
+    steps: async (page) => {
+      await page.locator('[data-slot="leads-band"] a[data-door]').first().click();
+    },
+    waitFor: async (page) => {
+      await page.locator('[data-slot="lead-origin"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "company-drawer-gone",
+    identity: "rep",
+    path: "/companies?open=00000000-0000-4000-8000-000000000000",
+    waitFor: dialogWithText("drawer.companyGone"),
+  },
+  {
+    role: "rep",
+    key: "company-menu",
+    identity: "rep",
+    path: "/companies",
+    steps: openCompanyMenu(),
+    waitFor: menuVisible(),
+  },
+  {
+    role: "rep",
+    key: "company-edit",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(openCompanyMenu(), chooseMenuItem("common.edit")),
+    waitFor: async (page, T) => {
+      await page
+        .getByRole("dialog", { name: T("forms.editCompany"), exact: true })
+        .getByRole("combobox", { name: T("common.category"), exact: true })
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "company-share",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(openCompanyMenu(), chooseMenuItem("drawer.share.action")),
+    waitFor: textWithin("drawer.share.companyMeans"),
+  },
+  {
+    role: "rep",
+    key: "company-archive",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(openCompanyMenu(), chooseMenuItem("drawer.archive")),
+    waitFor: dialogWithText("drawer.archiveWarning"),
+  },
+  {
+    role: "rep",
+    key: "company-contacts",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(openFirstCompany(), async (page, T) => {
+      await page.getByRole("tab", { name: T("common.contacts"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.locator("[data-contact]").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "company-add-contact",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(
+      openFirstCompany(),
+      async (page, T) => {
+        await page.getByRole("tab", { name: T("common.contacts"), exact: true }).click();
+      },
+      clickButton("drawer.addContact"),
+    ),
+    waitFor: textWithin("forms.addContactHint"),
+  },
+  {
+    role: "rep",
+    key: "company-add-refused",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(clickButton("forms.addCompany"), async (page, T, prefix, width) => {
+      await dialogWithText("forms.contactHeading")(page, T, prefix, width);
+      await page.getByRole("dialog").getByRole("button", { name: T("common.save"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "company-add-duplicate",
+    identity: "rep",
+    path: "/companies",
+    // One of his own customers' numbers, typed the way a rep types it.
+    steps: chain(clickButton("forms.addCompany"), async (page, T, prefix, width) => {
+      await dialogWithText("forms.contactHeading")(page, T, prefix, width);
+      await page.getByRole("dialog").getByLabel(T("common.phone")).fill("0551204477");
+    }),
+    waitFor: async (page) => {
+      const warning = page.getByRole("dialog").locator('[data-slot="open-match"]').first();
+      await warning.waitFor({ state: "visible" });
+      await warning.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    role: "rep",
+    key: "company-add-offline",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(clickButton("forms.addCompany"), async (page, T, prefix, width) => {
+      await dialogWithText("forms.contactHeading")(page, T, prefix, width);
+      const dialog = page.getByRole("dialog");
+      await dialog.getByLabel(T("common.company")).first().fill("Wire test — never saved");
+      await cutServerActions()(page, T, prefix, width);
+      await dialog.getByRole("button", { name: T("common.save"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page
+        .getByRole("dialog")
+        .locator('[data-slot="form-footer"] [role="alert"]')
+        .waitFor({ state: "visible" });
+    },
+  },
+  // Only the manager hands a company over (SPEC §3), and his own floor is the
+  // one empty floor the seed has: first use, as the reader who adds nothing.
+  {
+    role: "manager",
+    key: "company-hand-over",
+    identity: "manager",
+    path: "/companies",
+    steps: chain(openCompanyMenu(), chooseMenuItem("drawer.handOver")),
+    waitFor: textWithin("drawer.handOverWarning"),
+  },
+  {
+    role: "manager",
+    key: "companies-first-use",
+    identity: "manager",
+    path: "/team?tab=team",
+    steps: async (page) => {
+      await page.locator("a[href*='rep=']:visible").filter({ hasText: /Abdulrahman|عبدالرحمن/ }).first().click();
+    },
+    waitFor: async (page) => {
+      await page.locator('[data-slot="empty"]').waitFor({ state: "visible" });
+    },
   },
   {
     role: "rep",
@@ -523,7 +809,7 @@ const MANIFEST: StateDef[] = [
     key: "project-menu",
     identity: "rep",
     path: "/projects?view=list",
-    steps: chain(openFirstRow("open"), clickButtonByPrefix("projects.moreFor")),
+    steps: chain(openFirstRow("open"), clickButtonByPrefix("common.moreFor")),
     waitFor: menuVisible(),
   },
   {
@@ -902,7 +1188,7 @@ const MANIFEST: StateDef[] = [
     key: "admin-users-menu",
     identity: "admin",
     path: "/admin/users",
-    steps: clickButtonByPrefix("admin.moreFor"),
+    steps: clickButtonByPrefix("common.moreFor"),
     waitFor: menuVisible(),
   },
   {
@@ -926,7 +1212,7 @@ const MANIFEST: StateDef[] = [
     key: "admin-users-deactivate",
     identity: "admin",
     path: "/admin/users",
-    steps: chain(clickButtonByPrefix("admin.moreFor"), async (page, T) => {
+    steps: chain(clickButtonByPrefix("common.moreFor"), async (page, T) => {
       await page.getByRole("menuitem", { name: T("admin.deactivate"), exact: true }).click();
     }),
     waitFor: dialogVisible(),

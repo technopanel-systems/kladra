@@ -5,6 +5,7 @@ import { CompaniesTable } from "@/components/companies/companies-table";
 import { CompanyDrawer } from "@/components/companies/company-drawer";
 import { FollowUpStrip } from "@/components/companies/follow-up-strip";
 import { LeadsBand } from "@/components/leads/leads-band";
+import { Empty } from "@/components/ui-ext/empty";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
@@ -12,11 +13,15 @@ import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
 import { PersonStrip } from "@/components/team/person-strip";
 import { requireUser, seesAll } from "@/lib/authz";
-import { addsCompanies, mayWrite, ownsCompanies, sells } from "@/lib/floor";
+import { addsCompanies, filesLeads, mayWrite, ownsCompanies, sells } from "@/lib/floor";
 import { countCompanies, listCompanies } from "@/lib/companies";
 import { LIST_LIMIT } from "@/lib/list-size";
-import { todayRiyadh } from "@/lib/dates";
-import { followUpCounts, followUpCountsForRep, parseFollowUpFilter } from "@/lib/followups";
+import {
+  followUpCounts,
+  followUpCountsForRep,
+  parseFollowUpFilter,
+  type FollowUpFilter,
+} from "@/lib/followups";
 import { personStanding } from "@/lib/standing";
 import { repMonth } from "@/lib/team";
 import { db } from "@/db";
@@ -37,11 +42,13 @@ import type { Role } from "@/lib/types";
  * Narrowing happens in SQL, never over a fetched page: the strip's counts and
  * the rows under them come from the one follow-up definition in
  * `@/lib/followups`, which is what makes "2 overdue" and the two rows it opens
- * the same two (rules/data.md).
+ * the same two (rules/data.md). The row's colour is that definition too — the
+ * list hands the table each row's follow-up state rather than a `today` for
+ * the browser to compare against.
  *
- * `today` is computed once, on the server, in Riyadh, and handed down. A row
- * colour derived in the browser would be the visitor's day, and would flip at
- * hydration on a laptop set to another timezone.
+ * Two rhythms (DESIGN §1b): 24 between the cards of the page — the month, the
+ * standing, the list — and 16 inside the list, between the chips, the search
+ * and the rows they narrow, which belong together.
  */
 
 type Search = { q?: string; filter?: string; open?: string; rep?: string };
@@ -111,6 +118,17 @@ export default async function CompaniesPage({
   const total = rows.length === LIST_LIMIT ? await countCompanies(narrowing) : rows.length;
 
   /*
+   * An empty list under a chip is a list the chip emptied — or a floor with
+   * nothing on it. Only the first has companies to hide, and a sentence that
+   * says "nothing matches" over twelve customers a click away is the dead end
+   * the four kinds of empty exist to avoid (DESIGN §8). So the same narrowing,
+   * without the chip, counted in SQL: how many that chip is holding back.
+   */
+  const hidden =
+    rows.length === 0 && filter ? await countCompanies({ ...narrowing, filter: undefined }) : 0;
+  const firstUse = rows.length === 0 && !q && !filter;
+
+  /*
    * Whose floor this is, and whether that person quotes. Everybody who owns
    * companies sells since SPEC §3 P13 made marketing a rep (D168); the question
    * is still asked, because a floor whose holder raises nothing would show two
@@ -130,28 +148,28 @@ export default async function CompaniesPage({
     contactPhone: row.mainContactPhone,
     lastActivityOn: row.lastActivityOn,
     nextFollowUp: row.nextFollowUp,
+    followUpState: row.followUpState,
   }));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">
           {viewedName ? t("team.companiesOf", { name: viewedName }) : t("common.companies")}
         </h1>
         {mayAdd ? <AddCompanyDialog /> : null}
+        {/* The way back sits where the title's action would: a manager reading
+            one rep's floor adds nothing here, and came from the team. */}
+        {viewedName ? (
+          <Button asChild variant="outline" size="sm">
+            <Link href="/team">{t("team.backToTeam")}</Link>
+          </Button>
+        ) : null}
       </div>
 
       {/* The leads given to him and not yet acknowledged, apart from his own
           companies and above them (SPEC §3 P13) — reads its own rows. */}
       <LeadsBand rep={repId} />
-
-      {viewedName ? (
-        <div className="flex">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/team">{t("team.backToTeam")}</Link>
-          </Button>
-        </div>
-      ) : null}
 
       {month ? (
         /* A manager who drills into a rep's floor used to get the rep's bare
@@ -171,30 +189,50 @@ export default async function CompaniesPage({
           still in play and what has stopped on the way. */}
       {standing ? <PersonStrip standing={standing} /> : null}
 
-      <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} rep={repId} />
+      <div data-slot="company-list" className="flex flex-col gap-4">
+        {/* A floor with nothing on it has nothing to narrow: no chips saying
+            "nothing is due" and no box to search it, only the one sentence. */}
+        {firstUse ? null : (
+          <>
+            <FollowUpStrip counts={counts} filter={filter ?? null} q={q} open={open} rep={repId} />
+            <ListSearch
+              q={q}
+              keep={{ filter: filter ?? null, open, rep: repId }}
+              label={t("companies.searchLabel")}
+              placeholder={t("companies.searchPlaceholder")}
+              clearLabel={t("companies.clearSearch")}
+            />
+          </>
+        )}
 
-      <ListSearch
-        q={q}
-        keep={{ filter: filter ?? null, open, rep: repId }}
-        label={t("companies.searchLabel")}
-        placeholder={t("companies.searchPlaceholder")}
-        clearLabel={t("companies.clearSearch")}
-      />
+        {tableRows.length === 0 ? (
+          <EmptyList
+            q={q}
+            filter={filter ?? null}
+            hidden={hidden}
+            first={
+              mayAdd
+                ? t("shell.emptyCompanies")
+                : viewedName
+                  ? t("companies.emptyFloor", { name: viewedName })
+                  : filesLeads(user.role)
+                    ? t("companies.emptyLeads")
+                    : t("common.nothingYet")
+            }
+            rep={repId}
+          />
+        ) : (
+          <CompaniesTable
+            rows={tableRows}
+            q={q}
+            filter={filter ?? null}
+            openId={open}
+            rep={repId}
+          />
+        )}
 
-      {tableRows.length === 0 ? (
-        <EmptyList q={q} filtered={filter !== undefined} mayAdd={mayAdd} rep={repId} />
-      ) : (
-        <CompaniesTable
-          rows={tableRows}
-          q={q}
-          filter={filter ?? null}
-          openId={open}
-          rep={repId}
-          today={todayRiyadh()}
-        />
-      )}
-
-      <ListTail shown={rows.length} total={total} />
+        <ListTail shown={rows.length} total={total} />
+      </div>
 
       {/* Keyed by the company so switching rows renders a fresh drawer rather
           than animating one company's header into another's. */}
@@ -206,79 +244,74 @@ export default async function CompaniesPage({
 }
 
 /**
- * One sentence and its primary action, every time (SPEC §3). Which sentence
- * depends on WHY the list is empty: a search that matched nothing, a filter
- * that matched nothing, or a rep on his first day. Offering "Add company" to
- * someone whose search simply missed would be answering a question he did not
- * ask.
+ * Nothing in the list, and which of the four nothings it is (DESIGN §8, D127).
+ *
+ * - **Filtered out**: a chip is holding companies back. It says how many, and
+ *   the way out keeps the search and drops the chip.
+ * - **No results**: the search matched nothing at all. The way out clears the
+ *   search and keeps the chip.
+ * - **First use**: the floor is empty. One sentence, because where the work
+ *   starts is already on the screen — Add company in the title row, whose
+ *   second copy here would be a second brand button (D31, D35) — or, for a
+ *   reader who adds nothing here, whose floor it is.
+ * - **Could not load** is not an empty list: the query threw, and the screen's
+ *   own card says so (`error.tsx`).
  */
 async function EmptyList({
   q,
-  filtered,
-  mayAdd,
+  filter,
+  hidden,
+  first,
   rep,
 }: {
   q: string;
-  filtered: boolean;
-  mayAdd: boolean;
+  filter: FollowUpFilter | null;
+  /** How many companies the chip is holding back, counted without it. */
+  hidden: number;
+  /** The first-use sentence, already chosen for this reader. */
+  first: string;
   /** Whose floor a manager is reading (S8); the way back keeps him on it (P11G). */
   rep: string | null;
 }) {
   const t = await getTranslations();
-  // Built the way the strip, the search and the table build theirs.
-  const params = new URLSearchParams();
-  if (rep) params.set("rep", rep);
-  const query = params.toString();
-  const back = query ? `/companies?${query}` : "/companies";
 
+  // Built the way the strip, the search and the table build theirs.
+  function href(keep: { q?: string; filter?: FollowUpFilter | null }): string {
+    const params = new URLSearchParams();
+    if (keep.q) params.set("q", keep.q);
+    if (keep.filter) params.set("filter", keep.filter);
+    if (rep) params.set("rep", rep);
+    const query = params.toString();
+    return query ? `/companies?${query}` : "/companies";
+  }
+
+  if (filter && hidden > 0) {
+    return (
+      <Empty
+        action={
+          <Button asChild variant="outline">
+            <Link href={href({ q })}>{t("companies.clearFilter")}</Link>
+          </Button>
+        }
+      >
+        {t("companies.filteredOut", { count: hidden })}
+      </Empty>
+    );
+  }
   if (q) {
     return (
-      <Panel
-        sentence={t("shell.searchNoResults", { q })}
-        action={t("companies.clearSearch")}
-        href={back}
-      />
+      <Empty
+        action={
+          <Button asChild variant="outline">
+            <Link href={href({ filter })}>{t("companies.clearSearch")}</Link>
+          </Button>
+        }
+      >
+        {t("shell.searchNoResults", { q })}
+      </Empty>
     );
   }
-  if (filtered) {
-    return (
-      <Panel
-        sentence={t("companies.emptyFilter")}
-        action={t("companies.clearFilter")}
-        href={back}
-      />
-    );
-  }
-  /*
-    * The sentence alone, because the button is already on this screen.
-    *
-    * §3 asks an empty list for one sentence and its primary action, and this
-    * panel answered by drawing a SECOND Add company under the one in the
-    * heading row — two brand gradients on one screen, which is the one signal
-    * DESIGN §2 keeps for "this is the thing to press" (D31, D35). The action
-    * exists and is four lines above; the sentence says to use it.
-    *
-    * A manager reading an empty floor is told it is empty and nothing more: he
-    * is not handed a button that would make the company his.
-    */
-  return (
-    <div className="card-face flex flex-col items-center gap-3 px-4 py-12 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">
-        {mayAdd ? t("shell.emptyCompanies") : t("common.nothingYet")}
-      </p>
-    </div>
-  );
-}
-
-function Panel({ sentence, action, href }: { sentence: string; action: string; href: string }) {
-  return (
-    <div className="card-face flex flex-col items-center gap-3 px-4 py-12 text-center">
-      <p className="max-w-prose text-sm text-muted-foreground">{sentence}</p>
-      <Button asChild variant="outline">
-        <Link href={href}>{action}</Link>
-      </Button>
-    </div>
-  );
+  return <Empty>{first}</Empty>;
 }
 
 /**

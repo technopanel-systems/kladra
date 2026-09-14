@@ -84,6 +84,7 @@
   "close": "Close",
   "markLost": "Mark lost",
   "reason": "Reason",
+  "moreFor": "More for {name}",
   "markAllRead": "Mark all read",
   "today": "Today",
   "workingDays": "{count, plural, one {# working day} other {# working days}}",

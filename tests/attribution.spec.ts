@@ -195,7 +195,11 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
       await page.goto(`/${locale}/companies?open=${target.company_id}`);
       const drawer = page.getByRole("dialog").first();
       await expect(drawer).toBeVisible(COLD);
-      await drawer.getByRole("button", { name: t("drawer.handOver") }).click();
+      // Hand over is in the drawer's More menu (P13-G6 S12.2).
+      await drawer
+        .getByRole("button", { name: t("common.moreFor", { name: target.company_name }) })
+        .click();
+      await page.getByRole("menuitem", { name: t("drawer.handOver"), exact: true }).click();
 
       const dialog = page.getByRole("dialog", {
         name: t("drawer.handOverTitle", { name: target.company_name }),

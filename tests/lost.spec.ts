@@ -144,7 +144,7 @@ test("marking a project lost with no reason is refused at the reason, and nothin
   const drawer = page.getByRole("dialog", { name: project.name });
   await expect(drawer).toBeVisible(COLD);
 
-  const more = drawer.getByRole("button", { name: t("projects.moreFor", { name: project.name }) });
+  const more = drawer.getByRole("button", { name: t("common.moreFor", { name: project.name }) });
   await more.click();
   await page.getByRole("menuitem", { name: t("common.markLost"), exact: true }).click();
 

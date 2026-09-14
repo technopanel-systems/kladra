@@ -14,8 +14,10 @@
   "todayCount": "{count} today",
   "neverCount": "{count, plural, one {# company never contacted} other {# companies never contacted}}",
   "nothingDue": "Nothing due — you are up to date.",
-  "emptyFilter": "Nothing matches this filter.",
+  "filteredOut": "{count, plural, one {This filter is hiding # company.} other {This filter is hiding # companies.}}",
   "clearFilter": "Show all companies",
+  "emptyFloor": "{name} has no companies yet.",
+  "emptyLeads": "No companies yet — a lead you keep for yourself arrives here.",
   "quietCount": "{count, plural, one {# company gone quiet} other {# companies gone quiet}}",
   "copyNumber": "Copy number",
   "numberCopied": "Number copied"

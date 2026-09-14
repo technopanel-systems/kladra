@@ -159,7 +159,7 @@ export function LookupsPanel({
                     {t("common.edit")}
                   </Button>
                   <RowMenu
-                    label={t("admin.moreFor", { name: named(row.label) })}
+                    label={t("common.moreFor", { name: named(row.label) })}
                     items={[]}
                     end={
                       row.active

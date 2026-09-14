@@ -2,7 +2,6 @@
   "addUser": "Add user",
   "editUser": "Edit user",
   "userHint": "Name, email and what they may do.",
-  "moreFor": "More for {name}",
   "userAdded": "{name} added.",
   "userSaved": "{name} saved.",
   "notFound": "It is not there any more.",

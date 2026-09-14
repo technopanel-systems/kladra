@@ -150,8 +150,9 @@ test("a confirmation the wire refused says so and keeps its question open", asyn
   // Archive is a prompt with a reason; the wire is cut before the press.
   await drawer
     .getByRole("group", { name: t("drawer.companyActions") })
-    .getByRole("button", { name: t("drawer.archive") })
+    .getByRole("button", { name: t("common.moreFor", { name: company.name }) })
     .click();
+  await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
   const ask = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name: company.name }) });
   await expect(ask).toBeVisible(COLD);
   await ask.getByLabel(t("drawer.archiveReason")).fill("A wire test, not a real reason");

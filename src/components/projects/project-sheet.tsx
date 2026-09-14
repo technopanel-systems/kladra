@@ -227,7 +227,7 @@ export function ProjectSheet({
   }
   const menu =
     items.length > 0 || end.length > 0 ? (
-      <RowMenu label={t("projects.moreFor", { name })} items={items} end={end} size="head" />
+      <RowMenu label={t("common.moreFor", { name })} items={items} end={end} size="head" />
     ) : null;
   const reportable = reports && !lost;
 

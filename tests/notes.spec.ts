@@ -62,8 +62,9 @@ test("a note edited on the company is the note the drawer shows", async ({ page,
   const written = `${company.notes} · ${Date.now()}`;
   await drawer
     .getByRole("group", { name: t("drawer.companyActions") })
-    .getByRole("button", { name: t("common.edit") })
+    .getByRole("button", { name: t("common.moreFor", { name: company.name }) })
     .click();
+  await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
   const form = page.getByRole("dialog", { name: t("forms.editCompany") });
   await expect(form).toBeVisible(COLD);
   await form.getByLabel(t("common.notes")).fill(written);
@@ -75,8 +76,9 @@ test("a note edited on the company is the note the drawer shows", async ({ page,
   // Put it back, so the floor reads the same on the next run.
   await drawer
     .getByRole("group", { name: t("drawer.companyActions") })
-    .getByRole("button", { name: t("common.edit") })
+    .getByRole("button", { name: t("common.moreFor", { name: company.name }) })
     .click();
+  await page.getByRole("menuitem", { name: t("common.edit"), exact: true }).click();
   await expect(form).toBeVisible(COLD);
   await form.getByLabel(t("common.notes")).fill(company.notes);
   await form.getByRole("button", { name: t("common.save") }).click();
@@ -132,6 +134,13 @@ test("a manager reads the note on a floor he may not write on", async ({ page, l
   await expect(drawer).toBeVisible(COLD);
 
   await expect(drawer.locator("[data-slot='company-notes']")).toHaveText(company.notes, COLD);
-  // Nothing to press: reading a floor is not writing on it (D42).
-  await expect(drawer.getByRole("group", { name: t("drawer.companyActions") })).toHaveCount(0);
+  // Nothing to press that writes: reading a floor is not writing on it (D42).
+  // What he may do to the company — who holds it, who else reads it — is its
+  // More menu, and Edit is not in it (P13-G6 S12.2).
+  const actions = drawer.getByRole("group", { name: t("drawer.companyActions") });
+  await expect(actions.getByRole("button", { name: t("common.addReport") })).toHaveCount(0);
+  await actions.getByRole("button", { name: t("common.moreFor", { name: company.name }) }).click();
+  await expect(page.getByRole("menuitem", { name: t("drawer.handOver"), exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitem", { name: t("common.edit"), exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
 });

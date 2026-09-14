@@ -1,12 +1,10 @@
 "use client";
 
 import { useId, useState } from "react";
-import { UserRoundPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { handOverCompanyAction } from "@/actions/companies";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import type { PickerOption } from "@/lib/picker-option";
@@ -16,9 +14,13 @@ import type { PickerOption } from "@/lib/picker-option";
  *
  * The manager's move (SPEC §3): a customer going to the rep who will work it,
  * or a floor surviving somebody who leaves. On a lead nobody has acknowledged
- * yet the action treats it as reassigning the lead (SPEC §3 P13). It sits
- * beside the rep's name rather than in the row of buttons
- * below, because it changes that name and nothing else on the screen.
+ * yet the action treats it as reassigning the lead (SPEC §3 P13).
+ *
+ * It is one item of the drawer's menu since P13-G6, beside Sharing — the pair
+ * a reader compares, one moving the customer and the other not — so the drawer
+ * hosts it and hands focus back to the menu's button when it closes. It sat
+ * as a loose button against the rep's name before, which on a phone floated
+ * alone at the far end of a line of its own.
  *
  * It is a confirmation with a question in it: the warning says what travels
  * with the company, and the confirm button is live from the start — pressing it
@@ -30,10 +32,14 @@ export function HandOverDialog({
   companyId,
   companyName,
   people,
+  open,
+  onOpenChange,
 }: {
   companyId: string;
   companyName: string;
   people: PickerOption[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -44,12 +50,7 @@ export function HandOverDialog({
 
   return (
     <ConfirmDialog
-      trigger={
-        <Button variant="ghost" size="sm" className="ms-auto text-muted-foreground">
-          <UserRoundPlus aria-hidden="true" />
-          {t("drawer.handOver")}
-        </Button>
-      }
+      open={open}
       title={t("drawer.handOverTitle", { name: companyName })}
       description={t("drawer.handOverWarning")}
       confirmLabel={t("drawer.handOver")}
@@ -57,8 +58,9 @@ export function HandOverDialog({
         name: companyName,
         rep: chosen?.label ?? "",
       })}
-      onOpenChange={(open) => {
-        if (!open) setToId(null);
+      onOpenChange={(next) => {
+        if (!next) setToId(null);
+        onOpenChange(next);
       }}
       onConfirm={() => handOverCompanyAction(companyId, toId)}
       onDone={() => router.refresh()}
