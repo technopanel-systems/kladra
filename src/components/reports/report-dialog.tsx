@@ -317,17 +317,27 @@ function ReportPanel({
   // The people and papers at the chosen customer, kept against the customer
   // they were read for so a slow answer for the last one never fills this one.
   const companyId = picks.companyId;
+  // The paper the popup opened on — from a drawer, or the entry being corrected —
+  // asked for by id with the customer's lists, so it is a choice however old it
+  // is: superseded, withdrawn, or past the newest thirty (P13 review). Only for
+  // the customer it was opened on; choosing another customer lets go of it.
+  const openedQuotation = companyId === first.companyId ? first.quotation || undefined : undefined;
+  const openedDispatch = companyId === first.companyId ? first.dispatch || undefined : undefined;
   const [loaded, setLoaded] = useState<{ companyId: string; data: ReportTargets } | null>(null);
   useEffect(() => {
     if (!companyId) return;
     let cancelled = false;
-    guarded(reportTargetsAction)({ companyId }).then((outcome) => {
+    guarded(reportTargetsAction)({
+      companyId,
+      quotationId: openedQuotation,
+      dispatchId: openedDispatch,
+    }).then((outcome) => {
       if (!cancelled && outcome.ok && outcome.data) setLoaded({ companyId, data: outcome.data });
     });
     return () => {
       cancelled = true;
     };
-  }, [companyId, guarded]);
+  }, [companyId, openedQuotation, openedDispatch, guarded]);
   const targets = loaded?.companyId === companyId ? loaded.data : null;
 
   const quotationOption = targets?.quotations.find((row) => row.value === picks.quotation);
@@ -434,7 +444,17 @@ function ReportPanel({
     // The caret goes to the first box that was refused: a sheet can be taller
     // than a phone, and a message below the fold is a message nobody reads (D43).
     requestAnimationFrame(() => {
-      formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+      const refused = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"]');
+      // A row of chips is a radiogroup, and the group itself is only the thing
+      // that carries the refusal — focusable by script, outlined by nothing. So
+      // the caret goes to the chosen chip, or the first one: focus a keyboard can
+      // see, and arrow keys that answer the question at once (P13 review).
+      const radio =
+        refused?.getAttribute("role") === "radiogroup"
+          ? (refused.querySelector<HTMLInputElement>('input[type="radio"]:checked') ??
+            refused.querySelector<HTMLInputElement>('input[type="radio"]'))
+          : null;
+      (radio ?? refused)?.focus({ focusVisible: true } as FocusOptions);
     });
   }
 
@@ -686,6 +706,10 @@ function ReportPanel({
                     className={cn(
                       "touch inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm transition-colors",
                       "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+                      // Refused, the caret is put on a chip by script, which a
+                      // browser need not count as focus-visible: the ring then
+                      // follows focus itself until the question is answered.
+                      errors.outcomeId && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
                       outcome === String(row.id)
                         ? "border-line-strong bg-secondary font-medium text-foreground"
                         : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
@@ -774,6 +798,7 @@ function ReportPanel({
                           className={cn(
                             "touch inline-flex cursor-pointer items-center rounded-full border px-3 py-1.5 text-sm transition-colors",
                             "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+                            errors.happenedOn && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
                             day === which
                               ? "border-line-strong bg-secondary font-medium text-foreground"
                               : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
@@ -852,6 +877,8 @@ function KindField({
               className={cn(
                 "touch flex min-h-14 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs transition-colors",
                 "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+                // As on the outcome's chips: refused, the ring follows focus.
+                error && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
                 chosen
                   ? "border-line-strong bg-secondary font-medium text-foreground"
                   : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",

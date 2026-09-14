@@ -7,6 +7,7 @@ import { SearchableSelect, type SelectOption } from "@/components/ui-ext/searcha
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { LineRefusal } from "@/lib/line-refusal";
 import { formatMoney, serviceTotal } from "@/lib/money";
 import type { DraftService } from "@/lib/quotation-draft";
 import { cn } from "@/lib/utils";
@@ -58,18 +59,34 @@ export function servicesPayload(services: ServiceDraft[]): string {
 
 export function QuotationServices({
   choices,
+  choicesFor,
   services,
   subtotal,
   onChange,
   disabled,
+  refused,
 }: {
   /** The services the admin offers, in his order (quotationServiceChoicesAction). */
   choices: SelectOption[];
+  /**
+   * The choices one row offers, where they are not the same for every row. A
+   * load carried from its paper may name a service the admin has since switched
+   * off, which the dispatch action still accepts on the row it came on (D175 is
+   * the quotation's rule, not the load's) — so that row offers it, by name, and
+   * no other row does.
+   */
+  choicesFor?: (service: ServiceDraft) => SelectOption[];
   services: ServiceDraft[];
   /** What they come to together — the same figure the totals block shows. */
   subtotal: number;
   onChange: (services: ServiceDraft[]) => void;
   disabled?: boolean;
+  /**
+   * The box the action refused, by the row's place in the list as it was sent
+   * (src/lib/line-refusal.ts), marked where the caret will go, with the sentence
+   * under its row (D43).
+   */
+  refused?: LineRefusal | null;
 }) {
   const t = useTranslations();
   const headingId = useId();
@@ -110,6 +127,9 @@ export function QuotationServices({
 
           {services.map((service, index) => {
             const id = (fieldName: string) => `${service.key}-${fieldName}`;
+            const refusedHere = refused?.index === index ? refused : null;
+            const refusedBox = (name: string) => refusedHere?.field === name;
+            const describedBy = (name: string) => (refusedBox(name) ? id("refused") : undefined);
             return (
               <div
                 key={service.key}
@@ -153,8 +173,10 @@ export function QuotationServices({
                       aria-labelledby={id("service-label")}
                       value={service.serviceId}
                       onChange={(value) => patch(service.key, { serviceId: value })}
-                      options={choices}
+                      options={choicesFor ? choicesFor(service) : choices}
                       disabled={disabled}
+                      invalid={refusedBox("serviceId") || undefined}
+                      aria-describedby={describedBy("serviceId")}
                       placeholder={t("forms.choose")}
                       searchPlaceholder={t("forms.searchList")}
                       emptyText={t("forms.noMatch")}
@@ -175,6 +197,8 @@ export function QuotationServices({
                       className="num h-9 text-start"
                       value={service.sqm}
                       onChange={(event) => patch(service.key, { sqm: event.target.value })}
+                      aria-invalid={refusedBox("sqm") || undefined}
+                      aria-describedby={describedBy("sqm")}
                     />
                   </div>
 
@@ -192,6 +216,8 @@ export function QuotationServices({
                       className="num h-9 text-start"
                       value={service.pricePerSqm}
                       onChange={(event) => patch(service.key, { pricePerSqm: event.target.value })}
+                      aria-invalid={refusedBox("pricePerSqm") || undefined}
+                      aria-describedby={describedBy("pricePerSqm")}
                     />
                   </div>
                 </div>
@@ -208,10 +234,23 @@ export function QuotationServices({
                     <span className="xl:sr-only"> {t("common.sar")}</span>
                   </span>
                 </div>
+
+                {refusedHere ? (
+                  <p id={id("refused")} role="alert" className="text-xs text-destructive xl:col-span-full xl:pt-1">
+                    {refusedHere.message}
+                  </p>
+                ) : null}
               </div>
             );
           })}
         </div>
+      ) : null}
+
+      {/* A refusal about a row he has since taken off is still said. */}
+      {refused && refused.index >= services.length ? (
+        <p role="alert" className="text-xs text-destructive">
+          {refused.message}
+        </p>
       ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">

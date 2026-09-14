@@ -1,4 +1,5 @@
 import { addDays, todayRiyadh, type Day } from "@/lib/dates";
+import { quotationLabel } from "@/lib/labels";
 import { nothingWritten } from "@/lib/report-view";
 import { isWeekend, isWorkingDay, type NonWorking } from "@/lib/workdays";
 import { login } from "./helpers/auth";
@@ -171,6 +172,22 @@ test("opened from a project drawer, the report arrives with the company and the 
       await expect(dialog.getByText(project.company, { exact: true }).first()).toBeVisible();
       const job = dialog.getByRole("combobox", { name: t("common.project") });
       await expect(job.locator('[data-slot="select-value"]')).toContainText(project.name, COLD);
+    });
+
+    await test.step("sent with nothing chosen, the caret lands on a chip of the question refused", async () => {
+      // The refused thing is a row of chips, and the row itself is focusable by
+      // script and outlined by nothing: the caret goes to a chip, where it shows
+      // and where the arrow keys answer the question (P13 review).
+      await dialog.getByRole("button", { name: t("common.save") }).click();
+      const kinds = dialog.getByRole("radiogroup", { name: t("reports.dialog.kind") });
+      await expect(kinds).toHaveAttribute("aria-invalid", "true");
+      await expect(kinds.getByRole("radio").first()).toBeFocused();
+
+      await pressChip(dialog, t("common.siteVisit"));
+      await dialog.getByRole("button", { name: t("common.save") }).click();
+      const outcomes = dialog.getByRole("radiogroup", { name: t("reports.dialog.outcome") });
+      await expect(outcomes).toHaveAttribute("aria-invalid", "true");
+      await expect(outcomes.getByRole("radio").first()).toBeFocused();
     });
 
     await test.step("and what he sends is filed against both", async () => {
@@ -429,4 +446,237 @@ test("what Kladra recorded is its own region beside the written reports, never a
       await expect(figure.locator(".num")).toHaveText(raised.n);
     }
   });
+});
+
+/**
+ * The two lists are capped (D80): a person's month draws the newest 80 entries
+ * (REPORT_LIST_CAP, src/lib/reports.ts) and the team's day the newest 200
+ * (reports/page.tsx). Written out here rather than imported, because that module
+ * reads the database and the request.
+ */
+const PERSON_CAP = 80;
+const TEAM_CAP = 200;
+
+/**
+ * A figure counted after the cap is a figure about the cap (rules/data.md, P13
+ * review). The team's day grouped the 200 rows it drew, so on a busy day
+ * somebody who wrote in the morning read as having written nothing; and a day's
+ * heading counted the 80 rows the month drew while the calendar beside it
+ * counted the day. Both are SQL counts over the whole window now, and where the
+ * cap cut a day or a person short the screen says how many more.
+ *
+ * A busy day is written straight into the table — two hundred and ten entries of
+ * Faisal's, the newest there are, and one of Saad's from earlier — and deleted
+ * again after.
+ */
+test("counts are the day's, not the rows drawn: past the cap a person and a day say how many more", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const today = todayRiyadh();
+  const marker = `cap ${locale} ${Date.now()}`;
+  const faisal = await userId(FAISAL);
+  const saad = await userId(SAAD);
+  const outcome = await one<{ id: number }>("select id from outcomes where name_en = 'Reached'");
+  const companyOf = (rep: string) =>
+    one<{ id: string }>(
+      `select companies.id from companies
+        where companies.rep_id = $1::uuid and companies.archived_at is null
+        order by companies.name limit 1`,
+      [rep],
+    );
+  const countOn = async (person: string) =>
+    Number(
+      (
+        await one<{ n: string }>(
+          `select count(*)::text as n from activities
+            where activities.user_id = $1::uuid and activities.happened_on = $2::date
+              and activities.archived_at is null`,
+          [person, today],
+        )
+      ).n,
+    );
+
+  try {
+    await query(
+      `insert into activities (company_id, user_id, text, channel, happened_on, outcome_id)
+       select $1::uuid, $2::uuid, $3::text || ' ' || n, 'call', $4::date, $5::int
+         from generate_series(1, 210) as n`,
+      [(await companyOf(faisal)).id, faisal, marker, today, outcome.id],
+    );
+    await query(
+      `insert into activities (company_id, user_id, text, channel, happened_on, outcome_id, created_at, updated_at)
+       values ($1::uuid, $2::uuid, $3::text, 'visit', $4::date, $5::int,
+               now() - interval '2 hours', now() - interval '2 hours')`,
+      [(await companyOf(saad)).id, saad, `${marker} saad`, today, outcome.id],
+    );
+    const faisalCount = await countOn(faisal);
+    const saadCount = await countOn(saad);
+
+    await test.step("the manager's day: Saad wrote, and is not read as silent", async () => {
+      await login(page, locale, "abdulrahman");
+      // The day asked for by name: a week remembered for him would draw a table.
+      await page.goto(`/${locale}/reports?period=day&day=${today}`);
+      await expect(page.getByRole("heading", { name: t("reports.title"), exact: true })).toBeVisible(COLD);
+      const section = async (email: string) =>
+        page
+          .locator('[data-slot="team-person"]')
+          .filter({ has: page.getByText(await personName(email, locale), { exact: true }) });
+
+      // His two hundred and ten are the newest, so every row the day drew is his.
+      const his = await section(FAISAL);
+      await expect(his.locator('[data-slot="person-count"]')).toHaveText(
+        t("reports.reportsCount", { count: faisalCount }),
+        COLD,
+      );
+      await expect(his.locator('[data-slot="person-more"]')).toHaveText(
+        t("reports.moreOnDay", { count: faisalCount - TEAM_CAP }),
+      );
+
+      // Saad's are all past the cap: counted, a door to them, and never "nothing".
+      const theirs = await section(SAAD);
+      await expect(theirs.locator('[data-slot="person-count"]')).toHaveText(
+        t("reports.reportsCount", { count: saadCount }),
+      );
+      await expect(theirs.locator('[data-slot="person-more"]')).toHaveText(
+        t("reports.moreOnDay", { count: saadCount }),
+      );
+      await expect(theirs.locator('[data-slot="person-more"]')).toHaveAttribute(
+        "href",
+        new RegExp(`person=${saad}`),
+      );
+      await expect(theirs.locator('[data-slot="person-state"]')).toHaveCount(0);
+    });
+
+    await test.step("his own month: today's heading is the day's figure, and the rest is a door", async () => {
+      await login(page, locale, "faisal");
+      await page.goto(`/${locale}/reports`);
+      const day = page.locator(`[data-slot="report-day"][data-day="${today}"]`);
+      await expect(day.locator('[data-slot="day-count"]')).toHaveText(
+        t("reports.reportsCount", { count: faisalCount }),
+        COLD,
+      );
+      // Today is his newest day, so all eighty drawn are today's.
+      await expect(day.locator('[data-slot="report-entry"]')).toHaveCount(PERSON_CAP);
+      const more = day.locator('[data-slot="day-more"]');
+      await expect(more).toHaveText(t("reports.moreOnDay", { count: faisalCount - PERSON_CAP }));
+      await expect(more).toHaveAttribute("href", new RegExp(`day=${today}`));
+    });
+  } finally {
+    await query("delete from activities where text like $1::text || '%'", [marker]);
+  }
+});
+
+/**
+ * A drawer can open the popup on any paper of the customer's — a superseded
+ * revision too — and the popup's quotation list leaves those out and stops at
+ * the newest thirty. The field read blank while the report was filed against the
+ * paper (P13 review). The paper the popup was opened on is always a choice, first.
+ */
+test("opened from a superseded quotation, the report's quotation field names that paper", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const faisal = await userId(FAISAL);
+  const paper = await one<{ id: string; number: number; revision: number }>(
+    `select quotations.id, quotations.number, quotations.revision
+       from quotations
+       join companies on companies.id = quotations.company_id
+       join projects on projects.id = quotations.project_id
+      where companies.rep_id = $1::uuid and companies.archived_at is null
+        and projects.archived_at is null and projects.lost_at is null
+        and exists (select 1 from quotations later
+                     where later.number = quotations.number and later.revision > quotations.revision)
+      order by quotations.number, quotations.revision
+      limit 1`,
+    [faisal],
+  );
+  const label = quotationLabel(paper.number, paper.revision);
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/quotations?open=${paper.id}`);
+  const sheet = page.getByRole("dialog", { name: label });
+  await expect(sheet).toBeVisible(COLD);
+  await sheet.getByRole("button", { name: t("common.addReport") }).first().click();
+
+  const dialog = reportDialog(page, t);
+  const field = dialog.getByRole("combobox", { name: t("common.quotation") });
+  // Its own number, exactly — Q-3 and not the revision that replaced it, Q-3/2.
+  await expect(field.locator('[data-slot="select-value"] [dir="ltr"]')).toHaveText(label, COLD);
+});
+
+/**
+ * The manager's week at 1366 was 59px wider than its card in Arabic, so the
+ * total column was cut off at the inline end while English fitted (P13 review;
+ * DESIGN §5: a width that fits in English is a coincidence). The days are as wide
+ * as the widest date either script prints; below that the table scrolls inside
+ * its own card, and the page does not.
+ *
+ * Opening the week remembers it for him (D164), and every other walk of his
+ * Reports expects his day, so what he had is put back.
+ */
+test("the manager's week fits its card at 1366 in either language, and scrolls inside it at 375", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const manager = await userId("abdulrahman@technopanel.com.sa");
+  const choice = `select choice from screen_choices
+                   where user_id = $1::uuid and kind = 'view' and screen = 'reports'`;
+  const before = (await query<{ choice: string }>(choice, [manager]))[0]?.choice ?? null;
+  let opened = false;
+
+  try {
+    await page.setViewportSize({ width: 1366, height: 900 });
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/reports?period=week`);
+    opened = true;
+    const table = page.locator('[data-slot="team-week"]');
+    await expect(table).toBeVisible(COLD);
+    await expect(table.getByRole("columnheader", { name: t("reports.total") })).toBeVisible();
+
+    const fit = () =>
+      table.evaluate((node) => ({
+        table: node.scrollWidth,
+        room: (node.parentElement as HTMLElement).clientWidth,
+      }));
+    const wide = await fit();
+    expect(wide.table, "the week is wider than its card").toBeLessThanOrEqual(wide.room);
+    const cut = await table
+      .locator("thead th")
+      .evaluateAll((nodes) =>
+        nodes.filter((node) => node.scrollWidth > node.clientWidth + 1).map((node) => node.textContent ?? ""),
+      );
+    expect(cut, "a column name is cut").toEqual([]);
+
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect.poll(async () => (await fit()).room).toBeLessThan(wide.room);
+    const narrow = await fit();
+    expect(narrow.table, "at 375 the week should scroll inside its card").toBeGreaterThan(narrow.room);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  } finally {
+    if (opened) {
+      // The write is an effect after hydration; wait for it before undoing it.
+      await expect
+        .poll(async () => (await query<{ choice: string }>(choice, [manager]))[0]?.choice, COLD)
+        .toBe("week");
+    }
+    if (before === null) {
+      await query(
+        "delete from screen_choices where user_id = $1::uuid and kind = 'view' and screen = 'reports'",
+        [manager],
+      );
+    } else {
+      await query(
+        "update screen_choices set choice = $2::text where user_id = $1::uuid and kind = 'view' and screen = 'reports'",
+        [manager, before],
+      );
+    }
+  }
 });

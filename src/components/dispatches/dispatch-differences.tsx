@@ -44,19 +44,59 @@ export async function DispatchDifferences({
   const t = await getTranslations();
   if (!label || !difference || difference.length === 0) return null;
 
-  /** Figures as the screen writes them everywhere else; a lookup as its word; a service by name. */
-  function shown(field: DifferenceField, value: string): { text: string; figure: boolean } {
-    if (field === "service") return { text: serviceNames[value] ?? "", figure: false };
-    if (field === "width" || field === "length" || field === "pricePerSqm" || field === "sqm") {
-      return { text: formatNumber(value), figure: true };
+  /**
+   * The unit a figure is in, beside the figure itself (P13 review): "1.50 (was
+   * 1.24)" asked the desk to remember whether that was metres, millimetres or a
+   * price. Metres for a width and a length, millimetres for a thickness, SAR per
+   * m² for a price, m² for a service's area. Each key written out, so the parity
+   * check sees every one (rules/words.md).
+   */
+  function unitOf(field: DifferenceField): string | null {
+    switch (field) {
+      case "width":
+      case "length":
+        return t("dispatches.unit.metres");
+      case "thickness":
+        return t("common.mm");
+      case "pricePerSqm":
+        return t("dispatches.unit.sarPerSqm");
+      case "sqm":
+        return t("common.sqm");
+      default:
+        return null;
     }
-    return { text: value, figure: false };
   }
 
+  /** Figures as the screen writes them everywhere else, with their unit; a lookup as its word; a service by name. */
+  function shown(field: DifferenceField, value: string): { text: string; unit: string | null } {
+    if (field === "service") return { text: serviceNames[value] ?? "", unit: null };
+    const unit = unitOf(field);
+    if (field === "width" || field === "length" || field === "pricePerSqm" || field === "sqm") {
+      return { text: formatNumber(value), unit };
+    }
+    return { text: value, unit };
+  }
+
+  /**
+   * The field's name without the unit its column heading carries — "Width", not
+   * "Width (m)" — because the unit is on the figure now, and saying it twice on
+   * one line is noise.
+   */
   function fieldLabel(field: DifferenceField): string {
-    if (field === "service") return t("quotations.service");
-    if (field === "sqm") return t("common.sqm");
-    return t(`common.${field}`);
+    switch (field) {
+      case "service":
+        return t("quotations.service");
+      case "sqm":
+        return t("dispatches.field.area");
+      case "width":
+        return t("dispatches.field.width");
+      case "length":
+        return t("dispatches.field.length");
+      case "pricePerSqm":
+        return t("dispatches.field.price");
+      default:
+        return t(`common.${field}`);
+    }
   }
 
   // One entry per line or service, its changed fields together under it, in the
@@ -133,15 +173,26 @@ export async function DispatchDifferences({
                           className="flex flex-wrap items-baseline gap-x-2"
                         >
                           <span className="text-muted-foreground">{fieldLabel(change.field)}</span>
-                          {to.figure ? (
-                            <span dir="ltr" className="num">
-                              {to.text}
-                            </span>
-                          ) : (
-                            <bdi>{to.text}</bdi>
-                          )}
+                          {/* The value she acts on, then its unit, in the page's
+                              order: the figure is its own left-to-right run and
+                              the unit a word after it, which reads right in both
+                              directions (rules/words.md). */}
+                          <span className="whitespace-nowrap">
+                            {to.unit ? (
+                              <>
+                                <span dir="ltr" className="num">
+                                  {to.text}
+                                </span>{" "}
+                                {to.unit}
+                              </>
+                            ) : (
+                              <bdi>{to.text}</bdi>
+                            )}
+                          </span>
                           <span className="text-faint">
-                            {t("quotations.changedWas", { from: from.text })}
+                            {from.unit
+                              ? t("dispatches.changedWasUnit", { from: from.text, unit: from.unit })
+                              : t("quotations.changedWas", { from: from.text })}
                           </span>
                         </li>,
                       ];

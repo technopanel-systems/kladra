@@ -24,6 +24,17 @@
   "statusRefused": "Refused",
   "differsChip": "Differs from the quotation",
   "differsFrom": "Differs from {label}",
+  "changedWasUnit": "was {from} {unit}",
+  "unit": {
+    "metres": "m",
+    "sarPerSqm": "SAR per m²"
+  },
+  "field": {
+    "width": "Width",
+    "length": "Length",
+    "price": "Price",
+    "area": "Area"
+  },
   "formDiffers": "This load differs from {label}. What changed will show on the dispatch.",
   "lineAdded": "{item} added · colour {colour}",
   "serviceAdded": "Service added · {service} {sqm} m²",
@@ -49,6 +60,8 @@
   "remaining": "Left to send",
   "elsewhere": "On other dispatches",
   "notOnPaper": "Not on the quotation",
+  "lineNotOnPaper": "Added on this load. It is not on the quotation.",
+  "serviceNotOffered": "No longer offered",
   "sentInFull": "Already sent in full: {items}",
   "destinationPlaceholder": "Where the panels are going",
   "payment": {

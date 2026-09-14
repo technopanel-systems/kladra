@@ -42,6 +42,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { differenceFrom, type SheetValues } from "@/lib/dispatch-difference";
+import { lineRefusal } from "@/lib/line-refusal";
 import { quotationTotals } from "@/lib/money";
 import { splitOption, type DispatchTargets } from "@/lib/picker-option";
 import type { DraftLine, DraftService } from "@/lib/quotation-draft";
@@ -111,7 +112,8 @@ export type DispatchDraft = {
   paymentNote: string | null;
   /** The load as it stands, each line and service with the quotation row it came from. */
   lines: (DraftLine & { quotationItemId: string | null })[];
-  services: (DraftService & { quotationServiceId: string | null })[];
+  /** Each with its name, which the form needs where the admin no longer offers it. */
+  services: (DraftService & { quotationServiceId: string | null; name: string })[];
   /**
    * What it says it counts for: one person's id, or `split` (D148). A dispatch
    * still waiting has earned nobody anything yet, so the answer is editable for
@@ -521,6 +523,38 @@ function LoadForm({
   const totals = useMemo(() => quotationTotals(lines, services), [lines, services]);
 
   /*
+   * The services this load already names, with their names — the paper's, and on
+   * an edit the load's own. The form's list is what the admin offers TODAY, and a
+   * carried service he has switched off since is still what the customer was
+   * quoted, and still accepted on the row it came on. Read against today's list
+   * alone that row said "Choose…", and a rep would have chosen something else and
+   * recorded a difference nobody made. So the row that carries it offers it, by
+   * name and marked as no longer offered; no other row does, because the action
+   * refuses it anywhere else.
+   */
+  const offered = useMemo(() => new Set(serviceChoices.map((choice) => choice.value)), [serviceChoices]);
+  const namedOnLoad = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const service of existing?.services ?? []) names.set(service.serviceId, service.name);
+    for (const service of paper?.services ?? []) names.set(service.draft.serviceId, service.name);
+    return names;
+  }, [existing, paper]);
+  const paperServiceOf = useMemo(
+    () => new Map((paper?.services ?? []).map((service) => [service.quotationServiceId, service.draft.serviceId])),
+    [paper],
+  );
+  const notOffered = t("dispatches.serviceNotOffered");
+  const serviceChoicesFor = (service: ServiceDraft): SelectOption[] => {
+    const origin = carriedFrom(service.key);
+    const kept = new Set([service.serviceId, origin ? (paperServiceOf.get(origin) ?? "") : ""]);
+    const withdrawn = [...kept].flatMap((id) => {
+      const name = namedOnLoad.get(id);
+      return id && name && !offered.has(id) ? [{ value: id, label: name, hint: notOffered }] : [];
+    });
+    return withdrawn.length > 0 ? [...serviceChoices, ...withdrawn] : serviceChoices;
+  };
+
+  /*
    * Whether this load is still what its paper says, asked of the same function
    * the action records the difference with — on ids and typed figures here,
    * where the action compares the words it reads from the rows. The form only
@@ -591,6 +625,9 @@ function LoadForm({
   const seconds = terms ? detailsFor(terms) : [];
 
   const label = paper?.label ?? existing?.quotationLabel ?? fixedQuotation?.label ?? "";
+  // "Differs from 4541": the paper by SMAC's number where it has one, as the
+  // chip, the drawer and the trail name it — one paper, one name (D179).
+  const paperName = paper ? (paper.smacNumber ?? paper.label) : label;
 
   return (
     <form
@@ -752,6 +789,7 @@ function LoadForm({
               paper={Boolean(paper)}
               onChange={(next) => setLinesPick({ key: sourceKey, lines: next })}
               disabled={pending}
+              refused={lineRefusal("items", fieldErrors)}
             />
             {sentInFull ? (
               <p data-slot="sent-in-full" className="text-xs text-muted-foreground">
@@ -765,10 +803,12 @@ function LoadForm({
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
               <QuotationServices
                 choices={serviceChoices}
+                choicesFor={serviceChoicesFor}
                 services={services}
                 subtotal={totals.services}
                 onChange={(next) => setServicesPick({ key: sourceKey, services: next })}
                 disabled={pending}
+                refused={lineRefusal("services", fieldErrors)}
               />
               <QuotationTotals
                 sqm={totals.sqm}
@@ -783,7 +823,7 @@ function LoadForm({
                 at this", and in words: the colour is never the only carrier. */}
             {differs ? (
               <p role="status" data-slot="form-differs" className={cn("text-sm", TONE_TEXT.wait)}>
-                {t("dispatches.formDiffers", { label })}
+                {t("dispatches.formDiffers", { label: paperName })}
               </p>
             ) : null}
 

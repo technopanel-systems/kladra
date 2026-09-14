@@ -26,6 +26,8 @@
   "nothingWrittenDay": "Nothing written on this day.",
   "nothingMatchedDay": "No report on this day matches these filters.",
   "listTail": "The newest {shown} of {total}. Press a day in the calendar to read it whole.",
+  "teamListTail": "The newest {shown} of {total}. Press a person to read their day whole.",
+  "moreOnDay": "{count, plural, one {# more on this day} other {# more on this day}}",
   "nothingYetTitle": "Nothing written yet today",
   "nothingYetMeans": "The day is not over. Anyone on leave today is left off.",
   "notWorkingToday": "Today is not a working day, so nobody owes a report.",

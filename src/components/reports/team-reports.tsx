@@ -168,11 +168,19 @@ export async function TeamNav({
  *
  * Under a filter the day is the people it matches: a manager who asked for the
  * calls that reached nobody is reading calls, not a roll of the floor.
+ *
+ * Who wrote how much is counted in SQL over the whole day (`reportCounts`), and
+ * the entries drawn are only the newest of them (D80). It was counted off the
+ * drawn rows, so on a busy day somebody who wrote at nine — past the cap by
+ * four — read "Nothing written" under his own name, and under a filter he was
+ * not on the screen at all (P13 review). A person the cap cut short says how
+ * many more he wrote, and that line is the door to his whole day.
  */
 export async function TeamDay({
   people,
   entries,
   total,
+  counts,
   recorded,
   nonWorking,
   day,
@@ -183,6 +191,8 @@ export async function TeamDay({
   people: readonly ReportPerson[];
   entries: readonly ReportEntry[];
   total: number;
+  /** Entries per person on this day under the screen's filter, keyed person then day. */
+  counts: Readonly<Record<string, Readonly<Record<Day, number>>>>;
   recorded: (person: ReportPerson) => Recorded;
   nonWorking: readonly NonWorking[];
   day: Day;
@@ -201,7 +211,9 @@ export async function TeamDay({
     list.push(entry);
     byPerson.set(entry.userId, list);
   }
-  const shown = filtered ? people.filter((person) => byPerson.has(person.id)) : people;
+  const countOf = (person: ReportPerson) =>
+    Math.max(counts[person.id]?.[day] ?? 0, byPerson.get(person.id)?.length ?? 0);
+  const shown = filtered ? people.filter((person) => countOf(person) > 0) : people;
 
   if (shown.length === 0) {
     return (
@@ -223,6 +235,8 @@ export async function TeamDay({
     <div className="flex flex-col gap-4">
       {shown.map((person) => {
         const written = byPerson.get(person.id) ?? [];
+        const count = countOf(person);
+        const more = count - written.length;
         const reason = offReason(day, nonWorking, person.id);
         const headingId = `team-person-${person.id}`;
         return (
@@ -244,36 +258,52 @@ export async function TeamDay({
                 <span className="text-xs text-muted-foreground">
                   {tc(person.role)}
                   {" · "}
-                  {t("reportsCount", { count: written.length })}
+                  <span data-slot="person-count">{t("reportsCount", { count })}</span>
                 </span>
               </span>
               <LinkPending />
             </Link>
             <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_16rem]">
-              <div role="region" aria-label={t("written")} className="min-w-0">
-                <ActivityList
-                  context="day"
-                  activities={written}
-                  empty={
-                    <p data-slot="person-state" className="text-sm text-muted-foreground">
-                      {reason
-                        ? off[reason]
-                        : day >= today
-                          ? t("stateOpen")
-                          : t("stateSilent")}
-                    </p>
-                  }
-                />
+              <div role="region" aria-label={t("written")} className="flex min-w-0 flex-col gap-2">
+                {/* Nothing written is said only of somebody who wrote nothing —
+                    never of somebody whose entries the cap left undrawn. */}
+                {written.length > 0 || more === 0 ? (
+                  <ActivityList
+                    context="day"
+                    activities={written}
+                    empty={
+                      <p data-slot="person-state" className="text-sm text-muted-foreground">
+                        {reason
+                          ? off[reason]
+                          : day >= today
+                            ? t("stateOpen")
+                            : t("stateSilent")}
+                      </p>
+                    }
+                  />
+                ) : null}
+                {more > 0 ? (
+                  <Link
+                    href={personHref(query, person.id, day)}
+                    data-slot="person-more"
+                    className="hover-tint inline-flex w-fit items-center gap-1.5 rounded-md px-1.5 py-1 text-xs text-muted-foreground underline underline-offset-2"
+                  >
+                    {t("moreOnDay", { count: more })}
+                    <LinkPending />
+                  </Link>
+                ) : null}
               </div>
               <RecordedLane recorded={recorded(person)} />
             </div>
           </section>
         );
       })}
+      {/* There is no calendar on the team's day, so the way to the rest is a
+          person, not a day. */}
       <ListTail
         shown={entries.length}
         total={total}
-        hint={t("listTail", { shown: entries.length, total })}
+        hint={t("teamListTail", { shown: entries.length, total })}
       />
     </div>
   );
@@ -314,32 +344,45 @@ export async function TeamWeek({
 
   return (
     <StickyScroll label={t("byWeek")} barClassName="top-14" className="card-face">
-      <table data-slot="team-week" className="w-full min-w-[44rem] border-collapse text-sm">
+      {/*
+       * Fixed columns, each day as wide as the widest date either script prints:
+       * «28/أغسطس/2026» is 106px in the caption face against 80px for the widest
+       * English one, and sized by their content the seven days pushed the table
+       * 59px past its card at 1366 in Arabic, cutting «المجموع» off the inline
+       * end while English fitted (P13 review; DESIGN §5: a width that fits in
+       * English is a coincidence). 7.25rem holds that date and its padding. The
+       * person column takes what is left and its name truncates, which a name
+       * may; below the minimum the whole table scrolls in its StickyScroll.
+       */}
+      <table
+        data-slot="team-week"
+        className="w-full min-w-[64rem] table-fixed border-collapse text-sm"
+      >
         <thead>
           <tr className="border-b border-line">
-            <th scope="col" className="px-3 py-2 text-start text-xs font-medium text-muted-foreground">
+            <th scope="col" className="ps-3 pe-2 py-2 text-start text-xs font-medium text-muted-foreground">
               {t("person")}
             </th>
             {week.map((day) => (
-              <th key={day} scope="col" className="px-2 py-2 text-center text-xs font-medium">
+              <th key={day} scope="col" className="w-29 px-0.5 py-2 text-center text-xs font-medium">
                 {day <= today ? (
                   <Link
                     href={reportsHref(query, { period: "day", day, person: null, month: null })}
-                    className="hover-tint inline-flex flex-col items-center rounded-md px-1.5 py-1"
+                    className="hover-tint inline-flex flex-col items-center rounded-md px-0.5 py-1"
                     data-day={day}
                   >
                     <span>{nameOfDay(day)}</span>
                     <DayText day={day} locale={locale} className="text-xs font-normal text-muted-foreground" />
                   </Link>
                 ) : (
-                  <span className="inline-flex flex-col items-center px-1.5 py-1 text-faint">
+                  <span className="inline-flex flex-col items-center px-0.5 py-1 text-faint">
                     <span>{nameOfDay(day)}</span>
                     <DayText day={day} locale={locale} className="text-xs font-normal" />
                   </span>
                 )}
               </th>
             ))}
-            <th scope="col" className="px-3 py-2 text-end text-xs font-medium text-muted-foreground">
+            <th scope="col" className="w-16 px-2 py-2 text-end text-xs font-medium text-muted-foreground">
               {t("total")}
             </th>
           </tr>
@@ -350,9 +393,10 @@ export async function TeamWeek({
             const total = week.reduce((sum, day) => sum + (mine[day] ?? 0), 0);
             return (
               <tr key={person.id} data-slot="team-week-row" className="hover-tint border-b border-line last:border-0">
-                <th scope="row" className="px-3 py-2 text-start font-normal">
+                <th scope="row" className="ps-3 pe-2 py-2 text-start font-normal">
                   <Link
                     href={personHref(query, person.id, null)}
+                    title={person.name}
                     className="flex min-w-0 items-center gap-2"
                   >
                     <Avatar id={person.id} name={person.name} size="sm" />
@@ -390,7 +434,7 @@ export async function TeamWeek({
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 text-end">
+                <td className="px-2 py-2 text-end">
                   <span dir="ltr" className="num font-medium">
                     {total}
                   </span>

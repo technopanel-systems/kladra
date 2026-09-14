@@ -75,6 +75,7 @@ import { dispatchable, getQuotation, type QuotationStatus } from "@/lib/quotatio
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { SELLING_ROLES } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
+import { firstRefusedBox, type LineList } from "@/lib/line-refusal";
 import { round2 } from "@/lib/money";
 import {
   detailsFor,
@@ -259,18 +260,39 @@ type Service = z.infer<typeof serviceSchema>;
 
 const servicesSchema = z.array(serviceSchema).max(20);
 
-/** A JSON field, parsed and validated like any other input from a browser. */
-function readJson<T>(formData: FormData, name: string, schema: z.ZodType<T>): T | "invalid" {
-  const raw = field(formData, name);
-  if (!raw) return "invalid";
+/**
+ * A list refused, and the first box in it that is wrong — `items.7.pricePerSqm`
+ * — or null when no one box is (src/lib/line-refusal.ts).
+ */
+type Refused = { refused: string | null };
+
+/** A JSON list field, parsed and validated like any other input from a browser. */
+function readJson<T>(formData: FormData, list: LineList, schema: z.ZodType<T>): T | Refused {
+  const raw = field(formData, list);
+  if (!raw) return { refused: null };
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return "invalid";
+    return { refused: null };
   }
   const result = schema.safeParse(parsed);
-  return result.success ? result.data : "invalid";
+  return result.success ? result.data : { refused: firstRefusedBox(list, result.error.issues) };
+}
+
+function isRefused<T>(value: T | Refused): value is Refused {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && "refused" in value;
+}
+
+/**
+ * The sentence for a refused list, at the box it names where it names one — so
+ * the form marks that box and the caret goes to it — and in the footer where it
+ * names none (DESIGN §5, D43).
+ */
+function listRefusal(sentence: string, refused: Refused): { ok: false; error: string; fieldErrors?: Record<string, string> } {
+  return refused.refused
+    ? { ok: false, error: sentence, fieldErrors: { [refused.refused]: sentence } }
+    : { ok: false, error: sentence };
 }
 
 /**
@@ -278,20 +300,20 @@ function readJson<T>(formData: FormData, name: string, schema: z.ZodType<T>): T 
  * The same quotation line twice is refused: the database would refuse it too, and
  * twice would double the metres it moved.
  */
-function readLines(formData: FormData): Line[] | "invalid" {
+function readLines(formData: FormData): Line[] | Refused {
   const lines = readJson(formData, "items", linesSchema);
-  if (lines === "invalid") return lines;
+  if (isRefused(lines)) return lines;
   const carried = lines.flatMap((line) => (line.quotationItemId ? [line.quotationItemId] : []));
-  return new Set(carried).size === carried.length ? lines : "invalid";
+  return new Set(carried).size === carried.length ? lines : { refused: null };
 }
 
 /** The services beside them. No field at all is no services, which is most loads. */
-function readServices(formData: FormData): Service[] | "invalid" {
+function readServices(formData: FormData): Service[] | Refused {
   if (!field(formData, "services")) return [];
   const rows = readJson(formData, "services", servicesSchema);
-  if (rows === "invalid") return rows;
+  if (isRefused(rows)) return rows;
   const carried = rows.flatMap((row) => (row.quotationServiceId ? [row.quotationServiceId] : []));
-  return new Set(carried).size === carried.length ? rows : "invalid";
+  return new Set(carried).size === carried.length ? rows : { refused: null };
 }
 
 const detailsSchema = z.object({
@@ -704,9 +726,9 @@ export async function requestDispatchAction(
     const { payment } = paid;
 
     const lines = readLines(formData);
-    if (lines === "invalid") return { ok: false, error: td("needsLines") };
+    if (isRefused(lines)) return listRefusal(td("needsLines"), lines);
     const loadServices = readServices(formData);
-    if (loadServices === "invalid") return { ok: false, error: tq("needsServices") };
+    if (isRefused(loadServices)) return listRefusal(tq("needsServices"), loadServices);
     if (!(await methodOffered(parsed.data.shipmentMethodId))) return { ok: false, error: tc("invalid") };
 
     /*
@@ -964,9 +986,9 @@ export async function updateDispatchAction(
     const { payment } = paid;
 
     const lines = readLines(formData);
-    if (lines === "invalid") return { ok: false, error: td("needsLines") };
+    if (isRefused(lines)) return listRefusal(td("needsLines"), lines);
     const loadServices = readServices(formData);
-    if (loadServices === "invalid") return { ok: false, error: tq("needsServices") };
+    if (isRefused(loadServices)) return listRefusal(tq("needsServices"), loadServices);
     if (!(await methodOffered(parsed.data.shipmentMethodId))) return { ok: false, error: tc("invalid") };
 
     const dispatch = await load(actor, parsed.data.dispatchId);
@@ -1097,6 +1119,13 @@ export type PrefillLine = {
 export type PrefillService = {
   quotationServiceId: string;
   position: number;
+  /**
+   * Which service, in the reader's language. The form's list is the services the
+   * admin still offers, and a carried one he has since switched off must still
+   * read as itself on the row it came on — the action accepts it there — rather
+   * than as an empty "Choose…" a rep would fill with something false.
+   */
+  name: string;
   draft: DraftService;
 };
 
@@ -1109,6 +1138,8 @@ export type PrefillService = {
 export type DispatchPrefill = {
   quotationId: string;
   label: string;
+  /** SMAC's number for the paper, which is what "Differs from 4541" names it by (D179). */
+  smacNumber: string | null;
   companyId: string;
   companyName: string;
   projectId: string;
@@ -1150,6 +1181,7 @@ export async function dispatchPrefillAction(input: unknown): Promise<ActionResul
       data: {
         quotationId: quotation.id,
         label: quotation.label,
+        smacNumber: quotation.smacNumber,
         companyId: quotation.companyId,
         companyName: quotation.companyName,
         projectId: quotation.projectId,
@@ -1165,6 +1197,7 @@ export async function dispatchPrefillAction(input: unknown): Promise<ActionResul
         services: quotation.services.map((service, index) => ({
           quotationServiceId: service.id,
           position: service.position,
+          name: service.name,
           draft: serviceDrafts[index],
         })),
       },

@@ -1137,3 +1137,5 @@ Left for the founder, measured and not fixed. The document of a list screen is 5
 - [x] 218 A worktree made for a builder can start at an old commit, not at the branch it was made from. (P13 Stage 2)
 - [x] 219 A seed that mixes a fixed day of the month with working days back is honest on some days of the month only. (P13-S5)
 - [x] 220 A sticky bar inside a card that hides its overflow sticks to the card, not to the page. (P13-S7)
+- [x] 221 A count drawn beside a capped list counted the rows it drew, not the day. (P13 G2 review)
+- [x] 222 A spec that says a shared reader sees no action row outlived the slice that gave him one. (P13 G3)

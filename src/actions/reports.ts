@@ -19,7 +19,7 @@
  * the lists it opens on, and the people and papers at the company it is about.
  */
 
-import { and, asc, desc, eq, gte, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -163,10 +163,63 @@ export type ReportTargets = {
 export async function reportTargetsAction(input: unknown): Promise<ActionResult<ReportTargets>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
-    const parsed = z.object({ companyId: z.uuid() }).safeParse(input ?? {});
+    const parsed = z
+      .object({
+        companyId: z.uuid(),
+        // The paper the popup was opened on, or the entry being corrected names
+        // (P13 review). The lists below leave out a superseded or withdrawn
+        // quotation and stop at the newest thirty, and a drawer can open the
+        // popup on any of them — the field then read blank while the report was
+        // filed against it. So the prefilled one is read by id and put first.
+        quotationId: z.uuid().optional(),
+        dispatchId: z.uuid().optional(),
+      })
+      .safeParse(input ?? {});
     if (!parsed.success) return { ok: false, error: tc("invalid") };
     const { companyId } = parsed.data;
     const gate = await assertMayReport(actor, companyId);
+
+    // Read by id, and only at THIS company: the gate above is what says he may
+    // see what is under it (D147), and a paper at another company is not his to
+    // be told about here — it is simply not offered, and the write refuses it.
+    const prefilledDispatch = parsed.data.dispatchId
+      ? await db
+          .select({
+            id: dispatches.id,
+            number: dispatches.number,
+            projectId: dispatches.projectId,
+            quotationId: dispatches.quotationId,
+            projectName: projects.name,
+          })
+          .from(dispatches)
+          .leftJoin(projects, eq(projects.id, dispatches.projectId))
+          .where(and(eq(dispatches.id, parsed.data.dispatchId), eq(dispatches.companyId, companyId)))
+          .limit(1)
+      : [];
+    // A prefilled load fills in its paper (D176), so that paper must be a choice
+    // too, however old: the quotation named, and the one the load names.
+    const paperIds = [
+      ...new Set(
+        [parsed.data.quotationId, prefilledDispatch[0]?.quotationId].filter(
+          (id): id is string => typeof id === "string",
+        ),
+      ),
+    ];
+    const prefilledQuotation =
+      paperIds.length > 0
+        ? await db
+            .select({
+              id: quotations.id,
+              number: quotations.number,
+              revision: quotations.revision,
+              projectId: quotations.projectId,
+              projectName: projects.name,
+            })
+            .from(quotations)
+            .leftJoin(projects, eq(projects.id, quotations.projectId))
+            .where(and(inArray(quotations.id, paperIds), eq(quotations.companyId, companyId)))
+            .orderBy(desc(quotations.number), desc(quotations.revision))
+        : [];
 
     const [company, contactRows, projectRows, quotationRows, dispatchRows] = await Promise.all([
       db.select({ name: companies.name }).from(companies).where(eq(companies.id, companyId)).limit(1),
@@ -250,13 +303,20 @@ export async function reportTargetsAction(input: unknown): Promise<ActionResult<
         contacts: contactRows.map((row) => ({ value: row.id, label: row.name })),
         mainContact,
         projects: projectRows.map((row) => ({ value: row.id, label: row.name })),
-        quotations: quotationRows.map((row) => ({
+        // The prefilled paper first, then the rest without it (P13 review).
+        quotations: [
+          ...prefilledQuotation,
+          ...quotationRows.filter((row) => !prefilledQuotation.some((one) => one.id === row.id)),
+        ].map((row) => ({
           value: row.id,
           label: quotationLabel(row.number, row.revision),
           hint: row.projectName ?? undefined,
           projectId: row.projectId,
         })),
-        dispatches: dispatchRows.map((row) => ({
+        dispatches: [
+          ...prefilledDispatch,
+          ...dispatchRows.filter((row) => !prefilledDispatch.some((one) => one.id === row.id)),
+        ].map((row) => ({
           value: row.id,
           label: dispatchLabel(row.number),
           hint: row.projectName ?? undefined,

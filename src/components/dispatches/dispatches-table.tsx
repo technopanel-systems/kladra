@@ -27,11 +27,11 @@ import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
-import { Ref, Sqm } from "@/components/ui-ext/figures";
+import { Money, Ref } from "@/components/ui-ext/figures";
 import { paymentDetailLabel, paymentTermsLabel } from "@/lib/payment";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
-import { formatMoney, formatSqm } from "@/lib/money";
+import { formatMoney, formatSqm, lineTotal, loadTotals, serviceTotal } from "@/lib/money";
 import type { CreditLine } from "@/lib/credit-rows";
 import type {
   DispatchItemRow,
@@ -588,6 +588,9 @@ export function DispatchSheet({
   const t = useTranslations();
   const locale = useLocale();
   const close = useCloseDrawer(param);
+  // What the load comes to, by the function the form adds it up with while the
+  // rep types (money.ts) — on the stored figures, so the two agree to the halala.
+  const totals = loadTotals(items, dispatch.services);
 
   return (
     <Sheet
@@ -680,33 +683,71 @@ export function DispatchSheet({
           />
           {report ? <div className="flex flex-wrap gap-2">{report}</div> : null}
 
+          {/* The whole sheet per line, as the quotation drawer draws its own
+              (SPEC §3, P13): a direct load has no paper to open, so this card is
+              the paper the desk approves — every input the rep typed, what the
+              line comes to, and on a carried line her check against what was
+              quoted (D112, D12). */}
           <ul className="flex flex-col gap-2">
             {items.map((item) => (
-              <li key={item.id} className="card-face flex flex-col gap-2 p-3">
+              <li
+                key={item.id}
+                data-slot="dispatch-item"
+                data-position={item.position}
+                className="card-face flex flex-col gap-2 p-3"
+              >
                 <div className="flex items-center justify-between gap-2">
                   <h4 className="text-sm font-medium">
                     {t("quotations.itemNumber", { number: item.position })}
-                    {" · "}
+                  </h4>
+                  <span className="text-sm" data-slot="figure-line-total">
+                    <Money value={lineTotal(item)} currency={false} />
+                  </span>
+                </div>
+                {/* A line the rep added to a load that has a paper: said in a
+                    sentence of its own, never as a fact whose value repeats its
+                    label. A direct load's lines are all its own, and say nothing. */}
+                {item.quotedQty === null && dispatch.quotationId ? (
+                  <p data-slot="line-not-on-paper" className="text-xs text-muted-foreground">
+                    {t("dispatches.lineNotOnPaper")}
+                  </p>
+                ) : null}
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                  <Fact label={t("common.colourCode")}>
                     <span dir="ltr" className="num">
                       {item.colourCode}
                     </span>
-                  </h4>
-                  <Sqm value={item.sqm} className="text-sm" />
-                </div>
-                {/* Her check on a partial dispatch: what is going now, against
-                    what the quotation asked for, what other dispatches already
-                    hold, and what is left once this one is counted — one
-                    definition, the dialog's (D112, D12). */}
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3 md:grid-cols-6">
+                  </Fact>
+                  <Fact label={t("common.supplier")}>{item.supplier}</Fact>
+                  <Fact label={t("common.fireRating")}>{item.fireRating}</Fact>
+                  <Fact label={t("common.class")}>{item.className}</Fact>
+                  <Fact label={t("common.thickness")}>
+                    <span dir="ltr" className="num">
+                      {item.thickness}
+                    </span>
+                  </Fact>
+                  <Fact label={t("quotations.sheet")}>
+                    <span dir="ltr" className="num">
+                      {item.width} × {item.length}
+                    </span>
+                  </Fact>
                   <Fact label={t("dispatches.sending")}>
                     <span dir="ltr" className="num">
                       {item.qty}
                     </span>
                   </Fact>
+                  <Fact label={t("common.pricePerSqm")}>
+                    <span dir="ltr" className="num" data-slot="figure-line-price">
+                      {formatMoney(item.pricePerSqm)}
+                    </span>
+                  </Fact>
+                  <Fact label={t("common.sqm")}>
+                    <span dir="ltr" className="num" data-slot="figure-line-sqm">
+                      {formatSqm(item.sqm)}
+                    </span>
+                  </Fact>
                   {/* What the paper asked for, what other loads hold and what is
-                      left — only where there is a quotation line behind it. A
-                      line the rep added, or a direct load's, has none of the
-                      three, and three empty facts are three questions. */}
+                      left — only where there is a quotation line behind it. */}
                   {item.quotedQty !== null ? (
                     <>
                       <Fact label={t("dispatches.quoted")}>
@@ -725,27 +766,16 @@ export function DispatchSheet({
                         </span>
                       </Fact>
                     </>
-                  ) : dispatch.quotationId ? (
-                    <Fact label={t("common.quotation")}>{t("dispatches.notOnPaper")}</Fact>
                   ) : null}
-                  <Fact label={t("quotations.sheet")}>
-                    <span dir="ltr" className="num">
-                      {item.width} × {item.length}
-                    </span>
-                  </Fact>
-                  <Fact label={t("common.pricePerSqm")}>
-                    <span dir="ltr" className="num" data-slot="figure-line-price">
-                      {formatMoney(item.pricePerSqm)}
-                    </span>
-                  </Fact>
                 </dl>
               </li>
             ))}
           </ul>
 
           {/* The services on this load, as on its quotation: which one, the m²
-              it is done over and the price per m² (SPEC §3, P13). Its m² is
-              money and never metres, so it is not in the figure below (D173). */}
+              it is done over, its price per m², what it comes to, and their
+              subtotal (SPEC §3, P13). Its m² is money and never metres, so it is
+              not in the figure below (D173). */}
           {dispatch.services.length > 0 ? (
             <section aria-labelledby="dispatch-services-heading" className="flex flex-col gap-2">
               <h3 id="dispatch-services-heading" className="text-sm font-medium">
@@ -756,34 +786,50 @@ export function DispatchSheet({
                   <li
                     key={service.id}
                     data-slot="dispatch-service"
-                    className="card-face flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-3 text-sm"
+                    className="card-face flex flex-col gap-2 p-3"
                   >
-                    <span className="min-w-0 font-medium">
-                      <bdi>{service.name}</bdi>
-                    </span>
-                    <span className="flex flex-wrap items-baseline gap-x-4 text-xs text-muted-foreground">
-                      <span>
-                        {t("common.sqm")}{" "}
-                        <span dir="ltr" className="num text-foreground">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="min-w-0 text-sm font-medium break-words">
+                        <bdi>{service.name}</bdi>
+                      </h4>
+                      <span className="text-sm" data-slot="figure-service-total">
+                        <Money value={serviceTotal(service)} currency={false} />
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
+                      <Fact label={t("common.sqm")}>
+                        <span dir="ltr" className="num">
                           {formatSqm(service.sqm)}
                         </span>
-                      </span>
-                      <span>
-                        {t("common.pricePerSqm")}{" "}
-                        <span dir="ltr" className="num text-foreground">
+                      </Fact>
+                      <Fact label={t("common.pricePerSqm")}>
+                        <span dir="ltr" className="num">
                           {formatMoney(service.pricePerSqm)}
                         </span>
-                      </span>
-                    </span>
+                      </Fact>
+                    </dl>
                   </li>
                 ))}
               </ul>
+              <p
+                data-slot="services-subtotal"
+                className="flex items-baseline justify-between gap-4 text-sm"
+              >
+                <span className="text-muted-foreground">{t("quotations.servicesSubtotal")}</span>
+                <span>
+                  <span dir="ltr" className="num font-medium">
+                    {formatMoney(totals.services)}
+                  </span>{" "}
+                  {t("common.sar")}
+                </span>
+              </p>
             </section>
           ) : null}
 
-          <dl className="card-face flex flex-col gap-2 p-3 text-sm">
+          <dl data-slot="totals" className="card-face flex flex-col gap-2 p-3 text-sm">
             {/* The one figure this request is about: what it puts on the
-                month (S41). Everything under it is how and where. */}
+                month (S41). Everything under it is what it comes to, then how
+                and where. */}
             <div className="flex items-baseline justify-between gap-4 pb-1">
               <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {t("common.sqm")}
@@ -796,6 +842,30 @@ export function DispatchSheet({
                 {formatSqm(dispatch.totalSqm)}
               </dd>
             </div>
+            <div className="border-t border-line pt-1" />
+            {/* What the load comes to, the five figures a quotation's totals
+                are, from the same function (money.ts): the panels and the
+                services apart where there are services, then before VAT, VAT
+                and the total (SPEC §3, P13, D169). */}
+            {dispatch.services.length > 0 ? (
+              <>
+                <Row label={t("quotations.panelsSubtotal")} slot="figure-panels">
+                  <Amount value={totals.panels} sar={t("common.sar")} />
+                </Row>
+                <Row label={t("quotations.servicesSubtotal")} slot="figure-services">
+                  <Amount value={totals.services} sar={t("common.sar")} />
+                </Row>
+              </>
+            ) : null}
+            <Row label={t("common.totalExclVat")} slot="figure-subtotal">
+              <Amount value={totals.subtotal} sar={t("common.sar")} />
+            </Row>
+            <Row label={t("common.vatRate")} slot="figure-vat">
+              <Amount value={totals.vat} sar={t("common.sar")} />
+            </Row>
+            <Row label={t("common.grandTotal")} slot="figure-total" strong>
+              <Amount value={totals.total} sar={t("common.sar")} />
+            </Row>
             {credit.length > 0 && (credit.length > 1 || credit[0].userId !== dispatch.repId) ? (
               <>
                 <div className="border-t border-line pt-1" />
@@ -825,7 +895,9 @@ export function DispatchSheet({
               <bdi>{dispatch.warehouseName}</bdi>
             </Row>
             <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
-            <Row label={t("common.destination")}>{dispatch.destination}</Row>
+            <Row label={t("common.destination")}>
+              <bdi>{dispatch.destination}</bdi>
+            </Row>
             {/* The choice, then the answer it asked for, with a mark between
                 them rather than a gap: a gap says nothing (§5 #181). */}
             <Row label={t("common.paymentTerms")}>
@@ -880,20 +952,55 @@ function SplitNames({ names }: { names: string[] }) {
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * A label and its value on one line, the value at the end. The value WRAPS: a
+ * shipment method, a destination or a payment note is words somebody typed, and
+ * at 375 "TT — a Technopanel truck" was cut at the panel's edge with nothing to
+ * say so (DESIGN §5: anything whose job is to be exact wraps rather than clips).
+ * The label keeps its own width and the value takes what is left of the line.
+ */
+function Row({
+  label,
+  slot,
+  strong = false,
+  children,
+}: {
+  label: string;
+  /** Names the figure for a spec, the way the quotation's totals block does. */
+  slot?: string;
+  strong?: boolean;
+  children: ReactNode;
+}) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-end">{children}</dd>
+      <dt className={cn("shrink-0", strong ? "font-medium" : "text-muted-foreground")}>{label}</dt>
+      <dd
+        data-slot={slot}
+        className={cn("min-w-0 text-end break-words", strong && "font-semibold")}
+      >
+        {children}
+      </dd>
     </div>
+  );
+}
+
+/** A sum of money and its currency, in the figure face with the digits isolated. */
+function Amount({ value, sar }: { value: number; sar: string }) {
+  return (
+    <>
+      <span dir="ltr" className="num">
+        {formatMoney(value)}
+      </span>{" "}
+      {sar}
+    </>
   );
 }
 
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col">
+    <div className="flex min-w-0 flex-col">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd>{children}</dd>
+      <dd className="break-words">{children}</dd>
     </div>
   );
 }

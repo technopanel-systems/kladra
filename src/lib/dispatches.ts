@@ -514,6 +514,13 @@ export type DispatchDetail = DispatchRow & {
   warehouseId: number;
   warehouseName: string;
   /**
+   * The customer is archived, or the job is (S16). The load still opens, but
+   * nothing new is filed against it, and the drawer asks these two before it
+   * offers Add report (D176). A direct load's job is no job, never archived.
+   */
+  companyArchived: boolean;
+  projectArchived: boolean;
+  /**
    * Who its metres count for, and how much each takes (D148). One name on
    * every dispatch a single rep raised; two or more on a shared job, and then
    * the drawer is the only place a rep can see why his target moved by less
@@ -544,6 +551,9 @@ export async function getDispatch(
       // Whether this reader is on the company's share list, asked in the same
       // statement as its owner (D147).
       shared: onCompanySql(user, sql`companies.id`).mapWith(Boolean),
+      companyArchived: sql<boolean>`companies.archived_at is not null`.mapWith(Boolean),
+      // False with no job: the left join's null is not "archived".
+      projectArchived: sql<boolean>`projects.archived_at is not null`.mapWith(Boolean),
     })
     .from(dispatches)
     .innerJoin(companies, eq(companies.id, dispatches.companyId))
@@ -645,6 +655,8 @@ export async function getDispatch(
     ...detail,
     warehouseId: row.warehouseId,
     warehouseName: row.warehouseName,
+    companyArchived: Boolean(row.companyArchived),
+    projectArchived: Boolean(row.projectArchived),
     difference,
     serviceNames: Object.fromEntries(named.map((service) => [String(service.id), service.name])),
     credit: await creditOnDispatch(id, detail.totalSqm),

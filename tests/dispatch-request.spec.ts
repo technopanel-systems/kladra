@@ -3,8 +3,15 @@ import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 import { choose, pickFirst, pressChip } from "./helpers/pick";
-import { quotationLabel } from "@/lib/labels";
-import { formatSqmWhole } from "@/lib/money";
+import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import {
+  formatMoney,
+  formatNumber,
+  formatSqmWhole,
+  lineTotal,
+  loadTotals,
+  serviceTotal,
+} from "@/lib/money";
 import { quotationEvent } from "@/lib/quotation-events";
 
 /**
@@ -30,6 +37,14 @@ const COLD = { timeout: 30_000 };
 /** A line of the load, by the number it carries — the quotation's own (dispatch-lines.tsx). */
 function loadLine(form: Locator, position: number): Locator {
   return form.locator(`[data-slot="dispatch-line"][data-position="${position}"]`);
+}
+
+/** One fact on a drawer card, by its label: the value under "Supplier", not the word "Supplier". */
+function fact(card: Locator, label: string): Locator {
+  return card
+    .locator("dl > div")
+    .filter({ has: card.page().locator("dt").getByText(label, { exact: true }) })
+    .locator("dd");
 }
 
 /** The dispatch's own name, D-#, once the drawer holding it has loaded. */
@@ -271,8 +286,10 @@ test("a load opens on its quotation's lines and services, and the two things the
       await added.getByLabel(t("common.sqm"), { exact: true }).fill("25");
       await added.getByLabel(t("common.pricePerSqm"), { exact: true }).fill("18");
 
+      // The paper by SMAC's number, as the chip, the drawer and the trail name
+      // it — one paper, one name (D179, P13 review).
       await expect(form.locator('[data-slot="form-differs"]')).toHaveText(
-        t("dispatches.formDiffers", { label }),
+        t("dispatches.formDiffers", { label: paper.smac ?? label }),
       );
 
       await fillTheDetails(form, t, "Riyadh — showroom site, gate 2");
@@ -302,11 +319,94 @@ test("a load opens on its quotation's lines and services, and the two things the
       await expect(line.locator("li[data-field]")).toHaveCount(1);
       await expect(line.locator("li[data-field]")).toHaveAttribute("data-field", "pricePerSqm");
       await expect(line).toContainText(newPrice);
+      // Each figure with its unit, the new one and the one it was: "127.00" alone
+      // left the desk to remember whether that was metres or money (P13 review).
+      const sarPerSqm = t("dispatches.unit.sarPerSqm");
+      await expect(line.locator("li[data-field]")).toContainText(`${formatNumber(newPrice)} ${sarPerSqm}`);
+      await expect(line.locator("li[data-field]")).toContainText(
+        t("dispatches.changedWasUnit", { from: formatNumber(changed.price), unit: sarPerSqm }),
+      );
 
       const service = entries.nth(1);
       await expect(service).toHaveAttribute("data-change-of", "service");
       await expect(service).toHaveAttribute("data-change", "added");
       await expect(service).toContainText(extra.name);
+    });
+
+    await test.step("and the drawer is the whole load: each line's sheet and total, its services, what it comes to", async () => {
+      const sheet = page.getByRole("dialog", { name: dispatchName });
+      const items = await query<{
+        position: number;
+        supplier: string;
+        fire: string;
+        class: string;
+        width: string;
+        length: string;
+        qty: number;
+        price: string;
+      }>(
+        `select di.position, s.code as supplier, fr.name as fire, cl.name as class,
+                di.width::text as width, di.length::text as length, di.qty,
+                di.price_per_sqm::text as price
+           from dispatch_items di
+           join suppliers s on s.id = di.supplier_id
+           join fire_ratings fr on fr.id = di.fire_rating_id
+           join classes cl on cl.id = di.class_id
+          where di.dispatch_id = $1::uuid
+          order by di.position`,
+        [dispatchId],
+      );
+      const services = await query<{ sqm: string; price: string }>(
+        `select sqm::text as sqm, price_per_sqm::text as price
+           from dispatch_services where dispatch_id = $1::uuid order by position`,
+        [dispatchId],
+      );
+
+      // Every input the rep typed, per line, as the quotation drawer shows its own:
+      // Rawan approves a direct load with no paper to open (P13 review).
+      await expect(sheet.locator('[data-slot="dispatch-item"]')).toHaveCount(items.length, COLD);
+      for (const item of items) {
+        const card = sheet.locator(`[data-slot="dispatch-item"][data-position="${item.position}"]`);
+        for (const [label, value] of [
+          ["common.supplier", item.supplier],
+          ["common.fireRating", item.fire],
+          ["common.class", item.class],
+        ] as const) {
+          await expect(fact(card, t(label))).toHaveText(value);
+        }
+        const line = { width: item.width, length: item.length, qty: item.qty, pricePerSqm: item.price };
+        await expect(card.locator('[data-slot="figure-line-total"]')).toHaveText(formatMoney(lineTotal(line)));
+      }
+      const serviceTotals = sheet.locator('[data-slot="figure-service-total"]');
+      await expect(serviceTotals).toHaveCount(services.length);
+      for (const [index, service] of services.entries()) {
+        await expect(serviceTotals.nth(index)).toHaveText(
+          formatMoney(serviceTotal({ sqm: service.sqm, pricePerSqm: service.price })),
+        );
+      }
+
+      // The five figures, from the function the quotation drawer uses …
+      const totals = loadTotals(
+        items.map((item) => ({ width: item.width, length: item.length, qty: item.qty, pricePerSqm: item.price })),
+        services.map((service) => ({ sqm: service.sqm, pricePerSqm: service.price })),
+      );
+      const sar = (value: number) => `${formatMoney(value)} ${t("common.sar")}`;
+      await expect(sheet.locator('[data-slot="services-subtotal"]')).toContainText(formatMoney(totals.services));
+      await expect(sheet.locator('[data-slot="figure-panels"]')).toHaveText(sar(totals.panels));
+      await expect(sheet.locator('[data-slot="figure-services"]')).toHaveText(sar(totals.services));
+      await expect(sheet.locator('[data-slot="figure-subtotal"]')).toHaveText(sar(totals.subtotal));
+      await expect(sheet.locator('[data-slot="figure-vat"]')).toHaveText(sar(totals.vat));
+      await expect(sheet.locator('[data-slot="figure-total"]')).toHaveText(sar(totals.total));
+
+      // … and that function agrees with the stored rows, each line rounded once.
+      const stored = await one<{ subtotal: string }>(
+        `select ((select coalesce(sum(round(di.sqm * di.price_per_sqm, 2)), 0)
+                    from dispatch_items di where di.dispatch_id = $1::uuid)
+               + (select coalesce(sum(round(ds.sqm * ds.price_per_sqm, 2)), 0)
+                    from dispatch_services ds where ds.dispatch_id = $1::uuid))::text as subtotal`,
+        [dispatchId],
+      );
+      expect(totals.subtotal).toBe(Number(stored.subtotal));
     });
 
     await test.step("recorded for later: two entries, from and to, and the trail says so", async () => {
@@ -412,6 +512,17 @@ test("a direct dispatch: no quotation, one priced line, approved, and the metres
       const sheet = page.getByRole("dialog", { name: dispatchName });
       await expect(sheet.locator('[data-slot="fact-direct"]')).toHaveText(t("dispatches.direct"));
       await expect(sheet.locator('[data-slot="differs"]')).toHaveCount(0);
+      // Every line of a direct load is its own, so none is marked as missing from
+      // a paper; and what it comes to is on the drawer, there being no paper to
+      // open (P13 review).
+      await expect(sheet.locator('[data-slot="line-not-on-paper"]')).toHaveCount(0);
+      const totals = loadTotals([{ width, length, qty, pricePerSqm: 130 }]);
+      await expect(sheet.locator('[data-slot="figure-subtotal"]')).toHaveText(
+        `${formatMoney(totals.subtotal)} ${t("common.sar")}`,
+      );
+      await expect(sheet.locator('[data-slot="figure-total"]')).toHaveText(
+        `${formatMoney(totals.total)} ${t("common.sar")}`,
+      );
 
       const row = await one<{
         quotation_id: string | null;
@@ -557,7 +668,7 @@ test("a refused dispatch is corrected and sent again, back on the desk, its diff
       await row.getByLabel(t("dispatches.sending")).fill("1");
       await row.getByLabel(t("common.pricePerSqm")).fill(newPrice);
       await expect(form.locator('[data-slot="form-differs"]')).toHaveText(
-        t("dispatches.formDiffers", { label: paperLabel }),
+        t("dispatches.formDiffers", { label: refused.smac ?? paperLabel }),
       );
       await form.getByRole("button", { name: t("common.save") }).click();
       await expect(page.getByText(t("dispatches.updated"))).toBeVisible(COLD);
@@ -695,4 +806,346 @@ test("payment is three choices with nothing written in the boxes, and credit wit
     await expect(form).toBeVisible();
     expect(await count()).toBe(before);
   });
+});
+
+/**
+ * One of Faisal's papers a load can still be raised on — live, the newest
+ * revision, panels left on a line — with one of its services, named in the
+ * reader's language.
+ */
+async function paperWithAService(faisal: string, locale: Locale) {
+  return one<{ id: string; number: number; revision: number; service_id: number; service: string }>(
+    `select q.id, q.number, q.revision, s.id as service_id,
+            case when $2::text = 'ar' then s.name_ar else s.name_en end as service
+       from quotations q
+       join companies c on c.id = q.company_id
+       join quotation_services qs on qs.quotation_id = q.id
+       join services s on s.id = qs.service_id
+      where c.rep_id = $1::uuid and c.archived_at is null
+        and q.status in ('issued', 'accepted')
+        and s.active
+        and not exists (select 1 from quotations later
+                         where later.number = q.number and later.revision > q.revision)
+        and exists (select 1 from quotation_items qi
+                     where qi.quotation_id = q.id and qi.qty > ${COMMITTED})
+      order by q.number, qs.position
+      limit 1`,
+    [faisal, locale],
+  );
+}
+
+/**
+ * Request dispatch is a door onto something to send (P13 review): a paper with
+ * panels left on it, or a customer he may raise a direct load for. It was shown
+ * to everybody who sells and may write, which is the manager too — who owns no
+ * customer, so it opened a dialog with nothing in it to choose.
+ */
+test("Request dispatch is offered to a person with something to send, and not to the manager", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const heading = page.getByRole("heading", { name: t("common.dispatches"), level: 1 });
+  const request = page.getByRole("button", { name: t("dispatches.request") });
+
+  await test.step("the manager has nothing to send, and no button", async () => {
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/dispatches`);
+    await expect(heading).toBeVisible(COLD);
+    await expect(request).toHaveCount(0);
+  });
+
+  await test.step("Faisal has papers and customers, and the button", async () => {
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/dispatches`);
+    await expect(heading).toBeVisible(COLD);
+    await expect(request.first()).toBeVisible();
+  });
+});
+
+/**
+ * The admin switched a service off after it was quoted (P13 review). The action
+ * accepts it carried from the paper, and the form offered only the services
+ * still on — so the carried one read "Choose…", and the rep could only record a
+ * difference that was not one by choosing another.
+ */
+test("a service switched off since the quotation still reads as itself on the load, and is no difference", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const paper = await paperWithAService(faisal, locale);
+  const label = quotationLabel(paper.number, paper.revision);
+
+  await query("update services set active = false where id = $1::int", [paper.service_id]);
+  try {
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/quotations?open=${paper.id}`);
+    const drawer = page.getByRole("dialog", { name: label });
+    await expect(drawer).toBeVisible(COLD);
+    await drawer.getByRole("button", { name: t("dispatches.request") }).click();
+    const form = page.getByRole("dialog", { name: t("dispatches.requestFor", { label }) });
+
+    const boxes = form.getByRole("combobox", { name: t("quotations.service") });
+    const carried = boxes.filter({ hasText: paper.service });
+    await expect(carried).toHaveCount(1, COLD);
+    await expect(carried).toContainText(t("dispatches.serviceNotOffered"));
+    // Carried as it was quoted, so the load still matches its paper.
+    await expect(form.locator('[data-slot="form-differs"]')).toHaveCount(0);
+
+    // And it is not offered for a service he adds: switched off is switched off.
+    const before = await boxes.count();
+    await form.getByRole("button", { name: t("quotations.addService") }).click();
+    await expect(boxes).toHaveCount(before + 1);
+    const added = boxes.nth(before);
+    await added.click();
+    await expect(added).toHaveAttribute("aria-expanded", "true");
+    const options = page.getByRole("listbox").last().getByRole("option");
+    await expect(options.first()).toBeVisible();
+    await expect(options.filter({ hasText: paper.service })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+  } finally {
+    await query("update services set active = true where id = $1::int", [paper.service_id]);
+  }
+});
+
+/**
+ * A twelve-line load with one blank price used to say one sentence in the footer
+ * and mark nothing (P13 review). The refusal names the box: the price on the line
+ * it is missing from is marked, the caret is put in it, and the sentence is under
+ * that line.
+ */
+test("a load with one price left blank is refused at that price, on its own line", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const customer = await customerWithNoPaper(faisal);
+  const count = async () =>
+    (
+      await one<{ n: number }>("select count(*)::int as n from dispatches where company_id = $1::uuid", [
+        customer.id,
+      ])
+    ).n;
+  const before = await count();
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/dispatches`);
+  await page.getByRole("button", { name: t("dispatches.request") }).first().click();
+  const form = page.getByRole("dialog", { name: t("dispatches.request") });
+  await choose(page, form.getByRole("combobox", { name: t("common.company") }), customer.name);
+  const lines = form.locator('[data-slot="dispatch-line"]');
+  await expect(lines).toHaveCount(1, COLD);
+
+  const first = lines.first();
+  await first.getByLabel(t("common.colourCode")).fill("RAL 9016");
+  for (const label of ["common.supplier", "common.fireRating", "common.class"]) {
+    await pickFirst(first.getByRole("combobox", { name: t(label) }));
+  }
+  await first.getByLabel(t("dispatches.sending")).fill("2");
+  await first.getByLabel(t("common.pricePerSqm")).fill("120");
+
+  // A second line on the same sheet, everything but its price.
+  await form.getByRole("button", { name: t("quotations.addItem") }).click();
+  await expect(lines).toHaveCount(2);
+  const second = lines.nth(1);
+  await second.getByLabel(t("common.colourCode")).fill("RAL 7016");
+  await second.getByLabel(t("dispatches.sending")).fill("3");
+
+  await fillTheDetails(form, t, "Riyadh — refused at the price");
+  await form.getByRole("button", { name: t("common.save") }).click();
+
+  const price = second.getByLabel(t("common.pricePerSqm"));
+  await expect(price).toHaveAttribute("aria-invalid", "true", COLD);
+  await expect(price).toBeFocused();
+  await expect(second.getByRole("alert")).toHaveText(t("dispatches.needsLines"));
+  // The line that was whole is not marked, and the footer does not say it twice.
+  await expect(first.getByLabel(t("common.pricePerSqm"))).not.toHaveAttribute("aria-invalid", "true");
+  await expect(form.locator('[data-slot="form-footer"] [role="alert"]')).toHaveCount(0);
+  expect(await count()).toBe(before);
+});
+
+/**
+ * The line table's column names, measured rather than looked at (P13 review):
+ * "Sending n…", "Length (…" and «المطلوب…» were cut at 1366, a label being the
+ * one thing that may never be (DESIGN §5). Both shapes of the table, since a load
+ * from a paper has a column a direct one does not.
+ */
+test("the line table's column names are whole at 1366, on a load from a paper and on a direct one", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+  await page.setViewportSize({ width: 1366, height: 900 });
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const customer = await customerWithNoPaper(faisal);
+  const paper = await paperWithAService(faisal, locale);
+  const label = quotationLabel(paper.number, paper.revision);
+
+  const cut = async (form: Locator): Promise<string[]> => {
+    const head = form.locator('[data-slot="dispatch-lines-head"]');
+    await expect(head).toBeVisible(COLD);
+    return head
+      .locator("span")
+      .evaluateAll((nodes) =>
+        nodes
+          .filter((node) => (node.textContent ?? "").trim() !== "" && node.scrollWidth > node.clientWidth + 1)
+          .map((node) => node.textContent ?? ""),
+      );
+  };
+
+  await login(page, locale, "faisal");
+
+  await test.step("a direct load", async () => {
+    await page.goto(`/${locale}/dispatches`);
+    await page.getByRole("button", { name: t("dispatches.request") }).first().click();
+    const form = page.getByRole("dialog", { name: t("dispatches.request") });
+    await choose(page, form.getByRole("combobox", { name: t("common.company") }), customer.name);
+    await expect(form.locator('[data-slot="dispatch-line"]')).toHaveCount(1, COLD);
+    expect(await cut(form)).toEqual([]);
+  });
+
+  await test.step("a load from a paper, with what is left on it", async () => {
+    await page.goto(`/${locale}/quotations?open=${paper.id}`);
+    const drawer = page.getByRole("dialog", { name: label });
+    await expect(drawer).toBeVisible(COLD);
+    await drawer.getByRole("button", { name: t("dispatches.request") }).click();
+    const form = page.getByRole("dialog", { name: t("dispatches.requestFor", { label }) });
+    await expect(form.locator('[data-slot="figure-left"]').first()).toBeVisible(COLD);
+    expect(await cut(form)).toEqual([]);
+  });
+});
+
+/**
+ * Two things the drawer said badly (P13 review). A line the rep added to a load
+ * with a paper read "Quotation: Not on the quotation" — a fact whose value
+ * repeated its label — and it says so in a sentence now. And at 375 the shipment
+ * row was cut at the panel's edge with nothing to say so; a value there wraps.
+ *
+ * The seed has no load with an added line, so one line of a seeded load is
+ * unlinked from its paper for the walk and linked again after it.
+ */
+test("a line added to a load with a paper says so, and at 375 the drawer's rows wrap rather than clip", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const load = await one<{ id: string; number: number; item: string; quotation_item_id: string }>(
+    `select d.id, d.number, di.id as item, di.quotation_item_id
+       from dispatches d
+       join dispatch_items di on di.dispatch_id = d.id
+       join companies c on c.id = d.company_id
+      where c.rep_id = $1::uuid and d.quotation_id is not null and di.quotation_item_id is not null
+      order by d.number, di.position
+      limit 1`,
+    [faisal],
+  );
+
+  await query("update dispatch_items set quotation_item_id = null where id = $1::uuid", [load.item]);
+  try {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/dispatches?open=${load.id}`);
+    const sheet = page.getByRole("dialog", { name: dispatchLabel(load.number) });
+    await expect(sheet).toBeVisible(COLD);
+
+    await expect(sheet.locator('[data-slot="line-not-on-paper"]')).toHaveText(t("dispatches.lineNotOnPaper"));
+    await expect(sheet.getByText(t("dispatches.notOnPaper"), { exact: true })).toHaveCount(0);
+
+    const totals = sheet.locator('[data-slot="totals"]');
+    await totals.scrollIntoViewIfNeeded();
+    // The totals block IS the `dl`, so its rows are its own children.
+    await expect(
+      totals
+        .locator(":scope > div")
+        .filter({ has: page.locator("dt").getByText(t("common.shipment"), { exact: true }) })
+        .locator("dd"),
+    ).toBeVisible();
+    const clipped = await totals
+      .locator("dd")
+      .evaluateAll((nodes) =>
+        nodes.filter((node) => node.scrollWidth > node.clientWidth + 1).map((node) => node.textContent ?? ""),
+      );
+    expect(clipped, "a value on the drawer is cut at its edge").toEqual([]);
+  } finally {
+    await query("update dispatch_items set quotation_item_id = $2::uuid where id = $1::uuid", [
+      load.item,
+      load.quotation_item_id,
+    ]);
+  }
+});
+
+/**
+ * Add report on a paper or a load opens the popup on that paper's job, and the
+ * action refuses a report on an archived customer or a lost job (D176). The
+ * drawers offered it anyway (P13 review); they ask what the project sheet asks.
+ * The job is lost and the customer archived by hand for the walk, and put back.
+ */
+test("Add report is not offered on a load or a paper whose job is lost or whose customer is archived", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const load = await one<{
+    id: string;
+    number: number;
+    quotation_id: string;
+    q_number: number;
+    q_revision: number;
+    company_id: string;
+    project_id: string;
+  }>(
+    `select d.id, d.number, d.quotation_id, q.number as q_number, q.revision as q_revision,
+            d.company_id, d.project_id
+       from dispatches d
+       join quotations q on q.id = d.quotation_id
+       join companies c on c.id = d.company_id
+       join projects p on p.id = d.project_id
+      where c.rep_id = $1::uuid and c.archived_at is null
+        and p.archived_at is null and p.lost_at is null
+      order by d.number
+      limit 1`,
+    [faisal],
+  );
+  const drawers = [
+    { url: `/${locale}/dispatches?open=${load.id}`, name: dispatchLabel(load.number) },
+    { url: `/${locale}/quotations?open=${load.quotation_id}`, name: quotationLabel(load.q_number, load.q_revision) },
+  ];
+  const offered = async (count: number) => {
+    for (const drawer of drawers) {
+      await page.goto(drawer.url);
+      const sheet = page.getByRole("dialog", { name: drawer.name });
+      await expect(sheet).toBeVisible(COLD);
+      await expect(sheet.getByRole("button", { name: t("common.addReport") }), drawer.name).toHaveCount(count);
+    }
+  };
+
+  try {
+    await login(page, locale, "faisal");
+
+    await test.step("on a live job, both drawers offer it", async () => {
+      await offered(1);
+    });
+
+    await test.step("the job lost, neither does", async () => {
+      await query("update projects set lost_at = now() where id = $1::uuid", [load.project_id]);
+      await offered(0);
+    });
+
+    await test.step("the customer archived, neither does", async () => {
+      await query("update projects set lost_at = null where id = $1::uuid", [load.project_id]);
+      await query("update companies set archived_at = now() where id = $1::uuid", [load.company_id]);
+      await offered(0);
+    });
+  } finally {
+    await query("update projects set lost_at = null where id = $1::uuid", [load.project_id]);
+    await query("update companies set archived_at = null where id = $1::uuid", [load.company_id]);
+  }
 });

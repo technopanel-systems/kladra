@@ -155,3 +155,51 @@ export function differenceFrom(
 
   return [...lines, ...services];
 }
+
+/** A field as the admin's file names it, and the unit its figures are recorded in. */
+const IN_ENGLISH: Record<DifferenceField, { word: string | null; unit: string | null }> = {
+  colourCode: { word: "colour code", unit: null },
+  supplier: { word: "supplier", unit: null },
+  fireRating: { word: "fire rating", unit: null },
+  class: { word: "class", unit: null },
+  thickness: { word: "thickness", unit: "mm" },
+  width: { word: "width", unit: "m" },
+  length: { word: "length", unit: "m" },
+  pricePerSqm: { word: "price", unit: "SAR per m²" },
+  // The service itself: "Service 2 changed from CNC cutting to Fabrication".
+  service: { word: null, unit: null },
+  sqm: { word: "area", unit: "m²" },
+};
+
+/**
+ * What differed, as one English sentence per entry, for the dispatches CSV
+ * (SPEC §3 P13: "recorded for later analysis").
+ *
+ * The file is read in Excel by somebody asking which loads left the paper and
+ * how, so it says it in words and with units rather than as the JSON the column
+ * holds: "Item 2 price changed from 120.00 SAR per m² to 127.00 SAR per m²;
+ * Service 3 added, not on the quotation". Items and services are numbered as
+ * the file's own `item` column numbers them. A load with no paper has nothing to
+ * differ from and says nothing (its `source` already says `direct`); a load that
+ * matches its paper says `none`, which is an answer and not a blank.
+ *
+ * A service is recorded by its id (see above), so the caller hands over the
+ * name to print for one.
+ */
+export function differenceInEnglish(
+  difference: readonly Difference[] | null,
+  serviceName: (id: string) => string,
+): string {
+  if (difference === null) return "";
+  if (difference.length === 0) return "none";
+  return difference
+    .map((entry) => {
+      const what = `${entry.kind === "line" ? "Item" : "Service"} ${entry.position}`;
+      if (entry.change === "added") return `${what} added, not on the quotation`;
+      const { word, unit } = IN_ENGLISH[entry.field];
+      const value = (raw: string) =>
+        (entry.field === "service" ? serviceName(raw) : raw) + (unit ? ` ${unit}` : "");
+      return `${what}${word ? ` ${word}` : ""} changed from ${value(entry.from)} to ${value(entry.to)}`;
+    })
+    .join("; ");
+}

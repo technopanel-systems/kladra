@@ -42,13 +42,23 @@ export type LineInput = { width: string | number; length: string | number; qty: 
  * 215.76. SQL rounds once (`round(width * length * qty, 2)`), so this rounds
  * once, and tests/dispatches.spec.ts checks the two against each other rather
  * than trusting them — it caught exactly that six-halala gap.
+ *
+ * The width and the length go in as the database will HOLD them, though. Each is
+ * numeric(12,2) and the action rounds what was typed before it writes it, and
+ * the generated column multiplies the stored figures — so a width typed 1.245 is
+ * 1.25 by the time anything reads it, and a hundred sheets of 1.245 × 5 are
+ * 625.00 m² in the drawer. Multiplied as typed they were 622.50 under the rep's
+ * thumb. That is the quantity-rounding trap turned inside out: rounding the
+ * inputs is what the column does, rounding the product early is what it does
+ * not (tests/quotations.spec.ts compares the two on a stored row).
  */
 export function lineSqm(l: Pick<LineInput, "width" | "length" | "qty">): number {
-  return round2(toNumber(l.width) * toNumber(l.length) * toNumber(l.qty));
+  return round2(round2(toNumber(l.width)) * round2(toNumber(l.length)) * toNumber(l.qty));
 }
 
+/** A line's money: its m² as above, times its price as the column will hold it. */
 export function lineTotal(l: LineInput): number {
-  return round2(lineSqm(l) * toNumber(l.pricePerSqm));
+  return round2(lineSqm(l) * round2(toNumber(l.pricePerSqm)));
 }
 
 /** A service on a quotation as the arithmetic sees it: the m² typed and its price (SPEC §3, P13). */
@@ -84,7 +94,7 @@ export function serviceTotal(s: ServiceInput): number {
  * `src/lib/quotations.ts` does the same arithmetic in SQL on the stored rows, and
  * tests/services.spec.ts compares the two on a real quotation.
  */
-export function quotationTotals(lines: LineInput[], services: readonly ServiceInput[] = []) {
+export function quotationTotals(lines: readonly LineInput[], services: readonly ServiceInput[] = []) {
   const sqm = round2(lines.reduce((s, l) => s + lineSqm(l), 0));
   const panels = round2(lines.reduce((s, l) => s + lineTotal(l), 0));
   const servicesSubtotal = round2(services.reduce((s, service) => s + serviceTotal(service), 0));
@@ -92,4 +102,15 @@ export function quotationTotals(lines: LineInput[], services: readonly ServiceIn
   const vat = round2(subtotal * VAT_RATE);
   const total = round2(subtotal + vat);
   return { sqm, panels, services: servicesSubtotal, subtotal, vat, total };
+}
+
+/**
+ * What a LOAD comes to — the same five figures, by the same function (SPEC §3,
+ * P13: a dispatch carries the quotation's inputs, lines with a price per m² and
+ * services, D169). A name for the drawer that reads it, never a second formula:
+ * the desk compares a load's money with its paper's, and two arithmetics would
+ * be two answers to one question (rules/data.md).
+ */
+export function loadTotals(lines: readonly LineInput[], services: readonly ServiceInput[] = []) {
+  return quotationTotals(lines, services);
 }

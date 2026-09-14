@@ -116,7 +116,13 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       // A report about this paper, from the paper (SPEC §3, P13): his own
       // customer or one shared with him — the same sentence the popup's action
       // asks, so the button is here exactly when the report would be accepted.
+      // And not on an archived customer, nor on a job that is lost or archived,
+      // because the popup opens on this paper's job and the action refuses all
+      // three (D176) — the project sheet's `reports && !lost`, asked here too.
       report={
+        !quotation.companyArchived &&
+        !quotation.projectArchived &&
+        !quotation.projectLostOn &&
         mayReportOn(user, quotation.companyRepId, quotation.shared) ? (
           <ReportButton
             companyId={quotation.companyId}

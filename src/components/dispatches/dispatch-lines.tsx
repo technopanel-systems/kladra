@@ -8,6 +8,7 @@ import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { LineRefusal } from "@/lib/line-refusal";
 import { formatMoney, formatSqm, lineSqm, lineTotal, toNumber } from "@/lib/money";
 import { STANDARD_WIDTHS } from "@/lib/sheet";
 import { cn } from "@/lib/utils";
@@ -67,13 +68,20 @@ export function lineNumbers(
  * Number, the nine fields, what is left (on a load from a quotation), m², total,
  * remove. Written once per shape for the header row and every line, so the two
  * cannot drift apart. The extra column is paid for by the supplier, whose value is
- * a letter; the widths were measured off the pixels at 1366 in both languages, so
- * "Left to send" and «مقاومة الحريق» are read whole over a value that fits.
+ * a letter.
+ *
+ * The widths are measured, not guessed: each column name's natural width read
+ * off the pixels at 1366 in both languages against the column it heads, the
+ * wider script deciding. "Sending now" (78px) and «المتبقي للإرسال» (87px) are the
+ * two longest names, and the load's quantity column had been given the
+ * quotation's "Qty" width, so both locales read "Sending n…" / «المطلوب…» and
+ * the direct grid's length read "Length (…" (P13 review). The gap is 6px rather
+ * than the quotation's 8: thirteen gaps of two pixels is the width a name needed.
  */
 const GRID_WITH_PAPER =
-  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.75fr)_minmax(0,3.5fr)_minmax(0,5.75fr)_minmax(0,4.75fr)_minmax(0,4.5fr)_minmax(0,5.5fr)_minmax(0,4.25fr)_minmax(0,4.75fr)_minmax(0,4fr)_minmax(0,5fr)_minmax(0,3.75fr)_minmax(0,6.25fr)_2rem] xl:items-center xl:gap-x-2";
+  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.5fr)_minmax(0,3.5fr)_minmax(0,5.75fr)_minmax(0,5fr)_minmax(0,5.25fr)_minmax(0,5.75fr)_minmax(0,4.5fr)_minmax(0,4.75fr)_minmax(0,4.5fr)_minmax(0,4.75fr)_minmax(0,4.5fr)_minmax(0,5.5fr)_2rem] xl:items-center xl:gap-x-1.5";
 const GRID_DIRECT =
-  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.75fr)_minmax(0,6.5fr)_minmax(0,6.75fr)_minmax(0,6.75fr)_minmax(0,3.5fr)_minmax(0,5.25fr)_minmax(0,5.25fr)_minmax(0,4.25fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,6.5fr)_2rem] xl:items-center xl:gap-x-2";
+  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.75fr)_minmax(0,6.5fr)_minmax(0,6.75fr)_minmax(0,6.5fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,5fr)_minmax(0,4.75fr)_minmax(0,5fr)_minmax(0,4.75fr)_minmax(0,6fr)_2rem] xl:items-center xl:gap-x-1.5";
 
 export function DispatchLines({
   lookups,
@@ -83,6 +91,7 @@ export function DispatchLines({
   paper,
   onChange,
   disabled,
+  refused,
 }: {
   lookups: QuotationLookups;
   lines: LoadDraft[];
@@ -94,6 +103,12 @@ export function DispatchLines({
   paper: boolean;
   onChange: (lines: LoadDraft[]) => void;
   disabled?: boolean;
+  /**
+   * The box the action refused, by the line's place in the list as it was sent
+   * (src/lib/line-refusal.ts): marked `aria-invalid`, which is where the caret
+   * goes, with the sentence under its line.
+   */
+  refused?: LineRefusal | null;
 }) {
   const t = useTranslations();
   const grid = paper ? GRID_WITH_PAPER : GRID_DIRECT;
@@ -116,6 +131,7 @@ export function DispatchLines({
             because every cell below carries its own label. */}
         <div
           aria-hidden="true"
+          data-slot="dispatch-lines-head"
           className={cn(
             "hidden border-b border-line bg-surface-2 px-3 py-2 text-xs text-muted-foreground",
             grid,
@@ -142,6 +158,9 @@ export function DispatchLines({
           const facts = line.quotationItemId ? carried.get(line.quotationItemId) : undefined;
           const number = numbers[index];
           const overspent = facts !== undefined && toNumber(line.qty) > facts.left;
+          const refusedHere = refused?.index === index ? refused : null;
+          // The box the action named is the one that says it is wrong (D43).
+          const refusedBox = (name: string) => refusedHere?.field === name;
 
           return (
             <div
@@ -196,6 +215,8 @@ export function DispatchLines({
                     className="h-9"
                     value={line.colourCode}
                     onChange={(event) => patch(line.key, { colourCode: event.target.value })}
+                    aria-invalid={refusedBox("colourCode") || undefined}
+                    aria-describedby={refusedBox("colourCode") ? id("refused") : undefined}
                   />
                 </div>
 
@@ -216,6 +237,8 @@ export function DispatchLines({
                       onChange={(value) => patch(line.key, { [key]: value })}
                       options={options}
                       disabled={disabled}
+                      invalid={refusedBox(key) || undefined}
+                      aria-describedby={refusedBox(key) ? id("refused") : undefined}
                       placeholder={t("forms.choose")}
                       searchPlaceholder={t("forms.searchList")}
                       emptyText={t("forms.noMatch")}
@@ -237,8 +260,10 @@ export function DispatchLines({
                     className="num h-9 text-start"
                     value={line.qty}
                     onChange={(event) => patch(line.key, { qty: event.target.value })}
-                    aria-invalid={overspent || undefined}
-                    aria-describedby={overspent ? id("too-much") : undefined}
+                    aria-invalid={overspent || refusedBox("qty") || undefined}
+                    aria-describedby={
+                      overspent ? id("too-much") : refusedBox("qty") ? id("refused") : undefined
+                    }
                   />
                 </div>
 
@@ -276,6 +301,8 @@ export function DispatchLines({
                     onChange={(value) => patch(line.key, { thicknessId: value })}
                     options={lookups.thicknesses}
                     disabled={disabled}
+                    invalid={refusedBox("thicknessId") || undefined}
+                    aria-describedby={refusedBox("thicknessId") ? id("refused") : undefined}
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("forms.searchList")}
                     emptyText={t("forms.noMatch")}
@@ -292,6 +319,8 @@ export function DispatchLines({
                     onChange={(value) => patch(line.key, { width: value })}
                     options={STANDARD_WIDTHS.map((width) => ({ value: width, label: width }))}
                     disabled={disabled}
+                    invalid={refusedBox("width") || undefined}
+                    aria-describedby={refusedBox("width") ? id("refused") : undefined}
                     allowCustom
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("quotations.widthOther")}
@@ -313,6 +342,8 @@ export function DispatchLines({
                     className="num h-9 text-start"
                     value={line.length}
                     onChange={(event) => patch(line.key, { length: event.target.value })}
+                    aria-invalid={refusedBox("length") || undefined}
+                    aria-describedby={refusedBox("length") ? id("refused") : undefined}
                   />
                 </div>
 
@@ -330,6 +361,8 @@ export function DispatchLines({
                     className="num h-9 text-start"
                     value={line.pricePerSqm}
                     onChange={(event) => patch(line.key, { pricePerSqm: event.target.value })}
+                    aria-invalid={refusedBox("pricePerSqm") || undefined}
+                    aria-describedby={refusedBox("pricePerSqm") ? id("refused") : undefined}
                   />
                 </div>
               </div>
@@ -357,11 +390,24 @@ export function DispatchLines({
                 <p id={id("too-much")} role="alert" className="text-xs text-destructive xl:col-span-full xl:pt-1">
                   {t("dispatches.tooMuch")}
                 </p>
+              ) : refusedHere ? (
+                // What the action refused on this line, under it (D43).
+                <p id={id("refused")} role="alert" className="text-xs text-destructive xl:col-span-full xl:pt-1">
+                  {refusedHere.message}
+                </p>
               ) : null}
             </div>
           );
         })}
       </div>
+
+      {/* A refusal about a line that is no longer on the form — he took it off
+          after Save — is still said, under the table. */}
+      {refused && refused.index >= lines.length ? (
+        <p role="alert" className="text-xs text-destructive">
+          {refused.message}
+        </p>
+      ) : null}
 
       <div className="flex">
         <Button type="button" variant="outline" disabled={disabled} onClick={add}>

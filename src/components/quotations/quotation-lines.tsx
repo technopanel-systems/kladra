@@ -7,6 +7,7 @@ import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { LineRefusal } from "@/lib/line-refusal";
 import { formatMoney, formatSqm, lineSqm, lineTotal } from "@/lib/money";
 import type { DraftLine } from "@/lib/quotation-draft";
 import { STANDARD_LENGTH, STANDARD_WIDTH, STANDARD_WIDTHS } from "@/lib/sheet";
@@ -144,11 +145,19 @@ export function QuotationLines({
   lines,
   onChange,
   disabled,
+  refused,
 }: {
   lookups: QuotationLookups;
   lines: LineDraft[];
   onChange: (lines: LineDraft[]) => void;
   disabled?: boolean;
+  /**
+   * The box the action refused, by the line's place in the list as it was sent
+   * (src/lib/line-refusal.ts): marked `aria-invalid`, which is where the caret
+   * goes, with the sentence under its line — so a blank box on the eighth of
+   * twelve lines is found on the eighth line, not read for in the footer (D43).
+   */
+  refused?: LineRefusal | null;
 }) {
   const t = useTranslations();
 
@@ -196,6 +205,9 @@ export function QuotationLines({
           const id = (fieldName: string) => `${line.key}-${fieldName}`;
           const sqm = lineSqm(line);
           const total = lineTotal(line);
+          const refusedHere = refused?.index === index ? refused : null;
+          const refusedBox = (name: string) => refusedHere?.field === name;
+          const describedBy = (name: string) => (refusedBox(name) ? id("refused") : undefined);
 
           return (
             <div
@@ -255,6 +267,8 @@ export function QuotationLines({
                     className="h-9"
                     value={line.colourCode}
                     onChange={(event) => patch(line.key, { colourCode: event.target.value })}
+                    aria-invalid={refusedBox("colourCode") || undefined}
+                    aria-describedby={describedBy("colourCode")}
                     placeholder={t("quotations.colourPlaceholder")}
                   />
                 </div>
@@ -269,6 +283,8 @@ export function QuotationLines({
                     onChange={(value) => patch(line.key, { supplierId: value })}
                     options={lookups.suppliers}
                     disabled={disabled}
+                    invalid={refusedBox("supplierId") || undefined}
+                    aria-describedby={describedBy("supplierId")}
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("forms.searchList")}
                     emptyText={t("forms.noMatch")}
@@ -285,6 +301,8 @@ export function QuotationLines({
                     onChange={(value) => patch(line.key, { fireRatingId: value })}
                     options={lookups.fireRatings}
                     disabled={disabled}
+                    invalid={refusedBox("fireRatingId") || undefined}
+                    aria-describedby={describedBy("fireRatingId")}
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("forms.searchList")}
                     emptyText={t("forms.noMatch")}
@@ -301,6 +319,8 @@ export function QuotationLines({
                     onChange={(value) => patch(line.key, { classId: value })}
                     options={lookups.classes}
                     disabled={disabled}
+                    invalid={refusedBox("classId") || undefined}
+                    aria-describedby={describedBy("classId")}
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("forms.searchList")}
                     emptyText={t("forms.noMatch")}
@@ -320,6 +340,8 @@ export function QuotationLines({
                     className="num h-9 text-start"
                     value={line.qty}
                     onChange={(event) => patch(line.key, { qty: event.target.value })}
+                    aria-invalid={refusedBox("qty") || undefined}
+                    aria-describedby={describedBy("qty")}
                   />
                 </div>
 
@@ -333,6 +355,8 @@ export function QuotationLines({
                     onChange={(value) => patch(line.key, { thicknessId: value })}
                     options={lookups.thicknesses}
                     disabled={disabled}
+                    invalid={refusedBox("thicknessId") || undefined}
+                    aria-describedby={describedBy("thicknessId")}
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("forms.searchList")}
                     emptyText={t("forms.noMatch")}
@@ -349,6 +373,8 @@ export function QuotationLines({
                     onChange={(value) => patch(line.key, { width: value })}
                     options={STANDARD_WIDTHS.map((width) => ({ value: width, label: width }))}
                     disabled={disabled}
+                    invalid={refusedBox("width") || undefined}
+                    aria-describedby={describedBy("width")}
                     allowCustom
                     placeholder={t("forms.choose")}
                     searchPlaceholder={t("quotations.widthOther")}
@@ -369,6 +395,8 @@ export function QuotationLines({
                     className="num h-9 text-start"
                     value={line.length}
                     onChange={(event) => patch(line.key, { length: event.target.value })}
+                    aria-invalid={refusedBox("length") || undefined}
+                    aria-describedby={describedBy("length")}
                   />
                 </div>
 
@@ -385,6 +413,8 @@ export function QuotationLines({
                     className="num h-9 text-start"
                     value={line.pricePerSqm}
                     onChange={(event) => patch(line.key, { pricePerSqm: event.target.value })}
+                    aria-invalid={refusedBox("pricePerSqm") || undefined}
+                    aria-describedby={describedBy("pricePerSqm")}
                   />
                 </div>
               </div>
@@ -407,10 +437,25 @@ export function QuotationLines({
                   <span className="xl:sr-only"> {t("common.sar")}</span>
                 </span>
               </div>
+
+              {/* What the action refused on this line, under it — across the
+                  whole row from xl (D43). */}
+              {refusedHere ? (
+                <p id={id("refused")} role="alert" className="text-xs text-destructive xl:col-span-full xl:pt-1">
+                  {refusedHere.message}
+                </p>
+              ) : null}
             </div>
           );
         })}
       </div>
+
+      {/* A refusal about a line he has since taken off is still said. */}
+      {refused && refused.index >= lines.length ? (
+        <p role="alert" className="text-xs text-destructive">
+          {refused.message}
+        </p>
+      ) : null}
 
       <div className="flex">
         <Button type="button" variant="outline" disabled={disabled} onClick={add}>

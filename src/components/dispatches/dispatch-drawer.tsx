@@ -82,6 +82,9 @@ export async function DispatchDrawer({
         })),
         services: dispatch.services.map((service) => ({
           quotationServiceId: service.quotationServiceId,
+          // Its name, so a service the admin has since switched off still reads
+          // as itself on the row that carries it (SPEC §3, P13).
+          name: service.name,
           ...draftServicesFrom([service])[0],
         })),
         // What the field opens on: the name it already says, or the word that
@@ -114,8 +117,13 @@ export async function DispatchDrawer({
         owner: mayQuote(user, dispatch.companyRepId),
       }}
       // A report about this load, from the load (SPEC §3, P13), on the same
-      // terms the popup's action accepts one.
+      // terms the popup's action accepts one: not on an archived customer, and
+      // not on a job that is lost or archived, which the popup would open on
+      // and the action refuse (D176).
       report={
+        !dispatch.companyArchived &&
+        !dispatch.projectArchived &&
+        !dispatch.projectLostOn &&
         mayReportOn(user, dispatch.companyRepId, dispatch.shared) ? (
           <ReportButton
             companyId={dispatch.companyId}

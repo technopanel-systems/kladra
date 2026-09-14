@@ -43,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
+import { lineRefusal } from "@/lib/line-refusal";
 import { quotationTotals } from "@/lib/money";
 import { splitOption, type QuotationTargets } from "@/lib/picker-option";
 
@@ -573,7 +574,13 @@ function RequestForm({
           </div>
         </div>
 
-        <QuotationLines lookups={lookups} lines={lines} onChange={setLines} disabled={pending} />
+        <QuotationLines
+          lookups={lookups}
+          lines={lines}
+          onChange={setLines}
+          disabled={pending}
+          refused={lineRefusal("items", fieldErrors)}
+        />
 
         {/* The services under the panels, as their own section, and what the
             whole paper comes to beside them on a desk — the way an invoice
@@ -585,6 +592,7 @@ function RequestForm({
             subtotal={totals.services}
             onChange={setServices}
             disabled={pending}
+            refused={lineRefusal("services", fieldErrors)}
           />
 
           <QuotationTotals

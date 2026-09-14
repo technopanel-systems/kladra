@@ -586,6 +586,13 @@ export type QuotationDetail = QuotationRow & {
   warehouseName: string;
   contactId: string | null;
   contactName: string | null;
+  /**
+   * The customer is archived, or the job is (S16). A paper on either still
+   * opens — history stays readable — but nothing new is filed against it, and
+   * the drawer asks these two before it offers Add report (D176).
+   */
+  companyArchived: boolean;
+  projectArchived: boolean;
 };
 
 /**
@@ -617,6 +624,8 @@ export async function getQuotation(
       warehouseName: warehouseName(await getLocale()),
       contactId: quotations.contactId,
       contactName: contacts.name,
+      companyArchived: sql<boolean>`companies.archived_at is not null`.mapWith(Boolean),
+      projectArchived: sql<boolean>`projects.archived_at is not null`.mapWith(Boolean),
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -706,6 +715,8 @@ export async function getQuotation(
     warehouseName: row.warehouseName,
     contactId: row.contactId ?? null,
     contactName: row.contactName ?? null,
+    companyArchived: Boolean(row.companyArchived),
+    projectArchived: Boolean(row.projectArchived),
     items: items.map((item) => ({
       id: item.id,
       position: item.position,

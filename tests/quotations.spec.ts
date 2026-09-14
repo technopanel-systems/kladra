@@ -780,3 +780,115 @@ test("the customer says no, and the rep writes it down", async ({ page, locale, 
     );
   }
 });
+
+/**
+ * A length typed to three places, which the action rounds to two before it
+ * writes it and the generated column multiplies as stored (P13 review). The
+ * browser multiplied the figure as typed, so the m² under the rep's thumb and
+ * the m² in the drawer were two numbers for one line: 1.24 × 5.806 × 100 is
+ * 719.94 as typed and 720.44 as held. Both are compared here on a stored row.
+ *
+ * And before it is priced, the same line is refused the way a load is: at the
+ * box that is missing, on its line, with the caret in it — not one sentence in
+ * the footer over a form that marks nothing.
+ */
+test("a figure typed to three places is the one stored, and a line with no price is refused at its price", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  const TYPED_LENGTH = "5.806";
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const project = await one<{ id: string; name: string }>(
+    `select p.id, p.name
+       from projects p
+       join companies c on c.id = p.company_id
+      where c.rep_id = $1::uuid and p.rep_id = $1::uuid
+        and p.lost_at is null and p.archived_at is null and c.archived_at is null
+      order by p.created_at
+      limit 1`,
+    [faisal],
+  );
+  const count = async () =>
+    Number(
+      (
+        await one<{ n: string }>("select count(*)::text as n from quotations where project_id = $1::uuid", [
+          project.id,
+        ])
+      ).n,
+    );
+  const before = await count();
+  let quotationId = "";
+
+  try {
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/projects?open=${project.id}`);
+    const drawer = page.getByRole("dialog", { name: project.name });
+    await expect(drawer).toBeVisible(COLD);
+    await drawer.getByRole("tab", { name: t("common.quotations") }).click();
+    await drawer.getByRole("button", { name: t("quotations.request") }).first().click();
+
+    const form = page.getByRole("dialog", {
+      name: t("quotations.requestFor", { project: project.name }),
+    });
+    const line = form.locator('[data-slot="quotation-line"]').first();
+    await expect(line.getByLabel(t("common.colourCode"))).toBeVisible(COLD);
+    await line.getByLabel(t("common.colourCode")).fill(COLOUR);
+    for (const label of ["common.supplier", "common.fireRating", "common.class"]) {
+      await pickFirst(line.getByRole("combobox", { name: t(label) }));
+    }
+    await line.getByLabel(t("common.qty")).fill("100");
+    await line.getByLabel(t("common.length")).fill(TYPED_LENGTH);
+
+    const price = line.getByLabel(t("common.pricePerSqm"));
+
+    await test.step("with no price it is refused at the price, on its line, and nothing is written", async () => {
+      await form.getByRole("button", { name: t("common.save") }).click();
+      await expect(price).toHaveAttribute("aria-invalid", "true", COLD);
+      await expect(price).toBeFocused();
+      await expect(line.getByRole("alert")).toHaveText(t("quotations.needsLines"));
+      expect(await count()).toBe(before);
+    });
+
+    await test.step("priced, the m² he watches is the m² the row holds", async () => {
+      await price.fill("100");
+      const width = Number(
+        await line.getByRole("combobox", { name: t("common.width") }).locator("bdi").first().innerText(),
+      );
+      const typed = Math.round(width * Number(TYPED_LENGTH) * 100 * 100) / 100;
+      const held = Math.round(width * 5.81 * 100 * 100) / 100;
+      // The case is only a case if the two ways disagree.
+      expect(typed).not.toBe(held);
+      await expect.poll(async () => (await figures(form)).sqm).toBe(held);
+
+      await form.getByRole("button", { name: t("common.save") }).click();
+      await expect(page.getByText(t("quotations.requested"))).toBeVisible(COLD);
+      await expect(page).toHaveURL(/\/quotations\?open=/, COLD);
+      quotationId = openId(page);
+      expect(quotationId).not.toBe("");
+
+      const stored = await one<{ length: string; sqm: string }>(
+        `select quotation_items.length::text as length, quotation_items.sqm::text as sqm
+           from quotation_items where quotation_items.quotation_id = $1::uuid`,
+        [quotationId],
+      );
+      expect(stored.length).toBe("5.81");
+      expect(Number(stored.sqm)).toBe(held);
+
+      const label = await nameOfTheOpenQuotation(page);
+      expect((await figures(sheetFor(page, label))).sqm).toBe(held);
+    });
+  } finally {
+    if (quotationId) {
+      await query("delete from notifications where subject_type = 'quotation' and subject_id = $1::uuid", [
+        quotationId,
+      ]);
+      await query("delete from audit_log where record_type = 'quotation' and record_id = $1::text", [
+        quotationId,
+      ]);
+      await query("delete from quotations where id = $1::uuid", [quotationId]);
+    }
+  }
+});

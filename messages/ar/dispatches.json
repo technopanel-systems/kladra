@@ -24,6 +24,17 @@
   "statusRefused": "مرفوض",
   "differsChip": "يختلف عن عرض السعر",
   "differsFrom": "يختلف عن {label}",
+  "changedWasUnit": "سابقًا {from} {unit}",
+  "unit": {
+    "metres": "م",
+    "sarPerSqm": "ر.س لكل م²"
+  },
+  "field": {
+    "width": "العرض",
+    "length": "الطول",
+    "price": "السعر",
+    "area": "المساحة"
+  },
   "formDiffers": "هذا التوريد يختلف عن {label}، وما تغيّر سيظهر على التوريد.",
   "lineAdded": "{item} مضاف · اللون {colour}",
   "serviceAdded": "خدمة مضافة · {service} {sqm} م²",
@@ -49,6 +60,8 @@
   "remaining": "المتبقي للإرسال",
   "elsewhere": "في توريدات أخرى",
   "notOnPaper": "ليس في عرض السعر",
+  "lineNotOnPaper": "بند مضاف على هذا التوريد، وليس في عرض السعر.",
+  "serviceNotOffered": "لم تعد متاحة",
   "sentInFull": "أُرسل بالكامل: {items}",
   "destinationPlaceholder": "إلى أين تُشحن الألواح",
   "payment": {

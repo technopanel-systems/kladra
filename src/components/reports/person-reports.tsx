@@ -99,6 +99,10 @@ export async function PersonReports({
             days={days}
             entries={list.rows}
             total={list.total}
+            // The day's own figure, the calendar's, from SQL — not the rows the
+            // capped list drew (D80, P13 review).
+            counts={counts[person.id] ?? {}}
+            dayHref={(day) => (query.day === day ? null : reportsHref(query, { day }))}
             recorded={(day) => recordedOn(recorded, person, day)}
             correct={person.id === user.id && !user.viewedBy}
             empty={

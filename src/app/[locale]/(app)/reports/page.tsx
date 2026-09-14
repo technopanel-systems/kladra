@@ -223,8 +223,12 @@ export default async function ReportsPage({
   const aroundDay = await listNonWorkingDays(addDays(day, -21), addDays(day, 21));
   const previousDay = stepWorkingDay(day, -1, aroundDay);
   const nextDay = stepWorkingDay(day, 1, aroundDay);
-  const [list, recorded, dayOff] = await Promise.all([
+  const [list, dayCounts, recorded, dayOff] = await Promise.all([
     reportEntries(user, { personId: null, from: day, to: day, filter, limit: 200 }),
+    // Who wrote how much, over the whole day and under the same filter, in SQL:
+    // the list above is capped, and a count read off it named somebody who wrote
+    // in the morning as having written nothing (rules/data.md, D80).
+    reportCounts(user, { personId: null, from: day, to: day, filter }),
     recordedFor(people, day, day, filter.companyId),
     listNonWorkingDays(day, day),
   ]);
@@ -254,6 +258,7 @@ export default async function ReportsPage({
         people={people}
         entries={list.rows}
         total={list.total}
+        counts={dayCounts}
         recorded={(person) => recordedOn(recorded, person, day)}
         nonWorking={dayOff}
         day={day}

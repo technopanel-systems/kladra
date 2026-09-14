@@ -301,7 +301,20 @@ const MANIFEST: StateDef[] = [
     steps: clickButtonByPrefix("reports.addFor"),
     waitFor: dialogWithText("reports.dialog.kind"),
   },
-  { role: "rep", key: "projects", identity: "rep", path: "/projects", waitFor: heading("common.projects") },
+  {
+    role: "rep",
+    key: "projects",
+    identity: "rep",
+    path: "/projects?view=list",
+    waitFor: heading("common.projects"),
+  },
+  {
+    role: "rep",
+    key: "projects-board",
+    identity: "rep",
+    path: "/projects?view=board",
+    waitFor: textVisible("projects.stageDispatching"),
+  },
   {
     role: "rep",
     key: "project-drawer",

@@ -35,6 +35,7 @@ import {
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditQuotation, resolveCredit } from "@/lib/credit-rows";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
+import { firstRefusedBox, lineFieldKey } from "@/lib/line-refusal";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { clearNotifications, createNotification } from "@/lib/notify";
@@ -186,6 +187,19 @@ function issuedNow(self: SelfIssue) {
 const idSchema = z.uuid();
 
 /**
+ * A figure as it was typed. Blank is missing, never nought: a coerced "" is 0,
+ * so a line whose price box was left empty was saved at 0.00 SAR — refused at
+ * no box, since nothing was refused (P13 review; the load's form already asks
+ * it this way, src/actions/dispatches.ts). A price of 0 typed as 0 is still one.
+ */
+function typed<T extends z.ZodType>(schema: T) {
+  return z.preprocess(
+    (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+    schema,
+  );
+}
+
+/**
  * One line of a quotation (SPEC §3, S32).
  *
  * m² is never in here: it is `width × length × qty`, computed by the database
@@ -198,10 +212,10 @@ const itemSchema = z.object({
   fireRatingId: z.coerce.number().int().positive(),
   classId: z.coerce.number().int().positive(),
   thicknessId: z.coerce.number().int().positive(),
-  qty: z.coerce.number().int().positive().max(100_000),
-  width: z.coerce.number().positive().max(100),
-  length: z.coerce.number().positive().max(1_000),
-  pricePerSqm: z.coerce.number().min(0).max(1_000_000),
+  qty: typed(z.coerce.number().int().positive().max(100_000)),
+  width: typed(z.coerce.number().positive().max(100)),
+  length: typed(z.coerce.number().positive().max(1_000)),
+  pricePerSqm: typed(z.coerce.number().min(0).max(1_000_000)),
 });
 
 type Item = z.infer<typeof itemSchema>;
@@ -216,17 +230,40 @@ const itemsSchema = z.array(itemSchema).min(1).max(60);
  * that which survives a round trip intact. The value is parsed and validated
  * here like any other input — it is a string from a browser either way.
  */
-function readItems(formData: FormData): Item[] | "invalid" {
+function readItems(formData: FormData): Item[] | Refused {
   const raw = field(formData, "items");
-  if (!raw) return "invalid";
+  if (!raw) return { refused: null };
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return "invalid";
+    return { refused: null };
   }
   const result = itemsSchema.safeParse(parsed);
-  return result.success ? result.data : "invalid";
+  // The first box that is wrong, by the key the form marks it with — so a blank
+  // price on the eighth line is refused AT the eighth line (src/lib/line-refusal.ts).
+  return result.success ? result.data : { refused: firstRefusedBox("items", result.error.issues) };
+}
+
+/** A list refused, and the first box in it that is wrong, or null when no one box is. */
+type Refused = { refused: string | null };
+
+function isRefused<T>(value: T | Refused): value is Refused {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && "refused" in value;
+}
+
+/**
+ * The sentence for a refused list, at the box it names where it names one — the
+ * form marks it and the caret goes there — and in the footer where it names none
+ * (DESIGN §5, D43).
+ */
+function listRefusal(
+  sentence: string,
+  refused: Refused,
+): { ok: false; error: string; fieldErrors?: Record<string, string> } {
+  return refused.refused
+    ? { ok: false, error: sentence, fieldErrors: { [refused.refused]: sentence } }
+    : { ok: false, error: sentence };
 }
 
 /** numeric(12,2) in the database, so it is rounded once, here (D6). */
@@ -268,11 +305,13 @@ async function insertItems(
  */
 const serviceSchema = z.object({
   serviceId: z.coerce.number().int().positive(),
-  sqm: z.coerce
-    .number()
-    .max(1_000_000)
-    .refine((value) => round2(value) > 0),
-  pricePerSqm: z.coerce.number().min(0).max(1_000_000),
+  sqm: typed(
+    z.coerce
+      .number()
+      .max(1_000_000)
+      .refine((value) => round2(value) > 0),
+  ),
+  pricePerSqm: typed(z.coerce.number().min(0).max(1_000_000)),
 });
 
 type Service = z.infer<typeof serviceSchema>;
@@ -291,25 +330,38 @@ const servicesSchema = z.array(serviceSchema).max(20);
  * price may be written for, including on an edit or a revision of paper that
  * named it when it was still on.
  */
-async function readServices(formData: FormData): Promise<Service[] | "invalid" | "unavailable"> {
+async function readServices(
+  formData: FormData,
+): Promise<Service[] | Refused | { unavailable: string }> {
   const raw = field(formData, "services");
   if (!raw) return [];
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return "invalid";
+    return { refused: null };
   }
   const result = servicesSchema.safeParse(parsed);
-  if (!result.success) return "invalid";
+  if (!result.success) return { refused: firstRefusedBox("services", result.error.issues) };
   if (result.data.length === 0) return [];
 
   const wanted = [...new Set(result.data.map((service) => service.serviceId))];
-  const offered = await db
-    .select({ id: services.id })
-    .from(services)
-    .where(and(inArray(services.id, wanted), eq(services.active, true)));
-  return offered.length === wanted.length ? result.data : "unavailable";
+  const offered = new Set(
+    (
+      await db
+        .select({ id: services.id })
+        .from(services)
+        .where(and(inArray(services.id, wanted), eq(services.active, true)))
+    ).map((row) => row.id),
+  );
+  // The first one that is no longer offered, named at its own choice (D175).
+  const gone = result.data.findIndex((service) => !offered.has(service.serviceId));
+  return gone === -1 ? result.data : { unavailable: lineFieldKey("services", gone, "serviceId") };
+}
+
+/** The refusal for a service the admin has switched off, at the row that names it (D175). */
+function unavailableRefusal(sentence: string, key: string) {
+  return { ok: false as const, error: sentence, fieldErrors: { [key]: sentence } };
 }
 
 /**
@@ -450,10 +502,10 @@ export async function requestQuotationAction(
     const input = parsed.data;
 
     const items = readItems(formData);
-    if (items === "invalid") return { ok: false, error: tq("needsLines") };
+    if (isRefused(items)) return listRefusal(tq("needsLines"), items);
     const servicesIn = await readServices(formData);
-    if (servicesIn === "invalid") return { ok: false, error: tq("needsServices") };
-    if (servicesIn === "unavailable") return { ok: false, error: tq("serviceUnavailable") };
+    if (isRefused(servicesIn)) return listRefusal(tq("needsServices"), servicesIn);
+    if ("unavailable" in servicesIn) return unavailableRefusal(tq("serviceUnavailable"), servicesIn.unavailable);
 
     const [company] = await db
       .select({ repId: companies.repId, archivedAt: companies.archivedAt })
@@ -640,10 +692,10 @@ export async function updateQuotationAction(
     if (!withTheRep(quotation.status)) return { ok: false, error: tq("alreadyIssued") };
 
     const items = readItems(formData);
-    if (items === "invalid") return { ok: false, error: tq("needsLines") };
+    if (isRefused(items)) return listRefusal(tq("needsLines"), items);
     const servicesIn = await readServices(formData);
-    if (servicesIn === "invalid") return { ok: false, error: tq("needsServices") };
-    if (servicesIn === "unavailable") return { ok: false, error: tq("serviceUnavailable") };
+    if (isRefused(servicesIn)) return listRefusal(tq("needsServices"), servicesIn);
+    if ("unavailable" in servicesIn) return unavailableRefusal(tq("serviceUnavailable"), servicesIn.unavailable);
     const notes = field(formData, "notes") ?? null;
 
     // Asked again, exactly as long as the lines beside it may be changed
@@ -1106,13 +1158,13 @@ export async function reviseQuotationAction(
     }
 
     const items = readItems(formData);
-    if (items === "invalid") return { ok: false, error: tq("needsLines") };
+    if (isRefused(items)) return listRefusal(tq("needsLines"), items);
     // What the form sends, and nothing copied off the parent in SQL (D163): the
     // form opens on the paper it revises, and what he leaves on it is what this
     // one carries.
     const servicesIn = await readServices(formData);
-    if (servicesIn === "invalid") return { ok: false, error: tq("needsServices") };
-    if (servicesIn === "unavailable") return { ok: false, error: tq("serviceUnavailable") };
+    if (isRefused(servicesIn)) return listRefusal(tq("needsServices"), servicesIn);
+    if ("unavailable" in servicesIn) return unavailableRefusal(tq("serviceUnavailable"), servicesIn.unavailable);
 
     // Asked again, on the new paper. Copying the old one's answer would be the
     // one thing §3 forbids outright — nothing is carried forward from a
