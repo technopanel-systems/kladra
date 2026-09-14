@@ -15,7 +15,11 @@ skill is paraphrased.
   (`notes/site/social.txt`). YouTube Shorts are at
   https://www.youtube.com/@designmotionhq_yt. Most repeat a pattern page. Fitts's law
   (E2TNSk10BZc), kanban (HNbb5t_iDBM) and card input (ai7ExJmtxcY) do not, and are in
-  `notes/patterns/yt-*.txt`.
+  `notes/patterns/yt-*.txt`. Six untitled shorts were read as well
+  (`notes/patterns/_index_yt.txt`): three add something — spacing inside a card
+  (N7TfGXCeVjg), micro, macro and active white space (jMiGzqYrqqc), and easing, feedback
+  and anticipation (yy3yYlWQmAQ). Two repeat a pattern page (g7hHuiTTiUc visual-hierarchy,
+  MHyE3LlSGPs error-states), and one is not UX at all (Wbf2ywYVRlE).
 - Pattern videos: `https://pub-8b35602514014e9aa3363da6c7b5416c.r2.dev/videos/<slug>.mp4`.
 
 ## The 76 patterns, ranked for Kladra

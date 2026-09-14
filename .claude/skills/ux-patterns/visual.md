@@ -32,6 +32,16 @@ Blueprint PDF, and the site's own UI (`notes/site/site-ui.txt`). See `sources.md
   that belong together cannot sit together. A divider between groups that spacing already
   separates is noise.
 - **Toolbars group by function** (navigate · act · system), not as one evenly spaced row.
+- **Space does three jobs, so decide each one separately.**
+  - **Micro** is the padding inside a button, input or card.
+  - **Macro** is the margin between sections.
+  - **Active** is space left empty on purpose so that one thing stands out.
+
+  A card that looks cheap usually fails on padding, on the gap between its parts, or on
+  line-height before it fails on colour or font. The shorts double padding and gaps (8 → 28,
+  4 → 18, 16/8 → 32/16) and move body line-height from 1.1 to 1.6. Kladra keeps its own
+  scale (16 inside a card, 16 between its parts, a 1.5 base), which suits screens made of
+  data. The check is the same: parts of a card never touch, and no body text sits below 1.5.
 
 ## Alignment and grid
 - **Text starts and numbers end.** Icons sit centred on the text line. Nothing is centred on a

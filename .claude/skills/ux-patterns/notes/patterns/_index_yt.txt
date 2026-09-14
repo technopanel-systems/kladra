@@ -1,0 +1,6 @@
+g7hHuiTTiUc · repeat-of visual-hierarchy · low · Same 5-rule hierarchy video as the existing pattern page; only adds "double the padding" for whitespace and a sharper "not 20%, twice" phrasing for size.
+N7TfGXCeVjg · new topic (patterns/yt-N7TfGXCeVjg.txt) · medium · Four numbered card-spacing fixes — padding 8px→28px, gap 4px→18px, line-height 1.1→1.6 — distinct from perfect-card's padding/radius/typography/shadow/hover recipe.
+MHyE3LlSGPs · repeat-of error-states · low · Same "4 errors, 4 patterns" + severity→surface + 80%-inline-validation video as the existing pattern page; only adds a fuller Toast/Modal worked example (inbox list, delete-account dialog).
+jMiGzqYrqqc · new topic (patterns/yt-jMiGzqYrqqc.txt) · medium · Names a micro/macro/active white-space taxonomy and a doubled-padding/gap worked example not present in perfect-card or visual-hierarchy.
+yy3yYlWQmAQ · new topic (patterns/yt-yy3yYlWQmAQ.txt) · medium · Three button micro-interaction secrets (easing, feedback, anticipation/squash-bounce); easing repeats easing-curves.txt, but anticipation is new and should be flagged as a caution against Kladra's no-lift/no-scale, restrained-motion rules, not adopted.
+Wbf2ywYVRlE · not UX · n/a · BFS-vs-A* pathfinding-algorithm visualization built as a Remotion animation demo reel — no design/UX content.

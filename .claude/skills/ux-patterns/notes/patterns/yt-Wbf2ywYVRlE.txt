@@ -1,0 +1,2 @@
+VIDEO: Wbf2ywYVRlE "#animation #remotion #pathfinder" (https://www.youtube.com/shorts/Wbf2ywYVRlE) — NOT design/UX content.
+It is a maze pathfinding-algorithm visualization (BFS vs A*, cells-explored counters, "A* wins" race) built as a Remotion motion-graphics demo reel — a computer-science/animation-tooling showcase, nothing about UI patterns, components, or Kladra-relevant interface decisions.

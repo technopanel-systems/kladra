@@ -1,0 +1,23 @@
+TITLE: White Space — Three Types
+CATEGORY: Visual / spacing
+URL: https://www.youtube.com/shorts/jMiGzqYrqqc (YouTube Shorts channel @designmotionhq_yt; not one of the 76 designmotionhq.com/patterns/<slug> pages — closest neighbors are perfect-card and visual-hierarchy, but neither names a micro/macro/active taxonomy for white space)
+
+PROBLEM: "White space" is treated as one undifferentiated leftover, so designers either add it everywhere evenly (flat, no focus) or cut it everywhere to fit more in (cramped) — without a vocabulary for the three different jobs empty space actually does.
+
+RULES:
+- Named taxonomy, three types on screen as labeled cards: MICRO white space — "padding inside elements. The breathing room within buttons, inputs, and cards." MACRO white space — "margins between sections. The vertical rhythm of your page layout." ACTIVE white space — "intentional emptiness to draw focus. The space that makes one element pop."
+- Real-example card transform, same content shown twice: "Crammed" version at 16px padding / 8px gaps, then doubled to 32px padding / 16px gaps. Line: "Same content, but now it feels premium."
+- Closing line: "White space isn't empty. It's breathing room." / "Give your designs room to breathe."
+
+DO / DON'T:
+- Do: budget padding, section margins, and deliberate empty gaps as three separate decisions (micro / macro / active), not one generic "spacing" value.
+- Do: use active white space (an intentionally larger, otherwise-unjustified gap) specifically to make one element stand out, not just to fill a layout.
+- Do: treat doubling a cramped padding/gap pair (this video's worked example: 16px/8px to 32px/16px) as a legitimate, visible "premium" lever on its own, with no other change.
+- Don't: apply the same spacing value to inside-element padding (micro) and between-section margins (macro) — they serve different jobs and read differently at the same value.
+- Don't: treat white space as a leftover/default; the "active" category exists specifically because empty space can be an intentional design decision, not just unused area.
+
+VIDEO ADDS: the three-way named taxonomy itself (micro / macro / active) as a vocabulary for talking about spacing decisions, which is not present in patterns/perfect-card.txt (padding+radius/typography/shadow/hover) or patterns/visual-hierarchy.txt (whitespace mentioned only as one of five general hierarchy signals, no sub-types); the specific doubled-value worked example (16px/8px padding+gap doubled to 32px/16px).
+
+KLADRA: Gives Kladra's front-end audit a usable three-way spacing vocabulary instead of one flat "spacing" pass: MICRO applies to button/input/card internal padding (should follow Kladra's existing token scale, not be eyeballed per component); MACRO applies to the vertical rhythm between drawer sections, board columns, and dashboard card groups (should be a consistent step in the spacing scale, not ad hoc); ACTIVE applies where Kladra already wants one thing to read as primary — e.g. the one KPI number a manager should see first on a dashboard, or the primary action in a drawer footer — an intentionally larger gap around it is a legitimate way to reinforce that, on top of (not instead of) the accent-color and weight signals visual-hierarchy.txt already covers. NO CONFLICT with any standing rule — this is a vocabulary/checklist addition, not a new UI mechanic, and doesn't touch drag-and-drop/bulk-edit/saved-views/comments/motion timing.
+
+PRIORITY: medium — useful shared language for the visual audit (micro/macro/active) and a quick, checkable padding/gap doubling lever, but it does not surface a new mechanic Kladra lacks; it mostly sharpens vocabulary that visual-hierarchy.txt and the card-spacing note already gesture at.

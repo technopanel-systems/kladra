@@ -1,0 +1,27 @@
+TITLE: Did You Know These Design Tricks? (four spacing fixes)
+CATEGORY: Visual / spacing
+URL: https://www.youtube.com/shorts/N7TfGXCeVjg (YouTube Shorts channel @designmotionhq_yt; not one of the 76 designmotionhq.com/patterns/<slug> pages — closest neighbor is perfect-card, but that page's four changes are padding+radius / typography weight+opacity / layered shadow / hover, none of which overlap this video's padding / gap / line-height / breathing-room focus)
+
+PROBLEM: A card with the right colors and the right font can still "look cheap" because the one variable nobody tunes — spacing — was left at defaults; the same content read as premium once only the spacing values changed.
+
+RULES:
+- Same social-post card ("Sarah Chen... Just shipped the new dashboard redesign...") used as the one before/after subject through all four fixes, so every change is visibly isolated.
+- FIX 1 — Padding: inner padding goes from 8px to 28px. Line: "the content pulls away from the edges instantly. It feels more intentional, more premium."
+- FIX 2 — Element spacing: the gap between the card's own parts (avatar, text, image, actions) goes from 4px to 18px, each section separating out on its own. Line: "they each need their own space."
+- FIX 3 — Line height: body text line-height goes from 1.1 to 1.6. Line: "the text was suffocating at 1.1. Watch it breathe at 1.6. Suddenly it's readable... it feels designed."
+- FIX 4 — Breathing room: icon/action row spacing is widened further as a final pass ("the icons spread out, the card gets its final polish") — narration gives no new number for this step, it is framed as finishing touches on top of fixes 1-3, not a fifth independent metric.
+- Closing frame, same card shown before/after with identical colors and content: "Spacing isn't empty. It's the most expensive pixel on your screen."
+
+DO / DON'T:
+- Do: treat padding, inter-element gap, and line-height as three separate, independently-tunable spacing values, not one generic "add some margin" pass.
+- Do: push resting padding well past a cramped default (8px) toward something roomier (this video's target: 28px) on a card meant to read as premium/considered.
+- Do: give a body line-height around 1.5-1.6 rather than a tight ~1.1 — tight line-height reads as "suffocating," not compact.
+- Do: give each distinct element inside a card (avatar, text block, media, action row) its own gap rather than letting them touch.
+- Don't: judge a "cheap-looking" card by its color or font first — check spacing values before anything else.
+- Don't: leave line-height at a near-single-line default (1.1) on body copy; it is the specific fix this video credits for making text "suddenly readable."
+
+VIDEO ADDS: the exact padding delta (8px to 28px), the exact inter-element gap delta (4px to 18px), and the exact line-height delta (1.1 to 1.6) as the three concrete, numbered fixes — none of which appear in patterns/perfect-card.txt, which instead specifies ~12px to ~40px padding paired with 24px radius, 600-weight/~38px titles at ~55% body opacity, layered shadows, a 12%-opacity hairline border, and an 8px/1.02-scale hover lift. The two videos share only the general "same content, spacing alone changes the verdict" framing; their concrete numbers and technique lists do not overlap.
+
+KLADRA: Applies to every card and drawer-section surface — board cards (projects/dispatches/leads), KPI cards, and the padding/gap inside drawer sections and list rows. Concretely: audit existing card padding and inter-element gaps against these deltas (are rows/cards using an 8-ish px default where 20-28px would read as considered), and check body copy inside cards/drawers isn't sitting at a cramped line-height — Tailwind's default `leading-normal` (1.5) already clears this video's 1.6 target closely enough, but any place line-height was hand-set tighter for density should be reviewed. NO CONFLICT with any standing rule: this is spacing polish, not a density toggle (Kladra doesn't let users choose density, but the one spacing scale the app ships with should reflect these numbers) and doesn't touch drag-and-drop/bulk-edit/saved-views/comments/motion timing.
+
+PRIORITY: medium — a fast, checklist-friendly note (three numeric deltas: padding, gap, line-height) worth applying during the card/drawer visual audit, but narrower in scope than perfect-card, which already covers the fuller card recipe (shadow, hover, typography weight) this video does not touch.

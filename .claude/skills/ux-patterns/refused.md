@@ -14,6 +14,7 @@ is noted after the arrow.
 | Hover lift of ~8px, scale 1.02–1.05, tinted glow, 3D tilt, parallax (perfect-card, card-hover-anatomy, depth-layers, shadow-elevation) | §1 nothing is lifted by hover; §1b elevation | `hover-tint`; the site's own quiet hover (border or tone step) |
 | Spring and overshoot on presses and confirmations, bounce for attention (easing-curves, animation-timing, tabs-system, toast stacking) | §1b motion explains or is not there | Ease-out in, ease-in out, exits faster |
 | Staggered entrance of a list, 50ms per item (animation-timing, easing-curves, accordion, card actions) | §1b; motion that decorates | A list arrives as one; a new row takes the arrived flash |
+| Squash before a bounce, a ripple on press, a pulsing button (yt yy3yYlWQmAQ, "anticipation") | §1b nothing scales; §2 motion explains | Feedback on every press: the tint within 100ms, the pending mark, a toast that names the result |
 | Confetti or a "delight" peak at the end of a flow (peak-end-rule) | §2 calm; no decoration | The ending says exactly what happens next |
 | An animated completion meter, a live countdown ticker, number count-up (zeigarnik-effect, error-states' reconnect countdown, doherty progress ticker) | §1b a number does not count up; §2 no loops | A static figure that updates in place; a line of words for a stopped connection |
 | "Refresh page" as an error's way out (error-states) | CLAUDE.md Never (refresh buttons) | "Try again" on a failed write is an exit and allowed; live updates remove the need to refresh |
