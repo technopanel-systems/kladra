@@ -28,6 +28,7 @@ import { db } from "@/db";
 import { activities, companies, outcomes, users, type Channel } from "@/db/schema";
 import { readReports, type ActivityRow } from "@/lib/activities";
 import { NotAllowed } from "@/lib/authz";
+import { writtenWhere } from "@/lib/counted";
 import type { Day } from "@/lib/dates";
 import { mayOpen, REPORTING_ROLES, seesAllRoles, sells } from "@/lib/floor";
 import { personName } from "@/lib/people";
@@ -151,10 +152,10 @@ export async function reportCounts(
     .from(activities)
     .where(
       and(
-        isNull(activities.archivedAt),
+        // Written in the window and not taken back — the one clause the
+        // builder's "reports written" is counted by too (src/lib/counted.ts).
+        writtenWhere("activities", { from, to }, null),
         whoseWhere(user, personId),
-        gte(activities.happenedOn, from),
-        lte(activities.happenedOn, to),
         ...filterWhere(filter),
       ),
     )

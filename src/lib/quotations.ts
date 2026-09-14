@@ -71,6 +71,9 @@ import {
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { creditOnQuotation } from "@/lib/credit-rows";
+import { cohortWhere, statusesOf } from "@/lib/chain";
+import { companyWhere, dispatchedQuotation } from "@/lib/counted";
+import type { Narrowing } from "@/lib/narrowing";
 import { maySeeCompany, onCompanySql, onProjectSql, seesCompany } from "@/lib/visibility";
 
 export type QuotationStatus =
@@ -162,6 +165,14 @@ export type ListQuotationsInput = {
    * (D137) — the same reasoning as the rep's waiting list (D83).
    */
   order?: "newest" | "oldest";
+  /**
+   * The rows a figure on the metrics tab counted, when the list is opened from
+   * one (SPEC §3 P13: a slice or a bar opens the list behind it). The cohort
+   * the chain card follows — raised in the window, credited to the person,
+   * every revision its own row (S32) — narrowed to where they got to, to the
+   * ones with a dispatch, or to a kind of customer.
+   */
+  cohort?: Narrowing;
 };
 
 /** She runs both chains, so she sees every quotation on them (S9). */
@@ -388,11 +399,23 @@ function narrowTo(input: ListQuotationsInput): (SQL | undefined)[] {
   const { user } = input;
   const term = (input.q ?? "").trim();
 
+  const cohort = input.cohort;
   const conditions: (SQL | undefined)[] = [
     isNull(companies.archivedAt),
-    isLatestRevisionSql(),
+    // Only the live revision, except behind a figure: the chain card counts
+    // every revision as its own trip through the chain (S32), and a list that
+    // hid the earlier ones would show fewer rows than the slice that opened it.
+    cohort ? undefined : isLatestRevisionSql(),
     seesEveryQuotation(user) ? undefined : seesCompany(user),
   ];
+
+  if (cohort) {
+    conditions.push(cohortWhere("quotations", cohort, cohort.credited));
+    conditions.push(companyWhere("companies", cohort));
+    const ended = statusesOf(cohort.ended);
+    if (ended.length > 0) conditions.push(inArray(quotations.status, ended));
+    if (cohort.dispatched) conditions.push(dispatchedQuotation("quotations"));
+  }
 
   if (input.status) {
     const wanted = Array.isArray(input.status) ? input.status : [input.status];

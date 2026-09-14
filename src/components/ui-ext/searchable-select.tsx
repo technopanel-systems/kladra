@@ -256,6 +256,21 @@ export function SearchableSelect({
   );
 }
 
+/**
+ * The key cmdk tracks the highlighted row by, never empty.
+ *
+ * cmdk counts a row as highlighted only when its value is truthy, so a row whose
+ * value was "" — "Everyone" on the holidays form, "Everybody" on the team's rep
+ * picker — could be pressed with a mouse and never reached from the keyboard: the
+ * list opened with nothing highlighted, the arrows had nowhere to move from, and
+ * Enter chose nothing (P13-S11, found by tests/edge.spec.ts in Edge and Chrome
+ * alike). Filtering is ours (`shouldFilter={false}`), so this key is used for
+ * nothing but the highlight, and `choose` still receives the option's own value.
+ */
+function rowKey(value: string): string {
+  return `option:${value}`;
+}
+
 /** `data-checked` is what the kit's CommandItem hangs its tick on. */
 function Row({
   option,
@@ -268,7 +283,7 @@ function Row({
 }) {
   return (
     <CommandItem
-      value={option.value}
+      value={rowKey(option.value)}
       data-checked={option.value === value}
       onSelect={() => onChoose(option.value)}
     >

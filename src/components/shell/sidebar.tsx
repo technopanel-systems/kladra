@@ -73,7 +73,8 @@ export function Sidebar({
       <aside
         data-collapsed={collapsed}
         className={cn(
-          "sticky top-0 z-30 hidden h-svh shrink-0 flex-col overflow-hidden border-e border-line bg-rail md:flex",
+          // Never on paper: a printed page is its content (SPEC §3 P13's print sheet).
+          "sticky top-0 z-30 hidden h-svh shrink-0 flex-col overflow-hidden border-e border-line bg-rail md:flex print:hidden",
           "transition-[width] duration-200 ease-out",
           collapsed ? "w-[4.5rem]" : "w-60",
         )}

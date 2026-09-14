@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
 import { ListTail } from "@/components/ui-ext/list-tail";
+import { NarrowingNote } from "@/components/metrics/narrowing-note";
+import { parseNarrowing } from "@/lib/narrowing";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import {
   QuotationSheetSkeleton,
@@ -47,7 +49,11 @@ function parseStatus(value: string | undefined): QuotationStatus | null {
   return wanted ?? null;
 }
 
-type Search = { q?: string; status?: string; open?: string; view?: string };
+/** The list's own four, and a door's narrowing (src/lib/narrowing.ts), which may repeat a key. */
+type Search = { q?: string; status?: string; open?: string; view?: string } & Record<
+  string,
+  string | string[] | undefined
+>;
 
 export default async function QuotationsPage({
   searchParams,
@@ -56,7 +62,7 @@ export default async function QuotationsPage({
 }) {
   const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
 
-  const q = (params.q ?? "").trim();
+  const q = (typeof params.q === "string" ? params.q : "").trim();
   const status = parseStatus(params.status);
   const open = params.open?.trim() || null;
   // The URL wins, the person remembers, the list is the default (src/lib/view.ts).
@@ -66,11 +72,16 @@ export default async function QuotationsPage({
 
   // A board of states shows every state: narrowing to one would leave one
   // column standing, which is why the chips are hidden in that view too.
+  // Opened from a figure on the metrics tab (SPEC §3 P13): the cohort that
+  // figure counted, and a line over the list that says so.
+  const cohort = parseNarrowing(params) ?? undefined;
+
   const narrowing = {
     user,
     q: q || undefined,
     status: view === "board" ? undefined : (status ?? undefined),
     locale,
+    cohort,
   };
 
   const [t, rows, targets] = await Promise.all([
@@ -104,6 +115,8 @@ export default async function QuotationsPage({
           />
         ) : null}
       </div>
+
+      {cohort ? <NarrowingNote narrowing={cohort} list="quotations" /> : null}
 
       <QuotationsTable
         base="/quotations"

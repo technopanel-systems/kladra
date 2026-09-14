@@ -183,7 +183,7 @@ export default async function DayPage({
           {/* The six months first: they are not windowed and cannot be — the
               trend IS the six months (D61) — so they sit above the chips, and
               what the chips govern is exactly what is under them (D154). */}
-          {months ? <MonthsCard months={months} /> : null}
+          {months ? <MonthsCard months={months} personId={user.id} /> : null}
 
           <RangeChips
             range={range}
@@ -196,8 +196,8 @@ export default async function DayPage({
               funnel — drew a card with a block of nothing inside it, which reads
               as a card that failed to load rather than as a short answer. */}
           <div className="grid items-start gap-4 md:grid-cols-2">
-            {segments ? <SegmentCard rows={segments} /> : null}
-            {ratios ? <RatiosCard ratios={ratios} /> : null}
+            {segments ? <SegmentCard rows={segments} from={from} personId={user.id} /> : null}
+            {ratios ? <RatiosCard ratios={ratios} from={from} personId={user.id} /> : null}
           </div>
         </>
       )}

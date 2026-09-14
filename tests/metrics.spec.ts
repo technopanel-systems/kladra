@@ -135,14 +135,27 @@ async function expectSegments(
   repId: string | null,
 ): Promise<void> {
   const expected = await segments(from, repId);
+  // A pie carries six parts at most since §3 P13: the five largest, and one for
+  // the rest when there are more than six (DESIGN §1b). Ten segments exist.
+  const folds = expected.length > 6;
+  const kept = folds ? expected.slice(0, 5) : expected;
   const rows = card(page, t("team.segments")).locator('li[data-slot="share-row"]');
-  await expect(rows).toHaveCount(expected.length, COLD);
+  await expect(rows).toHaveCount(kept.length + (folds ? 1 : 0), COLD);
 
-  for (const [index, segment] of expected.entries()) {
+  for (const [index, segment] of kept.entries()) {
     const row = rows.nth(index);
     await expect(row).toContainText(locale === "ar" ? segment.name_ar : segment.name_en);
     // Whole metres, the way every other card in the app writes them (P11E).
     await expect(row).toContainText(formatSqmWhole(segment.sqm));
+  }
+
+  if (folds) {
+    const rest = expected.slice(5);
+    // Added in hundredths, as the metres are numeric(12,2).
+    const hundredths = rest.reduce((sum, segment) => sum + Math.round(Number(segment.sqm) * 100), 0);
+    const row = rows.nth(5);
+    await expect(row).toContainText(t("metrics.rest", { count: rest.length }));
+    await expect(row).toContainText(formatSqmWhole(hundredths / 100));
   }
 }
 

@@ -72,7 +72,7 @@
   "everybody": "The whole team",
   "segments": "Where the metres went",
   "segmentsNone": "Nothing has been approved in this window.",
-  "segmentsMeans": "Approved metres by the kind of customer they went to, share of what is shown here.",
+  "segmentsOf": "Shares of the {sqm} m² approved since {from}, by the kind of customer they went to.",
   "ratios": "How the work narrows",
   "ratiosNone": "Nothing has been raised in this window.",
   "ratioQuoted": "Projects quoted",

@@ -26,7 +26,7 @@ export async function ViewingBanner({ user }: { user: SessionUser }) {
       // colour, and this is the one thing on the page they must not miss.
       role="status"
       data-slot="viewing-banner"
-      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line bg-state-wait px-4 py-2 text-sm text-state-wait-fg md:px-8"
+      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-line bg-state-wait px-4 py-2 text-sm text-state-wait-fg md:px-8 print:hidden"
     >
       <Eye aria-hidden="true" className="size-4 shrink-0" />
       <span className="min-w-0">

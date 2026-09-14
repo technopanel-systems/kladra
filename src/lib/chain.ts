@@ -20,10 +20,12 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { sql } from "drizzle-orm";
+import { sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
+import { createdIn, type Window } from "@/lib/counted";
 import { creditedQuotation } from "@/lib/credit-rows";
 import { diffDays, todayRiyadh, type Day } from "@/lib/dates";
+import type { QuotationStatus } from "@/lib/quotations";
 
 /**
  * Where a quotation got to. Ordered as the chain runs, so a screen can render
@@ -49,6 +51,40 @@ export const CHAIN_STAGES = [
 ] as const;
 
 export type ChainStage = (typeof CHAIN_STAGES)[number];
+
+/**
+ * The status a quotation stands in at each ending — the one reading of the
+ * status column this card has. The cohort's `case` is built from it and the
+ * quotations list behind a pressed slice narrows by it (SPEC §3 P13), so the
+ * slice and its list cannot name two different sets of statuses.
+ */
+const STAGE_STATUS: Record<ChainStage, QuotationStatus> = {
+  waiting: "requested",
+  returned: "returned",
+  withdrawn: "cancelled",
+  withCustomer: "issued",
+  accepted: "accepted",
+  rejected: "rejected",
+};
+
+/** Reaching a customer is being issued at all — with him, accepted or rejected. */
+export const REACHED: readonly ChainStage[] = ["withCustomer", "accepted", "rejected"];
+
+/** The statuses of some endings; a word that is not an ending names none. */
+export function statusesOf(stages: readonly string[]): QuotationStatus[] {
+  return CHAIN_STAGES.filter((stage) => stages.includes(stage)).map((stage) => STAGE_STATUS[stage]);
+}
+
+/**
+ * The cohort, as a condition on a quotation aliased `alias`: raised in the
+ * window, and credited to the person when one is named (D148). The card, the
+ * ratios beside it, the builder's three quotation measures and the quotations
+ * list behind every one of their doors ask this and nothing else. Whether its
+ * customer is still on the floor is the caller's join, which each of them has.
+ */
+export function cohortWhere(alias: string, window: Window, repId: string | null): SQL {
+  return sql`(${createdIn(alias, window)} and ${creditedQuotation(alias, repId)})`;
+}
 
 export type ChainCohort = {
   /** The first day of the window, and how many were raised in it. */
@@ -98,8 +134,7 @@ export async function chainCohort(
       select q.id, q.status
         from quotations q
         join companies c on c.id = q.company_id
-       where (q.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-         and c.archived_at is null
+       where c.archived_at is null
          -- Whose quotation, not whose customer. They were the same person
          -- until a project could be shared, and since P12 a rep may raise one
          -- on somebody else's company (D147) — so a cohort scoped by the
@@ -107,7 +142,7 @@ export async function chainCohort(
          -- Whose it is means whose it was CREDITED to (D148), which is the
          -- same rule the metres beside it on this tab are counted by, and the
          -- same answer as the raiser for every quotation nobody shared.
-         and ${creditedQuotation("q", repId)}
+         and ${cohortWhere("q", { from, to: null }, repId)}
     ),
     sent_back as (
       -- The day each sent-back one was LAST sent back: its latest sendBack row.
@@ -121,12 +156,9 @@ export async function chainCohort(
        group by co.id
     )
     select case status
-             when 'requested' then 'waiting'
-             when 'returned' then 'returned'
-             when 'cancelled' then 'withdrawn'
-             when 'issued' then 'withCustomer'
-             when 'accepted' then 'accepted'
-             when 'rejected' then 'rejected'
+             ${sql.raw(
+               CHAIN_STAGES.map((stage) => `when '${STAGE_STATUS[stage]}' then '${stage}'`).join(" "),
+             )}
            end as stage,
            count(*)::int as n,
            -- The same on every row, read once with the rest (D95).
@@ -147,7 +179,7 @@ export async function chainCohort(
   // Reaching a customer is being issued at all — with him, accepted or
   // rejected. A superseded revision is not a separate case: the row that was
   // superseded still went out, and the one that replaced it is its own trip.
-  const reached = ended.withCustomer + ended.accepted + ended.rejected;
+  const reached = REACHED.reduce((sum, stage) => sum + ended[stage], 0);
 
   const oldest = result.rows[0]?.oldest_returned ?? null;
 
@@ -159,9 +191,4 @@ export async function chainCohort(
     answered: ended.accepted + ended.rejected,
     returnedOldestDays: oldest ? diffDays(oldest, today) : null,
   };
-}
-
-/** The share of a cohort that ended at one stage, 0–100, rounded. */
-export function shareOf(cohort: ChainCohort, stage: ChainStage): number {
-  return cohort.raised === 0 ? 0 : Math.round((cohort.ended[stage] / cohort.raised) * 100);
 }

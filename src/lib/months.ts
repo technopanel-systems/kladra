@@ -23,6 +23,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import { approvedWhere } from "@/lib/counted";
 import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { CREDITED_METRES } from "@/lib/sqm";
 
@@ -68,12 +69,12 @@ export async function monthsBack(
       select date_trunc('month', (credited.approved_at at time zone 'Asia/Riyadh')::date)::date as m,
              round(sum(credited.sqm), 2) as sqm
         from credited
-       where (credited.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-         -- Whoever the dispatch was CREDITED to (D148), which is what the month
-         -- card above these bars says and what the manager's table says. Read
-         -- by the raiser instead, a rep who shares a job would see six bars
-         -- that do not add up to the figure printed over them.
-         and (${userId}::uuid is null or credited.user_id = ${userId}::uuid)
+       -- Whoever the dispatch was CREDITED to (D148), which is what the month
+       -- card on the work tab says and what the manager's table says. Read by
+       -- the raiser instead, a rep who shares a job would see six bars that do
+       -- not add up to the figure printed over them. The same clause the
+       -- dispatches list behind each bar narrows by (src/lib/counted.ts).
+       where ${approvedWhere("credited", { from, to: null }, userId)}
        group by 1
     )
     select to_char(months.m, 'YYYY-MM-DD') as month,

@@ -1,26 +1,30 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { toneInk } from "@/components/metrics/colors";
+import { SharePie, type PieSlice } from "@/components/metrics/share-pie";
 import { formatDay } from "@/lib/dates";
-import { CHAIN_STAGES, shareOf, type ChainCohort } from "@/lib/chain";
-import { ShareBars } from "@/components/ui-ext/share-bars";
-import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
-import { cn } from "@/lib/utils";
+import { CHAIN_STAGES, type ChainCohort } from "@/lib/chain";
+import { narrowingQuery } from "@/lib/narrowing";
+import { wholePercents } from "@/lib/slices";
+import type { StateTone } from "@/lib/state-tone";
 
 /**
- * Where quotations go (SPEC D62, Jerom's phase 9C).
+ * Where quotations go (SPEC D62, Jerom's phase 9C) — a pie since §3 P13.
  *
  * One of his five questions, and the app could not answer any part of it. The
  * quotation screen says what each one IS right now; nothing said what becomes of
  * them as a population.
  *
  * It follows a COHORT rather than showing the pipeline as it stands: every
- * quotation raised in the last quarter, forward, to the furthest point it
- * reached. A funnel of current statuses is the board with the columns stacked,
- * and the board is already on the next screen.
+ * quotation raised in the window, forward, to the furthest point it reached.
+ * Each one is counted once, at one ending, so the six endings are six parts of
+ * the number the sentence names — a share of a whole, which is what a pie is
+ * for, and six is exactly the most a pie may have (DESIGN §1b). The endings
+ * keep the chain's order rather than being ranked, because "where it got to" is
+ * read along the chain; the list beside the drawing reads the same way down.
  *
- * Horizontal bars, because the labels are sentences of different lengths and a
- * vertical bar under "The customer has not answered" is a column of one letter.
- * Every row carries its count and its share as text, so the bars are hidden from
- * readers — the same rule as the months card, for the same reason.
+ * Every slice opens the quotations that ended there: the same cohort, through
+ * the same clause and the same statuses (`cohortWhere`, `statusesOf`), every
+ * revision its own row as it is here (S32).
  */
 
 /**
@@ -41,7 +45,14 @@ const STAGE_TONE: Record<(typeof CHAIN_STAGES)[number], StateTone> = {
   rejected: "bad",
 };
 
-export async function ChainCard({ cohort }: { cohort: ChainCohort }) {
+export async function ChainCard({
+  cohort,
+  personId,
+}: {
+  cohort: ChainCohort;
+  /** Whose paper — the picked rep, or null for the company. */
+  personId: string | null;
+}) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
   // The window in words, and it is the day itself rather than a count of days
   // back from today: the reader picked a window above this card and the card
@@ -59,62 +70,44 @@ export async function ChainCard({ cohort }: { cohort: ChainCohort }) {
     );
   }
 
+  const shares = wholePercents(CHAIN_STAGES.map((stage) => cohort.ended[stage]));
+  const slices: PieSlice[] = CHAIN_STAGES.map((stage, index) => {
+    const count = cohort.ended[stage];
+    return {
+      key: stage,
+      // The one handle a spec has on which ending this is: the row draws a
+      // word, never a code (DESIGN §2).
+      data: { "data-stage": stage },
+      label: t(`team.chain.${stage}`),
+      // A count hides an age: "sent back" with three in it might be three from
+      // this morning or one from March (D101).
+      caption:
+        stage === "returned" && count > 0 && cohort.returnedOldestDays !== null
+          ? t("team.chainReturnedOldest", { days: cohort.returnedOldestDays })
+          : undefined,
+      figure: String(count),
+      share: shares[index],
+      value: count,
+      href:
+        count > 0
+          ? `/quotations?${narrowingQuery({ from: cohort.from, credited: personId, ended: [stage] })}`
+          : null,
+      ink: toneInk(STAGE_TONE[stage]),
+    };
+  });
+
   return (
     <section className="card-face flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-sm font-medium text-muted-foreground">{t("team.chainTitle")}</h2>
-        {/* The question in words, which is the whole of D59: a reader should
-            not have to work out what a row of bars is counting. */}
+        {/* The question in words, which is the whole of D59 — and what the
+            pie is a share OF, with the number in it. */}
         <p className="text-sm text-pretty">
           {t("team.chainMeans", { raised: cohort.raised, from })}
         </p>
       </div>
 
-      <ShareBars
-        rows={CHAIN_STAGES.map((stage) => {
-          const count = cohort.ended[stage];
-          const share = shareOf(cohort, stage);
-          const tone = STAGE_TONE[stage];
-
-          return {
-            key: stage,
-            // The one handle a spec has on which ending this is: the row draws
-            // a word, never a code (DESIGN §2).
-            data: { "data-stage": stage },
-            tone,
-            share,
-            label: (
-              <span className={cn(count === 0 && "text-faint")}>
-                {t(`team.chain.${stage}`)}
-                {/* A count hides an age: "sent back" with three in it might be
-                    three from this morning or one from March (D101). */}
-                {stage === "returned" && count > 0 && cohort.returnedOldestDays !== null ? (
-                  <>
-                    {/* A visible separator, not only a margin: read aloud or
-                        selected, label and caption ran together in both
-                        languages ("…yet the oldest…"). */}
-                    {" "}
-                    <span className="text-xs text-muted-foreground">
-                      {"— "}
-                      {t("team.chainReturnedOldest", { days: cohort.returnedOldestDays })}
-                    </span>
-                  </>
-                ) : null}
-              </span>
-            ),
-            figure: (
-              <span dir="ltr" className={cn("num font-medium", count === 0 && "text-faint")}>
-                {count}
-              </span>
-            ),
-            support: (
-              <span dir="ltr" className={cn("num", count > 0 ? TONE_TEXT[tone] : "text-faint")}>
-                {t("common.percent", { percent: share })}
-              </span>
-            ),
-          };
-        })}
-      />
+      <SharePie slices={slices} label={t("team.chainTitle")} />
 
       {/* The one conversion in the chain that is about the market rather than
           about us: of the ones that actually reached a customer, how many he

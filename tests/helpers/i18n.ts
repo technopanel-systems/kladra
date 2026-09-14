@@ -185,6 +185,19 @@ async function forgetRememberedChoices(): Promise<void> {
 }
 
 /**
+ * Everything the `page` fixture below does to a page, as one call, for the one
+ * spec that cannot take that fixture: tests/edge.spec.ts runs in the `edge`
+ * project, whose name is a browser and not a locale, and walks both locales
+ * inside itself (D172). Returns the check to run when the test is done.
+ */
+export async function prepareAppPage(page: Page): Promise<() => void> {
+  await forgetRememberedChoices();
+  const assertNone = watchForRuntimeErrors(page);
+  waitForHydrationAfterEveryLoad(page);
+  return assertNone;
+}
+
+/**
  * Extends Playwright's `test` with `locale` (the app's URL-prefix locale,
  * read from the project name) and `t` (the translator above). Every spec
  * imports `test`/`expect` from here, never straight from "@playwright/test"
@@ -211,9 +224,7 @@ export const test = base.extend<Fixtures>({
     await provide(getTranslator(locale));
   },
   page: async ({ page }, provide) => {
-    await forgetRememberedChoices();
-    const assertNone = watchForRuntimeErrors(page);
-    waitForHydrationAfterEveryLoad(page);
+    const assertNone = await prepareAppPage(page);
     await provide(page);
     assertNone();
   },

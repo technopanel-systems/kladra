@@ -3,7 +3,9 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { creditedDispatch, creditedQuotation } from "@/lib/credit-rows";
+import { cohortWhere } from "@/lib/chain";
+import { approvedWhere, dispatchedQuotation } from "@/lib/counted";
+import { creditedDispatch } from "@/lib/credit-rows";
 import { CREDITED_METRES } from "@/lib/sqm";
 import type { Day } from "@/lib/dates";
 
@@ -56,8 +58,7 @@ export async function metresBySegment(from: Day, repId: string | null): Promise<
       join company_categories cat on cat.id = co.category_id
       -- The approval is the event that moves metres (S41), read as a Riyadh
       -- day in the shape the hooks allow (rules/data.md, H6/H7).
-     where (credited.approved_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-       and (${repId}::uuid is null or credited.user_id = ${repId}::uuid)
+     where ${approvedWhere("credited", { from, to: null }, repId)}
      group by cat.id
      order by sqm desc
   `);
@@ -131,14 +132,12 @@ export async function chainRatios(from: Day, repId: string | null): Promise<Chai
       select qq.id
         from quotations qq
         join companies c on c.id = qq.company_id
-       where (qq.created_at at time zone 'Asia/Riyadh')::date >= ${from}::date
-         and c.archived_at is null
-         -- Whose paper, which since D148 is who it was CREDITED to and not
-         -- who typed it: a rep who raised a quotation on a shared job and
-         -- gave the credit to the man whose job it is did not raise it for
-         -- himself, and his own funnel should not say he did. One question,
-         -- one answer, and the same one the metres beside it are counted by.
-         and ${creditedQuotation("qq", repId)}
+       where c.archived_at is null
+         -- The chain card's own cohort, and whose paper is who it was
+         -- CREDITED to (D148), not who typed it: a rep who raised a quotation
+         -- on a shared job and gave the credit to the man whose job it is did
+         -- not raise it for himself, and his own funnel should not say he did.
+         and ${cohortWhere("qq", { from, to: null }, repId)}
     )
     select
       (select count(*)::int from p) as projects,
@@ -146,7 +145,7 @@ export async function chainRatios(from: Day, repId: string | null): Promise<Chai
         where exists (select 1 from quotations qq where qq.project_id = p.id)) as quoted_projects,
       (select count(*)::int from q) as quotations,
       (select count(*)::int from q
-        where exists (select 1 from dispatches dd where dd.quotation_id = q.id))
+        where ${dispatchedQuotation("q")})
         as dispatched_quotations,
       -- The raw material, for the sentence under the two rows: how much was
       -- raised in the window at all, which neither fraction says.

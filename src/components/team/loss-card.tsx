@@ -1,26 +1,35 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import { rankInk } from "@/components/metrics/colors";
+import { SharePie, type PieSlice } from "@/components/metrics/share-pie";
 import { formatDay } from "@/lib/dates";
-import { formatSqmWhole } from "@/lib/money";
-import { Sqm } from "@/components/ui-ext/figures";
+import { formatSqmWhole, toNumber } from "@/lib/money";
 import { lossReasonLabel } from "@/lib/loss-reason";
 import type { LossCohort } from "@/lib/losses";
-import { ShareBars } from "@/components/ui-ext/share-bars";
+import { foldForPie, wholePercents } from "@/lib/slices";
 
 /**
- * Why we lose (D140), beside the card that says where quotations go (D62).
+ * Why we lose (D140), beside the card that says where quotations go (D62) — a
+ * pie since §3 P13.
  *
  * The two answer one question in two halves: what became of the paper, and what
  * became of the work. The same window, and neither card chooses it — it is
- * picked once for the whole tab and passed down (D154), because two cards on
- * one screen asking about two different windows is a reader having to hold two
- * figures with almost the same name (rules/words.md).
+ * picked once for the whole tab and passed down (D154).
  *
- * Every bar is the same neutral tone and that is the point. A lost project is
- * finished, not late: red here would put an alarm on the one card that is for
- * thinking about rather than for working through, next to a stuck list that
- * genuinely is red. The meaning is in the order and the metres, and both are
- * printed as text — the bars are for the shape of it and are hidden from a
- * reader who cannot see them, exactly as on the chain and months cards.
+ * Every project given up in the window was given up for one reason, so the
+ * reasons are parts of one whole — the metres lost — and that is a share. Nine
+ * reasons is more than a pie may carry, so the five largest are drawn and the
+ * rest are one slice (DESIGN §1b), named for what it is and not "Other", which
+ * is a reason of its own here.
+ *
+ * No colour for a reason: a lost project is finished, not late, and red here
+ * would put an alarm on the one card that is for thinking about rather than for
+ * working through. The slices step by size in one neutral ink, and the order,
+ * the metres and the count are all printed as text.
+ *
+ * The slices open nothing yet. The list behind them is lost projects in a
+ * window, and the projects list has no window or reason to narrow by; a slice
+ * that opened every project would count a different set of rows than it says
+ * (D117), which is worse than a slice that is only read.
  *
  * Square metres lead and the count follows: one tower lost on price and five
  * small jobs lost on colour are not the same quarter (DESIGN §6).
@@ -40,6 +49,44 @@ export async function LossCard({ cohort }: { cohort: LossCohort }) {
     );
   }
 
+  const cents = (sqm: string) => Math.round(toNumber(sqm) * 100);
+  const folded = foldForPie(cohort.rows, (row) => toNumber(row.sqm));
+  const parts = [
+    ...folded.kept.map((row) => ({
+      key: row.reason,
+      // The stored value is a code; this is the one reader for it.
+      label: lossReasonLabel(row.reason, t) ?? row.reason,
+      value: toNumber(row.sqm),
+      projects: row.projects,
+      data: { "data-reason": row.reason } as Record<string, string>,
+    })),
+    ...(folded.rest.length > 0
+      ? [
+          {
+            key: "rest",
+            label: t("metrics.rest", { count: folded.rest.length }),
+            value: folded.rest.reduce((sum, row) => sum + cents(row.sqm), 0) / 100,
+            projects: folded.rest.reduce((sum, row) => sum + row.projects, 0),
+            data: undefined,
+          },
+        ]
+      : []),
+  ];
+  const shares = wholePercents(parts.map((part) => part.value));
+
+  const slices: PieSlice[] = parts.map((part, index) => ({
+    key: part.key,
+    data: part.data,
+    label: part.label,
+    caption: t("team.lossProjects", { projects: part.projects }),
+    figure: formatSqmWhole(part.value),
+    unit: t("common.sqm"),
+    share: shares[index],
+    value: part.value,
+    href: null,
+    ink: rankInk(index),
+  }));
+
   return (
     <section className="card-face flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
@@ -55,18 +102,7 @@ export async function LossCard({ cohort }: { cohort: LossCohort }) {
         </p>
       </div>
 
-      <ShareBars
-        rows={cohort.rows.map((row) => ({
-          key: row.reason,
-          data: { "data-reason": row.reason },
-          share: row.share,
-          // The stored value is a code; this is the one reader for it.
-          label: lossReasonLabel(row.reason, t),
-          figure: <Sqm value={row.sqm} whole />,
-          support: t("team.lossProjects", { projects: row.projects }),
-        }))}
-      />
-
+      <SharePie slices={slices} label={t("team.lossTitle")} />
     </section>
   );
 }

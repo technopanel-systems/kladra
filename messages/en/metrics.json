@@ -1,0 +1,50 @@
+{
+  "rest": "{count, plural, one {One more} other {# more}}",
+  "title": "Break a figure down",
+  "question": "{measure} · {by} · {period}",
+  "window": "{from} to {to}",
+  "compareWindow": "{from} to {to}, against {lastFrom} to {lastTo}",
+  "measureLabel": "Figure",
+  "byLabel": "By",
+  "compare": "This month against last",
+  "lastMonth": "Last month",
+  "measure": {
+    "metres": "Metres approved",
+    "raised": "Quotations requested",
+    "issued": "Quotations issued",
+    "accepted": "Quotations accepted",
+    "approved": "Dispatches approved",
+    "reports": "Reports written",
+    "leads": "Leads passed"
+  },
+  "by": {
+    "rep": "Person",
+    "segment": "Category",
+    "source": "Lead source",
+    "city": "City",
+    "month": "Month"
+  },
+  "means": {
+    "metres": "Approved m², for whoever each dispatch counts for — the figure every month card reads.",
+    "raised": "Quotations requested in the window, each revision its own. A quotation two people share counts once for each of them, and once in the total.",
+    "issued": "Of the quotations requested in the window, the ones that reached a customer. A quotation two people share counts once for each of them, and once in the total.",
+    "accepted": "Of the quotations requested in the window, the ones the customer accepted. A quotation two people share counts once for each of them, and once in the total.",
+    "approved": "Dispatches approved in the window. A dispatch two people share counts once for each of them, and once in the total.",
+    "reports": "Reports written in the window, by the person who wrote them.",
+    "leads": "Leads filed in the window, by the person who passed them, and how many of them are won."
+  },
+  "total": "Total",
+  "noCity": "No city",
+  "nothing": "Nothing to count in this window.",
+  "exportCsv": "Export CSV",
+  "inMetres": "Figures in m².",
+  "narrowed": {
+    "approvedBetween": "Approved {from} to {to}",
+    "approvedSince": "Approved since {from}",
+    "requestedBetween": "Requested {from} to {to}, every revision",
+    "requestedSince": "Requested since {from}, every revision",
+    "for": "counted for {name}",
+    "dispatched": "With a dispatch",
+    "showAll": "Show all"
+  }
+}

@@ -5,6 +5,8 @@ import { DispatchSheetSkeleton, DispatchesTable } from "@/components/dispatches/
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { Button } from "@/components/ui/button";
 import { ListTail } from "@/components/ui-ext/list-tail";
+import { NarrowingNote } from "@/components/metrics/narrowing-note";
+import { parseNarrowing } from "@/lib/narrowing";
 import { requireUser } from "@/lib/authz";
 import {
   countDispatches,
@@ -32,7 +34,11 @@ import { viewFor } from "@/lib/view";
  * customer, and a reader who is only viewing, have neither and see no button.
  */
 
-type Search = { q?: string; status?: string; open?: string; view?: string };
+/** The list's own four, and a door's narrowing (src/lib/narrowing.ts), which may repeat a key. */
+type Search = { q?: string; status?: string; open?: string; view?: string } & Record<
+  string,
+  string | string[] | undefined
+>;
 
 function parseStatus(value: string | undefined): DispatchStatus | null {
   return value === "submitted" || value === "approved" || value === "refused" ? value : null;
@@ -45,7 +51,7 @@ export default async function DispatchesPage({
 }) {
   const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
 
-  const q = (params.q ?? "").trim();
+  const q = (typeof params.q === "string" ? params.q : "").trim();
   const status = parseStatus(params.status);
   const open = params.open?.trim() || null;
   // His own choice, not this browser's, and remembered apart from the
@@ -53,11 +59,16 @@ export default async function DispatchesPage({
   const stored = chosen(await rememberedChoices(user.id), "view", "dispatches");
   const view = viewFor(params.view, stored);
 
+  // Opened from a figure on the metrics tab (SPEC §3 P13): the loads that
+  // figure counted, and a line over the list that says so.
+  const moved = parseNarrowing(params) ?? undefined;
+
   const narrowing = {
     user,
     q: q || undefined,
     status: view === "board" ? undefined : (status ?? undefined),
     locale,
+    moved,
   };
 
   const [t, rows, targets, direct] = await Promise.all([
@@ -92,6 +103,8 @@ export default async function DispatchesPage({
           />
         ) : null}
       </div>
+
+      {moved ? <NarrowingNote narrowing={moved} list="dispatches" /> : null}
 
       <DispatchesTable
         base="/dispatches"

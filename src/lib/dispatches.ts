@@ -69,6 +69,8 @@ import type { SessionUser } from "@/lib/types";
 import { creditOnDispatch, type CreditLine } from "@/lib/credit-rows";
 import { CREDITED_METRES, lineSqm, sumSqm } from "@/lib/sqm";
 import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
+import { approvedDispatches, companyWhere } from "@/lib/counted";
+import type { Narrowing } from "@/lib/narrowing";
 
 export type DispatchStatus = "submitted" | "approved" | "refused";
 
@@ -158,6 +160,12 @@ export type ListDispatchesInput = {
   limit?: number;
   /** "oldest" for the desk somebody works down — the queue (D137). */
   order?: "newest" | "oldest";
+  /**
+   * The loads a figure on the metrics tab counted, when the list is opened from
+   * one (SPEC §3 P13): approved in the window and credited to the person, as an
+   * achieved metre is (D148), narrowed to a kind of customer where the figure was.
+   */
+  moved?: Narrowing;
 };
 
 /** She runs both chains, so she sees every dispatch on them (S9). */
@@ -393,10 +401,17 @@ function narrowTo(input: ListDispatchesInput): (SQL | undefined)[] {
   const term = (input.q ?? "").trim();
 
   const conditions: (SQL | undefined)[] = [
-    isNull(companies.archivedAt),
+    // A customer archived since still moved those metres, and the month counts
+    // them (S41); behind a figure the list shows what the figure counted.
+    input.moved ? undefined : isNull(companies.archivedAt),
     seesEveryDispatch(user) ? undefined : seesCompany(user),
     input.repId ? eq(companies.repId, input.repId) : undefined,
   ];
+
+  if (input.moved) {
+    conditions.push(approvedDispatches(input.moved, input.moved.credited));
+    conditions.push(companyWhere("companies", input.moved));
+  }
 
   if (input.status) {
     const wanted = Array.isArray(input.status) ? input.status : [input.status];

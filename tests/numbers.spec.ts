@@ -242,7 +242,7 @@ test("there is a month before this one, and it says which way it went", async ({
     // The bars are aria-hidden on purpose: there is nothing in the picture that
     // is not in the number above it, so a reader who cannot see the shape has
     // lost nothing (D61).
-    const figures = await page.locator('[data-slot="month-sqm"]').allInnerTexts();
+    const figures = await page.locator('[data-month] [data-slot="bar-figure"]').allInnerTexts();
     expect(figures).toHaveLength(6);
     for (const figure of figures) expect(figure.trim()).not.toBe("");
   });
@@ -253,7 +253,7 @@ test("there is a month before this one, and it says which way it went", async ({
     // a label whose text is wider than its box is a label being cut.
     await page.setViewportSize({ width: 375, height: 900 });
     const cut = await page
-      .locator('[data-month] [data-slot="month-label"]')
+      .locator('[data-month] [data-slot="bar-label"]')
       .evaluateAll((nodes) =>
         nodes.filter((n) => n.scrollWidth > n.clientWidth + 1).map((n) => n.textContent ?? ""),
       );

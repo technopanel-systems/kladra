@@ -130,15 +130,22 @@ below by number.
                   the day's cards in the one auto-fit grid, `Empty` where a card can be empty, a `loading.tsx` on
                   both; the team row with its grey leave ring and red stuck ring, each with its word, the stuck
                   count taken from the stuck list's own aged rows, and the row opening the person's floor (D188).
-            - [ ] G5 · S9 **Metrics and the report builder** (13.2): pies and rings where a share is the point, each
+            - [x] G5 · S9 **Metrics and the report builder** (13.2): pies and rings where a share is the point, each
                   slice a door to its list; the builder — measure, breakdown, period, rep — on the metrics tab, with
                   the table under the chart, CSV export for the manager and a print stylesheet; every question a
                   manager asks monthly answerable there.
-            - [ ] G5 · S11 **Edge** (13.9): an `edge` Playwright project on the msedge channel that runs only
+                  **Done**: the kit's chart over Recharts; pies, rings and columns by the question each card answers,
+                  every slice and bar opening its list through the figure's own predicate (D150, D192); the builder
+                  with seven measures, five breakdowns, the table, CSV and print (D193); S6's reliance card on the tab.
+            - [x] G5 · S11 **Edge** (13.9): an `edge` Playwright project on the msedge channel that runs only
                   `tests/edge.spec.ts` (D172), opening every menu, select, popover and palette on every screen in
                   both locales; the hypotheses in order — Edge's translation of the Arabic screens mutating the
                   portal (`translate="no"` on the shell if so), a modal menu dismissing a popover, Enhanced Security
                   mode, duplicated Radix internals (`npm ls`, clean today); fixed once in the kit, the rule in DESIGN §5.
+                  **Done**: in a plain Edge every popup opened; it failed once Edge translated the Arabic screens —
+                  React's text nodes rewritten, hydration broken, a select taking the screen down when reopened.
+                  `translate="no"` on `<html>` (D194), cmdk rows keyed so none is empty; the `edge` project runs
+                  `tests/edge.spec.ts`, every popup kind per role in both locales, and a translation regression.
             - [ ] **G6 · The front end, re-audited and reshaped** (founder, P13 approval) — its own group at the end,
                   as many slices as it needs, and it may take longer than the rest combined. Every screen, dialog,
                   drawer, board, dashboard, list, form and empty state opened as if never seen, and judged against

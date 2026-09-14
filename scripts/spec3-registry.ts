@@ -389,7 +389,9 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "a slice or a bar opens the list behind it",
-    owed: "P13-S9",
+    tests: [
+      "a slice or a bar carries the figure its SQL counts, and pressing it opens a list of exactly that many",
+    ],
   },
   {
     says: "it moves out of Metrics",
@@ -450,7 +452,16 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Dropdowns must open in Microsoft Edge",
-    owed: "P13-S11",
+    tests: [
+      // tests/edge.spec.ts, the `edge` project's one spec (D172): every kind of
+      // popup on each role's screens, by click and by keyboard, in both locales.
+      "every popup on Faisal's screens opens in Edge by click and by keyboard, and takes a choice",
+      "every popup on Rawan's screens opens in Edge by click and by keyboard, and takes a choice",
+      "every popup on Abdulrahman's screens opens in Edge by click and by keyboard, and takes a choice",
+      "every popup on Jerom's screens opens in Edge by click and by keyboard, and takes a choice",
+      // The cause, fixed once in the shell: a page the browser would translate.
+      "a page a browser would translate is marked not to be, and a Select given a new value on it still opens",
+    ],
   },
   {
     says: "applied everywhere in one sweep",

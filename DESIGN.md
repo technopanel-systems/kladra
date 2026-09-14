@@ -241,9 +241,9 @@ screen however many lists are under it; `PageTabs`, the row across the top of a 
 screen (D151), which is links rather than the kit's `Tabs` because a tab here is a place with an
 address and not a panel toggled in the browser, and which is deliberately not the pill the
 list-and-board switch wears — that one is a control inside a screen and this one is the
-structure of it; `ShareBars`, the one way a share of a whole is drawn — ranked longest first,
-the figure written on every row, the bar hidden from a reader because there is nothing in it
-that is not in the text (D150, D65); and `RangeChips`, the window a measured screen is read
+structure of it; the metrics shapes in `src/components/metrics/` — `SharePie` for a share of a
+whole, `ProgressRing` for a part of one, `BarsChart` for a comparison or a trend — over the kit's
+`ChartContainer`, each with its figures written beside it (D150, D192); and `RangeChips`, the window a measured screen is read
 over, which is `FilterChip` in a row rather than a fourth kind of chip; and `RecordPanel`, the
 drawer a record opens in — one width, one edge and one border for a company, a project, a
 quotation or a dispatch, and for the skeleton that stands in while each of them loads (D166); and, from P13-S1,
@@ -257,6 +257,13 @@ Logical utilities only (`ms-`, `pe-`,
 
 Each of these was a defect first. They are here so the fix is the rule, not the patch.
 
+- **The page is never machine-translated** (P13-S11, D194). Kladra is written in both languages
+  and switches between them itself; a browser that translates it as well rewrites text React owns.
+  Edge set to translate Arabic swapped React's text nodes for `<font>` wrappers, broke hydration and
+  left a picker reading its translated placeholder; on a page translated that way a Select given a
+  new value brought the screen down when it was opened again. `translate="no"` sits on `<html>` in
+  the root layout and nowhere else, so it covers every popup rendered into `<body>`. A searchable
+  picker's rows are keyed so that no row's value is empty, because cmdk never highlights one.
 - **Direction follows the first strong character, never a forced `ltr`.** A formatted date
   carries a month NAME, so `dir="ltr"` around `04/سبتمبر/2026` puts the month in its own
   right-to-left run and reclassifies the year after it as an Arabic number; the two swap and
@@ -340,8 +347,9 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   `--color-state-over` is `--surface-2` exactly, which is also the empty track every bar
   in this app draws itself on. So the withdrawn bar on the chain card was painted in the
   colour of the track it sat in and could not be seen, while the six-month card had
-  hand-written four `-fg` conditionals to dodge the same trap. `TONE_BAR` is the third
-  map beside `TONE_CLASS` and `TONE_TEXT`, and a bar uses it.
+  hand-written four `-fg` conditionals to dodge the same trap. A drawn mark takes its
+  tone's foreground colour (the chart colours in `src/components/metrics/colors.ts`), never
+  the pill tint.
 - **Colour may carry a state; it may never be the only thing carrying it.** The
   coordinator's queue said "3 working days" in red for a request that was late and "3
   working days" in grey for one that was not — the same words in the same shape, the

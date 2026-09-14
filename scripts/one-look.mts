@@ -77,7 +77,11 @@ const RULES: Rule[] = [
     //    on the row. `Ref` in figures.tsx carries it now.
     name: "a reference number is written once, and never translated",
     pattern: /translate="no"/,
-    allow: ["src/components/ui-ext/figures.tsx"],
+    // And the shell (P13-S11, DESIGN §5): since Edge's translation was measured
+    // rewriting React's text under the Arabic screens, the whole document says it
+    // is not to be translated, popups included. `Ref` keeps its own mark, so a
+    // number stays untranslated wherever it is lifted out of the shell.
+    allow: ["src/components/ui-ext/figures.tsx", "src/app/layout.tsx"],
     fix: "use <Ref>…</Ref> from @/components/ui-ext/figures",
   },
   {

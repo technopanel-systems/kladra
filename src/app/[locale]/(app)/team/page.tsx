@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { MonthCard } from "@/components/team/month-card";
 import { ChainCard } from "@/components/team/chain-card";
 import { LossCard } from "@/components/team/loss-card";
+import { RelianceCard } from "@/components/team/reliance-card";
 import { MonthsCard } from "@/components/team/months-card";
 import { RatiosCard } from "@/components/team/ratios-card";
 import { RepPicker } from "@/components/team/rep-picker";
@@ -23,6 +24,9 @@ import {
   teamMonth,
 } from "@/lib/team";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
+import { BuilderCard } from "@/components/metrics/builder-card";
+import { answer } from "@/lib/builder";
+import { parseQuestion, questionQuery, type Question } from "@/lib/builder-choice";
 import { chainCohort } from "@/lib/chain";
 import { lossCohort } from "@/lib/losses";
 import { chainRatios, metresBySegment } from "@/lib/metrics";
@@ -30,6 +34,7 @@ import { monthsBack } from "@/lib/months";
 import { RANGES, RANGE_SCREEN, rangeFor, rangeStart } from "@/lib/ranges";
 import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { tabFor, type Tab } from "@/lib/tabs";
+import { cn } from "@/lib/utils";
 
 /**
  * The manager's home (SPEC §3, D15): the company's month, everybody's month
@@ -50,7 +55,14 @@ const TABS: Tab[] = ["work", "metrics", "team"];
 export default async function TeamPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; range?: string; rep?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    range?: string;
+    rep?: string;
+    m?: string;
+    by?: string;
+    p?: string;
+  }>;
 }) {
   const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
   // Managers and admins only. A rep who follows a link here goes to his own
@@ -82,7 +94,13 @@ export default async function TeamPage({
   const from = rangeStart(range);
   const repId = params.rep?.trim() || null;
 
-  const [t, month, stuck, stuckPeople, months, cohort, losses, segments, ratios] = await Promise.all([
+  // The builder's question (SPEC §3 P13): what, by what, over when — and whose,
+  // which is the picker above everything on the tab. Nothing chosen opens on
+  // the metres by person over the window the chips already name.
+  const question = parseQuestion(params, range);
+  const asked = params.m !== undefined || params.by !== undefined || params.p !== undefined;
+
+  const [t, month, stuck, stuckPeople, months, cohort, losses, segments, ratios, answered] = await Promise.all([
     getTranslations(),
     // Every tab needs it: the work tab for the company's month and the pipeline
     // at the head of its strip, the metrics tab for the rep picker, the team tab
@@ -96,19 +114,27 @@ export default async function TeamPage({
     tab === "metrics" ? lossCohort(repId, from) : null,
     tab === "metrics" ? metresBySegment(from, repId) : null,
     tab === "metrics" ? chainRatios(from, repId) : null,
+    tab === "metrics" ? answer(user, question, locale) : null,
   ]);
 
-  // The address of a metrics tab is the window and the person together, so a
-  // chip keeps the rep and the picker keeps the window: changing one of two
-  // choices must never quietly reset the other.
+  // The address of a metrics tab is the window, the person and the builder's
+  // question together, so a chip keeps the rep and the question, and the picker
+  // keeps the window: changing one choice must never quietly reset another.
   const metricsHref = (next: { range?: string; rep?: string | null }) => {
     const rep = next.rep === undefined ? repId : next.rep;
-    return `/team?tab=metrics&range=${next.range ?? range}${rep ? `&rep=${rep}` : ""}`;
+    const kept = asked
+      ? `&${questionQuery({ ...question, repId: null })}`
+      : "";
+    return `/team?tab=metrics&range=${next.range ?? range}${rep ? `&rep=${rep}` : ""}${kept}`;
   };
+  // A builder chip changes the question and keeps the rest, and lands back on
+  // the builder rather than on the top of a long tab.
+  const builderHref = (next: Question) =>
+    `/team?tab=metrics&range=${range}&${questionQuery({ ...next, repId })}#builder`;
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
+      <header className={cn("flex flex-col gap-3", tab === "metrics" && "print:hidden")}>
         <h1 className="text-xl font-semibold">{t("shell.team")}</h1>
         <PageTabs
           screen="team"
@@ -204,8 +230,12 @@ export default async function TeamPage({
         </>
       ) : null}
 
-      {tab === "metrics" ? (
+      {tab === "metrics" && answered ? (
         <>
+          {/* Printed, the tab is the builder's page and nothing else: the
+              cards above it are for reading on the screen, and the builder's
+              table is the thing a manager takes into a meeting (SPEC §3 P13). */}
+          <div className="flex flex-col gap-6 print:hidden">
           {/* Whose, first: the picker changes every figure under it, so it sits
               above them all rather than beside the one it looks like it belongs
               to. */}
@@ -229,7 +259,7 @@ export default async function TeamPage({
               picked rep's: the company's opens the work tab (SPEC §3 P13), and
               one rep's is on his floor, one press from his team row, where
               `/companies?rep=` has carried it since P11. */}
-          {months ? <MonthsCard months={months} /> : null}
+          {months ? <MonthsCard months={months} personId={repId} /> : null}
 
           <RangeChips
             range={range}
@@ -254,22 +284,43 @@ export default async function TeamPage({
                 first arrangement put a two-row card beside a nine-row one and
                 left three hundred pixels of nothing under it, which reads as a
                 card that failed to load. */}
-            {segments ? <SegmentCard rows={segments} /> : null}
+            {segments ? <SegmentCard rows={segments} from={from} personId={repId} /> : null}
 
             {/* What is stuck is on the working tab, one row at a time; this is the
                 same chain read as a population — of everything raised in the
                 window, where did each one end up (D62). One is a list to work
                 through today, the other is a number to think about, and that is
                 exactly the line the tabs are drawn on (D151). */}
-            {cohort ? <ChainCard cohort={cohort} /> : null}
+            {cohort ? <ChainCard cohort={cohort} personId={repId} /> : null}
 
-            {ratios ? <RatiosCard ratios={ratios} /> : null}
+            {ratios ? <RatiosCard ratios={ratios} from={from} personId={repId} /> : null}
 
             {/* The other half of the same question, over the same window: the chain
                 says what became of the paper, this says what became of the work
                 (D140). */}
             {losses ? <LossCard cohort={losses} /> : null}
+
+            {/* Who leans on the coordinator, over the same window (SPEC §3 P13,
+                D191). A card about everybody, so it stands only while the tab
+                reads everybody: with one rep picked, every card is his (D154). */}
+            {repId ? null : <RelianceCard from={from} />}
           </div>
+          </div>
+
+          {/* The manager's own question, last: the cards above answer the ones
+              every month asks, and this answers the one this month asks. It
+              carries its own window, because "this month against last" is not
+              one of the chips' three, and it says which it is reading in words. */}
+          <BuilderCard
+            answer={answered}
+            whose={
+              repId
+                ? (month.members.find((member) => member.userId === repId)?.name ??
+                  t("team.everybody"))
+                : t("team.everybody")
+            }
+            hrefFor={builderHref}
+          />
         </>
       ) : null}
 

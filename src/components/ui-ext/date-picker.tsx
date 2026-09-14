@@ -122,6 +122,10 @@ export function DatePicker({
           id={id}
           type="button"
           variant="outline"
+          // What a walk over every popup on a screen finds a date picker by
+          // (tests/edge.spec.ts): to the accessibility tree it is a button that
+          // opens a dialog, the same as a button that opens a form.
+          data-picker="date"
           disabled={disabled}
           aria-invalid={invalid || undefined}
           aria-describedby={ariaDescribedBy}

@@ -12,6 +12,7 @@
  */
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
+import type { BuilderTable } from "@/lib/builder-table";
 import { mainContactIdSql } from "@/lib/companies";
 import { csv } from "@/lib/csv";
 import { differenceInEnglish, type Difference } from "@/lib/dispatch-difference";
@@ -368,6 +369,28 @@ async function dispatchesCsv(): Promise<string> {
     ],
     rows,
   );
+}
+
+/**
+ * The builder's table as a file, for the manager and the admin (SPEC §3 P13).
+ *
+ * The same rows as the table under the chart, in the same order, because both
+ * come out of `builderTable`; the total is the last line, as it is the table's
+ * footer. Unlike the three files above it is written in the reader's language:
+ * it is a copy of a screen somebody was reading, not a record for an
+ * accountant, and a manager who asked in Arabic opens it in Arabic. Figures are
+ * plain numbers — m² to the hundredth, counts whole — so a spreadsheet adds
+ * them up.
+ */
+export function builderCsv(table: BuilderTable): string {
+  const line = (label: string, figures: string[], won: number[] | null) =>
+    Object.fromEntries(
+      [label, ...figures, ...(won ?? []).map(String)].map((cell, i) => [table.head[i], cell]),
+    );
+  return csv(table.head, [
+    ...table.rows.map((row) => line(row.label, row.figures, row.won)),
+    line(table.total.label, table.total.figures, table.total.won),
+  ]);
 }
 
 export async function buildExport(name: ExportName): Promise<string> {

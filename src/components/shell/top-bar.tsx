@@ -43,7 +43,8 @@ export async function TopBar({
   const writes = writesReports(role) && !user.viewedBy;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-line bg-canvas">
+    // Never on paper: a printed page is its content (SPEC §3 P13's print sheet).
+    <header className="sticky top-0 z-20 border-b border-line bg-canvas print:hidden">
       <div className="flex h-14 items-center gap-2 px-4 md:px-8">
         {/* The rail carries the mark from md up; on a phone it lives here. */}
         <Link href={home} className="flex shrink-0 items-center md:hidden">

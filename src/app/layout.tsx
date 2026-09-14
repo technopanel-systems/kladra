@@ -66,6 +66,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html
       lang={locale}
       dir={dir}
+      // Never machine-translated (P13-S11, DESIGN §5). Kladra is written in both
+      // languages and switches between them itself; a browser that translates
+      // the page as well rewrites text React owns. Edge set to "always translate
+      // Arabic" was measured doing it to the Arabic screens: text rewritten in
+      // place, React's own text nodes taken out for <font> wrappers, `direction:
+      // ltr` stamped on what it touched, hydration failing on the day screen, and
+      // the report popup's customer picker still reading its translated
+      // placeholder after a customer had been chosen. On a page treated the way
+      // Chromium's translator treats one, a Select given a new value took the
+      // screen down the next time it was opened. It also translates what must
+      // never be — a customer's name. On <html> so it covers the popups too: every
+      // menu, list and dialog is portalled into <body>, outside any wrapper
+      // further down, and the attribute is inherited.
+      translate="no"
       data-theme={theme}
       className={`${readex.variable} ${plexMono.variable} ${theme === "dark" ? "dark" : ""} min-h-full antialiased`}
       suppressHydrationWarning
