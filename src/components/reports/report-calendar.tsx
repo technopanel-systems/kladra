@@ -92,9 +92,10 @@ export async function ReportCalendar({
             </Link>
           </Button>
         ) : (
-          <Button variant="ghost" size="icon" className="size-8" aria-label={t("nextMonth")} disabled>
-            <ChevronRight aria-hidden="true" className="rtl:rotate-180" />
-          </Button>
+          // This month is the last one with anything to show. Its place is kept so
+          // the month stays centred; a greyed arrow would be a control that
+          // cannot be used (DESIGN §5).
+          <span aria-hidden="true" className="size-8 shrink-0" />
         )}
       </div>
 

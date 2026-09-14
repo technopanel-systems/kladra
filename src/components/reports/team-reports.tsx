@@ -141,7 +141,9 @@ export async function NothingWritten({
 
 /**
  * The arrows over the team's day or week: the working day either side, or the
- * week either side. Next is disabled on the last one there is.
+ * week either side. On the last one there is, Next is not drawn: its place is
+ * kept, so the label does not move, and a greyed arrow would be a control that
+ * cannot be used (DESIGN §5). "Today" beside the label already says why.
  */
 export async function TeamNav({
   label,
@@ -171,9 +173,7 @@ export async function TeamNav({
           </Link>
         </Button>
       ) : (
-        <Button variant="outline" size="icon" className="size-8" aria-label={t("next")} disabled>
-          <ChevronRight aria-hidden="true" className="rtl:rotate-180" />
-        </Button>
+        <span aria-hidden="true" data-slot="team-next-none" className="size-8 shrink-0" />
       )}
       <p className="text-sm font-medium" data-slot="team-period">
         {label}

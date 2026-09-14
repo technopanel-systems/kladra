@@ -29,6 +29,9 @@ const ADMIN_SCREENS = [
   "quotations",
   "dispatches",
   "team",
+  "reports",
+  "leads",
+  "duplicates",
   "notifications",
   ...ADMIN_PATHS.map((path) => path.slice(1)),
 ];
@@ -78,10 +81,11 @@ async function walk(page: Page, locale: Locale, screens: readonly string[]): Pro
      * checked on every screen rather than on those two, because the next copy
      * will be somebody being helpful on a third.
      *
-     * The screens are the three lists above. A review queue, where every card
-     * carries the one decision it is there for, is a different shape and is not
-     * among them — /duplicates is the only one, and adding it here would be
-     * asking this rule a question it was not written to answer.
+     * /duplicates was left out of this for a phase, as a review queue where
+     * every pair carried its decision in the brand colour — two gradients per
+     * pair, eight on a busy desk. G6 took the colour off the answers (S12.8):
+     * "Keep this one" is the secondary button on both sides, so the queue is
+     * held to the same one-or-none as every other screen.
      */
     const primaries = await primaryActions(page);
     expect(primaries.length, `${primaries.join(" / ")} on /${locale}/${screen}`).toBeLessThanOrEqual(
