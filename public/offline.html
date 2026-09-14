@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#15110e" />
+    <meta name="theme-color" content="#12100e" />
     <title>Kladra</title>
     <!--
       The offline splash, and the only thing Kladra keeps for a phone with no
@@ -25,7 +25,7 @@
     <script>
       if (/(?:^|;\s*)theme=light(?:;|$)/.test(document.cookie)) {
         document.documentElement.classList.add("light");
-        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f5f0e9");
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", "#f7f5f3");
       }
     </script>
     <style>
@@ -41,9 +41,9 @@
         display: grid;
         place-items: center;
         padding: 24px;
-        background: #15110e;
-        color: #f0ebe7;
-        font-family: "Readex Pro", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+        background: #12100e;
+        color: #ece9e5;
+        font-family: "IBM Plex Sans", "Noto Sans Arabic", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
         line-height: 1.5;
         text-align: center;
       }
@@ -59,11 +59,11 @@
         width: 56px;
         height: 56px;
         place-items: center;
-        border-radius: 16px;
-        background: linear-gradient(140deg, #e5233c, #7a1020);
+        border-radius: 12px;
+        background: #b95651;
         color: #fff;
         font-size: 26px;
-        font-weight: 700;
+        font-weight: 600;
       }
       p {
         margin: 0;
@@ -71,26 +71,26 @@
       }
       .ar {
         direction: rtl;
-        font-family: "Readex Pro", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+        font-family: "IBM Plex Sans", "Noto Sans Arabic", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
       }
       .quiet {
-        color: #a49a94;
+        color: #ada8a3;
         font-size: 13px;
       }
       .rule {
         width: 40px;
         height: 1px;
-        background: #332c28;
+        background: rgba(236, 233, 229, 0.14);
       }
       .light {
         color-scheme: light;
       }
       .light body {
-        background: #f5f0e9;
-        color: #251d16;
+        background: #f7f5f3;
+        color: #211d1a;
       }
       .light .quiet {
-        color: #6b615c;
+        color: #605b56;
       }
       .light .rule {
         background: rgba(26, 22, 20, 0.13);

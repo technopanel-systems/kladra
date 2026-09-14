@@ -26,7 +26,7 @@ const buttonVariants = cva(
         // token names for the same colour — the app's most important control,
         // copy-pasted. A variant, so there is one of it (D69).
         brand:
-          "bg-(image:--brand-grad) text-brand-ink shadow-(--brand-glow) hover:opacity-90",
+          "bg-brand text-brand-ink hover:bg-brand-hover",
         link: "text-primary underline-offset-4 hover:underline",
       },
       // On the 4px scale (P13-G6): the kit's 6 and 10px paddings and gaps are

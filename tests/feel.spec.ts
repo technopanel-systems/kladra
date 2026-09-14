@@ -47,13 +47,13 @@ test("the browser's own chrome follows Kladra's theme, not the phone's", async (
 }) => {
   await login(page, locale, "faisal");
   const chrome = page.locator('meta[name="theme-color"]');
-  await expect(chrome).toHaveAttribute("content", "#15110e");
+  await expect(chrome).toHaveAttribute("content", "#12100e");
   await expect(page.locator("html")).toHaveClass(/\bdark\b/);
   try {
     // The same cookie the user menu writes (src/actions/prefs.ts).
     await context.addCookies([{ name: "theme", value: "light", url: new URL(page.url()).origin }]);
     await page.reload();
-    await expect(chrome).toHaveAttribute("content", "#f5f0e9", COLD);
+    await expect(chrome).toHaveAttribute("content", "#f7f5f3", COLD);
     await expect(page.locator("html")).not.toHaveClass(/\bdark\b/);
   } finally {
     await context.clearCookies({ name: "theme" });

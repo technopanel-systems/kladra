@@ -13,7 +13,7 @@ export function BrandMark({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "grid size-7 shrink-0 place-items-center rounded-md bg-(image:--mark-grad) text-sm font-semibold text-brand-ink",
+        "grid size-7 shrink-0 place-items-center rounded-md bg-brand text-sm font-semibold text-brand-ink",
         className,
       )}
     >

@@ -437,7 +437,7 @@ Faisal's Home target card (the old step 4) lands with P6, which is where the car
 4. Faisal presses the right button on a customer's number. The number is shown as text with one thing to do — copy — and what lands on the clipboard is what was on the screen, not the wa.me address. A finger held on it for half a second does the same.
 5. He opens a company, a project and a quotation in turn: the same panel every time, the same width, arriving from the end of the line — the right in English, the left in Arabic — with its line on the edge facing the list.
 6. He raises a quotation for a customer who has been quoted before. The form opens on one blank line: no price, no colour, and the last quotation's name nowhere on it. Add item still opens the next line on the sheet above it.
-7. Every screen every role can reach carries at most one button in the brand gradient, empty lists included.
+7. Every screen every role can reach carries at most one brand button (`data-variant="brand"`), empty lists included.
 
 **Abdulrahman (manager)** — `tests/manager.spec.ts`
 1. Sign in as Abdulrahman. Home shows company target vs achieved and the team table.

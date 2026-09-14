@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, Readex_Pro } from "next/font/google";
+import { IBM_Plex_Sans, Noto_Sans_Arabic } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { DirectionProvider } from "@/components/direction-provider";
@@ -10,23 +10,22 @@ import { dirOf } from "@/i18n/routing";
 import { CANVAS, getTheme } from "@/lib/theme";
 import "./globals.css";
 
-// One family for both scripts (DESIGN §1, P13-S1): Readex Pro was drawn for
-// Arabic and Latin together, so a Latin company name inside an Arabic row sits
-// at the same height and weight as the words around it, and the locale switch
-// changes the words and nothing about the voice. The variable file rather than
-// three static weights: one file per script covers 400–600, and nothing on a
-// screen is bolder than 600 (P11I, D133).
-const readex = Readex_Pro({
-  subsets: ["arabic", "latin"],
-  variable: "--font-app",
+// Two faces, one voice (DESIGN §1, P13-G6): IBM Plex Sans for Latin and Noto
+// Sans Arabic for Arabic. Plex's own Arabic was the first choice and was drawn
+// small: set beside Plex Latin at 13.5px an Arabic company name read a size
+// below the English one on the same line, which is the legibility rule this
+// scale exists for. Noto Sans Arabic stands at the Latin's height and weight.
+// The stack names Latin first; a browser takes each Arabic letter from the
+// second (globals.css `--font-sans` says why by name, not by variable). Nothing on a screen is bolder than 600 (P11I, D133). Figures are the
+// Latin face in tabular digits (`num`), not a monospace.
+const plexLatin = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-latin",
   display: "swap",
 });
-// Every money and m² figure stays in a monospace of its own: those stand in
-// columns that must line up (DESIGN §2).
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  variable: "--font-mono-app",
+const notoArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
+  variable: "--font-arabic",
   display: "swap",
 });
 
@@ -81,7 +80,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       // further down, and the attribute is inherited.
       translate="no"
       data-theme={theme}
-      className={`${readex.variable} ${plexMono.variable} ${theme === "dark" ? "dark" : ""} min-h-full antialiased`}
+      className={`${plexLatin.variable} ${notoArabic.variable} ${theme === "dark" ? "dark" : ""} min-h-full antialiased`}
       suppressHydrationWarning
     >
       <body className="min-h-svh">

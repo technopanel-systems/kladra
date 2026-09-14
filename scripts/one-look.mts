@@ -22,9 +22,18 @@ type Rule = { name: string; pattern: RegExp; allow: string[]; fix: string };
 
 const RULES: Rule[] = [
   {
+    // The brand red as a filled control with its ink on it IS the primary button.
+    // It was a gradient class string in fourteen files before it was a variant;
+    // since P13-G6 it is a flat fill, and a flat fill is easier still to copy.
     name: "the primary button is a variant, not a class string",
-    pattern: /--brand-grad/,
-    allow: ["src/app/globals.css", "src/components/ui/button.tsx"],
+    pattern: /\bbg-brand\b[^"'`]*\btext-brand-ink\b|\btext-brand-ink\b[^"'`]*\bbg-brand\b|--brand-grad/,
+    // The bell's count is a mark, not a control: the one other place the red is
+    // a fill with its ink on it.
+    allow: [
+      "src/components/ui/button.tsx",
+      "src/components/shell/brand-mark.tsx",
+      "src/components/shell/notification-bell.tsx#absolute -top-2",
+    ],
     fix: 'use <Button variant="brand">',
   },
   {

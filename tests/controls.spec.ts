@@ -58,7 +58,7 @@ async function deadControls(page: Page): Promise<string[]> {
  */
 async function primaryActions(page: Page): Promise<string[]> {
   return page
-    .locator('[class*="brand-grad"]')
+    .locator('[data-slot="button"][data-variant="brand"]')
     .filter({ visible: true })
     .evaluateAll((nodes) =>
       nodes.map((node) => (node.textContent ?? "").replace(/\s+/g, " ").trim() || "(no label)"),

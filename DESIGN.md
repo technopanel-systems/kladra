@@ -2,13 +2,35 @@
 
 ## §1 Identity
 
-**Sandstone** (P13-S1). Warm neutrals — Najdi plaster by day, a brown-black at dusk — with
-the brand red on one control per screen; dark is the default and light is designed, not
-inverted. Fonts: **Readex Pro** for both scripts, **IBM Plex Mono** for every money and m²
-figure. Base `text-sm` 14.5px / 1.5. Radius 12px (`--radius`), a card 16px. Surfaces are
-solid; a card at rest has a hairline and a soft shadow; nothing is lifted by hover.
+**Stone** (P13-G6, the founder's restyle brief of 2026-09-14, which retired Sandstone). Quiet
+neutrals with almost no hue, plaster by day and a near-black at dusk, and the brand red, flat,
+on one control per screen; dark is the default and light is designed, not inverted. Fonts:
+**IBM Plex Sans** for Latin and **Noto Sans Arabic** for Arabic, one stack; every figure is
+that sans in tabular lining digits (`num`), and nothing is monospace but a keyboard hint.
+Base `text-sm` 13.5px / 20. Radius 8px (`--radius`) for a control, 12 for a card, 6 for a
+badge or chip; nothing is a pill but an avatar. Surfaces are solid; a card at rest has a
+hairline and no shadow; only what floats casts one; nothing is lifted by hover.
 
-**How it was chosen.** Three directions were built as token sets switchable on the dev
+**Why Sandstone went.** The brief named three faults, and the screens had all three: colours
+too saturated (a state was a tinted pill, the brand a red-to-orange gradient, charts in four
+loud tones), type with too little range between a page title and a caption, and a hierarchy
+that shadows, tints and gradients each claimed at once. Thirteen reference videos of calm
+product UI (`UX-VIDEO/`, git-ignored) were studied frame by frame; what they share is below,
+and none of their screens was copied. One accent and greys everywhere else. Near-black, never
+black; a surface is raised by lightness and edged by a 1px alpha hairline. Three text tiers,
+never pure white. No gradient that says nothing. A state is a small mark and its word.
+
+**Readex Pro retired, and the legibility reason survives it.** Readex was chosen for being one
+family drawn for both scripts; beside Plex Sans its Latin read loose, and the new scale is
+tighter. Plex's own Arabic was tried first and refused: set next to Plex Latin at 13.5px an
+Arabic company name read a size smaller than the English one on the same line, the fault
+Aluminium was refused for below. Noto Sans Arabic stands at Plex Latin's height and weight.
+**The stack names the faces, not the variables** (`--font-sans` in globals.css): next/font
+builds a metric-matched fallback for each family out of Arial with no unicode range, Arial has
+Arabic, and a stack of variables drew every Arabic letter in that fallback before it reached
+Noto. Turbopack ignores `adjustFontFallback: false`, so the names go first.
+
+**How Sandstone was chosen (P13-S1), kept for what it learned about Arabic.** Three directions were built as token sets switchable on the dev
 server and rendered on the rep's home, the coordinator's queue and a quotation drawer, in
 both themes and both directions, at 1366 and 375 (`scripts/shots.ts --look`):
 
@@ -32,28 +54,31 @@ both themes and both directions, at 1366 and 375 (`scripts/shots.ts --look`):
 
 | Token | Dark (default) | Light |
 |---|---|---|
-| canvas / background | `#15110e` | `#f5f0e9` |
-| surface (card, popover) | `#1e1915` | `#fffcf8` |
-| surface-2 (muted, secondary, accent) | `#28221d` | `#efe8de` |
-| line (border, input) | `rgba(255,238,220,.08)` strong `.14` | `rgba(70,45,20,.10)` strong `.19` |
-| text | `#f4ece3` | `#251d16` |
-| text-muted | `#b2a496` | `#6c5f52` |
-| text-faint | `#9d8f82` | `#6f6256` |
-| rail (sidebar, bottom bar) | `#100c09` text `#a3978a` strong `#fff8f1` | `#231b15` text `#bcae9f` strong `#fff8f1` |
-| brand (primary, ring) | `#ec5e62` | `#bb2638` |
-| brand-grad | `linear-gradient(135deg,#ec5e62,#f08a4a)` | `linear-gradient(135deg,#bb2638,#d9613a)` |
-| mark-grad (the K, both themes) | `linear-gradient(140deg,#e5233c,#7a1020)` | same |
-| state-bad bg / fg | `rgba(236,94,98,.14)` / `#ff9a92` | `rgba(187,38,56,.09)` / `#b3202f` |
-| state-wait bg / fg | `rgba(230,170,80,.14)` / `#eab766` | `rgba(138,90,0,.11)` / `#7d5207` |
-| state-good bg / fg | `rgba(110,190,120,.13)` / `#86cf92` | `rgba(21,128,61,.09)` / `#116a34` |
-| state-open bg / fg | `rgba(130,170,225,.13)` / `#9dbde8` | `rgba(43,92,168,.09)` / `#2b5ca8` |
-| avatar-1…8 bg / fg | `oklch(.34 .04 h)` / `oklch(.86 .07 h)` | `oklch(.91 .035 h)` / `oklch(.43 .08 h)` |
-| shadow (card, dialog) | `0 1px 2px rgba(0,0,0,.3), 0 12px 32px -18px rgba(0,0,0,.7)` | `0 1px 2px rgba(60,40,20,.05), 0 10px 28px -18px rgba(60,40,20,.26)` |
+| canvas / background | `#12100e` | `#f7f5f3` |
+| surface (card) | `#191714` | `#fefdfc` |
+| surface-2 (muted, secondary, accent) | `#23201d` | `#f0edea` |
+| raised (popover, menu, dialog) | `#292623` | `#ffffff` |
+| line (border) / strong (input) | `rgba(236,233,229,.08)` / `.14` | `rgba(33,29,26,.10)` / `.17` |
+| text | `#ece9e5` | `#211d1a` |
+| text-muted | `#ada8a3` | `#605b56` |
+| text-faint | `#8f8a85` | `#706b66` |
+| rail (sidebar, bottom bar) | `#0e0c0a` | `#f2f0ed`, text `#605b56`, strong `#211d1a` |
+| brand (primary) / hover | `#b95651` / `#c4625d` | `#b33333` / `#a0292a` |
+| ring (focus) | the text colour | the text colour |
+| state bad · wait · good · open (text) | `#e88f85` `#e0b67b` `#8ac596` `#90b5dc` | `#b33832` `#90601f` `#337344` `#39659b` |
+| state tint (a band only) | the same hue at 7–9% | the same hue at 7–9% |
+| avatar-1…8 bg / fg | about `oklch(.33 .04 h)` / `oklch(.85 .06 h)` | about `oklch(.92 .03 h)` / `oklch(.44 .065 h)` |
+| shadow (floats only) | `0 1px 2px rgba(0,0,0,.4), 0 16px 40px -12px rgba(0,0,0,.6)` | `0 1px 2px rgba(20,16,12,.06), 0 12px 32px -12px rgba(20,16,12,.2)` |
+
+White ink on the brand passes 4.5:1 in both themes, and each text tier passes 4.5:1 on each
+surface it sits on; that was measured when the palette was set. The neutrals sit at oklch hue
+70 with chroma under 0.01: warm enough not to read blue under office light, too faint to read
+as a colour.
 
 The eight avatar hues are 25, 70, 110, 155, 200, 245, 290 and 335 degrees. The type scale is
-`text-xs` 12.5 · `text-sm` 14.5 · `text-base` 15.5 · `text-lg` 17 · `text-xl` 20 (px), set once
-in `@theme`; a component that writes `text-[13px]` is a component the scale cannot move, and
-G6 takes each of those back onto it.
+`text-2xs` 11 · `text-xs` 12 · `text-sm` 13.5 · `text-base` 14.5 · `text-lg` 16 · `text-xl` 20 ·
+`text-2xl` 24 (px), set once in `@theme`, in three weights (400, 500, 600) and nothing bolder.
+A component that writes `text-[13px]` is a component the scale cannot move.
 
 An apostrophe in English copy is `’`, never `'`. Ten strings carried the typewriter
 mark — "the coordinator's queue", "today's report" — and one straight quote in a card of
@@ -65,38 +90,32 @@ and dialogs take the solid surface — never blurred. Row colour means how long 
 waited: overdue red, due today amber, otherwise faint. Status was a word and not a colour
 until P8; it is now a word AND a colour, from the five in §6, and the word never goes away.
 
-The one gradient below brand-grad is a mark, not a surface: the K in the sidebar, on the
-sign-in screen and on the installed app's icon. It is the same in both themes because a logo
-does not change colour when somebody turns the lights off. `scripts/icons.ts` redraws the icon
-files from mark-grad; the K there is paths, not type, so no machine's font list can change it.
+**The running app has no gradient.** A gradient on the primary button said "press me" in a
+voice every other colour then had to shout over; flat red on one control says it once. The K
+in the sidebar and on the sign-in screen is the flat brand red. The installed app's icon
+(`scripts/icons.ts`) keeps its gradient, because it sits among other apps' icons on a phone
+and not among Kladra's own controls.
 
-So there are exactly two gradients in the running app: the primary button and the mark. The
-top bar's initials circle had a gradient of its own and is an `Avatar` now, in its person's
-tint like everybody else; the canvas glow went with the glass (P13-S1). A mark gradient for a
-contact's initials was defined for eleven months and used by nothing — an identity table
-that lists a colour nobody can see is a table that cannot be checked (D69).
-
-**One primary action means one button.** `variant="brand"` on `Button`, in the fifteen places
-a screen has a primary action. It was a class string written by hand in fourteen files, in
+**One primary action means one button.** `variant="brand"` on `Button`, wherever a screen has a
+primary action; `controls.spec` finds it by `data-variant="brand"`, and `one-look` refuses the
+brand fill written by hand anywhere but the button, the mark and the bell's count. It was a class string written by hand in fourteen files, in
 two syntaxes and under two token names for the same colour, which is how the app's most
 important control drifts without anybody deciding anything.
 
-**Two surfaces, and they are not interchangeable.** `card-face` is a thing at rest: 16px,
-a 1px `--line` border and the soft shadow, and it does not change under the pointer — a card
-that is pressed says so with `hover-tint`. The inset strip —
-`rounded-xl border border-line bg-surface-2` — is a panel WITHIN a card or a header, and has
-no shadow because a shadow says "this is lifted off the page" and it is not. Every floating
-surface (dialog, drawer, menu, popover, select) takes the same `--line` border as a card;
-they keep their own tighter shadows, because a menu that appears under the pointer for two
-seconds should not wear the shadow of a card that has been sitting there all day. What none
-of them may be is a RING: a ring was shadcn's default, it sits outside the box rather than
-inside it, and it was a different colour from every border in the app.
+**Two surfaces, and they are not interchangeable.** `card-face` is a thing at rest: 12px, a
+1px `--line` border, no shadow, and it does not change under the pointer; a card that is
+pressed says so with `hover-tint`. The inset strip (`rounded-lg border border-line
+bg-surface-2`) is a panel WITHIN a card or a header. A shadow says "this is lifted off the
+page", so only what is lifted wears one: dialog, drawer, menu, popover, select and toast, on
+the `raised` surface with the same hairline. What none of them may be is a RING: a ring was
+shadcn's default, it sits outside the box rather than inside it, and it was a different colour
+from every border in the app.
 
-**A date is not set in the number face, and that is deliberate.** Money and m² are, because
-they stand in columns that have to line up. A date does not: `03/Sep/2026` is one value on a
-row, and in Arabic it is `03/سبتمبر/2026` — a Latin day and year around an Arabic month name.
-Setting that string in IBM Plex Mono would render the month in whatever the browser falls
-back to, so the one string on the screen that mixes two scripts would also mix two typefaces.
+**A figure is the sans in tabular digits, and so is a date.** Money and m² stand in columns
+that have to line up, and `num` gives them fixed-width lining digits without leaving the face.
+Under Sandstone they were IBM Plex Mono, and a date could not be, because `03/سبتمبر/2026` in
+a mono face drew its month in whatever the browser fell back to. With one sans stack for both
+scripts, a date, an amount and an Arabic month sit in the same face on the same line.
 
 ## §1b One language (P13) — what every screen is drawn in
 
@@ -140,7 +159,7 @@ own id across eight quiet tints (`--avatar-1` … `--avatar-8`, defined for both
 low saturation, text in the same hue's foreground), so one person is one colour on every
 screen and no two colleagues in the team table share one by accident. That is identity,
 not state — the rule "colour only means something" (SPEC §3) holds because the meaning is
-"this is Faisal" — and it is a solid tint, never a gradient (§1's two gradients stay two).
+"this is Faisal" — and it is a solid tint, never a gradient (§1: the running app has none).
 A ring is drawn only where a state exists and only in the five state colours: `state-over`
 around a rep on leave, `state-wait` around a lead nobody has acknowledged, `state-bad`
 around a company with an overdue follow-up and around a person on the team tab with something
@@ -164,10 +183,10 @@ wraps every hover in `hover-capable` for exactly this reason; Linear's rows tint
 lift.)
 
 **Elevation has three levels and a page has none.** Level 0 is the canvas. Level 1 is a
-card at rest: a hairline `--line` border, no shadow unless it is `card-face`. Level 2 is a
-floating surface — menu, popover, select list — the same hairline and its own tight shadow.
-Level 3 is a dialog or a drawer: the hairline and the card shadow. Nothing is lifted by
-hover, nothing is lifted by being important; importance is position and words.
+card at rest: `surface`, a hairline `--line` border, no shadow. Level 2 is a floating surface
+(menu, popover, select list, toast) on `raised`, with the hairline and the float shadow.
+Level 3 is a dialog or a drawer: the same, over the scrim. Nothing is lifted by hover or by
+being important; importance is position, size and words.
 
 **Colour means five states, one brand and eight identities.** The five state tones (§6),
 brand on exactly one control per screen, and the eight avatar tints. A chart series takes
@@ -222,7 +241,7 @@ giving the proxy a direction of its own.
 - Motion where it explains (150–250 ms): dialogs, drawers, row changes. Menus, popovers and selects at 100 ms — a menu is not a dialog. No loops — motion that repeats is noise; the one exception is the pending mark inside a pressed link, which says "working". Under `prefers-reduced-motion` the travel goes and the information stays: the arrived flash keeps its two seconds because it is a colour, not a movement.
 - Loading states always; never a blank — a blank reads as broken. A pressed link shows it is working after 150 ms (`LinkPending`); a screen that cannot draw itself, or an address that names none, is one card inside the shell in the reader's language, never the framework's page and never a digest.
 - Sidebar collapses; on a phone it is a bottom bar and dialogs are bottom sheets — the thumb reaches the bottom. A phone is everything below `md`, one line for the shell and the forms (D128); in a sheet the primary action is the lowest button, and anything a thumb presses is 44px (D129, D130).
-- Money and m² in tabular figures (`.num`, Plex Mono); everything else normal text — columns of numbers must line up.
+- Money and m² in tabular figures (`.num`, the sans in tabular digits); everything else normal text — columns of numbers must line up.
 - Anything daily is two clicks from home — log a visit, add a company, check follow-ups.
 
 ## §3 Component kit

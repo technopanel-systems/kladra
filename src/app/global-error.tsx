@@ -31,9 +31,9 @@ export default function GlobalError({
           display: "grid",
           placeItems: "center",
           padding: 24,
-          background: "#15110e",
-          color: "#f4ece3",
-          fontFamily: '"Readex Pro", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
+          background: "#12100e",
+          color: "#ece9e5",
+          fontFamily: '"IBM Plex Sans", "Noto Sans Arabic", ui-sans-serif, system-ui, "Segoe UI", sans-serif',
           lineHeight: 1.5,
           textAlign: "center",
         }}
@@ -54,16 +54,16 @@ export default function GlobalError({
               width: 56,
               height: 56,
               placeItems: "center",
-              borderRadius: 16,
-              background: "linear-gradient(140deg, #e5233c, #7a1020)",
+              borderRadius: 12,
+              background: "#b95651",
               color: "#fff",
               fontSize: 26,
-              fontWeight: 700,
+              fontWeight: 600,
             }}
           >
             K
           </span>
-          <p lang="en" style={{ margin: 0, fontSize: 15.5 }}>
+          <p lang="en" style={{ margin: 0, fontSize: 14.5 }}>
             Kladra could not draw this screen.
           </p>
           <p
@@ -71,8 +71,8 @@ export default function GlobalError({
             dir="rtl"
             style={{
               margin: 0,
-              fontSize: 15.5,
-              fontFamily: '"Readex Pro", ui-sans-serif, system-ui, sans-serif',
+              fontSize: 14.5,
+              fontFamily: '"IBM Plex Sans", "Noto Sans Arabic", ui-sans-serif, system-ui, sans-serif',
             }}
           >
             تعذّر على كلادرا عرض هذه الشاشة.
@@ -83,14 +83,13 @@ export default function GlobalError({
             style={{
               cursor: "pointer",
               border: 0,
-              borderRadius: 12,
+              borderRadius: 8,
               padding: "8px 12px",
-              // --brand-grad, --brand-ink and --brand-glow, dark theme.
-              background: "linear-gradient(135deg, #ec5e62, #f08a4a)",
+              // --brand and --brand-ink, dark theme: flat, as the Button is.
+              background: "#b95651",
               color: "#ffffff",
-              boxShadow: "0 8px 24px -10px rgba(236, 94, 98, 0.5)",
               font: "inherit",
-              fontSize: 14.5,
+              fontSize: 13.5,
               fontWeight: 500,
             }}
           >

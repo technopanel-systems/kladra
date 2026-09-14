@@ -5,36 +5,50 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Kladra tokens (DESIGN.md §1, "Sandstone", P13-S1). Warm neutrals — Najdi
- * plaster by day, a brown-black at dusk — with the brand red on one control per
- * screen. Dark is the default; light is designed, not inverted. The palette is
- * mapped onto shadcn's semantic names so components say bg-card /
- * text-muted-foreground and never a raw colour. Red is --brand, not --accent
- * (shadcn owns --accent for hover).
+ * Kladra tokens (DESIGN.md §1, "Stone", P13-G6). Restrained neutrals with a
+ * trace of warmth left from Sandstone, one brand red spent on one control per
+ * screen, and state colours that speak only beside their word. Dark is the
+ * default; light is designed, not inverted. The palette is mapped onto shadcn's
+ * semantic names so components say bg-card / text-muted-foreground and never a
+ * raw colour. Red is --brand, not --accent (shadcn owns --accent for hover).
  */
 
 /*
- * The type scale, a half step above Tailwind's own (DESIGN §1). Readex Pro is one
- * family for Arabic and Latin, and Arabic at 13px is where a rep reading a phone
- * in the sun starts to squint; the Latin rides at the same size so the two
- * locales are one voice, not a large one and a small one.
+ * The type scale (DESIGN §1). IBM Plex Sans for Latin and Noto Sans Arabic for
+ * Arabic, one stack, chosen side by side so a Latin company name in an Arabic
+ * row sits at the same height and weight as the words around it. Dense screens read at 13.5 (`text-sm`), which is where tables, drawers and
+ * forms live; body copy is 14.5. Line heights are set with each size so every
+ * row lands on the 4px grid.
  */
 @theme {
   /* The one step below `text-xs` (P13-G6, S12.K): a count inside a badge and
-     the bottom bar's labels, and nothing else. Not a caption, not a label — a
-     reader who has to squint at a word is a reader the word has failed. */
+     the bottom bar's labels, and nothing else. */
   --text-2xs: 0.6875rem;
   --text-2xs--line-height: 1rem;
-  --text-xs: 0.78125rem;
-  --text-sm: 0.90625rem;
-  --text-base: 0.96875rem;
-  --text-lg: 1.0625rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.84375rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.90625rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
   --text-xl: 1.25rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 2rem;
 }
 
 @theme inline {
-  --font-sans: var(--font-app), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono-app), ui-monospace, monospace;
+  /* The two real faces by name first, then next/font's variables. Each variable
+     carries a metric-matched fallback built from Arial with no unicode-range,
+     and Arial has Arabic: listed first, "IBM Plex Sans Fallback" took every
+     Arabic letter before the stack reached Noto. Named first, a letter Plex
+     does not cover goes to Noto; the fallbacks still hold the line while the
+     faces load. */
+  --font-sans: "IBM Plex Sans", "Noto Sans Arabic", var(--font-latin), var(--font-arabic),
+    ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   --font-heading: var(--font-sans);
 
   --color-background: var(--background);
@@ -65,6 +79,7 @@
   --color-scrim: var(--scrim);
   --color-faint: var(--text-faint);
   --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
   --color-brand-ink: var(--brand-ink);
 
   --color-rail: var(--rail);
@@ -110,7 +125,7 @@
   --color-chart-4: var(--a-green-fg);
   --color-chart-5: var(--text-muted);
 
-  /* --radius 12px: controls 8–12px, cards 16px (rounded-xl), badges full pills. */
+  /* --radius 8px: controls 8 (rounded-lg), cards 12 (rounded-xl), badges and chips 6 (rounded-md). */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -123,94 +138,93 @@
 /* ---- light ------------------------------------------------------------- */
 :root {
   /* What the BROWSER paints for us: scrollbars, the calendar and clock popups
-     inside native inputs, the caret, form control chrome. Without it those stay
-     light on a dark screen, because the theme here is a class rather than the
-     OS preference. Stated on both, so a light theme on a dark desktop is right
-     too. */
+     inside native inputs, the caret, form control chrome. Stated on both
+     themes, so a light theme on a dark desktop is right too. */
   color-scheme: light;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  --canvas: #f5f0e9;
-
-  /* Solid, all of them. The frosted glass went in P13: a translucent card over
-     a glow is a card whose colour depends on where it sits, and every tint
-     measured against it was measured against a guess. */
-  --surface: #fffcf8;
-  --surface-solid: #fffcf8;
-  --surface-2: #efe8de;
-  --surface-2-solid: #efe8de;
+  /* Stone (P13-G6): oklch hue 70 at chroma 0.01 or less — neutral enough that a
+     state colour is the only colour on a row, warm enough not to read as a
+     spreadsheet. Lightness is elevation: canvas, then surface, then raised. */
+  --canvas: #f7f5f3;
+  --surface: #fefdfc;
+  --surface-solid: #fefdfc;
+  --surface-2: #f0edea;
+  --surface-2-solid: #f0edea;
+  --raised: #ffffff;
   /* The shade under a scroll hint, dark on a light ground (D80). */
-  --scroll-shadow: rgba(60, 40, 20, 0.16);
-  /*
-   * What lies over the page while a dialog, a drawer or a sheet is open (P13-G6,
-   * S12.K). A flat, warm shade and never a blur: the kit shipped a 4px frost,
-   * which is the glass S1 took out by another name — a surface whose ground
-   * depends on whatever happened to be behind it. The page stays legible
-   * enough to say where you were; the solid surface over it is what you read.
-   */
-  --scrim: rgba(37, 27, 18, 0.32);
-  --line: rgba(70, 45, 20, 0.1);
-  --line-strong: rgba(70, 45, 20, 0.19);
+  --scroll-shadow: rgba(33, 29, 26, 0.12);
+  /* What lies over the page while a dialog, a drawer or a sheet is open: flat,
+     never a blur (P13-G6, S12.K). */
+  --scrim: rgba(20, 18, 16, 0.32);
+  --line: rgba(33, 29, 26, 0.1);
+  --line-strong: rgba(33, 29, 26, 0.17);
 
-  --text: #251d16;
-  --text-muted: #6c5f52;
-  --text-faint: #6f6256;
+  /* Three tiers of text: what is read, what explains it, what can be skipped.
+     Each passes 4.5:1 on canvas and surface-2. */
+  --text: #211d1a;
+  --text-muted: #605b56;
+  --text-faint: #706b66;
 
-  --rail: #231b15;
-  --rail-solid: #231b15;
-  --rail-text: #bcae9f;
-  --rail-text-strong: #fff8f1;
-  --rail-active: rgba(255, 240, 225, 0.08);
+  /* The rail follows the theme (P13-G6): a dark brown slab down the side of a
+     light screen was the loudest thing on it, and it said nothing. */
+  --rail: #f2f0ed;
+  --rail-solid: #f2f0ed;
+  --rail-text: #605b56;
+  --rail-text-strong: #211d1a;
+  --rail-active: rgba(33, 29, 26, 0.06);
 
-  --brand: #bb2638;
+  /* One flat red (P13-G6): no gradient and no glow — they said nothing the
+     colour did not. White on it is 6.1:1. */
+  --brand: #b33333;
+  --brand-hover: #a0292a;
   --brand-ink: #ffffff;
-  --brand-grad: linear-gradient(135deg, #bb2638, #d9613a);
-  --brand-glow: 0 6px 18px -8px rgba(187, 38, 56, 0.45);
-  --mark-grad: linear-gradient(140deg, #e5233c, #7a1020);
 
-  --a-red-bg: rgba(187, 38, 56, 0.09);
-  --a-red-fg: #b3202f;
-  --a-blue-bg: rgba(43, 92, 168, 0.09);
-  --a-blue-fg: #2b5ca8;
-  --a-amber-bg: rgba(138, 90, 0, 0.11);
-  --a-amber-fg: #7d5207;
-  --a-green-bg: rgba(21, 128, 61, 0.09);
-  --a-green-fg: #116a34;
+  /* State colours: the word carries the meaning, the colour marks it. The text
+     colours pass 4.5:1; the tints are for a band that carries a state across a
+     whole row, and are quieter than they were. */
+  --a-red-bg: rgba(179, 56, 50, 0.07);
+  --a-red-fg: #b33832;
+  --a-blue-bg: rgba(57, 101, 155, 0.07);
+  --a-blue-fg: #39659b;
+  --a-amber-bg: rgba(144, 96, 31, 0.09);
+  --a-amber-fg: #90601f;
+  --a-green-bg: rgba(51, 115, 68, 0.07);
+  --a-green-fg: #337344;
 
   /*
    * Who somebody is (DESIGN §1b): eight quiet tints, one per hash of a record's
-   * id. Low chroma on purpose — they sit beside the five state colours and must
-   * never be mistaken for one — and spaced around the wheel so two colleagues
-   * are told apart by hue, not by two shades of the same brown.
+   * id. Low chroma on purpose — they sit beside the state colours and must
+   * never be mistaken for one.
    */
-  --avatar-1-bg: oklch(0.91 0.035 25);
-  --avatar-1-fg: oklch(0.43 0.08 25);
-  --avatar-2-bg: oklch(0.91 0.035 70);
-  --avatar-2-fg: oklch(0.43 0.07 70);
-  --avatar-3-bg: oklch(0.92 0.04 110);
-  --avatar-3-fg: oklch(0.42 0.07 110);
-  --avatar-4-bg: oklch(0.91 0.035 155);
-  --avatar-4-fg: oklch(0.42 0.07 155);
-  --avatar-5-bg: oklch(0.91 0.03 200);
-  --avatar-5-fg: oklch(0.42 0.06 200);
-  --avatar-6-bg: oklch(0.91 0.03 245);
-  --avatar-6-fg: oklch(0.43 0.08 245);
-  --avatar-7-bg: oklch(0.91 0.035 290);
-  --avatar-7-fg: oklch(0.43 0.08 290);
-  --avatar-8-bg: oklch(0.91 0.035 335);
-  --avatar-8-fg: oklch(0.43 0.08 335);
+  --avatar-1-bg: oklch(0.92 0.03 25);
+  --avatar-1-fg: oklch(0.44 0.07 25);
+  --avatar-2-bg: oklch(0.92 0.03 70);
+  --avatar-2-fg: oklch(0.44 0.06 70);
+  --avatar-3-bg: oklch(0.93 0.035 110);
+  --avatar-3-fg: oklch(0.43 0.06 110);
+  --avatar-4-bg: oklch(0.92 0.03 155);
+  --avatar-4-fg: oklch(0.43 0.06 155);
+  --avatar-5-bg: oklch(0.92 0.025 200);
+  --avatar-5-fg: oklch(0.43 0.05 200);
+  --avatar-6-bg: oklch(0.92 0.025 245);
+  --avatar-6-fg: oklch(0.44 0.07 245);
+  --avatar-7-bg: oklch(0.92 0.03 290);
+  --avatar-7-fg: oklch(0.44 0.07 290);
+  --avatar-8-bg: oklch(0.92 0.03 335);
+  --avatar-8-fg: oklch(0.44 0.07 335);
 
-  /* A card at rest and a dialog: soft, under a solid surface. Nothing is lifted
-     by hover (DESIGN §1b). */
-  --shadow: 0 1px 2px rgba(60, 40, 20, 0.05), 0 10px 28px -18px rgba(60, 40, 20, 0.26);
+  /* Only what floats has a shadow: a menu, a popover, a dialog, a sheet, a
+     toast. A card at rest has its hairline and nothing else (P13-G6). */
+  --shadow: 0 1px 2px rgba(20, 16, 12, 0.06), 0 12px 32px -12px rgba(20, 16, 12, 0.2);
 
   /* shadcn semantic aliases */
   --background: var(--canvas);
   --foreground: var(--text);
   --card: var(--surface);
   --card-foreground: var(--text);
-  --popover: var(--surface-solid);
+  --popover: var(--raised);
   --popover-foreground: var(--text);
   --primary: var(--brand);
   --primary-foreground: var(--brand-ink);
@@ -223,82 +237,82 @@
   --destructive: var(--a-red-fg); /* rendered as a tint: bg-destructive/10 text-destructive */
   --destructive-foreground: var(--brand-ink);
   --border: var(--line);
-  --input: var(--line);
-  --ring: var(--brand);
+  --input: var(--line-strong);
+  /* The focus ring is the text colour at half strength: 3:1 against the canvas
+     in both themes, and never red, which on this app means a refusal. */
+  --ring: var(--text);
 }
 
 /* ---- dark (the default) -------------------------------------------------- */
 .dark {
   color-scheme: dark;
 
-  --canvas: #15110e;
+  /* Near black, not black: room for the surfaces above it to step up in
+     lightness, which is how a dark screen shows depth without a shadow. */
+  --canvas: #12100e;
+  --surface: #191714;
+  --surface-solid: #191714;
+  --surface-2: #23201d;
+  --surface-2-solid: #23201d;
+  --raised: #292623;
+  /* LIGHT on a dark ground: a black shadow on near-black is invisible. */
+  --scroll-shadow: rgba(236, 233, 229, 0.1);
+  --scrim: rgba(0, 0, 0, 0.6);
+  --line: rgba(236, 233, 229, 0.08);
+  --line-strong: rgba(236, 233, 229, 0.14);
 
-  --surface: #1e1915;
-  --surface-solid: #1e1915;
-  --surface-2: #28221d;
-  --surface-2-solid: #28221d;
-  /*
-   * LIGHT on a dark ground. A black shadow on a near-black surface is four
-   * levels out of 255 and invisible — measured, not guessed — so on this theme
-   * the edge is a faint light one.
-   */
-  --scroll-shadow: rgba(255, 240, 225, 0.14);
-  /* Deeper than the light one: a surface a step above a brown-black canvas is
-     told apart only if the page under it goes down a long way. */
-  --scrim: rgba(8, 5, 3, 0.64);
-  --line: rgba(255, 238, 220, 0.08);
-  --line-strong: rgba(255, 238, 220, 0.14);
+  --text: #ece9e5;
+  --text-muted: #ada8a3;
+  --text-faint: #8f8a85;
 
-  --text: #f4ece3;
-  --text-muted: #b2a496;
-  --text-faint: #9d8f82;
+  --rail: #0e0c0a;
+  --rail-solid: #0e0c0a;
+  --rail-text: #ada8a3;
+  --rail-text-strong: #ece9e5;
+  --rail-active: rgba(236, 233, 229, 0.06);
 
-  --rail: #100c09;
-  --rail-solid: #100c09;
-  --rail-text: #a3978a;
-  --rail-text-strong: #fff8f1;
-  --rail-active: rgba(255, 238, 220, 0.06);
-
-  --brand: #ec5e62; /* #bb2638 is too dark on a dark canvas */
+  /* Calmer than the light red, not brighter: a saturated coral on near-black
+     glows past its own edges. White on it is 4.7:1. */
+  --brand: #b95651;
+  --brand-hover: #c4625d;
   --brand-ink: #ffffff;
-  --brand-grad: linear-gradient(135deg, #ec5e62, #f08a4a);
-  --brand-glow: 0 8px 24px -10px rgba(236, 94, 98, 0.5);
 
-  --a-red-bg: rgba(236, 94, 98, 0.14);
-  --a-red-fg: #ff9a92;
-  --a-blue-bg: rgba(130, 170, 225, 0.13);
-  --a-blue-fg: #9dbde8;
-  --a-amber-bg: rgba(230, 170, 80, 0.14);
-  --a-amber-fg: #eab766;
-  --a-green-bg: rgba(110, 190, 120, 0.13);
-  --a-green-fg: #86cf92;
+  --a-red-bg: rgba(232, 143, 133, 0.1);
+  --a-red-fg: #e88f85;
+  --a-blue-bg: rgba(144, 181, 220, 0.09);
+  --a-blue-fg: #90b5dc;
+  --a-amber-bg: rgba(224, 182, 123, 0.1);
+  --a-amber-fg: #e0b67b;
+  --a-green-bg: rgba(138, 197, 150, 0.09);
+  --a-green-fg: #8ac596;
 
-  --avatar-1-bg: oklch(0.34 0.045 25);
-  --avatar-1-fg: oklch(0.86 0.07 25);
-  --avatar-2-bg: oklch(0.34 0.04 70);
-  --avatar-2-fg: oklch(0.86 0.07 70);
-  --avatar-3-bg: oklch(0.34 0.04 110);
-  --avatar-3-fg: oklch(0.87 0.07 110);
-  --avatar-4-bg: oklch(0.34 0.04 155);
-  --avatar-4-fg: oklch(0.86 0.07 155);
-  --avatar-5-bg: oklch(0.34 0.035 200);
-  --avatar-5-fg: oklch(0.86 0.06 200);
-  --avatar-6-bg: oklch(0.34 0.045 245);
-  --avatar-6-fg: oklch(0.86 0.07 245);
-  --avatar-7-bg: oklch(0.34 0.045 290);
-  --avatar-7-fg: oklch(0.86 0.07 290);
-  --avatar-8-bg: oklch(0.34 0.045 335);
-  --avatar-8-fg: oklch(0.86 0.07 335);
+  --avatar-1-bg: oklch(0.33 0.04 25);
+  --avatar-1-fg: oklch(0.85 0.06 25);
+  --avatar-2-bg: oklch(0.33 0.035 70);
+  --avatar-2-fg: oklch(0.85 0.06 70);
+  --avatar-3-bg: oklch(0.33 0.035 110);
+  --avatar-3-fg: oklch(0.86 0.06 110);
+  --avatar-4-bg: oklch(0.33 0.035 155);
+  --avatar-4-fg: oklch(0.85 0.06 155);
+  --avatar-5-bg: oklch(0.33 0.03 200);
+  --avatar-5-fg: oklch(0.85 0.05 200);
+  --avatar-6-bg: oklch(0.33 0.04 245);
+  --avatar-6-fg: oklch(0.85 0.06 245);
+  --avatar-7-bg: oklch(0.33 0.04 290);
+  --avatar-7-fg: oklch(0.85 0.06 290);
+  --avatar-8-bg: oklch(0.33 0.04 335);
+  --avatar-8-fg: oklch(0.85 0.06 335);
 
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -18px rgba(0, 0, 0, 0.7);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 16px 40px -12px rgba(0, 0, 0, 0.6);
 }
 
 /* ---- utilities ----------------------------------------------------------- */
 
-/* Every money and m² figure: mono, tabular. */
+/* Every figure and reference number: the text face, in tabular lining digits,
+   so a column of them lines up at its last digit (P13-G6). The monospace it
+   used to be set a CRM's money in a code editor's voice. */
 @utility num {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 /*
@@ -427,7 +441,6 @@
   border: 1px solid var(--line);
   border-radius: calc(var(--radius) + 4px);
   background-color: var(--surface);
-  box-shadow: var(--shadow);
 }
 
 /*
