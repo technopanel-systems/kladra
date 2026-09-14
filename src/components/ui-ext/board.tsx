@@ -14,7 +14,7 @@ import { ScrollLine, StickyScroll } from "@/components/ui-ext/sticky-scroll";
 import { useArrivedIds } from "@/hooks/use-arrived";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
-import { TONE_CLASS, type StateTone } from "@/lib/state-tone";
+import { TONE_DOT, type StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -193,8 +193,12 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
                   "touch inline-flex items-center gap-2 whitespace-nowrap outline-none transition-[color,background-color,border-color,box-shadow] duration-100 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                 )}
               >
+                <span
+                  aria-hidden="true"
+                  className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[column.tone])}
+                />
                 <span>{column.label}</span>
-                <span dir="ltr" className={cn("num rounded-full px-2 text-xs", TONE_CLASS[column.tone])}>
+                <span dir="ltr" className="num text-muted-foreground">
                   {count}
                 </span>
               </button>
@@ -251,12 +255,15 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
                   <header className="flex items-center justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2 max-md:sr-only">
                     {/* A word in a sentence's case, not an eyebrow (DESIGN §8):
                         no capitals, no tracking, the muted caption. The column's
-                        tone is on its count, beside the word that names it. */}
-                    <h3 className="text-xs text-muted-foreground">{column.label}</h3>
-                    <span
-                      dir="ltr"
-                      className={cn("num rounded-full px-2 text-xs", TONE_CLASS[column.tone])}
-                    >
+                        tone is a dot before the word that names it. */}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[column.tone])}
+                      />
+                      <h3 className="text-xs text-muted-foreground">{column.label}</h3>
+                    </span>
+                    <span dir="ltr" className="num text-xs text-faint">
                       {count}
                     </span>
                   </header>

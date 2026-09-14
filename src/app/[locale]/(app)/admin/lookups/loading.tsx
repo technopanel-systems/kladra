@@ -15,7 +15,7 @@ export default function LookupsLoading() {
 
       <div className="flex gap-2">
         {[0, 1, 2, 3].map((chip) => (
-          <Skeleton key={chip} className="h-8 w-28 rounded-full" />
+          <Skeleton key={chip} className="h-8 w-28 rounded-md" />
         ))}
       </div>
 

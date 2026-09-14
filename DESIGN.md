@@ -148,7 +148,7 @@ this app is read in two directions.
 secondary and for captions, rows of 40. No density toggle — a toggle is a saved view with one option, and it would be
 the first control on the screen that changes nothing a rep is here to do.
 
-**An avatar names a person or a company, and a ring says one thing about them.** `Avatar`
+**An avatar names a person or a company, and a dot says one thing about them.** `Avatar`
 in `ui-ext`: initials in the reader's script (D68 — a person is named in the script the
 reader reads — first and last letter in Latin with a family's "Al-" set aside, so Faisal
 Al-Harbi is FH; ONE letter in Arabic, because two Arabic letters join into a fragment of a
@@ -160,10 +160,12 @@ low saturation, text in the same hue's foreground), so one person is one colour 
 screen and no two colleagues in the team table share one by accident. That is identity,
 not state — the rule "colour only means something" (SPEC §3) holds because the meaning is
 "this is Faisal" — and it is a solid tint, never a gradient (§1: the running app has none).
-A ring is drawn only where a state exists and only in the five state colours: `state-over`
-around a rep on leave, `state-wait` around a lead nobody has acknowledged, `state-bad`
-around a company with an overdue follow-up and around a person on the team tab with something
-stuck past its line (leave wins when both are true), nothing around anybody else. A ring with no
+A state dot (the `ring` prop, which kept its name) sits on the avatar's end corner, cut out
+of the card by a 2px edge, only where a state exists and only in the five state colours:
+`state-over` on a rep on leave, `state-wait` on a lead nobody has acknowledged, `state-bad` on
+a company with an overdue follow-up and on a person on the team tab with something stuck past
+its line (leave wins when both are true), nothing on anybody else. It was a 2px ring until the
+restyle, and a ring in amber round a 24px square read as a focus outline. A dot with no
 meaning is decoration, and the word for the state is beside the avatar as well (colour is
 never the only carrier). (Twenty: hash → one of 25 hues; round for a person, square for a
 company from the record's own shape. Eight, not 25: on a warm-black canvas twenty-five hues
@@ -1171,8 +1173,14 @@ never carries meaning alone: every coloured thing also says its word.
 | `state-over` | neutral | finished, and no longer interesting | Withdrawn, Cancelled, Superseded, Archived |
 
 `src/lib/state-tone.ts` holds the one mapping from a status to a token; no component decides
-its own. A tint is `bg-state-x text-state-x-fg`, never a solid fill — a solid is for the
-primary button and nothing else.
+its own. **Since the restyle a state is a dot and its word** (`TONE_DOT`, `StateBadge`): a
+6px dot in the tone's foreground and the word in the text colour, inside a hairline badge. A
+filter chip, a waiting pill, a board column's count and a card's title are neutral and carry
+the dot, never a tinted fill or a coloured word. A tint (`TONE_CLASS`, `bg-state-x
+text-state-x-fg`) is kept only for a band or a warning that carries a state across a whole row
+or panel (a lead not acknowledged, a duplicate warning), and it is never solid. `TONE_TEXT` is
+for a date or a figure that is late or behind. A chart's state series is the tone's
+foreground at 0.7 (`toneInk`).
 
 Refused moved from red to amber in P12-10, and the move is what the table is for: red is
 where a record STOPPED, and a refusal stopped being an ending the moment the rep could

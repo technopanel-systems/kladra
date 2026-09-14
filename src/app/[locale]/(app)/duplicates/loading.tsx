@@ -18,7 +18,7 @@ export default function DuplicatesLoading() {
           <div key={pair} className="card-face flex flex-col gap-4 p-3 md:p-4">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-5 w-24 rounded-md" />
                 <Skeleton className="h-4 w-28" />
               </div>
               <Skeleton className="h-4 w-20" />

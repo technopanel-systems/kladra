@@ -30,12 +30,12 @@ export default function ProjectsLoading() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col items-start gap-2 md:flex-row md:items-center">
           <div className="flex shrink-0 items-center gap-2">
-            <Skeleton className="h-8 w-36 rounded-full max-md:h-12" />
+            <Skeleton className="h-8 w-36 rounded-lg max-md:h-12" />
             <span aria-hidden="true" className="hidden h-4 w-px bg-line md:inline-block" />
           </div>
           <div className="flex w-full min-w-0 items-center gap-2 overflow-hidden md:flex-1">
             {["w-12", "w-24", "w-24", "w-20"].map((width, chip) => (
-              <Skeleton key={chip} className={cn("h-8 shrink-0 rounded-full max-md:h-11", width)} />
+              <Skeleton key={chip} className={cn("h-8 shrink-0 rounded-md max-md:h-11", width)} />
             ))}
           </div>
         </div>

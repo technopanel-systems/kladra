@@ -22,7 +22,7 @@ export default function LeadsLoading() {
           <Skeleton className="h-3 w-12" />
           <div className="flex gap-2">
             {[0, 1, 2].map((chip) => (
-              <Skeleton key={chip} className="h-8 w-24 shrink-0 rounded-full" />
+              <Skeleton key={chip} className="h-8 w-24 shrink-0 rounded-md" />
             ))}
           </div>
         </div>
@@ -37,7 +37,7 @@ export default function LeadsLoading() {
             <Skeleton className="size-6 shrink-0 rounded-md" />
             <Skeleton className="h-4 w-40" />
             <Skeleton className="hidden h-4 flex-1 md:block" />
-            <Skeleton className="h-5 w-24 rounded-full" />
+            <Skeleton className="h-5 w-24 rounded-md" />
           </div>
         ))}
       </div>

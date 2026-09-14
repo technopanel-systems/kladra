@@ -4,10 +4,11 @@ Lives under `.claude/` because hook H2 refuses a new .md anywhere else in the re
 Part of P13-G6: the restyle is the design-system half of the front-end reshape.
 
 ## Current phase
-P1 done (tokens, fonts, scale, flat brand, no card shadow, themed rail; DESIGN §1 rewritten). Next: P2 shared components.
+P2 committed (kit: states as dot + word, neutral chips, avatar state dot, 6px chips/badges, calmer charts). Next: wave 3 on the new system, then P4.
 
 ## Checkpoints (git)
-- P1 commit — Stone tokens + Plex Sans / Noto Sans Arabic + scale; DESIGN §1; WORKFLOW §3 #7 wording.
+- P2 commit — shared components restyled; full suite 799/800 then the chip-row spec fixed (Arabic lookups now fit at 1366).
+- 56bd6c1 P1 — Stone tokens + Plex Sans / Noto Sans Arabic + scale; DESIGN §1; WORKFLOW §3 #7 wording.
 - 9b1778e — wave-2 gate green (drawer skeletons close).
 - 9c2f76a — wave 2 merged (S12.2 companies, S12.3 projects, S12.8 reports/leads/duplicates) + kit pass (Clip, RowMenu end list/head size, common.moreFor). Last pre-restyle commit.
 
@@ -45,16 +46,17 @@ P1 done (tokens, fonts, scale, flat brand, no card shadow, themed rail; DESIGN �
 - CHANGE — Sandstone's warm chroma, 12/16 radii, rail dark in both themes. Evolves into restrained stone neutrals, 8/12 radii, a themed rail. Founder brief 2026-09-14 overrides S1's palette; the red and dark-default carry over.
 
 ## Remaining (in order)
-1. P2 shared components: StateBadge dot+word, Badge rounded-md, FilterChip neutral (tone as dot), waiting-list pills, Avatar state ring → corner dot, PageTabs underline in foreground, StandingStrip values text-base/500, chart tone inks calmer, Toasts closeButton, remaining rounded-full chips → rounded-md → specs that read them → shots → commit.
-2. Wave 3 on the new system: S12.4 quotations, S12.5 dispatches, S12.6+7 day/queue/team (briefs regenerate from make_wave3.py with the restyle contract).
-3. P4 consistency pass: every screen, 1366 + 375, en + ar, light + dark; fix repeated problems centrally.
-4. DESIGN §1b/§3/§6/§8 for P2's components and the rules-audit verdicts; SPEC §4 defaults; full suite; WORKFLOW where-I-stopped.
+1. Wave 3 on the new system: `python scratchpad/make_wave3.py <HEAD>` (now folds in restyle_contract.md), three builders in worktrees, merge, gate.
+2. P4 consistency pass: every screen, 1366 + 375, en + ar, light + dark; fix repeated problems centrally. Seen so far: day cards colour their titles (Overdue red, Never contacted blue) → dot + neutral title; quotation rows 64px (status over date); pace text in amber.
+3. DESIGN §8 verdicts; SPEC §4 defaults; full suite; WORKFLOW where-I-stopped; kit_pass items 5–8.
 
 ## Known issues / notes
-- Leftover `.claude/worktrees/agent-*` dirs from waves 1–2 to delete; kit_pass.md items 5–9 open.
+- A global sonner `closeButton` was tried and dropped: error toasts already carry their own Close action (admin.spec export), and two Close buttons fail strict locators.
+- First p2 run died in cascades of worker exits (0xC0000142) with dev 3100 + test 3101 + browsers up; rerun with 3100 stopped.
 
 ## Verification status
-- Wave-2 suite green after 9b1778e. P1: typecheck, lint, build green; feel, pwa, controls, sticky-scroll, colour specs 40/40. Arabic font verified by CDP platform-font probe (Noto Sans Arabic serves the label) and shots/rs-p1c.
+- P1: typecheck, lint, build green; 40 touched specs green; Arabic font verified by CDP probe + shots/rs-p1c.
+- P2: full suite in 4 chunks — 799 passed, 4 skipped, 1 failed (filters chip row: the Arabic lookups now fit at 1366; spec asks overflow only on a phone) → filters.spec 8/8; lint, build green. Shots shots/rs-p2a.
 
 ## Exact next action
-P2: edit src/components/ui-ext/state-badge.tsx (dot + word, add TONE_DOT to lib/state-tone.ts), ui/badge.tsx, ui-ext/filter-chip.tsx, day/waiting-list.tsx PILL, ui-ext/avatar.tsx ring, ui-ext/page-tabs.tsx, ui-ext/standing-strip.tsx, metrics/colors.ts; then run colour, filters, leads, work-tabs, dispatches, quotations, all-first, charts specs.
+Restart dev (npm run dev); `python scratchpad/make_wave3.py <P2 HEAD>`; launch S12.4, S12.5, S12.6+7 builders in worktrees (screen-builder, isolation worktree); merge each with git apply --3way; gate.

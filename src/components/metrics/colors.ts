@@ -37,7 +37,10 @@ const TONE_INK: Record<StateTone, string> = {
 };
 
 export function toneInk(tone: StateTone): Ink {
-  return { fill: TONE_INK[tone], opacity: 1 };
+  // At 0.7 (restyle): a state's text colour is drawn to be read at 13px, and
+  // the same colour poured into a bar forty pixels wide was the loudest thing
+  // on the manager's screen. Softened, a green month still reads green.
+  return { fill: TONE_INK[tone], opacity: 0.7 };
 }
 
 /** One person, one colour, on every screen (DESIGN §1b). */
@@ -46,7 +49,9 @@ export function personInk(id: string): Ink {
 }
 
 /** Six steps, the most a pie may have (DESIGN §1b), the last for "the rest". */
-const RANK_OPACITY = [0.9, 0.7, 0.54, 0.42, 0.32, 0.2];
+// Topped at 0.75 (restyle): the largest slice at 0.9 was a black wedge, the
+// heaviest mark on a screen whose point was the figures beside it.
+const RANK_OPACITY = [0.75, 0.58, 0.45, 0.35, 0.26, 0.18];
 
 /** The n-th largest of something that has no colour of its own. */
 export function rankInk(index: number): Ink {

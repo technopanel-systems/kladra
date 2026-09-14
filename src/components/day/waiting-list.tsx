@@ -9,7 +9,6 @@ import { Prose } from "@/components/ui-ext/prose";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Link } from "@/i18n/navigation";
 import type { Waiting, WaitingCounts, WaitingKindName } from "@/lib/day";
-import { TONE_CLASS } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,7 +36,7 @@ import { cn } from "@/lib/utils";
  * the same reason (D9).
  */
 const PILL =
-  "touch inline-flex h-7 items-center rounded-4xl border px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50";
+  "touch inline-flex h-7 items-center gap-1.5 rounded-md border border-line bg-surface px-2.5 text-xs font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 before:size-1.5 before:shrink-0 before:rounded-full before:content-['']";
 
 /** Exported for the message check: `day.<kind>Count` is a computed family (D96). */
 export const WAITING_KINDS = ["newLead", "sentBack", "refused", "withCustomer"] as const;
@@ -69,10 +68,10 @@ void EVERY_KIND_HAS_A_PILL;
  * reader is already looking at.
  */
 const DOORS: Record<WaitingKind, { href: string | null; tone: string }> = {
-  newLead: { href: null, tone: TONE_CLASS.wait },
-  sentBack: { href: "/quotations?status=returned", tone: TONE_CLASS.wait },
-  refused: { href: "/dispatches?status=refused", tone: TONE_CLASS.wait },
-  withCustomer: { href: "/quotations?status=issued", tone: TONE_CLASS.open },
+  newLead: { href: null, tone: "before:bg-state-wait-fg" },
+  sentBack: { href: "/quotations?status=returned", tone: "before:bg-state-wait-fg" },
+  refused: { href: "/dispatches?status=refused", tone: "before:bg-state-wait-fg" },
+  withCustomer: { href: "/quotations?status=issued", tone: "before:bg-state-open-fg" },
 };
 
 /**
@@ -103,7 +102,7 @@ export function WaitingList({
     const label = t(`day.${key}Count`, { count });
     if (count === 0) {
       return (
-        <span key={key} className={cn(PILL, "border-transparent text-faint")}>
+        <span key={key} className={cn(PILL, "text-faint before:bg-line-strong")}>
           {label}
         </span>
       );
@@ -112,7 +111,7 @@ export function WaitingList({
     // one directly below this line.
     if (!DOORS[key].href) {
       return (
-        <span key={key} className={cn(PILL, DOORS[key].tone, "border-transparent")}>
+        <span key={key} className={cn(PILL, DOORS[key].tone, "text-foreground")}>
           {label}
         </span>
       );
@@ -122,7 +121,7 @@ export function WaitingList({
         key={key}
         href={DOORS[key].href}
         data-slot={`waiting-${key}`}
-        className={cn(PILL, DOORS[key].tone, "border-transparent hover:border-current/30")}
+        className={cn(PILL, DOORS[key].tone, "text-foreground hover:bg-surface-2")}
       >
         {label}
       </Link>

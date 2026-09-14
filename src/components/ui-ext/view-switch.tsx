@@ -48,7 +48,7 @@ export function ViewSwitch({
     <div
       role="group"
       aria-label={t("common.view")}
-      className="inline-flex items-center gap-1 rounded-full border border-line bg-surface-2 p-0.5"
+      className="inline-flex items-center gap-1 rounded-lg border border-line bg-surface-2 p-0.5"
     >
       <Choice href={listHref} active={view === "list"} label={t("common.viewList")}>
         <ListIcon aria-hidden="true" className="size-3.5" />
@@ -76,7 +76,7 @@ function Choice({
       asChild
       size="sm"
       variant="ghost"
-      className={cn("h-7 gap-1.5 rounded-full px-2.5 text-xs", active && "bg-surface shadow-xs")}
+      className={cn("h-7 gap-1.5 rounded-md px-2.5 text-xs", active && "bg-popover text-foreground shadow-xs")}
     >
       <Link href={href} aria-current={active ? "true" : undefined}>
         {children}

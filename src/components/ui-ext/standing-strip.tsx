@@ -106,7 +106,10 @@ export function StandingStrip({
               An Arabic month name is wider than "Aug" and nothing in a grid
               cell's width knows that. */}
           <dd
-            className={cn("text-sm leading-tight break-words", item.tone && TONE_TEXT[item.tone])}
+            className={cn(
+              "text-base leading-tight font-medium break-words",
+              item.tone && TONE_TEXT[item.tone],
+            )}
           >
             {item.value}
           </dd>

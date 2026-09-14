@@ -20,7 +20,7 @@ export default function ReportsLoading() {
             <Skeleton className="h-3 w-24" />
             <div className="flex gap-2 overflow-hidden">
               {Array.from({ length: chips }, (_, chip) => (
-                <Skeleton key={chip} className="h-8 w-20 shrink-0 rounded-full" />
+                <Skeleton key={chip} className="h-8 w-20 shrink-0 rounded-md" />
               ))}
             </div>
           </div>

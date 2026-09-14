@@ -35,6 +35,20 @@ export const TONE_CLASS: Record<StateTone, string> = {
   over: "bg-state-over text-state-over-fg",
 };
 
+/**
+ * The mark beside a state's word (P13-G6 restyle): a 6px dot in the tone, the
+ * word itself in the text colour. A tinted pill put four saturated fills on a
+ * list of forty rows and made every state as loud as the name beside it; the
+ * dot says the same thing at the size of a full stop.
+ */
+export const TONE_DOT: Record<StateTone, string> = {
+  wait: "bg-state-wait-fg",
+  open: "bg-state-open-fg",
+  good: "bg-state-good-fg",
+  bad: "bg-state-bad-fg",
+  over: "bg-state-over-fg",
+};
+
 /** Just the text colour, for a figure or a line that carries no pill. */
 export const TONE_TEXT: Record<StateTone, string> = {
   wait: "text-state-wait-fg",

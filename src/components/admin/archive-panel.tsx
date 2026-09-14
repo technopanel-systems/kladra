@@ -102,7 +102,7 @@ export function ArchivePanel({
           <section key={kind} aria-labelledby={headingId} data-kind={kind} className="flex flex-col gap-2">
             <h2 id={headingId} className="flex items-center gap-2 text-sm font-medium">
               {t(GROUP_KEYS[kind])}
-              <span dir="ltr" className="num rounded-full bg-surface-2 px-2 text-xs text-muted-foreground">
+              <span dir="ltr" className="num rounded-md bg-surface-2 px-1.5 text-xs text-muted-foreground">
                 {group[0].inKind}
               </span>
             </h2>

@@ -703,7 +703,7 @@ function ReportPanel({
                   <label
                     key={row.id}
                     className={cn(
-                      "touch inline-flex cursor-pointer items-center min-h-8 rounded-full border px-3 py-1 text-sm transition-colors",
+                      "touch inline-flex cursor-pointer items-center min-h-8 rounded-md border px-3 py-1 text-sm transition-colors",
                       "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
                       // Refused, the caret is put on a chip by script, which a
                       // browser need not count as focus-visible: the ring then
@@ -795,7 +795,7 @@ function ReportPanel({
                         <label
                           key={which}
                           className={cn(
-                            "touch inline-flex cursor-pointer items-center min-h-8 rounded-full border px-3 py-1 text-sm transition-colors",
+                            "touch inline-flex cursor-pointer items-center min-h-8 rounded-md border px-3 py-1 text-sm transition-colors",
                             "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
                             errors.happenedOn && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
                             day === which

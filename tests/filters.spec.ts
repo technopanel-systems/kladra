@@ -114,8 +114,9 @@ test("an idle chip stands on the page, and the chosen one differs by more than a
  * and four at 375: a wall that pushed the list off a phone's first screen. The
  * lookups are the widest row in the app, so they are the row this asks: one
  * line, which scrolls rather than widening the page, fades at the edge that has
- * more and only there, and brings the chosen chip into view when it is the
- * last one.
+ * more and only there (and nowhere when it all fits, as it does at a desk in
+ * Arabic since the restyle), and brings the chosen chip into view when it is
+ * the last one.
  */
 test("a row of chips is one line that scrolls sideways, never a wall", async ({ page, locale, t }) => {
   test.slow();
@@ -136,10 +137,24 @@ test("a row of chips is one line that scrolls sideways, never a wall", async ({ 
       expect(tops.length, "a lookup lost its chip").toBe(LOOKUP_KINDS.length);
       expect(new Set(tops).size, `the chips wrapped onto ${new Set(tops).size} lines`).toBe(1);
 
-      const fits = await line.evaluate((node) => node.scrollWidth <= node.clientWidth + 1);
-      expect(fits, `every lookup fits at ${viewport.width} — nothing to prove`).toBe(false);
       const sideways = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
       expect(sideways, "the chips widened the page").toBeLessThanOrEqual(0);
+
+      // Whether the line overflows at a desk depends on the type: since the
+      // restyle's tighter scale the eleven Arabic lookups fit in one line at
+      // 1366, and a fade over nothing would be the bug. The scrolling is asked
+      // where the row cannot fit, and the desk asks what it can: one line,
+      // the page no wider.
+      const fits = await line.evaluate((node) => node.scrollWidth <= node.clientWidth + 1);
+      if (viewport.width !== PHONE.width) {
+        if (fits) {
+          await expect(line).not.toHaveAttribute("data-more-end");
+          await expect(line).not.toHaveAttribute("data-more-start");
+          return;
+        }
+      } else {
+        expect(fits, "every lookup fits on a phone — nothing to prove").toBe(false);
+      }
 
       // At its start the line fades where there is more, which is its end.
       await expect(line).toHaveAttribute("data-more-end", "true");

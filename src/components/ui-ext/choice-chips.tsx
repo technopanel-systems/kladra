@@ -57,7 +57,7 @@ export function ChoiceChips<T extends string>({
             key={option}
             className={cn(
               // `touch`: the label is the control, and not a kit one (D130).
-              "touch inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors",
+              "touch inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors",
               "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
               "has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60",
               value === option

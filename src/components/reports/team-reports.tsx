@@ -94,7 +94,7 @@ export async function NothingWritten({
                     today,
                   )}
                   data-slot="silent-person"
-                  className="hover-tint touch inline-flex items-center gap-2 rounded-full border border-line py-1 ps-1 pe-3 text-sm"
+                  className="hover-tint touch inline-flex items-center gap-2 rounded-lg border border-line py-1 ps-1 pe-3 text-sm"
                 >
                   <Avatar id={person.id} name={person.name} size="sm" />
                   <Clip text={person.name} />

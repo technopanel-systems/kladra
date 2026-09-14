@@ -1,5 +1,5 @@
 import { avatarTint, initialsOf } from "@/lib/avatar";
-import type { StateTone } from "@/lib/state-tone";
+import { TONE_DOT, type StateTone } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,7 +9,10 @@ import { cn } from "@/lib/utils";
  * before the letters do. 24 in a row, 32 in a card, 40 at the head of a drawer.
  *
  * `ring` is drawn only where a state exists, in that state's colour, and never
- * alone: the word for the state is on the screen beside it, because a ring is
+ * alone. It is a dot on the avatar's end corner since the restyle, cut out of
+ * the surface by a 2px edge: a 2px ring in amber around a 24px square read as
+ * a focus outline, or as a second, louder avatar. The prop keeps its name.
+ * And never alone: the word for the state is on the screen beside it, because a ring is
  * the one part of this a reader with deuteranopia cannot see. So the avatar
  * itself is `aria-hidden` — the name it stands for is always written next to
  * it or in the label of the control it sits in, and a screen reader hearing
@@ -25,12 +28,10 @@ const SIZE: Record<AvatarSize, string> = {
   lg: "size-10 text-sm",
 };
 
-const RING: Record<StateTone, string> = {
-  wait: "ring-state-wait-fg",
-  open: "ring-state-open-fg",
-  good: "ring-state-good-fg",
-  bad: "ring-state-bad-fg",
-  over: "ring-state-over-fg",
+const DOT: Record<AvatarSize, string> = {
+  sm: "size-2",
+  md: "size-2.5",
+  lg: "size-3",
 };
 
 export function Avatar({
@@ -57,11 +58,10 @@ export function Avatar({
       data-slot="avatar"
       data-tint={tint}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center leading-none font-medium select-none",
+        "relative inline-flex shrink-0 items-center justify-center leading-none font-medium select-none",
         "bg-(--avatar-bg) text-(--avatar-fg)",
         kind === "person" ? "rounded-full" : "rounded-md",
         SIZE[size],
-        ring && ["ring-2 ring-offset-2 ring-offset-background", RING[ring]],
         className,
       )}
       style={
@@ -72,6 +72,16 @@ export function Avatar({
       }
     >
       {initialsOf(name)}
+      {ring ? (
+        <span
+          data-slot="avatar-state"
+          className={cn(
+            "absolute -end-0.5 -bottom-0.5 rounded-full ring-2 ring-card",
+            DOT[size],
+            TONE_DOT[ring],
+          )}
+        />
+      ) : null}
     </span>
   );
 }

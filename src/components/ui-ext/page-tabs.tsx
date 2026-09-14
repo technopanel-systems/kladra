@@ -71,9 +71,9 @@ export function PageTabs({
               // oversized at a desk, and it never wraps: a tab that breaks in
               // two lines stops reading as a tab.
               "relative flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-t-md px-3 text-sm",
-              "transition-colors hover:bg-surface-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-brand/50",
+              "transition-colors hover:bg-surface-2 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring/50",
               live
-                ? "font-semibold text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-brand after:content-['']"
+                ? "font-semibold text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-foreground after:content-['']"
                 : "text-muted-foreground",
             )}
           >

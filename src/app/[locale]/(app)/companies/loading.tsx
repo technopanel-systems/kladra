@@ -38,7 +38,7 @@ export default function CompaniesLoading() {
       <div className="flex flex-col gap-4">
         <div className="flex gap-2 overflow-hidden">
           {["w-12", "w-24", "w-20", "w-44"].map((width) => (
-            <Skeleton key={width} className={`h-8 shrink-0 rounded-full ${width}`} />
+            <Skeleton key={width} className={`h-8 shrink-0 rounded-md ${width}`} />
           ))}
         </div>
         <Skeleton className="h-9 w-full max-w-sm rounded-lg" />

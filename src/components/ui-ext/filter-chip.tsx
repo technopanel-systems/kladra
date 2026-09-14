@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Link } from "@/i18n/navigation";
-import { TONE_CLASS } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -45,29 +44,25 @@ export function chipClass({
   disabled?: boolean;
 }): string {
   return cn(
-    // One height everywhere (tests/filters.spec.ts) and a pill. `shrink-0`: a
-    // chip in a line that scrolls keeps its word whole rather than squeezing.
-    "h-8 shrink-0 rounded-full border px-3 text-xs",
-    // A lateness chip keeps its tint in every state (the tone's own classes,
-    // state-tone.ts) and says which state it is in by its edge and its weight.
-    tone === "bad"
-      ? cn(
-          TONE_CLASS.bad,
-          active ? "border-state-bad-fg font-semibold" : "border-state-bad-fg/25",
-          !disabled && "hover:bg-state-bad hover:text-state-bad-fg",
-        )
-      : tone === "wait"
-        ? cn(
-            TONE_CLASS.wait,
-            active ? "border-state-wait-fg font-semibold" : "border-state-wait-fg/25",
-            !disabled && "hover:bg-state-wait hover:text-state-wait-fg",
-          )
-        : active
-          ? "border-foreground/40 bg-surface-2 font-semibold text-foreground hover:bg-surface-2"
-          : cn(
-              "border-line bg-surface text-muted-foreground",
-              !disabled && "hover:bg-surface-2 hover:text-foreground",
-            ),
+    // One height everywhere (tests/filters.spec.ts), 6px corners like every
+    // chip and badge (DESIGN §1). `shrink-0`: a chip in a line that scrolls
+    // keeps its word whole rather than squeezing.
+    "h-8 shrink-0 rounded-md border px-3 text-xs",
+    active
+      ? "border-line-strong bg-surface-2 font-semibold text-foreground hover:bg-surface-2"
+      : cn(
+          "border-line bg-surface text-muted-foreground",
+          !disabled && "hover:bg-surface-2 hover:text-foreground",
+        ),
+    // A lateness chip is the same chip with a dot in its tone before the word
+    // (restyle): a red-filled and an amber-filled chip in a row of grey ones
+    // were the loudest thing on the projects list, louder than the rows they
+    // filter. The dot is a flex item of the chip, so the gap spaces it.
+    tone &&
+      cn(
+        "before:size-1.5 before:shrink-0 before:rounded-full before:content-['']",
+        tone === "bad" ? "before:bg-state-bad-fg" : "before:bg-state-wait-fg",
+      ),
     disabled && "cursor-default opacity-50",
   );
 }
@@ -83,11 +78,10 @@ export function FilterChip({
   /** Selected, which the browser is told through `aria-current`, not colour. */
   active: boolean;
   /**
-   * A colour, on the two chips in the app that count lateness rather than name
+   * A tone, on the two chips in the app that count lateness rather than name
    * a state: overdue and due-today on the projects list. It is the same red and
-   * the same amber the dates under them carry (DESIGN §6), which is the only
-   * reason a filter is allowed one — the fourth copy of this chip had them, and
-   * they are the one thing it had that this did not.
+   * the same amber the dates under them carry (DESIGN §6), drawn as a dot
+   * before the word rather than a fill.
    */
   tone?: "bad" | "wait";
   /**
