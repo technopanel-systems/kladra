@@ -34,6 +34,8 @@ import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
+import { isolatePlaceholders } from "../src/i18n/isolate";
+
 const PORT = process.env.SHOTS_PORT ?? "3100";
 const BASE = `http://localhost:${PORT}`;
 const ALLOWED_HOSTS = new Set([`localhost:${PORT}`, `127.0.0.1:${PORT}`]);
@@ -104,8 +106,10 @@ function interpolate(template: string, params?: Record<string, string | number>)
 type Tr = (key: string, params?: Record<string, string | number>) => string;
 type PrefixOf = (key: string) => string;
 
+/** A value in a message is isolated on screen (`src/i18n/isolate.ts`, words.md),
+ *  so the text an exact match looks for carries the same isolates. */
 function trFor(locale: Locale): Tr {
-  return (key, params) => interpolate(rawMessage(locale, key), params);
+  return (key, params) => interpolate(isolatePlaceholders(rawMessage(locale, key)), params);
 }
 
 /** The literal text before a template's first `{placeholder}` — for matching
