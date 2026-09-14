@@ -79,5 +79,17 @@
   "ratioDispatched": "Quotations dispatched",
   "ratioOf": "{part} of {whole}",
   "ratiosMeans": "Each row is what has become of what was started in this window. Raised in it: {quotations, plural, one {# quotation} other {# quotations}} and {dispatches, plural, one {# dispatch} other {# dispatches}}.",
-  "whose": "Whose figures"
+  "whose": "Whose figures",
+  "reliance": {
+    "title": "Relying on the coordinator",
+    "means": "Of each person’s quotations and dispatches raised since {from}, how many the coordinator raised for them. A habit is {percent} per cent or more of them, and at least {count}.",
+    "line": "{raised} of {total} raised by the coordinator",
+    "noPaper": "No quotation or dispatch in this window",
+    "nothing": "Nobody has raised a quotation or a dispatch since {from}.",
+    "word": {
+      "none": "Never",
+      "occasional": "Occasional",
+      "habit": "A habit"
+    }
+  }
 }

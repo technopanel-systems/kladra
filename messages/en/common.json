@@ -142,6 +142,16 @@
     "help": "Chosen for this one, and never carried to the next.",
     "notOnProject": "That person is not on this project."
   },
+  "onBehalf": {
+    "for": "For",
+    "nobody": "Nobody — Internal Sales",
+    "raisedBy": "Raised by {name}",
+    "nobodyMay": "Nobody on the team works this customer or this job.",
+    "pickSomebody": "Internal Sales does not work this customer or this job. Say whom it is for.",
+    "notForOthers": "Only the coordinator requests for somebody else.",
+    "notSomebody": "A request can be for an active rep or marketing only.",
+    "notTheirs": "{name} does not work this customer or this job, so it cannot be requested for them."
+  },
   "paymentNote": "Payment note",
   "pickCompany": "Choose a company",
   "pickCompanyFirst": "Choose a company first"

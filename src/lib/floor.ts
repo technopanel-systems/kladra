@@ -118,6 +118,30 @@ export function issuesOwnQuotations(role: Role): boolean {
 }
 
 /**
+ * Who may raise a quotation or a dispatch on somebody else's behalf (SPEC §3,
+ * P13): "the coordinator may raise a quotation or a dispatch on a rep's behalf;
+ * it counts toward that rep".
+ *
+ * The same person as the one who issues her own paper, and said as that rather
+ * than as a second role list: the desk is who a rep rings when he cannot raise
+ * it himself, and there is nobody else in the building he rings.
+ */
+export function raisesForOthers(role: Role): boolean {
+  return issuesOwnQuotations(role);
+}
+
+/**
+ * Who she may raise it for: whoever has a floor of his own and a month against
+ * his name and asks the desk for his paper — a rep and marketing (SPEC §3 P13,
+ * "marketing is a rep in everything"). Not the manager, who holds a floor only
+ * by handover and sits on no target; not herself, whose own paper is "nobody —
+ * Internal Sales".
+ */
+export function mayBeRaisedFor(role: Role): boolean {
+  return ownsCompanies(role) && carriesMetres(role) && !raisesForOthers(role);
+}
+
+/**
  * Who brings a customer in through the lead module instead of Add company
  * (SPEC §3, P12-7).
  *
@@ -209,6 +233,8 @@ export const SELLING_ROLES: Role[] = ["rep", "marketing", "manager", "coordinato
 export const REPORTING_ROLES: Role[] = ["rep", "marketing", "coordinator"];
 export const ADD_COMPANY_ROLES: Role[] = ["rep", "coordinator"];
 export const LEAD_ROLES: Role[] = ["marketing"];
+/** Whom the coordinator may raise paper for (`mayBeRaisedFor`), and whose reliance on her is counted. */
+export const RAISED_FOR_ROLES: Role[] = ["rep", "marketing"];
 
 /**
  * On whose floor may a company SIT.

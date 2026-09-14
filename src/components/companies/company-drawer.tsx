@@ -31,6 +31,7 @@ import { getCompany, type CompanyDetail } from "@/lib/companies";
 import { floorHolderOptions } from "@/lib/pickers";
 import { companySharers } from "@/lib/shares";
 import { mayKeepContacts, mayRaiseFor } from "@/lib/visibility";
+import { raisesOnBehalf } from "@/lib/on-behalf";
 import { listQuotationsForCompany } from "@/lib/quotations";
 import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
@@ -184,8 +185,16 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
    * row, so the picker never offers a job the action would refuse and never
    * hides one it would allow (DESIGN §5).
    */
+  //
+  // The coordinator raises for whoever works them (SPEC §3 P13), so her button
+  // is on every live customer with an open job; the dialog's "For" field then
+  // offers only the people who may raise on one of them.
+  const forOthers = raisesOnBehalf(user) && !company.archivedAt;
   const quotationProjects = projects
-    .filter((row) => !row.lostAt && mayRaiseFor(user, company.repId, row.repId, row.onProject))
+    .filter(
+      (row) =>
+        !row.lostAt && (forOthers || mayRaiseFor(user, company.repId, row.repId, row.onProject)),
+    )
     .map((row) => ({
       value: optionValue(row.id, company.id),
       label: row.name,

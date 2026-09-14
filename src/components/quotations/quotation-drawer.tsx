@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { issuesOwnQuotations, mayWrite } from "@/lib/floor";
 import { mayRaiseFor } from "@/lib/visibility";
+import { raisesOnBehalf } from "@/lib/on-behalf";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
 import { dispatchable, getQuotation, quotationHistory, revisionChanges } from "@/lib/quotations";
@@ -83,8 +84,13 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
   // colleague had raised on his own job, while the action behind the button
   // would have allowed it: the screen refusing work the write permits, which
   // is the same defect as offering work it refuses, one mirror over (§5 #163).
+  //
+  // And the coordinator may send against anybody's, for whoever may (SPEC §3
+  // P13): the dialog's "For" field offers exactly the people who may.
+  const forOthers = raisesOnBehalf(user);
   const canSend =
-    mayRaiseFor(user, quotation.companyRepId, quotation.projectRepId, quotation.onProject) &&
+    (mayRaiseFor(user, quotation.companyRepId, quotation.projectRepId, quotation.onProject) ||
+      forOthers) &&
     quotation.isLatest &&
     dispatchable(quotation.status);
 
@@ -99,6 +105,7 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
                 <RequestDispatchDialog
                   quotationId={quotation.id}
                   quotationLabel={quotation.label}
+                  raisesForOthers={forOthers}
                   trigger={<Button variant="outline">{t("dispatches.request")}</Button>}
                 />
               </div>

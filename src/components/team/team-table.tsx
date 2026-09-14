@@ -183,10 +183,7 @@ export async function TeamTable({
         ))}
       </ul>
 
-      {/* `overflow-clip`, not the card's own `overflow-hidden`: a hidden overflow
-          is a scroll container, and the table's scrollbar would stick to it
-          rather than under the top bar (P13-S7). */}
-      <div className="card-face hidden overflow-clip md:block">
+      <div className="card-face hidden md:block">
         <Table label={t("shell.team")}>
           <TableCaption className="sr-only">{t("shell.team")}</TableCaption>
           <TableHeader>

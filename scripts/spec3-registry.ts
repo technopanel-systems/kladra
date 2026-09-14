@@ -354,7 +354,15 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "How often each rep relies on her is tracked",
-    owed: "P13-S6",
+    tests: [
+      "the coordinator issues a quotation for Faisal from the quotations screen: it is his, it says she raised it, and he is told",
+      "a dispatch she raises for nobody is hers, under Internal Sales",
+      "a rep's dialogs ask nobody who the paper is for",
+      "the action refuses a rep who names somebody else, and the coordinator who names somebody off the customer",
+      "reliance is a word: a habit at a quarter of the paper and at least three, occasional short of that, never at none",
+      "the pure twin counts each person's paper in the window and the part somebody else raised",
+      "the reader's statement counts what SQL written here counts, in every window",
+    ],
   },
   {
     says: "Credit and tasaheel are one payment option",
@@ -432,7 +440,7 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "pending quotations and pending dispatches side by side",
-    owed: "P13-S6",
+    tests: ["her two lists sit side by side at 1366 and one above the other at 375"],
   },
   {
     says: "the customer's query as the single note",

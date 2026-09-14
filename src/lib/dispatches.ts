@@ -99,8 +99,14 @@ export type DispatchRow = {
    */
   projectLostOn: string | null;
   projectLostReason: string | null;
+  /** Whom it counts for — who raised it, on everything a rep raised himself. */
   repId: string;
   repName: string;
+  /**
+   * The person who pressed the button, named, only where that is somebody else:
+   * the coordinator raising it on his behalf (SPEC §3 P13). Null otherwise.
+   */
+  raisedByName: string | null;
   /** Who owns the company, so who may act on it (S8). */
   companyRepId: string;
   shipmentMethod: string;
@@ -231,6 +237,11 @@ function selection(locale: string) {
     projectLostReason: projects.lostReason,
     repId: dispatches.repId,
       repName: personName(locale),
+    // Both tables named outright in the correlated subquery (rules/data.md).
+    raisedByName: sql<string | null>`(
+      select ${personNameOf("rb", locale)} from users rb
+       where rb.id = dispatches.raised_by_id and dispatches.raised_by_id <> dispatches.rep_id
+    )`,
     companyRepId: companies.repId,
     shipmentMethodId: dispatches.shipmentMethodId,
     destination: dispatches.destination,
@@ -287,6 +298,7 @@ type Selected = {
   projectLostReason: string | null;
   repId: string;
   repName: string;
+  raisedByName: string | null;
   companyRepId: string;
   shipmentMethodId: number;
   destination: string;
@@ -326,6 +338,7 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
     repName: row.repName,
+    raisedByName: row.raisedByName ?? null,
     companyRepId: row.companyRepId,
     shipmentMethod,
     shipmentMethodId: row.shipmentMethodId,

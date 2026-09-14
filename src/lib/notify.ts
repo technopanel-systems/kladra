@@ -42,6 +42,25 @@ import { notifyLive } from "@/lib/live";
 export { NOTIFICATION_KINDS };
 export type { NotificationKind };
 
+/**
+ * The kinds a notice may carry when the paper was raised FOR its reader by
+ * somebody else (SPEC §3 P13) — `raisedFor: 1` in its params, and the person who
+ * raised it as `repId`, the way every other sentence names its person.
+ *
+ * The same kinds, not new ones: what clears the notice is the same work (D79) —
+ * an issued paper leaves his bell when the customer answers, a request when the
+ * desk does — and the kind is what `CLEARED_BY` and every `clearNotifications`
+ * already key on. Only the sentence differs, so the reader renders
+ * `notifications.raisedFor.<kind>` for these rows, and a new kind here without
+ * its sentence in both locales fails `check:messages`.
+ */
+export const RAISED_FOR_KINDS = ["quotationIssued", "dispatchRequested"] as const;
+export type RaisedForKind = (typeof RAISED_FOR_KINDS)[number];
+
+export function isRaisedForKind(kind: NotificationKind): kind is RaisedForKind {
+  return (RAISED_FOR_KINDS as readonly string[]).includes(kind);
+}
+
 /** The record a notice is about, and where the work at the end of it lives. */
 export type NotificationSubject = { type: NotificationSubjectType; id: string };
 

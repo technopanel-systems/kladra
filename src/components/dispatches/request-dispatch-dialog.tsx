@@ -12,6 +12,7 @@ import {
 } from "@/actions/forms";
 import {
   directCompaniesAction,
+  dispatchOnBehalfAction,
   dispatchPrefillAction,
   requestDispatchAction,
   updateDispatchAction,
@@ -33,6 +34,7 @@ import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcom
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useDispatchLookups, useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { RaisedForField, useOnBehalf } from "@/components/ui-ext/raised-for-field";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect, type SelectOption } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,7 @@ import { useRouter } from "@/i18n/navigation";
 import { differenceFrom, type SheetValues } from "@/lib/dispatch-difference";
 import { lineRefusal } from "@/lib/line-refusal";
 import { quotationTotals } from "@/lib/money";
+import { dispatchEligible, openingFor, type DispatchOnBehalf } from "@/lib/on-behalf-option";
 import { splitOption, type DispatchTargets } from "@/lib/picker-option";
 import type { DraftLine, DraftService } from "@/lib/quotation-draft";
 import {
@@ -137,6 +140,7 @@ export function RequestDispatchDialog({
   targets,
   mode = "request",
   existing,
+  raisesForOthers = false,
   trigger,
 }: {
   /** Known when the dialog is opened from a quotation's drawer: customer and paper are fixed. */
@@ -154,6 +158,13 @@ export function RequestDispatchDialog({
   targets?: DispatchTargets;
   mode?: DispatchMode;
   existing?: DispatchDraft;
+  /**
+   * The coordinator, who may raise this load for a rep (SPEC §3 P13): the form
+   * then asks "For" first. Passed down from the server the way the quotation
+   * dialog's `issuesDirectly` is, so a rep's dialog makes no extra round trip;
+   * `requestDispatchAction` asks the role again, and it is the one that decides.
+   */
+  raisesForOthers?: boolean;
   trigger?: ReactNode;
 }) {
   const t = useTranslations();
@@ -162,6 +173,12 @@ export function RequestDispatchDialog({
   const { lookups: dispatchLists, failed: dispatchFailed } = useDispatchLookups(open);
   const { lookups: lineLists, failed: linesFailed } = useQuotationLookups(open);
   const serviceChoices = useServiceChoices(open);
+  // Whom it is for, on a first ask only: a load being corrected is already his.
+  const onBehalf = useOnBehalf(
+    open && raisesForOthers && mode === "request",
+    quotationId ?? "",
+    () => dispatchOnBehalfAction({ quotationId }),
+  );
   // Only where the customer is a choice or Direct might be: never on a load
   // already against a paper, never on an edit, which cannot change either.
   const own = useDirectCompanies(open && !quotationId && !existing);
@@ -177,7 +194,11 @@ export function RequestDispatchDialog({
   );
 
   const ready =
-    dispatchLists && lineLists && Array.isArray(serviceChoices) && (quotationId || existing || own);
+    dispatchLists &&
+    lineLists &&
+    Array.isArray(serviceChoices) &&
+    (quotationId || existing || own) &&
+    onBehalf !== undefined;
 
   return (
     <ResponsiveDialog
@@ -203,7 +224,7 @@ export function RequestDispatchDialog({
         )
       }
     >
-      {dispatchFailed || linesFailed || serviceChoices === "failed" ? (
+      {dispatchFailed || linesFailed || serviceChoices === "failed" || onBehalf === "failed" ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
@@ -215,6 +236,7 @@ export function RequestDispatchDialog({
           fixedCompany={companyId ? { id: companyId, name: companyName ?? "" } : null}
           targets={targets}
           own={own ?? []}
+          onBehalf={onBehalf ?? null}
           dispatchLists={dispatchLists}
           lineLists={lineLists}
           serviceChoices={serviceChoices}
@@ -324,6 +346,7 @@ function LoadForm({
   fixedCompany,
   targets,
   own,
+  onBehalf,
   dispatchLists,
   lineLists,
   serviceChoices,
@@ -337,6 +360,8 @@ function LoadForm({
   targets?: DispatchTargets;
   /** The customers Direct may be chosen for. */
   own: SelectOption[];
+  /** The "For" field's answers; null where it is not asked. */
+  onBehalf: DispatchOnBehalf | null;
   dispatchLists: DispatchLookups;
   lineLists: QuotationLookups;
   serviceChoices: SelectOption[];
@@ -366,6 +391,24 @@ function LoadForm({
   const [pickedCompany, setPickedCompany] = useState("");
   const [sourcePick, setSourcePick] = useState<{ companyId: string; value: string } | null>(null);
 
+  /*
+   * Whom it is for (SPEC §3 P13), first, because the customers and the papers
+   * offered under it are THAT person's — `dispatchTargets` and the direct
+   * customers, read with his id. On a quotation's drawer the paper is fixed, so
+   * the answers narrow instead: whoever may send against it. Opens on Internal
+   * Sales where hers is an answer, else on the paper's own rep. Choosing
+   * somebody clears the customer and the source, in the setter.
+   */
+  const eligible = useMemo(() => (onBehalf ? dispatchEligible(onBehalf) : []), [onBehalf]);
+  const [forPick, setForPick] = useState<string | null>(null);
+  const raisedFor = onBehalf ? (forPick ?? openingFor(eligible, onBehalf.suggested)) : "";
+  const theirs = onBehalf ? onBehalf.targets[raisedFor] : null;
+  const shownTargets = onBehalf ? theirs : targets;
+  const shownOwn = useMemo(
+    () => (onBehalf ? (theirs?.direct ?? []) : own),
+    [onBehalf, theirs, own],
+  );
+
   const [prefill, setPrefill] = useState<{ quotationId: string; data: DispatchPrefill | null } | null>(
     null,
   );
@@ -379,23 +422,23 @@ function LoadForm({
 
   const companyOptions = useMemo(() => {
     const byId = new Map<string, SelectOption>();
-    for (const option of [...(targets?.companies ?? []), ...own]) byId.set(option.value, { value: option.value, label: option.label });
+    for (const option of [...(shownTargets?.companies ?? []), ...shownOwn]) byId.set(option.value, { value: option.value, label: option.label });
     return [...byId.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [targets, own]);
+  }, [shownTargets, shownOwn]);
 
   // This customer's papers, newest first, as the screen sent them — the latest
   // is the one a rep means nine times in ten, so it is the one chosen for him.
   const papers = useMemo(
     () =>
-      (targets?.quotations ?? []).flatMap((option) => {
+      (shownTargets?.quotations ?? []).flatMap((option) => {
         const split = splitOption(option.value);
         return split && split.companyId === company
           ? [{ value: split.id, label: option.label, hint: option.hint }]
           : [];
       }),
-    [targets, company],
+    [shownTargets, company],
   );
-  const mayDirect = own.some((option) => option.value === company);
+  const mayDirect = shownOwn.some((option) => option.value === company);
   const sourceOptions: SelectOption[] = [
     ...papers,
     ...(mayDirect
@@ -440,25 +483,32 @@ function LoadForm({
    * raising it. A failure here is not an error a rep should see — the question
    * is simply not asked.
    */
-  const [credit, setCredit] = useState<{ quotationId: string; choices: CreditChoices | null } | null>(
+  // Keyed on the person too: on a load she raises for him the pool is his, and
+  // his name is the answer it opens on (SPEC §3 P13).
+  const [credit, setCredit] = useState<{ key: string; choices: CreditChoices | null } | null>(
     null,
   );
   useEffect(() => {
     if (!quotation) return;
+    const key = `${quotation}|${raisedFor}`;
     let cancelled = false;
-    guarded(creditChoicesAction)({ quotationId: quotation }).then((outcome) => {
-      if (!cancelled) setCredit({ quotationId: quotation, choices: outcome.ok ? (outcome.data ?? null) : null });
-    });
+    guarded(creditChoicesAction)({ quotationId: quotation, repId: raisedFor || undefined }).then(
+      (outcome) => {
+        if (!cancelled) setCredit({ key, choices: outcome.ok ? (outcome.data ?? null) : null });
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [quotation, guarded]);
-  const creditChoices = quotation && credit?.quotationId === quotation ? credit.choices : null;
+  }, [quotation, raisedFor, guarded]);
+  const creditChoices =
+    quotation && credit?.key === `${quotation}|${raisedFor}` ? credit.choices : null;
   const [creditPick, setCreditPick] = useState<{ source: string; value: string } | null>(
-    existing?.creditTo ? { source: existing.quotationId ?? DIRECT, value: existing.creditTo } : null,
+    existing?.creditTo ? { source: `${existing.quotationId ?? DIRECT}|`, value: existing.creditTo } : null,
   );
+  const creditSource = `${source}|${raisedFor}`;
   const countsFor =
-    (creditPick?.source === source ? creditPick.value : "") || creditChoices?.mine || "";
+    (creditPick?.source === creditSource ? creditPick.value : "") || creditChoices?.mine || "";
 
   /* ---- the load --------------------------------------------------------- */
 
@@ -651,8 +701,33 @@ function LoadForm({
       <input type="hidden" name="shipmentMethodId" value={method} />
       <input type="hidden" name="warehouseId" value={warehouse} />
       <input type="hidden" name="credit" value={countsFor} />
+      {onBehalf ? <input type="hidden" name="repId" value={raisedFor} /> : null}
 
       <FormBody>
+        {/* Whom it is for, first and on a row of its own (SPEC §3 P13), one
+            column wide on the band's grid so it lines up with the customer. */}
+        {onBehalf ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <RaisedForField
+              people={onBehalf.people}
+              eligible={eligible}
+              value={raisedFor}
+              onChange={(value) => {
+                setForPick(value);
+                setPickedCompany("");
+                setSourcePick(null);
+              }}
+              disabled={pending}
+              error={fieldErrors.repId}
+            />
+            {eligible.length === 0 ? (
+              <p className="self-end text-sm text-muted-foreground sm:col-span-1 lg:col-span-3">
+                {t("common.onBehalf.nobodyMay")}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Who, where from, and how it leaves: one-line answers about the whole
             load, four across on the desk dialog (as on the quotation's). */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -681,7 +756,8 @@ function LoadForm({
                 options={companyOptions}
                 value={pickedCompany}
                 onChange={setPickedCompany}
-                disabled={pending}
+                // Nothing to choose until she has said whom it is for.
+                disabled={pending || Boolean(onBehalf && !raisedFor)}
                 placeholder={t("common.pickCompany")}
                 searchPlaceholder={t("forms.searchList")}
                 emptyText={t("forms.noMatch")}
@@ -832,7 +908,7 @@ function LoadForm({
             <CreditField
               people={creditChoices?.people ?? []}
               value={countsFor}
-              onChange={(next) => setCreditPick({ source, value: next })}
+              onChange={(next) => setCreditPick({ source: creditSource, value: next })}
               sqm={totals.sqm}
               id="dispatch-credit"
             />

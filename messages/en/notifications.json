@@ -15,5 +15,9 @@
   "companyShared": "{rep} shared {label} with you.",
   "projectShared": "{rep} put you on {label}.",
   "companyFolded": "{company} was folded into {rep}’s record for the same customer.",
-  "companyAbsorbed": "{rep} folded a second record for {company} into yours."
+  "companyAbsorbed": "{rep} folded a second record for {company} into yours.",
+  "raisedFor": {
+    "quotationIssued": "{rep} issued {label} for {company} on your behalf — SMAC {smacNumber}.",
+    "dispatchRequested": "{rep} requested {label} for {company} on your behalf."
+  }
 }

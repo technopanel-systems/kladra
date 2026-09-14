@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { DispatchDrawer } from "@/components/dispatches/dispatch-drawer";
 import { DispatchSheetSkeleton, DispatchesTable } from "@/components/dispatches/dispatches-table";
@@ -7,6 +7,7 @@ import {
   QuotationSheetSkeleton,
   QuotationsTable,
 } from "@/components/quotations/quotations-table";
+import { Empty } from "@/components/ui-ext/empty";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
@@ -179,9 +180,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
           it. A search that matched nothing is not a clear desk: each table keeps
           its own sentence and its Clear, so the term can be taken back (P11G). */}
       {waiting === 0 && !q ? (
-        <p className="card-face px-6 py-8 text-center text-sm text-muted-foreground">
-          {t("queue.clear")}
-        </p>
+        <Empty>{t("queue.clear")}</Empty>
       ) : (
         <>
           {/* ONE box over both lists. Two tables meant two boxes, both writing
@@ -196,42 +195,63 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
             clearLabel={t("common.clear")}
           />
 
-          <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {t("common.quotations")}
-            </h2>
-            <QuotationsTable
-              base="/queue"
-              rows={quotationRows}
-              q={q}
-              status="requested"
-              openId={open}
-              showFilters={false}
-              showSearch={false}
-              waiting={waits(quotationRows)}
-            />
-            {/* What the cap left off, said the way the four list screens say it
-                (D80, D144). */}
-            <ListTail shown={quotationRows.length} total={quotationDays.length} />
-          </section>
+          {/* The two halves of her desk side by side from `lg` (SPEC §3 P13),
+              stacked below it. `items-start`, so each half is as tall as its
+              own list: a long list of quotations never pushes the dispatches
+              down the screen, and a short half does not stretch into a block of
+              nothing beside a long one (DESIGN §5, D154). Each keeps D137's
+              order, oldest first, and its own heading and count. */}
+          <div data-slot="queue-halves" className="grid items-start gap-8 lg:grid-cols-2 lg:gap-6">
+            <QueueHalf
+              slot="queue-quotations"
+              heading={t("common.quotations")}
+              count={quotationDays.length}
+            >
+              {/* Nothing waiting in this half and no search: one sentence in the
+                  kit's Empty. A search that matched nothing is the table's own
+                  sentence, with its Clear (P11G). */}
+              {quotationRows.length === 0 && !q ? (
+                <Empty>{t("queue.noQuotations")}</Empty>
+              ) : (
+                <QuotationsTable
+                  base="/queue"
+                  rows={quotationRows}
+                  q={q}
+                  status="requested"
+                  openId={open}
+                  showFilters={false}
+                  showSearch={false}
+                  waiting={waits(quotationRows)}
+                />
+              )}
+              {/* What the cap left off, said the way the four list screens say it
+                  (D80, D144). */}
+              <ListTail shown={quotationRows.length} total={quotationDays.length} />
+            </QueueHalf>
 
-          <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {t("common.dispatches")}
-            </h2>
-            <DispatchesTable
-              base="/queue"
-              param="dispatch"
-              rows={dispatchRows}
-              q={q}
-              status="submitted"
-              openId={openDispatch}
-              showFilters={false}
-              showSearch={false}
-              waiting={waits(dispatchRows)}
-            />
-            <ListTail shown={dispatchRows.length} total={dispatchDays.length} />
-          </section>
+            <QueueHalf
+              slot="queue-dispatches"
+              heading={t("common.dispatches")}
+              count={dispatchDays.length}
+            >
+              {dispatchRows.length === 0 && !q ? (
+                <Empty>{t("queue.noDispatches")}</Empty>
+              ) : (
+                <DispatchesTable
+                  base="/queue"
+                  param="dispatch"
+                  rows={dispatchRows}
+                  q={q}
+                  status="submitted"
+                  openId={openDispatch}
+                  showFilters={false}
+                  showSearch={false}
+                  waiting={waits(dispatchRows)}
+                />
+              )}
+              <ListTail shown={dispatchRows.length} total={dispatchDays.length} />
+            </QueueHalf>
+          </div>
         </>
       )}
 
@@ -246,6 +266,45 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
         <DispatchDrawer dispatchId={openDispatch} param="dispatch" />
       </Suspense>
     </div>
+  );
+}
+
+/**
+ * One half of her desk: its heading, how many are waiting in it, and the list.
+ *
+ * The count sits beside the heading rather than inside it, so the heading is the
+ * name of the list and nothing else — it is what a reader moving by headings
+ * hears, and what a spec finds the half by. The figure is the uncapped one the
+ * strip above counts (D144), never the length of what was drawn.
+ *
+ * `min-w-0`, because a grid cell is as wide as its widest child unless told
+ * otherwise, and a table that needs its sideways scroll would otherwise push
+ * the other half off the screen instead of scrolling inside its own.
+ */
+function QueueHalf({
+  slot,
+  heading,
+  count,
+  children,
+}: {
+  slot: string;
+  heading: string;
+  count: number;
+  children: ReactNode;
+}) {
+  const id = `${slot}-heading`;
+  return (
+    <section data-slot={slot} aria-labelledby={id} className="flex min-w-0 flex-col gap-4">
+      <div className="flex items-baseline gap-2">
+        <h2 id={id} className="text-sm font-medium text-muted-foreground">
+          {heading}
+        </h2>
+        <span data-slot="queue-half-count" dir="ltr" className="num text-sm text-faint">
+          {count}
+        </span>
+      </div>
+      {children}
+    </section>
   );
 }
 

@@ -81,6 +81,10 @@ export const families: [string, string[]][] = [
   ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],
   ["projects.lossReason", union("src/lib/loss-reason.ts", "LOSS_REASON_CODES")],
   ["notifications", union("src/db/schema.ts", "NOTIFICATION_KINDS")],
+  // A notice about paper somebody else raised for its reader (SPEC §3 P13).
+  ["notifications.raisedFor", union("src/lib/notify.ts", "RAISED_FOR_KINDS")],
+  // How often somebody relies on the coordinator, in a word (SPEC §3 P13).
+  ["team.reliance.word", union("src/lib/reliance.ts", "RELIANCE_WORDS")],
   [
     "companies",
     union("src/components/companies/follow-up-strip.tsx", "Pill").map((pill) => `${pill}Count`),

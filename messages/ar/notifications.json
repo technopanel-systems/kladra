@@ -15,5 +15,9 @@
   "companyShared": "شاركك {rep} {label}.",
   "projectShared": "أضافك {rep} إلى {label}.",
   "companyFolded": "دُمج {company} في سجل {rep} للعميل نفسه.",
-  "companyAbsorbed": "دمج {rep} سجلًا ثانيًا لـ{company} في سجلك."
+  "companyAbsorbed": "دمج {rep} سجلًا ثانيًا لـ{company} في سجلك.",
+  "raisedFor": {
+    "quotationIssued": "صدر عرض السعر {label} لدى {company} لصالحك بواسطة {rep} برقم سماك {smacNumber}.",
+    "dispatchRequested": "قُدِّم طلب التوريد {label} لدى {company} لصالحك بواسطة {rep}."
+  }
 }

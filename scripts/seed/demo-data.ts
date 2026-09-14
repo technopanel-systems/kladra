@@ -1302,6 +1302,12 @@ export type QuotationSeed = {
    * the row carries the flag so the manager reads who did both.
    */
   selfIssued?: boolean;
+  /**
+   * Who pressed the button, where that is not the person it counts for (SPEC §3
+   * P13): the coordinator, raising it on a rep's behalf. Absent means `rep`
+   * raised it himself, which is nearly all paper.
+   */
+  raisedBy?: RepKey;
   /** A revision copies the parent's number and its lines (SPEC D10). */
   revisionOf?: string;
   revision?: number;
@@ -1652,6 +1658,120 @@ export const QUOTATIONS: QuotationSeed[] = [
       { colourCode: "168", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 120, width: "1.24", length: "5.8", pricePerSqm: "132.00" },
     ],
   },
+  /*
+   * Paper the coordinator raised on a rep's behalf (SPEC §3 P13), spread over the
+   * last month: two for Faisal — one the customer turned down, one accepted with
+   * a load waiting on her desk below it — and one for Saad still with the
+   * customer. Each counts for the rep, carries her as the raiser, and was issued
+   * in the same act, as her own paper is (q10 is hers, under Internal Sales).
+   *
+   * At the end of the list so no other quotation's number moves.
+   */
+  {
+    key: "fr1",
+    company: "f6",
+    project: "p5",
+    rep: "faisal",
+    raisedBy: "rawan",
+    selfIssued: true,
+    status: "rejected",
+    contact: 0,
+    createdBack: 17,
+    issuedBack: 17,
+    decidedBack: 12,
+    smacNumber: "4561",
+    decisionReason: "المشروع تأجل إلى السنة القادمة",
+    notes: "فيصل في موقع جدة، طلب رفعه نيابةً عنه",
+    items: [
+      { colourCode: "RAL 9016", supplier: "N", fireRating: "B1", className: "A", thickness: "4.0", qty: 70, width: "1.24", length: "5.8", pricePerSqm: "112.00" },
+    ],
+  },
+  {
+    key: "fr2",
+    company: "f9",
+    project: "p6",
+    rep: "faisal",
+    raisedBy: "rawan",
+    selfIssued: true,
+    status: "accepted",
+    contact: 0,
+    createdBack: 7,
+    issuedBack: 7,
+    decidedBack: 5,
+    smacNumber: "4563",
+    items: [
+      { colourCode: "RAL 7016", supplier: "C", fireRating: "A2", className: "A2G1", thickness: "4.0", qty: 90, width: "1.24", length: "5.8", pricePerSqm: "128.00" },
+    ],
+  },
+  {
+    key: "sr1",
+    company: "s5",
+    project: "p10",
+    rep: "saad",
+    raisedBy: "rawan",
+    selfIssued: true,
+    status: "issued",
+    createdBack: 12,
+    issuedBack: 12,
+    smacNumber: "4565",
+    items: [
+      { colourCode: "168", supplier: "K", fireRating: "B1", className: "B", thickness: "4.0", qty: 40, width: "1.5", length: "5.8", pricePerSqm: "104.00" },
+    ],
+  },
+  /*
+   * And the other side of the line (rules/data.md: a threshold needs a row on
+   * each side of it). Turki, the newest rep, leans on the desk: three of his
+   * papers in the window were hers, which is a habit on the reliance card by
+   * the rule in src/lib/reliance.ts, where Faisal's and Saad's are occasional.
+   */
+  {
+    key: "tr1",
+    company: "t2",
+    project: "p12",
+    rep: "turki",
+    raisedBy: "rawan",
+    selfIssued: true,
+    status: "accepted",
+    createdBack: 13,
+    issuedBack: 13,
+    decidedBack: 3,
+    smacNumber: "4567",
+    items: [
+      { colourCode: "RAL 9006", supplier: "C", fireRating: "B1", className: "A", thickness: "4.0", qty: 55, width: "1.24", length: "5.8", pricePerSqm: "109.00" },
+    ],
+  },
+  {
+    key: "tr3",
+    company: "t2",
+    project: "p12",
+    rep: "turki",
+    raisedBy: "rawan",
+    selfIssued: true,
+    status: "rejected",
+    createdBack: 10,
+    issuedBack: 10,
+    decidedBack: 8,
+    smacNumber: "4569",
+    decisionReason: "العميل طلب لونًا غير متوفر",
+    items: [
+      { colourCode: "RAL 3020", supplier: "N", fireRating: "Normal", className: "B", thickness: "4.0", qty: 24, width: "1.24", length: "3.2", pricePerSqm: "96.00" },
+    ],
+  },
+  {
+    key: "tr2",
+    company: "t1",
+    project: "p11",
+    rep: "turki",
+    raisedBy: "rawan",
+    selfIssued: true,
+    status: "issued",
+    createdBack: 6,
+    issuedBack: 6,
+    smacNumber: "4571",
+    items: [
+      { colourCode: "7016", supplier: "K", fireRating: "B1", className: "A", thickness: "4.0", qty: 36, width: "1.24", length: "5.8", pricePerSqm: "107.00" },
+    ],
+  },
 ];
 
 // ---- dispatches ---------------------------------------------------------------
@@ -1666,6 +1786,8 @@ export type DispatchSeed = {
   /** A direct dispatch's customer; one against a quotation takes the paper's. */
   company?: string;
   rep: RepKey;
+  /** Who pressed the button, where that is not `rep` — as on a quotation (SPEC §3 P13). */
+  raisedBy?: RepKey;
   /**
    * Who it counts for (D148). Absent means the rep who raised it, which is the
    * answer for every job one man works; naming two people splits the metres
@@ -1902,6 +2024,25 @@ export const DISPATCHES: DispatchSeed[] = [
     smacDispatchNumber: "8886",
     approvedOnDayOfMonth: 7,
     createdBack: 4,
+    items: [{ item: 0, qty: 30 }],
+  },
+  /*
+   * A load the coordinator raised for Faisal against the paper she raised for
+   * him (SPEC §3 P13): waiting on her own desk like any other, counted for him,
+   * with her name as the raiser. Not raised today, so the desk's "arrived today"
+   * says what it said before.
+   */
+  {
+    key: "fd1",
+    quotation: "fr2",
+    rep: "faisal",
+    raisedBy: "rawan",
+    status: "submitted",
+    shipmentMethod: "ct",
+    destination: "الخرج — المحطة الثالثة",
+    paymentTerms: "bankTransfer",
+    paymentDetail: "fullAmount",
+    createdBack: 2,
     items: [{ item: 0, qty: 30 }],
   },
 ];

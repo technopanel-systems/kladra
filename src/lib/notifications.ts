@@ -16,12 +16,18 @@ import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { companies, dispatches, notifications, quotations, users } from "@/db/schema";
 import type { NotificationSubjectType } from "@/db/schema";
-import type { NotificationKind } from "@/lib/notify";
+import { isRaisedForKind, type NotificationKind, type RaisedForKind } from "@/lib/notify";
 import { personName } from "@/lib/people";
 
 export type NotificationRow = {
   id: string;
   kind: NotificationKind;
+  /**
+   * The paper was raised for this reader by somebody else (SPEC §3 P13): the
+   * kind whose `notifications.raisedFor.<kind>` sentence says so, or null for
+   * every other notice.
+   */
+  raisedFor: RaisedForKind | null;
   params: Record<string, string | number>;
   link: string;
   read: boolean;
@@ -76,9 +82,13 @@ export async function listNotifications(userId: string, limit = 50): Promise<Not
     // The customer in the sentence, from the notice's own subject (D110): a
     // row written last year names him too, and a renamed company reads right.
     params.company = customers.get(`${row.subjectType}:${row.subjectId}`) ?? "";
+    const kind = row.kind as NotificationKind;
+    const raisedFor = params.raisedFor === 1 && isRaisedForKind(kind) ? kind : null;
+    delete params.raisedFor;
     return {
       id: row.id,
-      kind: row.kind as NotificationKind,
+      kind,
+      raisedFor,
       params,
       link: row.link,
       read: row.readAt !== null,

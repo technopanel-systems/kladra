@@ -8,12 +8,15 @@ import {
   holdsFloor,
   LEAD_ROLES,
   issuesOwnQuotations,
+  mayBeRaisedFor,
   mayHandOver,
   mayOpen,
   mayQuote,
   mayShare,
   mayWrite,
   ownsCompanies,
+  RAISED_FOR_ROLES,
+  raisesForOthers,
   REPORTING_ROLES,
   seesAllRoles,
   SELLING_ROLES,
@@ -196,6 +199,23 @@ test("the role lists say exactly what the rules say", () => {
       addsCompanies(role),
     );
     expect(LEAD_ROLES.includes(role), `LEAD_ROLES disagrees about ${role}`).toBe(filesLeads(role));
+    expect(RAISED_FOR_ROLES.includes(role), `RAISED_FOR_ROLES disagrees about ${role}`).toBe(
+      mayBeRaisedFor(role),
+    );
+  }
+});
+
+/**
+ * Who raises paper for somebody else, and for whom (SPEC §3 P13): the
+ * coordinator, for a rep or marketing — never the manager, who sits on no
+ * target, and never herself, whose own paper is Internal Sales.
+ */
+test("only the coordinator raises for others, and only for a rep or marketing", () => {
+  for (const role of ROLES) {
+    expect(raisesForOthers(role), `${role} raising for others`).toBe(role === "coordinator");
+    expect(mayBeRaisedFor(role), `raising for a ${role}`).toBe(
+      role === "rep" || role === "marketing",
+    );
   }
 });
 

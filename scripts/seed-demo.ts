@@ -1006,6 +1006,8 @@ async function seedQuotations(
 
       const created = instant(back(q.createdBack), 10, 20);
       const him = must(userIds, q.rep, "user");
+      // Who pressed the button: the rep, or the coordinator on his behalf (SPEC §3 P13).
+      const raiser = q.raisedBy ? must(userIds, q.raisedBy, "user") : him;
 
       // Every time it came back, and what the row itself is left holding: the
       // reason of the last return, and only while it is still sitting with him.
@@ -1018,7 +1020,7 @@ async function seedQuotations(
       }
 
       const trail: TrailEvent[] = [
-        { name: q.revisionOf ? "revise" : "request", at: created, by: him },
+        { name: q.revisionOf ? "revise" : "request", at: created, by: raiser },
       ];
       for (const r of returns) {
         trail.push({ name: "sendBack", at: instant(back(r.back), 14, 10), by: her, reason: r.reason });
@@ -1058,7 +1060,7 @@ async function seedQuotations(
               : (contactIds.get(q.company) ?? [])[q.contact] ?? null,
           warehouseId: must(lk.warehouseByName, q.warehouse ?? "Riyadh", "warehouse"),
           repId: him,
-          raisedById: him,
+          raisedById: raiser,
           status: q.status,
           notes: q.notes ?? null,
           smacNumber: q.smacNumber ?? null,
@@ -1353,7 +1355,8 @@ async function seedDispatches(
             : must(companyIds, d.company ?? "", "company"),
           projectId: quotationId ? paperProject(quotationId) : null,
           repId: must(userIds, d.rep, "user"),
-          raisedById: must(userIds, d.rep, "user"),
+          // The coordinator where she raised it on his behalf (SPEC §3 P13).
+          raisedById: must(userIds, d.raisedBy ?? d.rep, "user"),
           // What the load changed from its paper, recorded; null on a direct one.
           quotationDifference: difference,
           status: d.status,
@@ -1388,7 +1391,7 @@ async function seedDispatches(
       const desk = must(userIds, "rawan", "user");
       await tx.insert(auditLog).values([
         {
-          userId: must(userIds, d.rep, "user"),
+          userId: must(userIds, d.raisedBy ?? d.rep, "user"),
           action: "dispatch.request",
           recordType: "dispatch" as const,
           recordId: row.id,

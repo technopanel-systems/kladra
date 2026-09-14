@@ -90,7 +90,11 @@ export function NotificationsList({
               />
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-sm">
-                  {t(`notifications.${row.kind}`, row.params)}
+                  {/* Raised for him by somebody else (SPEC §3 P13): the same
+                      kind, and the sentence that says who raised it. */}
+                  {row.raisedFor
+                    ? t(`notifications.raisedFor.${row.raisedFor}`, row.params)
+                    : t(`notifications.${row.kind}`, row.params)}
                   {row.read ? null : (
                     <span className="sr-only"> · {t("notifications.unreadMark")}</span>
                   )}

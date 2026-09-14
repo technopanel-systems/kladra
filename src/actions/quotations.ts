@@ -44,6 +44,15 @@ import { quotationLabel } from "@/lib/labels";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
 import { issuesOwnQuotations, SELLING_ROLES } from "@/lib/floor";
+import {
+  notTheirs,
+  raisedForOptions,
+  raisedForPeople,
+  raisesOnBehalf,
+  resolveRaiser,
+} from "@/lib/on-behalf";
+import { RAISED_FOR_NOBODY, type QuotationOnBehalf } from "@/lib/on-behalf-option";
+import { quotationTargets } from "@/lib/pickers";
 import { activeServices, seesEveryQuotation, type QuotationStatus } from "@/lib/quotations";
 import { withTheRep } from "@/lib/with-the-rep";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
@@ -419,6 +428,34 @@ export async function quotationServiceChoicesAction(): Promise<
 }
 
 /**
+ * What the "For" field at the top of the quotation dialog offers (SPEC §3 P13),
+ * or null for everybody who is not the coordinator — who is never shown it.
+ *
+ * Every person she may raise for, and for each of them, and for her own paper
+ * under `RAISED_FOR_NOBODY`, what that person may raise on: `quotationTargets`
+ * asked with his id, which is the list his own Quotations screen draws. One
+ * reader, two callers, so the dialog cannot offer her a job for Faisal that
+ * Faisal's own dialog would not offer him, and the action asks the same
+ * `mayRaiseFor` of him when she saves.
+ */
+export async function quotationOnBehalfAction(): Promise<ActionResult<QuotationOnBehalf | null>> {
+  return guard(async (actor) => {
+    if (!raisesOnBehalf(actor)) return { ok: true, data: null };
+    const people = await raisedForPeople();
+    const answers = [
+      { key: RAISED_FOR_NOBODY, user: actor },
+      ...people.map((person) => ({ key: person.id, user: person })),
+    ];
+    const targets = Object.fromEntries(
+      await Promise.all(
+        answers.map(async (answer) => [answer.key, await quotationTargets(answer.user)] as const),
+      ),
+    );
+    return { ok: true, data: { people: await raisedForOptions(people), targets } };
+  });
+}
+
+/**
  * A rep asks for a quotation, from inside a company or a project (§3).
  *
  * Rep only. A manager or an admin pressing this would become the asker on
@@ -507,6 +544,17 @@ export async function requestQuotationAction(
     if (isRefused(servicesIn)) return listRefusal(tq("needsServices"), servicesIn);
     if ("unavailable" in servicesIn) return unavailableRefusal(tq("serviceUnavailable"), servicesIn.unavailable);
 
+    /*
+     * Who this paper is raised AS (SPEC §3 P13). For a rep, himself, and a form
+     * that names anybody else is refused rather than written as his. For the
+     * coordinator, whoever she chose under "For", or herself under Internal
+     * Sales — and from here down every gate is asked of THAT person, exactly as
+     * if he had opened the dialog: his customer, his job, his credit pool.
+     */
+    const raiser = await resolveRaiser(actor, field(formData, "repId"));
+    if (!raiser.ok) return raiser;
+    const person = raiser.person;
+
     const [company] = await db
       .select({ repId: companies.repId, archivedAt: companies.archivedAt })
       .from(companies)
@@ -539,7 +587,7 @@ export async function requestQuotationAction(
         companyId: projects.companyId,
         lostAt: projects.lostAt,
         repId: projects.repId,
-        onProject: onProjectSql(actor, sql`projects.id`).mapWith(Boolean),
+        onProject: onProjectSql(person, sql`projects.id`).mapWith(Boolean),
       })
       .from(projects)
       .where(eq(projects.id, projectId))
@@ -552,8 +600,10 @@ export async function requestQuotationAction(
     // ways to be allowed and only one of them is about the company: his own
     // customer, or a job he has been put on (D147). Both are refused with the
     // same silence a rep gets for somebody else's id.
-    if (!mayRaiseFor(actor, company.repId, project.repId, project.onProject)) {
-      throw new NotAllowed();
+    // Raised as somebody who does not work this customer or this job: said, at
+    // the field she chose him in; a rep's own refusal stays a silence.
+    if (!mayRaiseFor(person, company.repId, project.repId, project.onProject)) {
+      return notTheirs(actor, raiser);
     }
     // A lost project is finished work (S20): nothing new hangs off it.
     if (project.lostAt) return { ok: false, error: t("alreadyLost") };
@@ -570,10 +620,14 @@ export async function requestQuotationAction(
     // Whose paper this is (D148). Resolved from the job rather than trusted
     // from the form, and a name that is not on the job is a refusal rather than
     // a silent fallback to the man who typed it.
-    const credit = await resolveCredit(projectId, actor.id, field(formData, "credit"));
+    // His pool when she raises it for him: the metres are his to share, not hers.
+    const credit = await resolveCredit(projectId, person.id, field(formData, "credit"));
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
-    // Hers goes out as she raises it; everybody else's joins the queue.
+    // Hers goes out as she raises it; everybody else's joins the queue. A paper
+    // she raises FOR a rep goes out the same way: a request of hers would wait
+    // on the desk she is sitting at (D156), so she issues it in the same act and
+    // the row carries the flag that says one person did both.
     const self = selfIssue(actor, formData);
     if (self.kind === "missing") {
       return { ok: false, error: tc("required"), fieldErrors: { smacNumber: tc("required") } };
@@ -588,8 +642,9 @@ export async function requestQuotationAction(
           projectId,
           contactId: addressing.contactId,
           warehouseId: addressing.warehouseId,
-          repId: actor.id,
-          // Nobody raises on anybody's behalf yet (P13-S6 will); the two agree.
+          // Whom it counts for, and who pressed the button (SPEC §3 P13): the
+          // same person on everything a rep raises himself.
+          repId: person.id,
           raisedById: actor.id,
           notes: input.notes ?? null,
           ...issuedNow(self),
@@ -609,7 +664,14 @@ export async function requestQuotationAction(
         action: quotationEvent("request"),
         recordType: "quotation",
         recordId: row.id,
-        details: { companyId: input.companyId, lines: items.length, services: servicesIn.length },
+        details: {
+          companyId: input.companyId,
+          lines: items.length,
+          services: servicesIn.length,
+          // Both people, on the row that says what happened (SPEC §3 P13).
+          repId: person.id,
+          raisedById: actor.id,
+        },
       });
 
       const label = quotationLabel(row.number, 1);
@@ -637,7 +699,24 @@ export async function requestQuotationAction(
         }
       }
 
-      await notifyLive(tx, await liveAudienceForCompany(input.companyId, actor.id, ["coordinator"]), {
+      // Raised for him, so he is told it exists and that she raised it — in the
+      // kind his bell already clears (D79): an issued one leaves when the
+      // customer answers, a request when the desk does. `repId` in the params is
+      // the person in the sentence, which here is her.
+      // Only she raises for somebody, and hers is always issued as she raises it
+      // (SPEC §4), so the notice he gets is the issued one, with its number.
+      if (raiser.onBehalf && self.kind === "yes") {
+        await createNotification(tx, {
+          userId: person.id,
+          kind: "quotationIssued",
+          params: { label, smacNumber: self.smacNumber, repId: actor.id, raisedFor: 1 },
+          link: `/quotations?open=${row.id}`,
+          subject: { type: "quotation", id: row.id },
+        });
+      }
+
+      const audience = await liveAudienceForCompany(input.companyId, actor.id, ["coordinator"]);
+      await notifyLive(tx, [...new Set([...audience, person.id])], {
         type: "quotation",
         id: row.id,
         number: label,

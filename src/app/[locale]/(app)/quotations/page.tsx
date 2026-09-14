@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { issuesOwnQuotations } from "@/lib/floor";
+import { raisesOnBehalf } from "@/lib/on-behalf";
 import { quotationTargets } from "@/lib/pickers";
 import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { viewFor } from "@/lib/view";
@@ -89,7 +90,9 @@ export default async function QuotationsPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.quotations")}</h1>
-        {targets.projects.length > 0 ? (
+        {/* Hers whenever there is anybody to raise one for, even with no job of
+            her own: the dialog's "For" field says whose (SPEC §3 P13). */}
+        {targets.projects.length > 0 || raisesOnBehalf(user) ? (
           <RequestQuotationDialog
             targets={targets}
             issuesDirectly={direct}

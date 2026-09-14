@@ -39,6 +39,7 @@ import {
   listWarehouses,
 } from "@/lib/lookups";
 import { STANDARD_THICKNESS_MM } from "@/lib/sheet";
+import { readerFor } from "@/lib/on-behalf";
 import { getProject } from "@/lib/projects";
 import { getQuotation } from "@/lib/quotations";
 import type { ActionResult } from "@/lib/types";
@@ -306,11 +307,17 @@ export async function contactChoicesAction(input: unknown): Promise<ActionResult
     return { ok: false, error: t("somethingWrong") };
   }
 
-  const parsed = z.object({ companyId: z.uuid() }).safeParse(input ?? {});
+  const parsed = z
+    .object({ companyId: z.uuid(), repId: z.string().optional() })
+    .safeParse(input ?? {});
   if (!parsed.success) return { ok: false, error: t("invalid") };
 
   try {
-    const company = await getCompany(actor, parsed.data.companyId);
+    // Through the eyes of the person the paper is raised for, when the
+    // coordinator raises it for him (SPEC §3 P13): his customer's people, which
+    // her own reading of the floor does not reach.
+    const reader = await readerFor(actor, parsed.data.repId);
+    const company = await getCompany(reader, parsed.data.companyId);
     if (!company) return { ok: false, error: t("somethingWrong") };
     const people = company.contacts.map((row) => ({ value: row.id, label: row.name }));
     // The one there is, when there is only one; with several it opens on nobody,
@@ -356,28 +363,38 @@ export async function creditChoicesAction(
   }
 
   const parsed = z
-    .object({ quotationId: z.uuid().optional(), projectId: z.uuid().optional() })
+    .object({
+      quotationId: z.uuid().optional(),
+      projectId: z.uuid().optional(),
+      repId: z.string().optional(),
+    })
     .safeParse(input ?? {});
   if (!parsed.success) return { ok: false, error: t("invalid") };
 
   try {
+    // Whose question this is: the person the paper is raised for, when the
+    // coordinator raises it for him (SPEC §3 P13) — his job, his sharers, and
+    // his name as the answer the field opens on, exactly as his own dialog
+    // would ask it. `resolveCredit` asks the same pool of the same person when
+    // she saves.
+    const reader = await readerFor(actor, parsed.data.repId);
     // Authorized the same way the record itself is read, never by a query of
     // its own: a rep who may not open the quotation may not learn who works
     // the job behind it either.
     let projectId = parsed.data.projectId ?? null;
     if (parsed.data.quotationId) {
-      const quotation = await getQuotation(actor, parsed.data.quotationId);
+      const quotation = await getQuotation(reader, parsed.data.quotationId);
       if (!quotation) return { ok: false, error: t("somethingWrong") };
       projectId = quotation.projectId;
     } else if (projectId) {
-      const project = await getProject(actor, projectId);
+      const project = await getProject(reader, projectId);
       if (!project) return { ok: false, error: t("somethingWrong") };
     }
-    const people = await creditPoolNamed(projectId, actor.id);
+    const people = await creditPoolNamed(projectId, reader.id);
     // One name is not a question. The founder's own line: where the project
     // has one rep the dialog asks nothing at all.
-    if (people.length < 2) return { ok: true, data: { people: [], mine: actor.id } };
-    return { ok: true, data: { people, mine: actor.id } };
+    if (people.length < 2) return { ok: true, data: { people: [], mine: reader.id } };
+    return { ok: true, data: { people, mine: reader.id } };
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     return { ok: false, error: t("somethingWrong") };

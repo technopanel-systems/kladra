@@ -221,6 +221,52 @@ test("her desk is in the order she works it: the longest wait is the first row",
   await expect(section.getByRole("row").nth(1).getByText(label, { exact: true })).toBeVisible(COLD);
 });
 
+/**
+ * SPEC §3 P13: "the coordinator's desk shows pending quotations and pending
+ * dispatches side by side, not stacked" — where the screen is wide enough, which
+ * is `lg` up; a phone has one column and reads them one above the other.
+ *
+ * Measured by their boxes rather than by a class: two sections that start on
+ * the same line and at two different inline starts ARE two columns, whatever
+ * the stylesheet says, and in the page's own reading order — quotations first.
+ */
+test("her two lists sit side by side at 1366 and one above the other at 375", async ({
+  page,
+  locale,
+  t,
+}) => {
+  await page.setViewportSize({ width: 1366, height: 900 });
+  await login(page, locale, "rawan");
+  await expect(page).toHaveURL(new RegExp(`/${locale}/queue`), COLD);
+
+  const quotations = listSection(page, t("common.quotations"));
+  const dispatches = listSection(page, t("common.dispatches"));
+  await expect(quotations).toBeVisible(COLD);
+  await expect(dispatches).toBeVisible();
+
+  await test.step("at 1366 the two halves start on one line, in two columns", async () => {
+    const q = (await quotations.boundingBox())!;
+    const d = (await dispatches.boundingBox())!;
+    expect(Math.round(q.y), "the halves do not start on one line").toBe(Math.round(d.y));
+    expect(Math.abs(q.x - d.x), "the halves share an inline start").toBeGreaterThan(q.width / 2);
+    // Quotations at the inline start: the left in English, the right in Arabic.
+    if (locale === "ar") expect(q.x, "quotations are not first in Arabic").toBeGreaterThan(d.x);
+    else expect(q.x, "quotations are not first in English").toBeLessThan(d.x);
+  });
+
+  await test.step("at 375 they stack, quotations above dispatches", async () => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    // Laid out again after the resize, so the boxes are read until they settle.
+    await expect
+      .poll(async () => {
+        const q = (await quotations.boundingBox())!;
+        const d = (await dispatches.boundingBox())!;
+        return d.y >= q.y + q.height && Math.round(q.x) === Math.round(d.x);
+      }, COLD)
+      .toBe(true);
+  });
+});
+
 test("one search box over both her lists, and it filters both", async ({ page, locale, t }) => {
   const raised = await query<{ company: string }>(
     `select c.name as company

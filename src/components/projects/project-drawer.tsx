@@ -14,6 +14,7 @@ import { floorHolderOptions } from "@/lib/pickers";
 import { getProject } from "@/lib/projects";
 import { projectSharers } from "@/lib/shares";
 import { mayRaiseFor, mayWorkProject } from "@/lib/visibility";
+import { raisesOnBehalf } from "@/lib/on-behalf";
 import { projectStanding } from "@/lib/standing";
 import { listQuotationsForProject } from "@/lib/quotations";
 
@@ -112,7 +113,11 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   // seller's sentence for everybody. Two ways in (D147): the customer is his,
   // or the job is one he was put on —
   // the same sentence `requestQuotationAction` guards itself with.
-  const mayRaise = mayRaiseFor(user, project.company.repId, project.repId, project.onProject);
+  // And the coordinator, for whoever works it (SPEC §3 P13): the dialog's "For"
+  // field offers the people who may raise on this job.
+  const mayRaise =
+    mayRaiseFor(user, project.company.repId, project.repId, project.onProject) ||
+    raisesOnBehalf(user);
   // She does not ask the desk for a price; she IS the desk (SPEC §3), so the
   // same door says Issue and the form behind it asks for the SMAC number.
   const direct = issuesOwnQuotations(user.role);

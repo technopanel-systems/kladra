@@ -14,6 +14,7 @@ import {
 } from "@/lib/dispatches";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { dispatchTargets } from "@/lib/pickers";
+import { raisesOnBehalf } from "@/lib/on-behalf";
 import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { viewFor } from "@/lib/view";
 
@@ -72,14 +73,17 @@ export default async function DispatchesPage({
 
   // Only when it came back full (D80).
   const total = rows.length === LIST_LIMIT ? await countDispatches(narrowing) : rows.length;
+  const forOthers = raisesOnBehalf(user);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.dispatches")}</h1>
-        {targets.quotations.length > 0 || direct.length > 0 ? (
+        {/* Hers whenever there is anybody to raise one for (SPEC §3 P13). */}
+        {targets.quotations.length > 0 || direct.length > 0 || forOthers ? (
           <RequestDispatchDialog
             targets={targets}
+            raisesForOthers={forOthers}
             trigger={
               <Button variant="brand">
                 {t("dispatches.request")}

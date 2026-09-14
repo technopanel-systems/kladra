@@ -116,9 +116,13 @@ below by number.
             - [x] G3 · S10 **Targets** (13.2): the current month only, editable where the admin sets it, history
                   read-only beneath. **Done**: no month to move to; the action refuses another month; earlier months
                   in a read-only table in `StickyScroll` (D180). Nothing else navigated months.
-            - [ ] G4 · S6 **The coordinator** (13.6): pending quotations and dispatches side by side from `lg` up; a
+            - [x] G4 · S6 **The coordinator** (13.6): pending quotations and dispatches side by side from `lg` up; a
                   rep picker at the top of both request dialogs for her, counting toward him, hers under Internal
                   Sales when no rep is named; reliance per rep on the manager's team tab.
+                  **Done**: two columns from `lg`; "For" first in both dialogs for her, the chosen person's own
+                  readers below it and the action asking again, `rep_id` him and `raised_by_id` her, "Raised by" on
+                  drawers and rows, his bell told (D190); `src/lib/reliance.ts` with its twin, the card on the
+                  manager's metrics tab (D191) — wired once S9 has rebuilt that tab.
             - [x] G4 · S8 **Dashboards, the work tabs** (13.2): the target card at the top of the first tab on the day
                   and team screens, out of Metrics; today's cards in the auto-fit grid; the team tab rebuilt in the
                   language — avatars, rings for leave and stuck, a row that opens the person.

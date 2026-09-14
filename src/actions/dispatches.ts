@@ -47,6 +47,7 @@ import {
   dispatchServices,
   dispatches,
   fireRatings,
+  projectShares,
   projects,
   quotations,
   services,
@@ -74,6 +75,15 @@ import {
 import { dispatchable, getQuotation, type QuotationStatus } from "@/lib/quotations";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { SELLING_ROLES } from "@/lib/floor";
+import {
+  notTheirs,
+  raisedForOptions,
+  raisedForPeople,
+  raisesOnBehalf,
+  resolveRaiser,
+} from "@/lib/on-behalf";
+import { RAISED_FOR_NOBODY, type DispatchOnBehalf } from "@/lib/on-behalf-option";
+import { dispatchTargets } from "@/lib/pickers";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { firstRefusedBox, type LineList } from "@/lib/line-refusal";
 import { round2 } from "@/lib/money";
@@ -732,6 +742,18 @@ export async function requestDispatchAction(
     if (!(await methodOffered(parsed.data.shipmentMethodId))) return { ok: false, error: tc("invalid") };
 
     /*
+     * Who this load is raised AS (SPEC §3 P13) — the question the quotation's
+     * request asks first, asked the same way (`resolveRaiser`): a rep is himself
+     * and a form naming anybody else is refused; the coordinator is whoever she
+     * chose under "For", or herself under Internal Sales. Every gate below is
+     * asked of that person, so a load she raises for Faisal is allowed exactly
+     * where Faisal's own would be.
+     */
+    const raiser = await resolveRaiser(actor, field(formData, "repId"));
+    if (!raiser.ok) return raiser;
+    const person = raiser.person;
+
+    /*
      * Where it comes from: the quotation named, which must be this customer's —
      * a form that names another customer's paper is refused rather than
      * believed — or nothing, which is a direct load.
@@ -755,7 +777,7 @@ export async function requestDispatchAction(
           companyRepId: companies.repId,
           companyArchived: companies.archivedAt,
           projectRepId: projects.repId,
-          onProject: onProjectSql(actor, sql`quotations.project_id`).mapWith(Boolean),
+          onProject: onProjectSql(person, sql`quotations.project_id`).mapWith(Boolean),
         })
         .from(quotations)
         .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -765,8 +787,8 @@ export async function requestDispatchAction(
       if (!quotation || quotation.companyId !== companyId) {
         return { ok: false, error: td("quotationNotFound") };
       }
-      if (!mayRaiseFor(actor, quotation.companyRepId, quotation.projectRepId, quotation.onProject))
-        throw new NotAllowed();
+      if (!mayRaiseFor(person, quotation.companyRepId, quotation.projectRepId, quotation.onProject))
+        return notTheirs(actor, raiser);
       if (quotation.companyArchived) return { ok: false, error: td("quotationNotFound") };
       // S38: the paper has to exist before goods move against it. A request that
       // has been sent back or refused is not a quotation yet.
@@ -786,7 +808,7 @@ export async function requestDispatchAction(
         .limit(1);
       if (!company) return { ok: false, error: te("companyNotFound") };
       // No job under it, so the customer alone decides who may load it (SPEC §3, P13).
-      if (!mayRaiseFor(actor, company.repId, null)) throw new NotAllowed();
+      if (!mayRaiseFor(person, company.repId, null)) return notTheirs(actor, raiser);
       if (company.archivedAt) return { ok: false, error: te("companyArchived") };
     }
 
@@ -794,8 +816,9 @@ export async function requestDispatchAction(
     // from the form: the answer arrived as a name the dialog offered a minute
     // ago, and a share is a permission that can be taken away in a minute. A
     // name that is not on the job now is a refusal, not a silent fallback. A
-    // direct load has no job, so it is his.
-    const credit = await resolveCredit(paper?.projectId ?? null, actor.id, field(formData, "credit"));
+    // direct load has no job, so it is his — the person it is raised for, whose
+    // month an approval moves, never the coordinator who pressed the button.
+    const credit = await resolveCredit(paper?.projectId ?? null, person.id, field(formData, "credit"));
     if (!credit) return { ok: false, error: tc("credit.notOnProject") };
 
     const outcome = await db.transaction(async (tx): Promise<{ failure: RaiseFailure } | { id: string }> => {
@@ -828,7 +851,8 @@ export async function requestDispatchAction(
           companyId,
           projectId: paper?.projectId ?? null,
           quotationId: paper?.id ?? null,
-          repId: actor.id,
+          // Whom it counts for, and who pressed the button (SPEC §3 P13).
+          repId: person.id,
           raisedById: actor.id,
           // What the rep changed from the paper, recorded for the desk and for
           // later (SPEC §3, P13); null exactly when there is no paper.
@@ -897,10 +921,17 @@ export async function requestDispatchAction(
           services: load.services.length,
           // "Differs from Q-12" on the trail, from the moment it was raised.
           ...differsDetail(paper?.label ?? null, load.difference),
+          // Both people, on the row that says what happened (SPEC §3 P13).
+          repId: person.id,
+          raisedById: actor.id,
         },
       });
 
       for (const userId of await coordinators()) {
+        // Not to the coordinator who raised it: it is on her desk because she
+        // put it there, and "Rawan requested D-24" in Rawan's own bell is a
+        // notice about nothing (SPEC §3 P13 makes that the ordinary case).
+        if (userId === actor.id) continue;
         await createNotification(tx, {
           userId,
           kind: "dispatchRequested",
@@ -910,7 +941,21 @@ export async function requestDispatchAction(
         });
       }
 
-      await notifyLive(tx, await liveAudienceForCompany(companyId, actor.id, ["coordinator"]), {
+      // Raised for him: he is told it is on the desk and that she put it there,
+      // in the kind the desk's answer clears (D79) — approved or refused, the
+      // next notice he gets is that answer.
+      if (raiser.onBehalf) {
+        await createNotification(tx, {
+          userId: person.id,
+          kind: "dispatchRequested",
+          params: { label, repId: actor.id, raisedFor: 1 },
+          link: `/dispatches?open=${row.id}`,
+          subject: { type: "dispatch", id: row.id },
+        });
+      }
+
+      const audience = await liveAudienceForCompany(companyId, actor.id, ["coordinator"]);
+      await notifyLive(tx, [...new Set([...audience, person.id])], {
         type: "dispatch",
         id: row.id,
         number: label,
@@ -1218,6 +1263,94 @@ export async function directCompaniesAction(): Promise<
     ok: true,
     data: (await directDispatchCompanies(actor)).map((row) => ({ value: row.id, label: row.name })),
   }));
+}
+
+/**
+ * What the "For" field at the top of the dispatch dialog offers (SPEC §3 P13),
+ * or null for everybody who is not the coordinator — who is never shown it.
+ *
+ * For each person she may raise for, and for her own load under
+ * `RAISED_FOR_NOBODY`: the papers he may send against and the customers he may
+ * load direct, read by `dispatchTargets` and `directDispatchCompanies` with his
+ * id — the two readers his own Dispatches screen draws.
+ *
+ * Opened on one quotation's drawer, the paper is fixed and there is nothing to
+ * narrow, so the answers are narrowed instead: whoever `mayRaiseFor` allows on
+ * that paper, asked of each of them with his own share of the job — the gate
+ * `requestDispatchAction` asks when she saves. `suggested` is the paper's own
+ * rep, which is what the field opens on when she may not send it herself.
+ */
+export async function dispatchOnBehalfAction(
+  input: unknown,
+): Promise<ActionResult<DispatchOnBehalf | null>> {
+  return guard(async (actor) => {
+    if (!raisesOnBehalf(actor)) return { ok: true, data: null };
+    const tc = await getTranslations("common");
+    const parsed = z.object({ quotationId: z.uuid().optional() }).safeParse(input ?? {});
+    if (!parsed.success) return { ok: false, error: tc("invalid") };
+
+    const people = await raisedForPeople();
+    const answers = [
+      { key: RAISED_FOR_NOBODY, user: actor },
+      ...people.map((person) => ({ key: person.id, user: person })),
+    ];
+    const targets = Object.fromEntries(
+      await Promise.all(
+        answers.map(async (answer) => {
+          const [papers, direct] = await Promise.all([
+            dispatchTargets(answer.user),
+            directDispatchCompanies(answer.user),
+          ]);
+          return [
+            answer.key,
+            { ...papers, direct: direct.map((row) => ({ value: row.id, label: row.name })) },
+          ] as const;
+        }),
+      ),
+    );
+
+    let eligible: string[] | null = null;
+    let suggested: string | null = null;
+    if (parsed.data.quotationId) {
+      const [paper] = await db
+        .select({
+          repId: quotations.repId,
+          companyRepId: companies.repId,
+          projectRepId: projects.repId,
+          projectId: quotations.projectId,
+        })
+        .from(quotations)
+        .innerJoin(companies, eq(companies.id, quotations.companyId))
+        .innerJoin(projects, eq(projects.id, quotations.projectId))
+        .where(eq(quotations.id, parsed.data.quotationId))
+        .limit(1);
+      if (!paper) return { ok: false, error: tc("somethingWrong") };
+      const sharers = new Set(
+        (
+          await db
+            .select({ userId: projectShares.userId })
+            .from(projectShares)
+            .where(eq(projectShares.projectId, paper.projectId))
+        ).map((row) => row.userId),
+      );
+      eligible = answers
+        .filter((answer) =>
+          mayRaiseFor(answer.user, paper.companyRepId, paper.projectRepId, sharers.has(answer.user.id)),
+        )
+        .map((answer) => answer.key);
+      suggested = paper.repId;
+    }
+
+    return {
+      ok: true,
+      data: {
+        people: await raisedForOptions(people),
+        targets,
+        eligible,
+        suggested,
+      },
+    };
+  });
 }
 
 

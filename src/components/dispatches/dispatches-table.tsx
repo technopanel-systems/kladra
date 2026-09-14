@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
 import { Empty } from "@/components/ui-ext/empty";
 import { ListSearch } from "@/components/ui-ext/list-search";
+import { RaisedBy } from "@/components/ui-ext/raised-by";
 import { Prose } from "@/components/ui-ext/prose";
 import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
 import type { Waited } from "@/lib/waiting";
@@ -114,6 +115,68 @@ function DiffersChip() {
     <span data-slot="differs-chip">
       <StateBadge tone="wait">{t("dispatches.differsChip")}</StateBadge>
     </span>
+  );
+}
+
+/**
+ * The job a load is for, and the word for a load with none — never an empty
+ * cell (SPEC §3, P13). The project was marked lost after this was raised
+ * (D138): a dead project is not work to price, and nothing on her desk said so.
+ */
+function ProjectOf({ row }: { row: DispatchRow }) {
+  const t = useTranslations();
+  return (
+    <>
+      {row.projectName ?? t("dispatches.noProject")}
+      {row.projectLostOn ? (
+        <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
+          {t("common.projectLost")}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The quotation a load is against, named the way the quotations list leads
+ * (P12-11): SMAC's number, with Kladra's under it where there are two. A
+ * cross-reference is looked up, so it says the number she will search for.
+ * Where there is none, the word for a direct load (SPEC §3, P13).
+ *
+ * `desk` is the coordinator's queue, where this sits under the load's own number
+ * in a smaller face rather than in a column of its own, and the "differs" chip
+ * goes to the customer's cell, which is the one with the width to wrap it.
+ */
+function PaperOf({ row, desk = false }: { row: DispatchRow; desk?: boolean }) {
+  const t = useTranslations();
+  const face = desk ? "block text-xs text-muted-foreground" : "text-sm";
+  return (
+    <>
+      {row.quotationLabel ? (
+        <Ref slot="row-quotation" className={face}>
+          {row.smacNumber ?? row.quotationLabel}
+        </Ref>
+      ) : (
+        <span data-slot="row-direct" className={face}>
+          {t("dispatches.direct")}
+        </span>
+      )}
+      {row.smacNumber ? (
+        <Ref slot="row-quotation-second" className="block text-xs text-muted-foreground">
+          {row.quotationLabel}
+        </Ref>
+      ) : null}
+      {desk && row.superseded ? (
+        <span data-slot="revised-since" className={cn("block text-xs", TONE_TEXT.wait)}>
+          {t("dispatches.revisedSince")}
+        </span>
+      ) : null}
+      {row.differs && !desk ? (
+        <span className="mt-1 block">
+          <DiffersChip />
+        </span>
+      ) : null}
+    </>
   );
 }
 
@@ -265,8 +328,10 @@ export function DispatchesTable({
           <Board columns={columns} />
         ) : (
           <>
-            {/* 375: cards. Six columns on a phone is a horizontal scroll. */}
-            <div className="flex flex-col gap-2 md:hidden">
+            {/* 375: cards. Six columns on a phone is a horizontal scroll. And on
+                her desk between `lg` and `xl`, where the two halves sit side by
+                side and half of that screen is a phone's width (SPEC §3 P13). */}
+            <div className={cn("flex flex-col gap-2 md:hidden", waiting && "lg:flex xl:hidden")}>
               {rows.map((row) => (
                 <Link
                   key={row.id}
@@ -296,6 +361,7 @@ export function DispatchesTable({
                       {row.repName}
                     </span>
                   ) : null}
+                  <RaisedBy name={row.raisedByName} className="truncate" />
                   {/* The paper was revised after this was raised: approval would
                       refuse it (D85), so the row says it first (P11E). */}
                   {waiting && row.superseded ? (
@@ -327,14 +393,17 @@ export function DispatchesTable({
               ))}
             </div>
 
-            <div className="card-face hidden md:block">
+            <div className={cn("card-face hidden md:block", waiting && "lg:hidden xl:block")}>
               <Table label={t("common.dispatches")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="p-3">{t("common.dispatch")}</TableHead>
                     <TableHead className="p-3">{t("common.company")}</TableHead>
-                    <TableHead className="p-3">{t("common.project")}</TableHead>
-                    <TableHead className="p-3">{t("common.quotation")}</TableHead>
+                    {/* On her desk the job folds under its customer and the paper
+                        under the load's own number: half a screen wide from `lg`
+                        (SPEC §3 P13), six columns scrolled the wait off its edge. */}
+                    {waiting ? null : <TableHead className="p-3">{t("common.project")}</TableHead>}
+                    {waiting ? null : <TableHead className="p-3">{t("common.quotation")}</TableHead>}
                     <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
                     <TableHead className="p-3">
                       {waiting ? t("queue.waited") : t("common.status")}
@@ -375,9 +444,15 @@ export function DispatchesTable({
                               {row.label}
                             </Ref>
                           ) : null}
+                          {/* On the desk, the paper under the load's own number:
+                              the half is too narrow for a column of its own. */}
+                          {waiting ? <PaperOf row={row} desk /> : null}
                         </Link>
                       </TableCell>
-                      <TableCell className="p-3">
+                      {/* The one cell on the desk that may wrap: the customer's
+                          name is what the row is FOR, so it is the column that
+                          takes the width rather than gives it up (DESIGN §5). */}
+                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
                         {row.companyName}
                         {waiting ? (
                           <span
@@ -387,64 +462,37 @@ export function DispatchesTable({
                             {row.repName}
                           </span>
                         ) : null}
-                      </TableCell>
-                      <TableCell className="p-3 text-muted-foreground">
-                        {/* A direct load has no job, and the cell says so rather
-                            than standing empty (SPEC §3, P13). */}
-                        {row.projectName ?? t("dispatches.noProject")}
-                        {/* The project was marked lost after this was raised (D138). A dead
-                            project is not work to price, and nothing on her desk said so. */}
-                        {row.projectLostOn ? (
-                          <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
-                            {t("common.projectLost")}
-                          </span>
+                        <RaisedBy name={row.raisedByName} />
+                        {waiting ? (
+                          <>
+                            <span className="block text-xs text-muted-foreground">
+                              <ProjectOf row={row} />
+                            </span>
+                            {row.differs ? (
+                              <span className="mt-1 block">
+                                <DiffersChip />
+                              </span>
+                            ) : null}
+                          </>
                         ) : null}
                       </TableCell>
-                      <TableCell className="p-3">
-                        {/* The quotation this load is against, named the way the
-                            quotations list now leads (P12-11): SMAC's number, with
-                            Kladra's under it where there are two. A cross-reference
-                            is looked up, so it says the number she will search for. */}
-                        {row.quotationLabel ? (
-                          <Ref slot="row-quotation" className="text-sm">
-                            {row.smacNumber ?? row.quotationLabel}
-                          </Ref>
-                        ) : (
-                          // Where a quotation number would be, the word for a
-                          // load with none — never an empty cell (SPEC §3, P13).
-                          <span data-slot="row-direct" className="text-sm">
-                            {t("dispatches.direct")}
-                          </span>
-                        )}
-                        {row.smacNumber ? (
-                          <Ref
-                            slot="row-quotation-second"
-                            className="block text-xs text-muted-foreground"
-                          >
-                            {row.quotationLabel}
-                          </Ref>
-                        ) : null}
-                        {waiting && row.superseded ? (
-                          <span
-                            data-slot="revised-since"
-                            className={cn("block text-xs", TONE_TEXT.wait)}
-                          >
-                            {t("dispatches.revisedSince")}
-                          </span>
-                        ) : null}
-                        {row.differs ? (
-                          <span className="mt-1 block">
-                            <DiffersChip />
-                          </span>
-                        ) : null}
-                      </TableCell>
+                      {waiting ? null : (
+                        <TableCell className="p-3 text-muted-foreground">
+                          <ProjectOf row={row} />
+                        </TableCell>
+                      )}
+                      {waiting ? null : (
+                        <TableCell className="p-3">
+                          <PaperOf row={row} />
+                        </TableCell>
+                      )}
                       <TableCell className="p-3 text-end">
                         <span dir="ltr" className="num">
                           {formatSqm(row.totalSqm)}
                         </span>
                         <SplitNames names={row.creditNames} />
                       </TableCell>
-                      <TableCell className="p-3">
+                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
                         <span className="flex flex-col gap-1">
                           {waiting?.[row.id] ? (
                             <WaitedFor waited={waiting[row.id]} className="font-medium" />
@@ -649,7 +697,12 @@ export function DispatchSheet({
                   <span data-slot="fact-direct">{t("dispatches.direct")}</span>
                 )}
               </Fact>
-              <Fact label={t("common.raisedBy")}>{dispatch.repName}</Fact>
+              {/* "Raised by" on everything a rep raised himself; "For" where the
+                  coordinator raised it on his behalf, with her name on the line
+                  under these facts (SPEC §3 P13). */}
+              <Fact label={t(dispatch.raisedByName ? "common.onBehalf.for" : "common.raisedBy")}>
+                {dispatch.repName}
+              </Fact>
               <Fact label={t("common.date")}>
                 <DayText day={dispatch.createdOn} locale={locale} />
               </Fact>
@@ -659,6 +712,7 @@ export function DispatchSheet({
                 </Fact>
               ) : null}
             </dl>
+            <RaisedBy name={dispatch.raisedByName} place="drawer" />
           </div>
 
           {dispatch.status === "refused" && dispatch.refuseReason ? (

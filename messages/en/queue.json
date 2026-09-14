@@ -10,5 +10,7 @@
   "arrivedToday": "{arrived, plural, =0 {nothing arrived today} one {# arrived today} other {# arrived today}}",
   "waited": "Waiting",
   "clear": "Nothing is waiting on you. The desk is clear.",
+  "noQuotations": "No quotation is waiting to be issued.",
+  "noDispatches": "No dispatch is waiting to be approved.",
   "late": "late"
 }

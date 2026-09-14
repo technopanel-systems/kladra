@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import { Empty } from "@/components/ui-ext/empty";
+import { RaisedBy } from "@/components/ui-ext/raised-by";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { formatDay } from "@/lib/dates";
 import { lossReasonLabel } from "@/lib/loss-reason";
@@ -273,8 +274,10 @@ export function QuotationsTable({
           <Board columns={columns} />
         ) : (
           <>
-            {/* 375: cards. Six columns on a phone is a horizontal scroll. */}
-            <div className="flex flex-col gap-2 md:hidden">
+            {/* 375: cards. Six columns on a phone is a horizontal scroll. And on
+                her desk between `lg` and `xl`, where the two halves sit side by
+                side and half of that screen is a phone's width (SPEC §3 P13). */}
+            <div className={cn("flex flex-col gap-2 md:hidden", waiting && "lg:flex xl:hidden")}>
               {rows.map((row) => (
                 <Link
                   key={row.id}
@@ -305,6 +308,7 @@ export function QuotationsTable({
                       {row.repName}
                     </span>
                   ) : null}
+                  <RaisedBy name={row.raisedByName} className="truncate" />
                   <span className="truncate text-xs text-muted-foreground">
                     {row.projectName}
                   </span>
@@ -325,15 +329,22 @@ export function QuotationsTable({
               ))}
             </div>
 
-            <div className="card-face hidden md:block">
+            <div className={cn("card-face hidden md:block", waiting && "lg:hidden xl:block")}>
               <Table label={t("common.quotations")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead className="p-3">{t("common.quotation")}</TableHead>
                     <TableHead className="p-3">{t("common.company")}</TableHead>
-                    <TableHead className="p-3">{t("common.project")}</TableHead>
+                    {/* On her desk the job folds under its customer and the money
+                        under its metres: the desk is half the screen wide from
+                        `lg` (SPEC §3 P13), and six columns in half a screen
+                        scrolled the wait — the one column she reads the row
+                        for — off its edge. */}
+                    {waiting ? null : <TableHead className="p-3">{t("common.project")}</TableHead>}
                     <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
-                    <TableHead className="p-3 text-end">{t("common.grandTotal")}</TableHead>
+                    {waiting ? null : (
+                      <TableHead className="p-3 text-end">{t("common.grandTotal")}</TableHead>
+                    )}
                     <TableHead className="p-3">
                       {waiting ? t("queue.waited") : t("common.status")}
                     </TableHead>
@@ -376,7 +387,9 @@ export function QuotationsTable({
                           ) : null}
                         </Link>
                       </TableCell>
-                      <TableCell className="p-3">
+                      {/* The one cell on the desk that may wrap: the customer's
+                          name is what the row is FOR (DESIGN §5). */}
+                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
                         {row.companyName}
                         {waiting ? (
                           <span
@@ -386,24 +399,36 @@ export function QuotationsTable({
                             {row.repName}
                           </span>
                         ) : null}
+                        <RaisedBy name={row.raisedByName} />
+                        {waiting ? (
+                          <>
+                            <span className="block text-xs text-muted-foreground">
+                              {row.projectName}
+                            </span>
+                            <ProjectLostMark lostOn={row.projectLostOn} />
+                          </>
+                        ) : null}
                       </TableCell>
-                      <TableCell className="p-3 text-muted-foreground">
-                        {row.projectName}
-                        {/* The project was marked lost after this was raised (D138). A dead
-                            project is not work to price, and nothing on her desk said so. */}
-                        {row.projectLostOn ? (
-                          <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
-                            {t("common.projectLost")}
+                      {waiting ? null : (
+                        <TableCell className="p-3 text-muted-foreground">
+                          {row.projectName}
+                          <ProjectLostMark lostOn={row.projectLostOn} />
+                        </TableCell>
+                      )}
+                      <TableCell className="p-3 text-end">
+                        <Sqm value={row.totalSqm} unit={false} />
+                        {waiting ? (
+                          <span className="block text-xs text-muted-foreground">
+                            <Money value={row.total} currency={false} />
                           </span>
                         ) : null}
                       </TableCell>
-                      <TableCell className="p-3 text-end">
-                        <Sqm value={row.totalSqm} unit={false} />
-                      </TableCell>
-                      <TableCell className="p-3 text-end">
-                        <Money value={row.total} currency={false} />
-                      </TableCell>
-                      <TableCell className="p-3">
+                      {waiting ? null : (
+                        <TableCell className="p-3 text-end">
+                          <Money value={row.total} currency={false} />
+                        </TableCell>
+                      )}
+                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
                         <span className="flex flex-col gap-1">
                           {waiting?.[row.id] ? (
                             <WaitedFor waited={waiting[row.id]} className="font-medium" />
@@ -426,6 +451,20 @@ export function QuotationsTable({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * The project was marked lost after this was raised (D138). A dead project is
+ * not work to price, and nothing on her desk said so.
+ */
+function ProjectLostMark({ lostOn }: { lostOn: string | null }) {
+  const t = useTranslations();
+  if (!lostOn) return null;
+  return (
+    <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
+      {t("common.projectLost")}
+    </span>
   );
 }
 
@@ -639,7 +678,13 @@ export function QuotationSheet({
             />
 
             <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              <Fact label={t("common.raisedBy")}>{quotation.repName}</Fact>
+              {/* Whose paper this is. "Raised by" on everything a rep raised
+                  himself; "For" where the coordinator raised it on his behalf,
+                  because then the man named did not raise it — she did, and the
+                  line under these facts says so (SPEC §3 P13). */}
+              <Fact label={t(quotation.raisedByName ? "common.onBehalf.for" : "common.raisedBy")}>
+                {quotation.repName}
+              </Fact>
               {/* Who at the customer this went to, and which store it was
                   priced out of (SPEC §3, P12-9). The name only when there is
                   one: a dash under a heading is a field a reader has to decide
@@ -667,6 +712,7 @@ export function QuotationSheet({
                 </Fact>
               ) : null}
             </dl>
+            <RaisedBy name={quotation.raisedByName} place="drawer" />
           </div>
 
           {quotation.status === "returned" && quotation.returnReason ? (

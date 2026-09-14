@@ -12,6 +12,7 @@ import {
   type QuotationLookups,
 } from "@/actions/forms";
 import {
+  quotationOnBehalfAction,
   quotationServiceChoicesAction,
   requestQuotationAction,
   reviseQuotationAction,
@@ -36,6 +37,7 @@ import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { CreditField } from "@/components/ui-ext/credit-field";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { RaisedForField, useOnBehalf } from "@/components/ui-ext/raised-for-field";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -45,6 +47,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { lineRefusal } from "@/lib/line-refusal";
 import { quotationTotals } from "@/lib/money";
+import {
+  openingFor,
+  quotationEligible,
+  type QuotationOnBehalf,
+} from "@/lib/on-behalf-option";
 import { splitOption, type QuotationTargets } from "@/lib/picker-option";
 
 /**
@@ -93,6 +100,9 @@ export type RequestMode = "request" | "edit" | "revise";
  * (P12-9). `log-dialog.tsx` spells it the same way and for the same reason.
  */
 const NOBODY = "none";
+
+/** What a "For" answer with nothing to raise on offers: no customer and no job. */
+const NO_TARGETS: QuotationTargets = { companies: [], projects: [] };
 
 const ACTIONS = {
   request: requestQuotationAction,
@@ -143,6 +153,13 @@ export function RequestQuotationDialog({
   const [open, setOpen] = useState(false);
   const { lookups, failed } = useQuotationLookups(open);
   const serviceChoices = useServiceChoices(open);
+  // Whom it is for, asked of her alone and only on a first ask: an edit and a
+  // revision belong to the paper's own rep already (SPEC §3 P13).
+  const onBehalf = useOnBehalf(
+    open && issuesDirectly && mode === "request",
+    "quotation",
+    quotationOnBehalfAction,
+  );
 
   const onSaved = useCallback(
     (quotationId: string | undefined) => {
@@ -195,15 +212,16 @@ export function RequestQuotationDialog({
         )
       }
     >
-      {failed || serviceChoices === "failed" ? (
+      {failed || serviceChoices === "failed" || onBehalf === "failed" ? (
         <p role="alert" className="px-4 pb-4 text-sm text-destructive">
           {t("forms.listsUnavailable")}
         </p>
-      ) : lookups && serviceChoices ? (
+      ) : lookups && serviceChoices && onBehalf !== undefined ? (
         <RequestForm
           companyId={companyId ?? null}
           projectId={projectId ?? null}
           targets={targets}
+          onBehalf={onBehalf}
           mode={mode}
           existing={existing}
           issuesDirectly={issuesDirectly}
@@ -253,6 +271,7 @@ function RequestForm({
   companyId,
   projectId,
   targets,
+  onBehalf,
   mode,
   existing,
   issuesDirectly,
@@ -264,6 +283,8 @@ function RequestForm({
   companyId: string | null;
   projectId: string | null;
   targets?: QuotationTargets;
+  /** The "For" field's answers; null where it is not asked. */
+  onBehalf: QuotationOnBehalf | null;
   mode: RequestMode;
   existing?: QuotationDraft;
   issuesDirectly: boolean;
@@ -303,15 +324,31 @@ function RequestForm({
   const company = companyId ?? pickedCompany;
   const project = projectId ?? picked?.id ?? null;
 
+  /*
+   * Whom it is for (SPEC §3 P13), above everything else because everything
+   * else follows from it: the customers and the jobs offered are the ones THAT
+   * person may raise on, read by the same reader his own screen draws with. It
+   * opens on Internal Sales wherever her own paper is an answer at this door,
+   * and choosing somebody clears the customer and the job, which may not be
+   * his — in the setter, for the reason the customer clears the job below.
+   */
+  const eligible = useMemo(
+    () => (onBehalf ? quotationEligible(onBehalf, { companyId, projectId }) : []),
+    [onBehalf, companyId, projectId],
+  );
+  const [forPick, setForPick] = useState<string | null>(null);
+  const raisedFor = onBehalf ? (forPick ?? openingFor(eligible)) : "";
+  const offered = onBehalf ? (onBehalf.targets[raisedFor] ?? NO_TARGETS) : targets;
+
   // The jobs of the customer in hand. Filtered here rather than fetched again:
   // the whole list came down with the screen, and a rep with a customer on the
   // phone should not wait for a round trip between two fields.
   const jobs = useMemo(
     () =>
-      (targets?.projects ?? []).filter(
+      (offered?.projects ?? []).filter(
         (option) => splitOption(option.value)?.companyId === company,
       ),
-    [targets, company],
+    [offered, company],
   );
 
   const [lines, setLines] = useState<LineDraft[]>(() =>
@@ -351,33 +388,40 @@ function RequestForm({
    * lint refuses and, worse, would leave the field naming a person who is not
    * on the job he has just picked.
    */
-  const [credit, setCredit] = useState<{ projectId: string; choices: CreditChoices } | null>(null);
-  const [creditPick, setCreditPick] = useState<{ projectId: string; value: string } | null>(
+  // The job and the person it is raised for, together: the pool is HIS on a
+  // paper she raises for him, and his name is the answer it opens on (P13).
+  const creditKey = project ? `${project}|${raisedFor}` : null;
+  const [credit, setCredit] = useState<{ key: string; choices: CreditChoices } | null>(null);
+  const [creditPick, setCreditPick] = useState<{ key: string; value: string } | null>(
     // An EDIT opens on what it already says; a REVISION does not. A revision is
     // a new quotation, and §3's rule is that nothing is ever carried forward
     // from a previous record — credit least of all, since carrying it is
     // exactly the inheriting D148 forbids.
-    project && mode === "edit" && existing?.creditTo
-      ? { projectId: project, value: existing.creditTo }
+    creditKey && mode === "edit" && existing?.creditTo
+      ? { key: creditKey, value: existing.creditTo }
       : null,
   );
   useEffect(() => {
     if (!project) return;
+    const key = `${project}|${raisedFor}`;
     let cancelled = false;
     // A failure here is not an error the rep should see: the question is simply
     // not asked, and the metres go to the man raising it, as they did before.
-    guarded(creditChoicesAction)({ projectId: project }).then((outcome) => {
+    guarded(creditChoicesAction)({
+      projectId: project,
+      repId: raisedFor || undefined,
+    }).then((outcome) => {
       if (!cancelled && outcome.ok && outcome.data) {
-        setCredit({ projectId: project, choices: outcome.data });
+        setCredit({ key, choices: outcome.data });
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [project, guarded]);
+  }, [project, raisedFor, guarded]);
 
-  const choices = credit?.projectId === project ? credit.choices : null;
-  const countsFor = (creditPick?.projectId === project ? creditPick.value : "") || choices?.mine || "";
+  const choices = credit && credit.key === creditKey ? credit.choices : null;
+  const countsFor = (creditPick && creditPick.key === creditKey ? creditPick.value : "") || choices?.mine || "";
 
   /*
    * Who at the customer the paper goes to (P12-9) — the last link of the chain,
@@ -411,15 +455,19 @@ function RequestForm({
     let cancelled = false;
     // A failure here is not an error the rep should see: the field simply
     // offers nobody, and a quotation addressed to nobody is a real quotation.
-    guarded(contactChoicesAction)({ companyId: company }).then((outcome) => {
-      if (!cancelled && outcome.ok && outcome.data) {
-        setPeople({ companyId: company, choices: outcome.data });
-      }
-    });
+    // Read as the person it is for when she raises it for somebody: his
+    // customer's people, which her own reading of the floor does not reach.
+    guarded(contactChoicesAction)({ companyId: company, repId: raisedFor || undefined }).then(
+      (outcome) => {
+        if (!cancelled && outcome.ok && outcome.data) {
+          setPeople({ companyId: company, choices: outcome.data });
+        }
+      },
+    );
     return () => {
       cancelled = true;
     };
-  }, [company, guarded]);
+  }, [company, raisedFor, guarded]);
 
   const contacts = people?.companyId === company ? people.choices : null;
   const addressedTo =
@@ -476,8 +524,34 @@ function RequestForm({
       <input type="hidden" name="credit" value={countsFor} />
       <input type="hidden" name="contactId" value={addressedTo === NOBODY ? "" : addressedTo} />
       <input type="hidden" name="warehouseId" value={warehouse} />
+      {onBehalf ? <input type="hidden" name="repId" value={raisedFor} /> : null}
 
       <FormBody>
+        {/* Whom it is for, first and on a row of its own (SPEC §3 P13): the
+            answer every list under it follows. Drawn one column wide on the
+            band's own grid, so it lines up with the customer beneath it. */}
+        {onBehalf ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <RaisedForField
+              people={onBehalf.people}
+              eligible={eligible}
+              value={raisedFor}
+              onChange={(value) => {
+                setForPick(value);
+                setPickedCompany("");
+                setChosen("");
+              }}
+              disabled={pending}
+              error={fieldErrors.repId}
+            />
+            {eligible.length === 0 ? (
+              <p className="self-end text-sm text-muted-foreground sm:col-span-1 lg:col-span-3">
+                {t("common.onBehalf.nobodyMay")}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* Who and where, in one band: the customer, the job, who at the
             customer the paper goes to, and which store it comes out of (SPEC
             §3, P12-9). One-line answers about the whole quotation, so they sit
@@ -494,7 +568,7 @@ function RequestForm({
               aria-labelledby="quotation-company-label"
               aria-describedby={fieldErrors.companyId ? "quotation-company-error" : undefined}
               invalid={fieldErrors.companyId ? true : undefined}
-              options={targets.companies}
+              options={offered?.companies ?? []}
               value={pickedCompany}
               // The job goes with the customer: one belongs to the other, and a
               // job left behind from the last choice would file this price
@@ -503,7 +577,8 @@ function RequestForm({
                 setPickedCompany(value);
                 setChosen("");
               }}
-              disabled={pending}
+              // Nothing to choose until she has said whom it is for.
+              disabled={pending || Boolean(onBehalf && !raisedFor)}
               placeholder={t("common.pickCompany")}
               searchPlaceholder={t("forms.searchList")}
               emptyText={t("forms.noMatch")}
@@ -609,7 +684,7 @@ function RequestForm({
         <CreditField
           people={choices?.people ?? []}
           value={countsFor}
-          onChange={(next) => setCreditPick(project ? { projectId: project, value: next } : null)}
+          onChange={(next) => setCreditPick(creditKey ? { key: creditKey, value: next } : null)}
           id="quotation-credit"
         />
 

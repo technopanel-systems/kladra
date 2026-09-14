@@ -103,9 +103,16 @@ export type QuotationRow = {
    */
   projectLostOn: string | null;
   projectLostReason: string | null;
-  /** Who raised it. */
+  /** Whom it counts for — who raised it, on everything a rep raised himself. */
   repId: string;
   repName: string;
+  /**
+   * The person who pressed the button, named, only where that is somebody else:
+   * the coordinator raising it on his behalf (SPEC §3 P13). Null on every paper
+   * a rep raised himself, so a screen that says "Raised by" says it only when it
+   * is news.
+   */
+  raisedByName: string | null;
   /**
    * Who owns the COMPANY, which is who may act on it (S8). Not always the one
    * who raised it: an admin can move a company to another rep, and the answers
@@ -262,6 +269,11 @@ function selection(locale: string) {
     projectLostReason: projects.lostReason,
     repId: quotations.repId,
       repName: personName(locale),
+    // Both tables named outright in the correlated subquery (rules/data.md).
+    raisedByName: sql<string | null>`(
+      select ${personNameOf("rb", locale)} from users rb
+       where rb.id = quotations.raised_by_id and quotations.raised_by_id <> quotations.rep_id
+    )`,
     companyRepId: companies.repId,
     smacNumber: quotations.smacNumber,
     returnReason: quotations.returnReason,
@@ -294,6 +306,7 @@ type Selected = {
   projectLostReason: string | null;
   repId: string;
   repName: string;
+  raisedByName: string | null;
   companyRepId: string;
   smacNumber: string | null;
   returnReason: string | null;
@@ -325,6 +338,7 @@ function toRow(row: Selected): QuotationRow {
     projectLostReason: row.projectLostReason ?? null,
     repId: row.repId,
     repName: row.repName,
+    raisedByName: row.raisedByName ?? null,
     companyRepId: row.companyRepId,
     smacNumber: row.smacNumber ?? null,
     returnReason: row.returnReason ?? null,
