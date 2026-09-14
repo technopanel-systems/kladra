@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { Clip } from "@/components/ui-ext/clip";
 import { Empty } from "@/components/ui-ext/empty";
 import { RaisedBy } from "@/components/ui-ext/raised-by";
 import { ListSearch } from "@/components/ui-ext/list-search";
@@ -812,8 +813,8 @@ export function QuotationSheet({
                     className="card-face flex flex-col gap-2 p-3"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="min-w-0 truncate text-sm font-medium">
-                        <bdi>{service.name}</bdi>
+                      <h4 className="flex min-w-0 text-sm font-medium">
+                        <Clip text={service.name} />
                       </h4>
                       <span className="text-sm">
                         <Money value={service.total} currency={false} />

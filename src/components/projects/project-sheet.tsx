@@ -210,23 +210,24 @@ export function ProjectSheet({
   }
 
   // The menu at the end of the action row: what changes the record, then —
-  // apart, in the tint — the act that takes it away. A lost job has already
-  // ended, so Archive is its last act; a live one ends by Mark lost.
+  // apart, in the tint — the acts that take it away. A live job goes by Archive
+  // or ends by Mark lost, and both stand after the divider; a lost one has
+  // already ended, so Archive is its only last act.
   const items: RowMenuItem[] = [];
-  let end: RowMenuEnd | undefined;
+  const end: RowMenuEnd[] = [];
   if (owns) items.push({ label: t("common.edit"), icon: Pencil, onSelect: choose("edit") });
   if (shareProjectOffered(sharers, shareWith, me)) {
     items.push({ label: t("drawer.share.action"), icon: UsersRound, onSelect: choose("share") });
   }
-  if (owns && lost) {
-    end = { label: t("drawer.archive"), icon: Archive, destructive: true, onSelect: choose("archive") };
-  } else if (owns) {
-    items.push({ label: t("drawer.archive"), icon: Archive, onSelect: choose("archive") });
-    end = { label: t("common.markLost"), icon: CircleOff, destructive: true, onSelect: choose("lost") };
+  if (owns) {
+    end.push({ label: t("drawer.archive"), icon: Archive, destructive: true, onSelect: choose("archive") });
+    if (!lost) {
+      end.push({ label: t("common.markLost"), icon: CircleOff, destructive: true, onSelect: choose("lost") });
+    }
   }
   const menu =
-    items.length > 0 || end ? (
-      <RowMenu label={t("projects.moreFor", { name })} items={items} end={end} />
+    items.length > 0 || end.length > 0 ? (
+      <RowMenu label={t("projects.moreFor", { name })} items={items} end={end} size="head" />
     ) : null;
   const reportable = reports && !lost;
 

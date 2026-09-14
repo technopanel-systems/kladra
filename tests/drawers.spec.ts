@@ -353,7 +353,10 @@ test("the project drawer shows Add report, keeps the rest in its menu, and puts 
     }
   });
 
-  await test.step("the menu: what changes the record, then — apart, in the tint — Mark lost", async () => {
+  await test.step("the menu: what changes the record, then — apart, in the tint — Archive and Mark lost", async () => {
+    // At a drawer's head the menu's button stands with the 32px buttons beside it.
+    const box = await more.boundingBox();
+    expect(box?.height, "the drawer head's menu button").toBe(32);
     await more.click();
     const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();
@@ -363,8 +366,16 @@ test("the project drawer shows Add report, keeps the rest in its menu, and puts 
       t("drawer.archive"),
       t("common.markLost"),
     ]);
-    await expect(menu.getByRole("menuitem").last()).toHaveAttribute("data-variant", "destructive");
+    const items = menu.getByRole("menuitem");
+    await expect(items.nth(1)).not.toHaveAttribute("data-variant", "destructive");
+    await expect(items.nth(2)).toHaveAttribute("data-variant", "destructive");
+    await expect(items.nth(3)).toHaveAttribute("data-variant", "destructive");
     await expect(menu.getByRole("separator")).toHaveCount(1);
+    // The divider stands between the two groups: straight after Sharing.
+    const afterSharing = await items
+      .nth(1)
+      .evaluate((node) => node.nextElementSibling?.getAttribute("role") ?? null);
+    expect(afterSharing, "what follows Sharing in the menu").toBe("separator");
   });
 
   await test.step("Edit opens from the menu, and closing it gives focus back to the menu's button", async () => {

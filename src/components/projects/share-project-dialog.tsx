@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { shareProjectAction, unshareProjectAction } from "@/actions/shares";
 import { useSubmitAction } from "@/components/ui-ext/action-outcome";
+import { Clip } from "@/components/ui-ext/clip";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -172,8 +173,8 @@ function ShareProjectBody({
           <ul className="flex flex-col gap-2">
             {sharers.map((person) => (
               <li key={person.id} className="card-face flex items-center gap-3 p-3">
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  <bdi>{person.name}</bdi>
+                <span className="flex min-w-0 flex-1 text-sm font-medium">
+                  <Clip text={person.name} />
                 </span>
                 {/* Taking somebody off is a change to a permission, so it asks
                     first — the same confirmation archiving uses, not a second

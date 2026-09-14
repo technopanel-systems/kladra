@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList } from "@/components/activities/activity-list";
 import { RecordedLane } from "@/components/reports/recorded-lane";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Empty } from "@/components/ui-ext/empty";
 import { LinkPending } from "@/components/ui-ext/link-pending";
@@ -26,37 +27,6 @@ import type { NonWorking } from "@/lib/workdays";
  * people by output is a leaderboard, and fourteen people all know who is second
  * without being shown. Nothing here carries a target, a pace or a percentage.
  */
-
-/**
- * A name cut to fit its place loses its own END, never its first word (the
- * shape of `Clip` in shell/search-command.tsx, S12.1). A `truncate` box round a
- * `<bdi>` keeps the page's direction and clips at the page's end, so on an
- * English screen «عبدالرحمن الزهراني» lost «عبدالرحمن». The box takes the name's
- * direction instead and is never wider than its text — `column` for a child of
- * a flex column, which would otherwise stretch it to the column's width and set
- * the name against the far edge.
- */
-function Clip({
-  text,
-  id,
-  className,
-  column = false,
-}: {
-  text: string;
-  id?: string;
-  className?: string;
-  column?: boolean;
-}) {
-  return (
-    <span
-      id={id}
-      dir="auto"
-      className={cn("min-w-0 truncate", column && "max-w-full self-start", className)}
-    >
-      {text}
-    </span>
-  );
-}
 
 /** Which drill a person's name opens: his reports on that day, filters kept. */
 function personHref(query: ReportQuery, personId: string, day: Day | null): string {

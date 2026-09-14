@@ -870,7 +870,7 @@ test("a figure typed to three places is the one stored, and a line with no price
     await test.step("priced, the m² he watches is the m² the row holds", async () => {
       await price.fill("100");
       const width = Number(
-        await line.getByRole("combobox", { name: t("common.width") }).locator("bdi").first().innerText(),
+        await line.getByRole("combobox", { name: t("common.width") }).locator('[data-slot="chosen"]').innerText(),
       );
       const typed = Math.round(width * Number(TYPED_LENGTH) * 100 * 100) / 100;
       const held = Math.round(width * 5.81 * 100 * 100) / 100;

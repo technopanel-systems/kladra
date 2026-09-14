@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { WORK_CARD, WORK_ROW, WORK_ROWS } from "@/components/team/work-grid";
+import { Clip } from "@/components/ui-ext/clip";
 import { Empty } from "@/components/ui-ext/empty";
 import { Ref } from "@/components/ui-ext/figures";
 import { Prose } from "@/components/ui-ext/prose";
@@ -181,9 +182,7 @@ export function WaitingList({
                     {row.smacNumber ?? row.label}
                   </Ref>
                 ) : (
-                  <span className="max-w-full truncate font-medium">
-                    <bdi>{row.companyName}</bdi>
-                  </span>
+                  <Clip text={row.companyName} className="max-w-full font-medium" />
                 )}
                 <StateBadge tone={TONE_OF[row.reasonKey] ?? "wait"}>{t(row.reasonKey)}</StateBadge>
               </span>
@@ -199,17 +198,13 @@ export function WaitingList({
                   line above and printing him twice would say nothing twice. */}
               {row.label ? (
                 <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-                  <span className="max-w-full truncate">
-                    <bdi>{row.companyName}</bdi>
-                  </span>
+                  <Clip text={row.companyName} className="max-w-full" />
                   {row.projectName ? (
                     <>
                       <span aria-hidden="true" className="text-faint">
                         ·
                       </span>
-                      <span className="max-w-full truncate text-muted-foreground">
-                        <bdi>{row.projectName}</bdi>
-                      </span>
+                      <Clip text={row.projectName} className="max-w-full text-muted-foreground" />
                     </>
                   ) : null}
                 </span>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Ellipsis, type LucideIcon } from "lucide-react";
-import { useId, useRef } from "react";
+import { Fragment, useId, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -51,28 +51,43 @@ export type RowMenuEnd = RowMenuItem & {
  * dialog closes (`useOpener`) — Escape from "Reset password" lands on the row's
  * own menu button, not at the top of the page.
  *
- * The trigger is 24px on a desk, which is what keeps a row at 40 (DESIGN §1b),
- * and 44 on a phone through the kit's `touch` (D130). Both actions stay drawn
- * at every width: nothing here is reached by hover alone.
+ * The trigger is 24px in a row on a desk, which is what keeps a row at 40
+ * (DESIGN §1b), and 32 at a drawer's head (`size="head"`), where it stands in a
+ * row of 32px buttons and a 24px mark read as an afterthought beside them. On a
+ * phone both are 44 through the kit's `touch` (D130). Nothing here is reached
+ * by hover alone.
+ *
+ * `end` is the act that takes the record away, or the acts: a live project
+ * ends by Mark lost or goes by Archive, and both belong apart, in the tint,
+ * after the divider (S12.3).
  */
 export function RowMenu({
   label,
   items,
   end,
+  size = "row",
 }: {
   /** Names the row: "More for Faisal Al-Harbi". */
   label: string;
   items: RowMenuItem[];
-  end?: RowMenuEnd;
+  end?: RowMenuEnd | RowMenuEnd[];
+  size?: "row" | "head";
 }) {
   const next = useRef<RowMenuItem["onSelect"] | null>(null);
   const button = useRef<HTMLButtonElement>(null);
   const refusedId = useId();
+  const ends = end === undefined ? [] : Array.isArray(end) ? end : [end];
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button ref={button} variant="ghost" size="icon-xs" aria-label={label} data-slot="row-menu">
+        <Button
+          ref={button}
+          variant="ghost"
+          size={size === "head" ? "icon" : "icon-xs"}
+          aria-label={label}
+          data-slot="row-menu"
+        >
           {/* The kit draws an extra-small button's glyph at 12px, where three
               dots on a warm-black row are a smudge; 16, like every row glyph. */}
           <Ellipsis aria-hidden="true" className="size-4" />
@@ -98,32 +113,39 @@ export function RowMenu({
             {item.label}
           </DropdownMenuItem>
         ))}
-        {end ? (
-          <>
-            {/* A divider marks a line between two groups, so a menu holding
-                only the last act draws none (D145). */}
-            {items.length > 0 ? <DropdownMenuSeparator /> : null}
+        {/* A divider marks a line between two groups, so a menu holding only
+            its last acts draws none (D145). */}
+        {ends.length > 0 && items.length > 0 ? <DropdownMenuSeparator /> : null}
+        {ends.map((last, index) => (
+          <Fragment key={last.label}>
             <DropdownMenuItem
-              variant={end.destructive ? "destructive" : "default"}
-              disabled={end.refused ? true : undefined}
-              aria-describedby={end.refused ? refusedId : undefined}
+              variant={last.destructive ? "destructive" : "default"}
+              disabled={last.refused ? true : undefined}
+              aria-describedby={
+                last.refused ? `${refusedId}-${index}` : undefined
+              }
               onSelect={() => {
-                next.current = end.onSelect;
+                next.current = last.onSelect;
               }}
             >
-              <end.icon
+              <last.icon
                 aria-hidden="true"
-                className={end.destructive ? undefined : "text-muted-foreground"}
+                className={
+                  last.destructive ? undefined : "text-muted-foreground"
+                }
               />
-              {end.label}
+              {last.label}
             </DropdownMenuItem>
-            {end.refused ? (
-              <p id={refusedId} className="max-w-56 px-2 pb-2 text-xs text-muted-foreground">
-                {end.refused}
+            {last.refused ? (
+              <p
+                id={`${refusedId}-${index}`}
+                className="max-w-56 px-2 pb-2 text-xs text-muted-foreground"
+              >
+                {last.refused}
               </p>
             ) : null}
-          </>
-        ) : null}
+          </Fragment>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

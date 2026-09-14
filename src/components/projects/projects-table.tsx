@@ -6,6 +6,7 @@ import { useProjectFlashOf } from "@/components/projects/project-flash";
 import { STAGE_KEYS } from "@/components/projects/stage-words";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
+import { Clip } from "@/components/ui-ext/clip";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Empty } from "@/components/ui-ext/empty";
 import { Sqm } from "@/components/ui-ext/figures";
@@ -76,20 +77,6 @@ function listHref(
   if (view) params.set("view", view);
   const query = params.toString();
   return query ? `/projects?${query}` : "/projects";
-}
-
-/**
- * A name somebody typed, cut at its OWN end when it has to be cut (S12.1's
- * `Clip`, search-command.tsx). The box takes the name's direction and is never
- * wider than its text — no flex-1, no width — so on an English row an Arabic
- * name keeps its first word and the ellipsis lands where the name ends.
- */
-function Clip({ text, className }: { text: string; className?: string }) {
-  return (
-    <span dir="auto" className={cn("min-w-0 truncate", className)}>
-      {text}
-    </span>
-  );
 }
 
 function FollowUp({ day, state }: { day: string | null; state: FollowUpState | null }) {

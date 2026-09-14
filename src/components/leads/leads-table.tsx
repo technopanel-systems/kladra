@@ -4,6 +4,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useLeadFlash } from "@/components/leads/lead-flash";
 import { ReassignLeadDialog } from "@/components/leads/reassign-lead-dialog";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
 import { Prose } from "@/components/ui-ext/prose";
@@ -51,28 +52,6 @@ import { cn } from "@/lib/utils";
  * the reader's own save filed or moved takes the same flash (`useLeadFlash`),
  * so after the toast nobody hunts for the row (DESIGN §2, §8).
  */
-
-/**
- * A name cut to fit its cell loses its own END, never its first word (the shape
- * of `Clip` in shell/search-command.tsx, S12.1): the box takes the name's
- * direction and is never wider than its text. `column` for a child of a flex
- * column, which would otherwise stretch it and set the name at the far edge.
- */
-function Clip({
-  text,
-  className,
-  column = false,
-}: {
-  text: string;
-  className?: string;
-  column?: boolean;
-}) {
-  return (
-    <span dir="auto" className={cn("min-w-0 truncate", column && "max-w-full self-start", className)}>
-      {text}
-    </span>
-  );
-}
 
 export type LeadRow = {
   id: string;

@@ -3,6 +3,7 @@
 import { ChevronsUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Clip } from "@/components/ui-ext/clip";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -178,9 +179,7 @@ export function SearchableSelect({
           )}
         >
           <span className="flex min-w-0 items-baseline gap-1.5 truncate text-start">
-            <span className="truncate">
-              <bdi>{shown ?? placeholder}</bdi>
-            </span>
+            <Clip data-slot="chosen" text={shown ?? placeholder} />
             {shown !== null && selected?.hint ? (
               <>
                 {/*
@@ -196,9 +195,7 @@ export function SearchableSelect({
                 <span aria-hidden="true" className="shrink-0 text-faint">
                   ·
                 </span>
-                <span className="truncate text-xs text-muted-foreground">
-                  <bdi>{selected.hint}</bdi>
-                </span>
+                <Clip text={selected.hint} className="text-xs text-muted-foreground" />
               </>
             ) : null}
           </span>
@@ -288,13 +285,9 @@ function Row({
       onSelect={() => onChoose(option.value)}
     >
       <span className="flex min-w-0 flex-col">
-        <span className="truncate">
-          <bdi>{option.label}</bdi>
-        </span>
+        <Clip text={option.label} column />
         {option.hint ? (
-          <span className="truncate text-xs text-muted-foreground">
-            <bdi>{option.hint}</bdi>
-          </span>
+          <Clip text={option.hint} column className="text-xs text-muted-foreground" />
         ) : null}
       </span>
     </CommandItem>

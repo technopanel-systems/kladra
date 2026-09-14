@@ -25,6 +25,7 @@ import {
 import { KIND_ICON, KINDS } from "@/components/activities/kinds";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { DatePicker } from "@/components/ui-ext/date-picker";
 import { DayText } from "@/components/ui-ext/day-text";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
@@ -571,9 +572,7 @@ function ReportPanel({
                   {companyId ? (
                     <Avatar id={companyId} name={companyName || "?"} kind="company" size="sm" />
                   ) : null}
-                  <span className="min-w-0 truncate font-medium">
-                    <bdi>{companyName}</bdi>
-                  </span>
+                  <Clip text={companyName} className="font-medium" />
                 </p>
               ) : (
                 <SearchableSelect

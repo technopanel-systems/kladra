@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { formatDay, type Day } from "@/lib/dates";
 import { HABIT_AT_LEAST, HABIT_SHARE_PERCENT, relianceRows } from "@/lib/reliance";
@@ -53,9 +54,7 @@ export async function RelianceCard({ from }: { from: Day }) {
             >
               <Avatar id={row.userId} name={row.name} size="sm" />
               <div className="flex min-w-0 flex-1 flex-col">
-                <span className="truncate text-sm font-medium">
-                  <bdi>{row.name}</bdi>
-                </span>
+                <Clip text={row.name} column className="text-sm font-medium" />
                 <span className="text-xs text-muted-foreground">
                   {row.total === 0
                     ? t("team.reliance.noPaper")

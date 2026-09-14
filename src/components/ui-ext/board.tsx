@@ -4,6 +4,7 @@ import { useId, type KeyboardEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Ref, Sqm } from "@/components/ui-ext/figures";
 import { Empty } from "@/components/ui-ext/empty";
@@ -316,23 +317,17 @@ function BoardCardLink({
         ) : (
           // No number: the name leads, as a list row's does.
           <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
-            <span data-slot="card-title" className="min-w-0 truncate">
-              <bdi>{card.title}</bdi>
-            </span>
+            <Clip data-slot="card-title" text={card.title} />
             <LinkPending />
           </span>
         )}
         <Sqm value={card.sqm} className="shrink-0 text-xs" />
       </span>
       {card.label ? (
-        <span className="truncate text-sm">
-          <bdi>{card.title}</bdi>
-        </span>
+        <Clip text={card.title} column className="text-sm" />
       ) : null}
       {card.subtitle ? (
-        <span className="truncate text-xs text-muted-foreground">
-          <bdi>{card.subtitle}</bdi>
-        </span>
+        <Clip text={card.subtitle} column className="text-xs text-muted-foreground" />
       ) : null}
       {card.day || card.person ? (
         <span className="flex items-center justify-between gap-2">

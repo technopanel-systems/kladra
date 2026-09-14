@@ -250,7 +250,7 @@ test("marketing requests a quotation and raises a dispatch on its own customer, 
       const form = page.getByRole("dialog", { name: t("dispatches.request") });
       await choose(page, form.getByRole("combobox", { name: t("common.company") }), customer.name);
       const source = form.getByRole("combobox", { name: t("dispatches.source") });
-      await expect(source.locator("bdi").first()).toHaveText(t("dispatches.direct"), COLD);
+      await expect(source.locator('[data-slot="chosen"]')).toHaveText(t("dispatches.direct"), COLD);
 
       const line = form.locator('[data-slot="dispatch-line"]').first();
       await line.getByLabel(t("common.colourCode")).fill("RAL 7016");
@@ -261,7 +261,7 @@ test("marketing requests a quotation and raises a dispatch on its own customer, 
       await line.getByLabel(t("common.pricePerSqm")).fill("128");
 
       const width = Number(
-        await line.getByRole("combobox", { name: t("common.width") }).locator("bdi").first().innerText(),
+        await line.getByRole("combobox", { name: t("common.width") }).locator('[data-slot="chosen"]').innerText(),
       );
       const length = Number(await line.getByLabel(t("common.length")).inputValue());
       sqm = Math.round(width * length * qty * 100) / 100;

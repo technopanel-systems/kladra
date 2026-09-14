@@ -5,6 +5,7 @@ import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } fro
 import { useTranslations } from "next-intl";
 import { recentRecordsAction, searchAllAction, type SearchResults } from "@/actions/search";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { Clip } from "@/components/ui-ext/clip";
 import { Empty } from "@/components/ui-ext/empty";
 import { Ref } from "@/components/ui-ext/figures";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,6 @@ import { useRouter } from "@/i18n/navigation";
 import type { PaletteCompany, PalettePaper, RecentRecords } from "@/lib/palette";
 import { formatPhone } from "@/lib/phone";
 import type { ActionResult, Role } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 /**
  * The search trigger and the palette behind it. Ctrl+K / Cmd+K opens it from
@@ -491,25 +491,6 @@ function Papers({
         </CommandItem>
       ))}
     </CommandGroup>
-  );
-}
-
-/**
- * A name cut to fit its row loses its own END. The app's run — a truncating
- * span around a `<bdi>` — keeps the page's direction on the box, and the box
- * clips at the page's end: on an English row an Arabic company lost its FIRST
- * word, «…المعمار الحديث للاستشارات الهندسية» for «مكتب المعمار …», which reads
- * as another company. Here the box takes the name's direction instead. It is
- * never wider than its text (no flex-1, no width), so only the ellipsis moves,
- * never the name; and `dir` isolates the run as a `<bdi>` would. It carries no
- * margin of its own: `ms-auto` on a box of the other direction resolves to the
- * other side, so a name meant for the row's end sits in a `CommandShortcut`.
- */
-function Clip({ text, className }: { text: string; className?: string }) {
-  return (
-    <span dir="auto" className={cn("min-w-0 truncate", className)}>
-      {text}
-    </span>
   );
 }
 

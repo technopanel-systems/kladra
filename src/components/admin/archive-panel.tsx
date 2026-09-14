@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { restoreAction } from "@/actions/admin";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { Empty } from "@/components/ui-ext/empty";
 import { Sqm } from "@/components/ui-ext/figures";
 import { LinkPending } from "@/components/ui-ext/link-pending";
@@ -135,9 +136,7 @@ function ArchivedItem({ row, survivorId }: { row: ArchivedRow; survivorId?: stri
           rems the Restore button wraps under it rather than squeezing it. */}
       <div className="flex min-w-48 flex-1 flex-col gap-1">
         <Link href={recordHref(row)} className="flex items-center gap-2 font-medium hover:underline">
-          <span className="min-w-0 truncate">
-            <bdi>{row.name}</bdi>
-          </span>
+          <Clip text={row.name} />
           <LinkPending />
         </Link>
 
