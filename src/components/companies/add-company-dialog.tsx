@@ -33,7 +33,6 @@ import { Button } from "@/components/ui/button";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { formatDay } from "@/lib/dates";
 import { normalizePhone } from "@/lib/phone";
-import { TONE_CLASS } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 import type { ActionResult } from "@/lib/types";
 
@@ -184,7 +183,7 @@ function CompanyForm({
     duplicate === null ? null : (
       <div
         role="status"
-        className={cn("flex items-start gap-2 rounded-lg px-3 py-2 text-xs", TONE_CLASS.wait)}
+        className={cn("flex items-start gap-2 rounded-lg px-3 py-2 text-xs", "bg-state-wait text-foreground")}
       >
         <Info aria-hidden="true" className="mt-px size-4 shrink-0" />
         <span className="flex min-w-0 flex-col gap-1">

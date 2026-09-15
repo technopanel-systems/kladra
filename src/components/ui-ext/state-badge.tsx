@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils";
  * dispatches each had a private copy of this that painted every status the same
  * quiet grey, so the screen said what had happened but never how it was going.
  *
- * A dot and the word, since the restyle (DESIGN §1b): the tone is the dot, the
- * word is in the text colour inside a hairline, so a status column reads as a
- * column of words with a mark each rather than a column of coloured lozenges.
+ * A dot and the word, since the restyle (DESIGN §1b, §6): the tone is the dot
+ * and the word is in the muted text colour, with no box. A hairline round it
+ * vanished on a dark card and showed on a light one, so the one badge read as
+ * two different things from screen to screen (P4 consistency pass).
  */
 export function StateBadge({
   tone,
@@ -30,7 +31,7 @@ export function StateBadge({
     <Badge
       data-tone={tone}
       variant="outline"
-      className={cn("gap-1.5 border-line font-normal text-foreground", className)}
+      className={cn("gap-1.5 border-transparent px-0 font-normal text-muted-foreground", className)}
     >
       <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT[tone])} />
       {children}

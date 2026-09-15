@@ -405,8 +405,9 @@ test("two reps on one customer: a shared company, a shared project, and taking t
       await expect(dialogNamed(page, fixture.company)).toHaveCount(0);
       await expect(page.getByText(t("drawer.companyGone"))).toBeVisible(COLD);
 
+      // The project's link says it is gone, as the company's does (P13-G6).
       await page.goto(`/${locale}/projects?open=${projectId}`);
-      await expect(page.getByRole("heading", { name: t("common.projects") })).toBeVisible(COLD);
+      await expect(page.getByText(t("drawer.projectGone"))).toBeVisible(COLD);
       await expect(dialogNamed(page, fixture.project)).toHaveCount(0);
 
       // What he made is a record of work that happened, and it stays.

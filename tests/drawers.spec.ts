@@ -479,7 +479,12 @@ test("the dispatch drawer leads with the customer and its metres, keeps Refuse l
     await expect(refuse).toHaveAttribute("data-variant", "destructive");
     await expect(actions.getByRole("button").last()).toHaveText(t("dispatches.refuse"));
 
-    // Apart: at the far end of its row, whichever way the row reads.
+    // Apart: at the far end of its row, whichever way the row reads. Measured
+    // at rest: the gap read 3, 4 and 5px on three runs while the drawer was
+    // still coming in.
+    await drawer.evaluate((node) =>
+      Promise.all(node.getAnimations({ subtree: true }).map((motion) => motion.finished)),
+    );
     const row = await actions.boundingBox();
     const end = await refuse.boundingBox();
     expect(row, "the action row has no box").not.toBeNull();

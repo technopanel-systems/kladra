@@ -107,7 +107,7 @@ export function StandingStrip({
               cell's width knows that. */}
           <dd
             className={cn(
-              "text-base leading-tight font-medium break-words",
+              "text-lg leading-tight font-medium break-words",
               item.tone && TONE_TEXT[item.tone],
             )}
           >

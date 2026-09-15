@@ -443,29 +443,29 @@ export function DispatchesTable({
               <Table label={t("common.dispatches")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                    <TableHead className="px-3">
                       {t("common.dispatch")}
                     </TableHead>
-                    <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                    <TableHead className="px-3">
                       {t("common.company")}
                     </TableHead>
                     {/* On her desk the job folds under its customer and the paper
                         under the load's own number: half a screen wide from `lg`
                         (SPEC §3 P13), six columns scrolled the wait off its edge. */}
                     {waiting ? null : (
-                      <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                      <TableHead className="px-3">
                         {t("common.project")}
                       </TableHead>
                     )}
                     {waiting ? null : (
-                      <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                      <TableHead className="px-3">
                         {t("common.quotation")}
                       </TableHead>
                     )}
-                    <TableHead className="px-3 text-end text-xs font-normal text-muted-foreground">
+                    <TableHead className="px-3 text-end">
                       {t("common.sqm")}
                     </TableHead>
-                    <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                    <TableHead className="px-3">
                       {waiting ? t("queue.waited") : t("common.status")}
                     </TableHead>
                   </TableRow>

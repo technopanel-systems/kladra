@@ -134,7 +134,8 @@ text and their padding) and 48px on a phone, where the thumb rule (D130) already
 value nobody chose. (Twenty: base 4, row 32 — theirs is a dense grid for people who live in
 it; Kladra's rows carry a second line and a phone number, so 40.)
 
-**Alignment: text starts, numbers end.** Words align to the start of the line in both
+**A table header is one style everywhere:** `TableHead` is 12px, weight 500, the muted
+colour, sentence case. **Alignment: text starts, numbers end.** Words align to the start of the line in both
 scripts (`text-start`); every figure aligns to the end in tabular figures (`.num`), so a
 column of metres reads as a column. In a drawer, a label sits in a `w-28` column and its
 value beside it; the two columns are the same width on every drawer, which is what makes
@@ -160,8 +161,8 @@ low saturation, text in the same hue's foreground), so one person is one colour 
 screen and no two colleagues in the team table share one by accident. That is identity,
 not state — the rule "colour only means something" (SPEC §3) holds because the meaning is
 "this is Faisal" — and it is a solid tint, never a gradient (§1: the running app has none).
-A state dot (the `ring` prop, which kept its name) sits on the avatar's end corner, cut out
-of the card by a 2px edge, only where a state exists and only in the five state colours:
+A state dot (the `ring` prop, which kept its name) sits on the avatar's outer (start)
+corner, away from the name beside it, cut out of the card by a 2px edge, only where a state exists and only in the five state colours:
 `state-over` on a rep on leave, `state-wait` on a lead nobody has acknowledged, `state-bad` on
 a company with an overdue follow-up and on a person on the team tab with something stuck past
 its line (leave wins when both are true), nothing on anybody else. It was a 2px ring until the
@@ -1174,11 +1175,14 @@ never carries meaning alone: every coloured thing also says its word.
 
 `src/lib/state-tone.ts` holds the one mapping from a status to a token; no component decides
 its own. **Since the restyle a state is a dot and its word** (`TONE_DOT`, `StateBadge`): a
-6px dot in the tone's foreground and the word in the text colour, inside a hairline badge. A
+6px dot in the tone's foreground and the word in the muted text colour, with no box. (A
+hairline box was tried: it vanished on a dark card and showed on a light one, so one badge
+read as two.) A
 filter chip, a waiting pill, a board column's count and a card's title are neutral and carry
 the dot, never a tinted fill or a coloured word. A tint (`TONE_CLASS`, `bg-state-x
-text-state-x-fg`) is kept only for a band or a warning that carries a state across a whole row
-or panel (a lead not acknowledged, a duplicate warning), and it is never solid. `TONE_TEXT` is
+text-state-x-fg`) survives only as the fill of a warning inside a form (a possible duplicate),
+with its words in the text colour; the leads band and the drawer's lead banner are neutral
+surfaces, since the dot and word beside the avatar already say "not acknowledged". `TONE_TEXT` is
 for a date or a figure that is late or behind. A chart's state series is the tone's
 foreground at 0.7 (`toneInk`).
 

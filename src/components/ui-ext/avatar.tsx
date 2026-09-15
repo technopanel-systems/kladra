@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
  * before the letters do. 24 in a row, 32 in a card, 40 at the head of a drawer.
  *
  * `ring` is drawn only where a state exists, in that state's colour, and never
- * alone. It is a dot on the avatar's end corner since the restyle, cut out of
+ * alone. It is a dot on the avatar's outer (start) corner since the restyle, away
+ * from the name beside it, which read a dot at the end corner as a bullet; cut out of
  * the surface by a 2px edge: a 2px ring in amber around a 24px square read as
  * a focus outline, or as a second, louder avatar. The prop keeps its name.
  * And never alone: the word for the state is on the screen beside it, because a ring is
@@ -76,7 +77,7 @@ export function Avatar({
         <span
           data-slot="avatar-state"
           className={cn(
-            "absolute -end-0.5 -bottom-0.5 rounded-full ring-2 ring-card",
+            "absolute -start-0.5 -bottom-0.5 rounded-full ring-2 ring-card",
             DOT[size],
             TONE_DOT[ring],
           )}

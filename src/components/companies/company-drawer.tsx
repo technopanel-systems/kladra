@@ -31,7 +31,7 @@ import { DayText } from "@/components/ui-ext/day-text";
 import { dayOf, formatDay } from "@/lib/dates";
 import { lossReasonLabel } from "@/lib/loss-reason";
 import { formatSqm } from "@/lib/money";
-import { TONE_CLASS, TONE_TEXT } from "@/lib/state-tone";
+import { TONE_TEXT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
 /**
@@ -317,7 +317,10 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           data-slot="lead-origin"
           className={cn(
             "mx-4 mt-4 flex flex-col gap-2 rounded-xl p-3 md:flex-row md:items-center md:gap-4",
-            company.lead.acknowledged ? "bg-surface-2" : TONE_CLASS.wait,
+            "border border-line bg-surface-2",
+            // No amber fill (P4): "Not acknowledged" is the dot and word beside
+            // the drawer's avatar; a tinted box with an amber title said it twice.
+            company.lead.acknowledged ? null : "border-state-wait-fg/40",
           )}
         >
           <div className="flex min-w-0 flex-1 flex-col gap-1">

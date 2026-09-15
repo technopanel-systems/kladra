@@ -80,7 +80,7 @@ async function Band() {
           <li
             key={lead.id}
             data-lead={lead.id}
-            className="row-door flex flex-col gap-3 rounded-xl border border-line bg-state-wait p-3 md:flex-row md:items-center md:gap-4 md:p-4"
+            className="row-door flex flex-col gap-3 rounded-xl border border-line bg-surface p-3 md:flex-row md:items-center md:gap-4 md:p-4"
           >
             <div className="flex min-w-0 flex-1 items-start gap-3">
               <Avatar id={lead.id} name={lead.name} kind="company" ring="wait" />
