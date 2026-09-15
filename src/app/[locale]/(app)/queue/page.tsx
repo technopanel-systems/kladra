@@ -118,9 +118,15 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
     t("queue.latePart", { late: count, days: LATE_AFTER_WORKING_DAYS });
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">{t("common.queue")}</h1>
 
+      {/* A figure is coloured only where it is late or ahead (restyle, S12.6):
+          the two counts are her work, not lateness, and were amber on every
+          morning with anything on the desk — so amber stopped meaning anything
+          on the one screen she lives on. How many of them ARE late is the
+          caption under each; the longest wait turns red past its line; a day
+          level with what arrived is green. */}
       <StandingStrip
         items={[
           {
@@ -131,7 +137,6 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               </span>
             ),
             caption: <LateCaption count={lateQuotations} text={lateText(lateQuotations)} />,
-            tone: quotationDays.length > 0 ? "wait" : null,
           },
           {
             label: t("common.dispatches"),
@@ -141,7 +146,6 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               </span>
             ),
             caption: <LateCaption count={lateDispatches} text={lateText(lateDispatches)} />,
-            tone: dispatchDays.length > 0 ? "wait" : null,
           },
           {
             label: t("queue.longestWait"),
@@ -150,9 +154,10 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
             ) : (
               <span className="text-muted-foreground">—</span>
             ),
-            caption: worst
-              ? t("queue.since", { day: formatDay(oldest(raised), locale) })
-              : t("queue.nothingWaiting"),
+            // A clear desk has no oldest day to name. The sentence under the
+            // strip says the desk is clear, once; a caption saying "nothing
+            // waiting" above "Nothing is waiting on you" said it twice (S12.6).
+            caption: worst ? t("queue.since", { day: formatDay(oldest(raised), locale) }) : undefined,
             // Late is late whoever it is waiting on: the same red the rest of
             // the app uses for an overdue date (DESIGN §6).
             tone: worst?.late ? "bad" : null,
@@ -201,7 +206,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
               down the screen, and a short half does not stretch into a block of
               nothing beside a long one (DESIGN §5, D154). Each keeps D137's
               order, oldest first, and its own heading and count. */}
-          <div data-slot="queue-halves" className="grid items-start gap-8 lg:grid-cols-2 lg:gap-6">
+          <div data-slot="queue-halves" className="grid items-start gap-6 lg:grid-cols-2">
             <QueueHalf
               slot="queue-quotations"
               heading={t("common.quotations")}
@@ -294,12 +299,14 @@ function QueueHalf({
 }) {
   const id = `${slot}-heading`;
   return (
-    <section data-slot={slot} aria-labelledby={id} className="flex min-w-0 flex-col gap-4">
+    <section data-slot={slot} aria-labelledby={id} className="flex min-w-0 flex-col gap-3">
+      {/* A title in the text colour and its count a step quieter: the same
+          head every card on the day and the team's screen wears (restyle). */}
       <div className="flex items-baseline gap-2">
-        <h2 id={id} className="text-sm font-medium text-muted-foreground">
+        <h2 id={id} className="text-sm font-medium text-foreground">
           {heading}
         </h2>
-        <span data-slot="queue-half-count" dir="ltr" className="num text-sm text-faint">
+        <span data-slot="queue-half-count" dir="ltr" className="num text-sm text-muted-foreground">
           {count}
         </span>
       </div>

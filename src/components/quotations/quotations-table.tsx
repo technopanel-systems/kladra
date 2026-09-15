@@ -1,23 +1,15 @@
 "use client";
 
-import { Fragment, useTransition, type ReactNode } from "react";
+import { useTransition, type AnimationEvent } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
-import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
-import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { useQuotationFlashOf } from "@/components/quotations/quotation-flash";
+import { STATUS_KEYS } from "@/components/quotations/status-words";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { Clip } from "@/components/ui-ext/clip";
 import { Empty } from "@/components/ui-ext/empty";
 import { RaisedBy } from "@/components/ui-ext/raised-by";
 import { ListSearch } from "@/components/ui-ext/list-search";
-import { formatDay } from "@/lib/dates";
-import { lossReasonLabel } from "@/lib/loss-reason";
-import { NoteBlock } from "@/components/ui-ext/note-block";
-import type { QuotationDraft } from "@/components/quotations/request-quotation-dialog";
-import type { Waited } from "@/lib/waiting";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -26,57 +18,45 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { LinkPending } from "@/components/ui-ext/link-pending";
-import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Ref, Money, Sqm } from "@/components/ui-ext/figures";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
-import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
-import { formatMoney, formatSqm } from "@/lib/money";
-import type {
-  QuotationItemRow,
-  QuotationRow,
-  QuotationServiceRow,
-  QuotationStatus,
-} from "@/lib/quotations";
-import type { QuotationStanding } from "@/lib/standing";
-import { quotationTone, TONE_TEXT } from "@/lib/state-tone";
+import type { QuotationRow, QuotationStatus } from "@/lib/quotations";
+import type { Waited } from "@/lib/waiting";
+import { quotationTone, TONE_DOT } from "@/lib/state-tone";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
 import type { ListView } from "@/lib/view";
 import { cn } from "@/lib/utils";
 import { useArrivedIds } from "@/hooks/use-arrived";
 
 /**
- * The quotations screen and the drawer it opens (DESIGN §2: work happens in a
- * drawer over the list, and the list stays where it was).
- *
- * A status is a word, never a colour. DESIGN §4 keeps a colour-per-status map
- * out of this app on purpose: five statuses in five colours is a legend to
- * learn, and the word is already the answer.
+ * The quotations screen's list and board, and the coordinator's queue built from
+ * the same list (DESIGN §2: work happens in a drawer over the list, and the list
+ * stays where it was). The drawer is quotation-sheet.tsx.
  *
  * Search, status and the open drawer all live in the URL, so a link somebody
  * sends reopens exactly what they were looking at (SPEC §3).
+ *
+ * A row leads with the paper's number — SMAC's where there is one (P12-11) — and
+ * says whose it is with the company's own face beside its name (DESIGN §1b: 24 in
+ * a row, 32 on a card, a company square), the way the companies and projects
+ * lists do, so one customer is one colour on every screen.
  */
 
-const STATUS_KEYS: Record<QuotationStatus, string> = {
-  requested: "quotations.statusRequested",
-  returned: "quotations.statusReturned",
-  issued: "quotations.statusIssued",
-  accepted: "quotations.statusAccepted",
-  rejected: "quotations.statusRejected",
-  cancelled: "quotations.statusCancelled",
-};
+// The drawer lives in its own file; the queue still reads its skeleton from here.
+export { QuotationSheetSkeleton } from "@/components/quotations/quotation-sheet";
 
 /** The filters the list offers, in the order the work moves through them. */
 const FILTERS: QuotationStatus[] = ["requested", "returned", "issued", "accepted", "rejected"];
 
 /**
- * The board's columns: EVERY status, taken off the map above rather than
+ * The board's columns: EVERY status, taken off the map of words rather than
  * written out again.
  *
  * The board was built from the chips, and the chips leave out `cancelled` on
@@ -114,9 +94,25 @@ function listHref(
   return query ? `${base}?${query}` : base;
 }
 
-function StatusBadge({ status }: { status: QuotationStatus }) {
+function StatusBadge({ status, className }: { status: QuotationStatus; className?: string }) {
   const t = useTranslations();
-  return <StateBadge tone={quotationTone(status)}>{t(STATUS_KEYS[status])}</StateBadge>;
+  return (
+    <StateBadge tone={quotationTone(status)} className={className}>
+      {t(STATUS_KEYS[status])}
+    </StateBadge>
+  );
+}
+
+/** The arrived flash, from somebody else's change (live) or the reader's own act. */
+function useRowMark(
+  arrived: ReadonlySet<string>,
+): (id: string) => { className?: string; onAnimationEnd?: (event: AnimationEvent<HTMLElement>) => void } {
+  const own = useQuotationFlashOf();
+  return (id) => {
+    const mine = own?.(id);
+    if (mine?.className) return mine;
+    return { className: arrived.has(id) ? "row-arrived" : undefined };
+  };
 }
 
 export function QuotationsTable({
@@ -130,6 +126,8 @@ export function QuotationsTable({
   showFilters = true,
   showSearch = true,
   waiting,
+  hidden = 0,
+  canRequest = false,
 }: {
   /** "/quotations" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
   base: string;
@@ -157,14 +155,21 @@ export function QuotationsTable({
    * (D59).
    */
   waiting?: Record<string, Waited>;
+  /**
+   * How many quotations the chosen chip is hiding, counted by the page only
+   * when it hides every one of them — the number the filtered-out sentence says
+   * (DESIGN §8).
+   */
+  hidden?: number;
+  /** Whether this reader has the screen's Request button, which the first-use sentence points at. */
+  canRequest?: boolean;
 }) {
   const t = useTranslations();
-  // Rows somebody else touched in the last two seconds (D105): the companies
-  // and projects lists had this since P8; these two, and the queue built from
-  // them, did not — so a request that landed while the desk was watching looked
-  // like one that had always been there. The clock starts when these rows are
-  // on screen, which the hook reports from `rows`.
+  // Rows somebody else touched in the last two seconds (D105), and the one the
+  // reader's own act changed (QuotationFlash). The clock starts when these rows
+  // are on screen, which the hook reports from `rows`.
   const arrived = useArrivedIds(rows);
+  const mark = useRowMark(arrived);
   const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -185,10 +190,9 @@ export function QuotationsTable({
   }
 
   /**
-   * The board's columns: the same five states the chips filter by, in the order
-   * the work moves through them. A column carries its count and a card carries
-   * the day it arrived, because without those two a board is a list in a wider
-   * shape (DESIGN §6).
+   * The board's columns: the six states, in the order the work moves through
+   * them. A column carries its count and a card carries the day it arrived,
+   * because without those two a board is a list in a wider shape (DESIGN §6).
    */
   const columns: BoardColumn[] = BOARD_STATUSES.map((value) => ({
     key: value,
@@ -269,6 +273,8 @@ export function QuotationsTable({
             q={q}
             status={status}
             fixed={!showFilters}
+            hidden={hidden}
+            canRequest={canRequest}
             onClear={clearTerm}
           />
         ) : view === "board" && showFilters ? (
@@ -279,172 +285,196 @@ export function QuotationsTable({
                 her desk between `lg` and `xl`, where the two halves sit side by
                 side and half of that screen is a phone's width (SPEC §3 P13). */}
             <div className={cn("flex flex-col gap-2 md:hidden", waiting && "lg:flex xl:hidden")}>
-              {rows.map((row) => (
-                <Link
-                  key={row.id}
-                  href={listHref(base, q, status, row.id)}
-                  className={cn(
-                    "card-face flex flex-col gap-1.5 p-3",
-                    arrived.has(row.id) && "row-arrived",
-                  )}
-                >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5">
-                      <Ref className="font-medium">
-                        {row.smacNumber ?? row.label}
-                      </Ref>
-                      <LinkPending />
-                    </span>
-                    {waiting?.[row.id] ? (
-                      <WaitedFor waited={waiting[row.id]} />
-                    ) : (
-                      <StatusBadge status={row.status} />
+              {rows.map((row) => {
+                const rowMark = mark(row.id);
+                return (
+                  <Link
+                    key={row.id}
+                    href={listHref(base, q, status, row.id)}
+                    aria-current={openId === row.id ? "true" : undefined}
+                    onAnimationEnd={rowMark.onAnimationEnd}
+                    className={cn(
+                      "card-face hover-tint flex items-start gap-3 p-3",
+                      openId === row.id && "bg-surface-2",
+                      rowMark.className,
                     )}
-                  </span>
-                  <span className="truncate text-sm">{row.companyName}</span>
-                  {/* On the queue the row is somebody's request, and the
-                      conversation about it is with him (S54, D116). */}
-                  {waiting ? (
-                    <span data-slot="row-rep" className="truncate text-xs text-muted-foreground">
-                      {row.repName}
+                  >
+                    <Avatar id={row.companyId} name={row.companyName} kind="company" size="md" />
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-2">
+                          <Ref slot="row-number" className="font-medium">{row.smacNumber ?? row.label}</Ref>
+                          <LinkPending />
+                        </span>
+                        {waiting?.[row.id] ? (
+                          <WaitedFor waited={waiting[row.id]} className="shrink-0" />
+                        ) : (
+                          <StatusBadge status={row.status} className="shrink-0" />
+                        )}
+                      </span>
+                      <span className="flex min-w-0 text-sm">
+                        <Clip text={row.companyName} />
+                      </span>
+                      {/* On the queue the row is somebody's request, and the
+                          conversation about it is with him (S54, D116). */}
+                      {waiting ? (
+                        <span data-slot="row-rep" className="flex min-w-0 text-xs text-muted-foreground">
+                          <Clip text={row.repName} />
+                        </span>
+                      ) : null}
+                      <RaisedBy name={row.raisedByName} />
+                      <span className="flex min-w-0 text-xs text-muted-foreground">
+                        <Clip text={row.projectName} />
+                      </span>
+                      <ProjectLostMark lostOn={row.projectLostOn} />
+                      {/* m² is the headline and SAR the support (DESIGN §6):
+                          a rep's month is metres, and SMAC owns the money. */}
+                      <span className="flex items-baseline justify-between gap-3 text-sm">
+                        <Sqm value={row.totalSqm} />
+                        <Money value={row.total} className="text-xs" />
+                      </span>
                     </span>
-                  ) : null}
-                  <RaisedBy name={row.raisedByName} className="truncate" />
-                  <span className="truncate text-xs text-muted-foreground">
-                    {row.projectName}
-                  </span>
-                  {/* The project was marked lost after this was raised (D138). A dead
-                      project is not work to price, and nothing on her desk said so. */}
-                  {row.projectLostOn ? (
-                    <span data-slot="project-lost" className={cn("truncate text-xs", TONE_TEXT.bad)}>
-                      {t("common.projectLost")}
-                    </span>
-                  ) : null}
-                  {/* m² is the headline and SAR the support (DESIGN §6):
-                      a rep's month is metres, and SMAC owns the money. */}
-                  <span className="flex items-baseline justify-between gap-3 text-sm">
-                    <Sqm value={row.totalSqm} />
-                    <Money value={row.total} className="text-xs" />
-                  </span>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
 
             <div className={cn("card-face hidden md:block", waiting && "lg:hidden xl:block")}>
               <Table label={t("common.quotations")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="p-3">{t("common.quotation")}</TableHead>
-                    <TableHead className="p-3">{t("common.company")}</TableHead>
+                    <TableHead className="px-3">{t("common.quotation")}</TableHead>
+                    <TableHead className="px-3">{t("common.company")}</TableHead>
                     {/* On her desk the job folds under its customer and the money
                         under its metres: the desk is half the screen wide from
                         `lg` (SPEC §3 P13), and six columns in half a screen
                         scrolled the wait — the one column she reads the row
                         for — off its edge. */}
-                    {waiting ? null : <TableHead className="p-3">{t("common.project")}</TableHead>}
-                    <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
+                    {waiting ? null : <TableHead className="px-3">{t("common.project")}</TableHead>}
+                    <TableHead className="px-3 text-end">{t("common.sqm")}</TableHead>
                     {waiting ? null : (
-                      <TableHead className="p-3 text-end">{t("common.grandTotal")}</TableHead>
+                      <TableHead className="px-3 text-end">{t("common.grandTotal")}</TableHead>
                     )}
-                    <TableHead className="p-3">
+                    <TableHead className="px-3">
                       {waiting ? t("queue.waited") : t("common.status")}
                     </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={openId === row.id ? "selected" : undefined}
-                      // The whole row opens the record, not only the first cell
-                      // (P12-11): `row-door` stretches that cell's own link over
-                      // the row, so it stays one anchor and one tab stop.
-                      className={cn("row-door", arrived.has(row.id) && "row-arrived")}
-                    >
-                      <TableCell className="p-0">
-                        <Link
-                          data-door
-                          href={listHref(base, q, status, row.id)}
-                          aria-current={openId === row.id ? "true" : undefined}
-                          className="block p-3"
-                        >
-                          {/* SMAC's number leads where there is one, and Kladra's own
-                              goes quietly under it (P12-11). It was the other way round:
-                              the paper the customer holds and finance files is the one
-                              anybody says out loud, and it was the small grey line. */}
-                          <span className="flex items-center gap-1.5">
-                            <Ref slot="row-number" className="font-medium">
-                              {row.smacNumber ?? row.label}
-                            </Ref>
-                            <LinkPending />
-                          </span>
-                          {row.smacNumber ? (
-                            <Ref
-                              slot="row-second-number"
-                              className="block text-xs text-muted-foreground"
-                            >
-                              {row.label}
-                            </Ref>
-                          ) : null}
-                        </Link>
-                      </TableCell>
-                      {/* The one cell on the desk that may wrap: the customer's
-                          name is what the row is FOR (DESIGN §5). */}
-                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
-                        {row.companyName}
-                        {waiting ? (
-                          <span
-                            data-slot="row-rep"
-                            className="block text-xs text-muted-foreground"
+                  {rows.map((row) => {
+                    const rowMark = mark(row.id);
+                    return (
+                      <TableRow
+                        key={row.id}
+                        data-state={openId === row.id ? "selected" : undefined}
+                        onAnimationEnd={rowMark.onAnimationEnd}
+                        // The whole row opens the record, not only the first cell
+                        // (P12-11): `row-door` stretches that cell's own link over
+                        // the row, so it stays one anchor and one tab stop.
+                        className={cn("row-door", rowMark.className)}
+                      >
+                        <TableCell className="px-3 py-2">
+                          <Link
+                            data-door
+                            href={listHref(base, q, status, row.id)}
+                            aria-current={openId === row.id ? "true" : undefined}
+                            className="block"
                           >
-                            {row.repName}
+                            {/* SMAC's number leads where there is one, and Kladra's own
+                                goes quietly under it (P12-11): the paper the customer
+                                holds and finance files is the one anybody says out loud. */}
+                            <span className="flex items-center gap-2">
+                              <Ref slot="row-number" className="font-medium">
+                                {row.smacNumber ?? row.label}
+                              </Ref>
+                              <LinkPending />
+                            </span>
+                            {row.smacNumber ? (
+                              <Ref
+                                slot="row-second-number"
+                                className="block text-xs text-muted-foreground"
+                              >
+                                {row.label}
+                              </Ref>
+                            ) : null}
+                          </Link>
+                        </TableCell>
+                        {/* The customer, with its face. On her desk the name may
+                            wrap, because it is what the row is FOR (DESIGN §5);
+                            on the list it is cut at its own end (Clip). */}
+                        <TableCell
+                          className={cn("px-3 py-2", waiting ? "whitespace-normal" : "max-w-[18rem]")}
+                        >
+                          <span className={cn("flex min-w-0 gap-2", waiting ? "items-start" : "items-center")}>
+                            <Avatar id={row.companyId} name={row.companyName} kind="company" size="sm" />
+                            <span className="flex min-w-0 flex-col">
+                              {waiting ? (
+                                <span>
+                                  <bdi>{row.companyName}</bdi>
+                                </span>
+                              ) : (
+                                <span className="flex min-w-0">
+                                  <Clip text={row.companyName} />
+                                </span>
+                              )}
+                              {waiting ? (
+                                <span
+                                  data-slot="row-rep"
+                                  className="block text-xs text-muted-foreground"
+                                >
+                                  {row.repName}
+                                </span>
+                              ) : null}
+                              <RaisedBy name={row.raisedByName} />
+                              {waiting ? (
+                                <>
+                                  <span className="block text-xs text-muted-foreground">
+                                    <bdi>{row.projectName}</bdi>
+                                  </span>
+                                  <ProjectLostMark lostOn={row.projectLostOn} />
+                                </>
+                              ) : null}
+                            </span>
                           </span>
-                        ) : null}
-                        <RaisedBy name={row.raisedByName} />
-                        {waiting ? (
-                          <>
-                            <span className="block text-xs text-muted-foreground">
-                              {row.projectName}
+                        </TableCell>
+                        {waiting ? null : (
+                          <TableCell className="max-w-[16rem] px-3 py-2 text-muted-foreground">
+                            <span className="flex min-w-0">
+                              <Clip text={row.projectName} />
                             </span>
                             <ProjectLostMark lostOn={row.projectLostOn} />
-                          </>
-                        ) : null}
-                      </TableCell>
-                      {waiting ? null : (
-                        <TableCell className="p-3 text-muted-foreground">
-                          {row.projectName}
-                          <ProjectLostMark lostOn={row.projectLostOn} />
+                          </TableCell>
+                        )}
+                        <TableCell className="px-3 py-2 text-end">
+                          <Sqm value={row.totalSqm} unit={false} />
+                          {waiting ? (
+                            <span className="block text-xs">
+                              <Money value={row.total} currency={false} />
+                            </span>
+                          ) : null}
                         </TableCell>
-                      )}
-                      <TableCell className="p-3 text-end">
-                        <Sqm value={row.totalSqm} unit={false} />
-                        {waiting ? (
-                          <span className="block text-xs text-muted-foreground">
+                        {waiting ? null : (
+                          <TableCell className="px-3 py-2 text-end">
                             <Money value={row.total} currency={false} />
+                          </TableCell>
+                        )}
+                        <TableCell className={cn("px-3 py-2", waiting && "whitespace-normal")}>
+                          <span className="flex flex-col items-start gap-1">
+                            {waiting?.[row.id] ? (
+                              <WaitedFor waited={waiting[row.id]} className="font-medium" />
+                            ) : (
+                              <StatusBadge status={row.status} />
+                            )}
+                            <DayText
+                              day={row.issuedOn ?? row.createdOn}
+                              locale={locale}
+                              className="text-xs text-muted-foreground"
+                            />
                           </span>
-                        ) : null}
-                      </TableCell>
-                      {waiting ? null : (
-                        <TableCell className="p-3 text-end">
-                          <Money value={row.total} currency={false} />
                         </TableCell>
-                      )}
-                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
-                        <span className="flex flex-col gap-1">
-                          {waiting?.[row.id] ? (
-                            <WaitedFor waited={waiting[row.id]} className="font-medium" />
-                          ) : (
-                            <StatusBadge status={row.status} />
-                          )}
-                          <DayText
-                            day={row.issuedOn ?? row.createdOn}
-                            locale={locale}
-                            className="text-xs text-muted-foreground"
-                          />
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -457,24 +487,48 @@ export function QuotationsTable({
 
 /**
  * The project was marked lost after this was raised (D138). A dead project is
- * not work to price, and nothing on her desk said so.
+ * not work to price, and nothing on her desk said so. The word, with the tone as
+ * a dot beside it: red is the mark, never the whole of the sentence (DESIGN §1).
  */
 function ProjectLostMark({ lostOn }: { lostOn: string | null }) {
   const t = useTranslations();
   if (!lostOn) return null;
   return (
-    <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
+    <span
+      data-slot="project-lost"
+      className="flex items-center gap-2 text-xs text-muted-foreground"
+    >
+      <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT.bad)} />
       {t("common.projectLost")}
     </span>
   );
 }
 
-/** One sentence, and the action it names — where there is one (SPEC §3, D31). */
+/**
+ * Nothing to draw, and the kinds of nothing are different sentences (DESIGN §8).
+ *
+ * - **Filtered out**: the chip is hiding every quotation there is — or every one
+ *   the search found — so the sentence says how many and the button shows them
+ *   with the search kept. "Nothing is waiting" over a floor of forty papers read
+ *   like a floor of none, and "Nothing matched" under a search that matched was
+ *   simply false.
+ * - **No results**: the words matched nothing, and the way out is to clear them.
+ * - **The desk's own status** (the queue): the page chose it, so there is no
+ *   "All" to go to (P11G).
+ * - **First use**: nothing at all yet. It never draws Request quotation a second
+ *   time (§2) — the one at the top is where the work starts, and the sentence
+ *   says so to the reader who has it and says where quotations come from to the
+ *   one who does not. It used to offer "Open companies", a door out of an empty
+ *   list that nobody was looking for.
+ * - **Could not load** is not an empty list; the screen's error card draws it.
+ */
 function EmptyQuotations({
   base,
   q,
   status,
   fixed,
+  hidden,
+  canRequest,
   onClear,
 }: {
   base: string;
@@ -482,442 +536,47 @@ function EmptyQuotations({
   status: QuotationStatus | null;
   /** The page chose the status (the queue): there is no "All" to go to (P11G). */
   fixed: boolean;
+  hidden: number;
+  canRequest: boolean;
   onClear: () => void;
 }) {
   const t = useTranslations();
 
+  // Before the search's own sentence: when the search found rows and the chip
+  // hid them all, "Nothing matched" is false. The way out takes the chip off
+  // and keeps the search, so the count is the rows it will show.
+  if (status && hidden > 0) {
+    return (
+      <Empty
+        action={
+          <Button asChild variant="outline">
+            <Link href={listHref(base, q, null)}>{t("quotations.showAll")}</Link>
+          </Button>
+        }
+      >
+        {q ? null : `${t("quotations.emptyStatus", { status: t(STATUS_KEYS[status]) })} `}
+        {t("quotations.hiddenByFilter", { count: hidden })}
+      </Empty>
+    );
+  }
+
   if (q) {
     return (
-      <EmptyCard sentence={t("quotations.emptySearch", { q })}>
-        <Button type="button" variant="outline" onClick={onClear}>
-          {t("common.clear")}
-        </Button>
-      </EmptyCard>
-    );
-  }
-
-  if (status) {
-    return (
-      <EmptyCard sentence={t("quotations.emptyStatus", { status: t(STATUS_KEYS[status]) })}>
-        {fixed ? null : (
-          <Button asChild variant="outline">
-            <Link href={base}>{t("common.all")}</Link>
+      <Empty
+        action={
+          <Button type="button" variant="outline" onClick={onClear}>
+            {t("common.clear")}
           </Button>
-        )}
-      </EmptyCard>
+        }
+      >
+        {t("quotations.emptySearch", { q })}
+      </Empty>
     );
   }
 
-  // A quotation is raised from inside a company or a project (§3), so that is
-  // where the sentence sends the rep.
-  return (
-    <EmptyCard sentence={t("quotations.empty")}>
-      <Button asChild variant="outline">
-        <Link href="/companies">{t("projects.openCompanies")}</Link>
-      </Button>
-    </EmptyCard>
-  );
-}
+  if (status && fixed) {
+    return <Empty>{t("quotations.emptyStatus", { status: t(STATUS_KEYS[status]) })}</Empty>;
+  }
 
-function EmptyCard({ sentence, children }: { sentence: string; children: ReactNode }) {
-  return <Empty action={children}>{sentence}</Empty>;
-}
-
-/* -------------------------------------------------------------------------- */
-/* The drawer the URL opens. Its data is read by the server component in       */
-/* quotation-drawer.tsx; everything interactive lives here.                    */
-/* -------------------------------------------------------------------------- */
-
-/** Closing the drawer drops `?open=` and leaves the search and status alone. */
-function useCloseDrawer(): () => void {
-  const router = useRouter();
-  const pathname = usePathname();
-  const params = useSearchParams();
-  return () => {
-    const next = new URLSearchParams(params.toString());
-    next.delete("open");
-    const query = next.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-  };
-}
-
-export type QuotationSheetProps = {
-  quotation: QuotationRow & {
-    notes: string | null;
-    isLatest: boolean;
-    selfIssued: boolean;
-    /** Where it was priced out of, and who it is for (SPEC §3, P12-9). */
-    warehouseName: string;
-    contactName: string | null;
-  };
-  /**
-   * Who it counts for (D148). Said only when it is worth saying — more than one
-   * name, or one name that is not the man who raised it — so the ordinary
-   * quotation is not made to answer a question nobody asked.
-   */
-  credit: { userId: string; name: string }[];
-  items: QuotationItemRow[];
-  /** Its services, drawn in their own section under the lines when there are any (SPEC §3, P13). */
-  services: QuotationServiceRow[];
-  revisions: { id: string; label: string; revision: number; status: QuotationStatus }[];
-  draft: QuotationDraft;
-  scope: ActionScope;
-  /** The figures under the title (P8.5). */
-  standing: QuotationStanding;
-  /**
-   * "Add report", opening on this customer, its job and this paper (SPEC §3,
-   * P13) — built on the server, which knows whether the reader may write one.
-   */
-  report?: ReactNode;
-  /**
-   * What has gone out against this quotation, and the button that sends more —
-   * built on the server, because both need the reader's own scope (S38).
-   */
-  dispatches: ReactNode;
-  /**
-   * What happened to it, oldest first (D72). A node rather than data for the
-   * same reason `dispatches` is one: it is built on the server, where the
-   * audit log and the reader's own language both live.
-   */
-  history: ReactNode;
-  /**
-   * On a revision, what it changed from the one it was raised on (D76). Null on
-   * a first ask, which is most of them.
-   */
-  changes: ReactNode;
-};
-
-export function QuotationSheet({
-  quotation,
-  credit,
-  items,
-  services,
-  revisions,
-  draft,
-  scope,
-  standing,
-  dispatches,
-  history,
-  changes,
-  report,
-}: QuotationSheetProps) {
-  const t = useTranslations();
-  const locale = useLocale();
-  const close = useCloseDrawer();
-
-  return (
-    <Sheet
-      open
-      onOpenChange={(next) => {
-        if (!next) close();
-      }}
-    >
-      <RecordPanel className="scroller">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <SheetTitle className="text-lg">
-                <Ref>{quotation.label}</Ref>
-              </SheetTitle>
-              <StatusBadge status={quotation.status} />
-              {!quotation.isLatest ? (
-                <Badge variant="outline">{t("quotations.supersededBadge")}</Badge>
-              ) : null}
-              {/* One person asked for this paper and put it out (SPEC §3). Said
-                  here rather than only in the trail below, because the trail is
-                  read after a question has been asked and this is what makes
-                  somebody ask it. Everyone who may open the quotation sees it:
-                  a flag only one role can see is a flag nobody trusts. */}
-              {quotation.selfIssued ? (
-                <Badge variant="outline">{t("quotations.selfIssuedBadge")}</Badge>
-              ) : null}
-            </div>
-            <SheetDescription>
-              {t("quotations.drawerDescription", {
-                company: quotation.companyName,
-                project: quotation.projectName,
-              })}
-            </SheetDescription>
-
-            {/* The project is lost and this paper is still open on it (D138):
-                the drawer says so with the day and the reason, so nobody prices
-                or ships against a decision that has already been taken. */}
-            {quotation.projectLostOn ? (
-              <p data-slot="project-lost" className={cn("text-sm", TONE_TEXT.bad)}>
-                {t("common.projectLostOn", { date: formatDay(quotation.projectLostOn, locale) })}
-                {quotation.projectLostReason ? (
-                  <>
-                    {" — "}
-                    <bdi>{lossReasonLabel(quotation.projectLostReason, t)}</bdi>
-                  </>
-                ) : null}
-              </p>
-            ) : null}
-
-            {/* What this drawer is opened to check, before who typed it
-                (DESIGN §6): how big it is, how much of it is still available to
-                send (D12), when it went out, and SMAC's number for it. */}
-            <StandingStrip
-              items={[
-                { label: t("common.sqm"), value: <Sqm value={quotation.totalSqm} /> },
-                { label: t("dispatches.remaining"), value: <Sqm value={standing.remainingSqm} /> },
-                {
-                  label: t("common.date"),
-                  value: (
-                    <DayText day={quotation.issuedOn ?? quotation.createdOn} locale={locale} />
-                  ),
-                },
-                {
-                  label: t("common.smacNumber"),
-                  value: quotation.smacNumber ? (
-                    <Ref>{quotation.smacNumber}</Ref>
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  ),
-                },
-              ]}
-            />
-
-            <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              {/* Whose paper this is. "Raised by" on everything a rep raised
-                  himself; "For" where the coordinator raised it on his behalf,
-                  because then the man named did not raise it — she did, and the
-                  line under these facts says so (SPEC §3 P13). */}
-              <Fact label={t(quotation.raisedByName ? "common.onBehalf.for" : "common.raisedBy")}>
-                {quotation.repName}
-              </Fact>
-              {/* Who at the customer this went to, and which store it was
-                  priced out of (SPEC §3, P12-9). The name only when there is
-                  one: a dash under a heading is a field a reader has to decide
-                  is empty, and a price raised for the company rather than for a
-                  person is addressed to nobody by design, not by omission. */}
-              {quotation.contactName ? (
-                <Fact label={t("common.contact")}>
-                  <bdi>{quotation.contactName}</bdi>
-                </Fact>
-              ) : null}
-              <Fact label={t("common.warehouse")}>
-                <bdi>{quotation.warehouseName}</bdi>
-              </Fact>
-              {credit.length > 0 && (credit.length > 1 || credit[0].userId !== quotation.repId) ? (
-                <Fact label={t("common.credit.label")}>
-                  {/* Each name in its own bdi: the separator is neutral and
-                      would otherwise settle against the paragraph rather than
-                      against the name beside it (rules/words.md). */}
-                  {credit.map((line, index) => (
-                    <Fragment key={line.userId}>
-                      {index > 0 ? " · " : null}
-                      <bdi>{line.name}</bdi>
-                    </Fragment>
-                  ))}
-                </Fact>
-              ) : null}
-            </dl>
-            <RaisedBy name={quotation.raisedByName} place="drawer" />
-          </div>
-
-          {quotation.status === "returned" && quotation.returnReason ? (
-            <NoteBlock title={t("quotations.sentBackReason")} text={quotation.returnReason} />
-          ) : null}
-          {quotation.status === "rejected" && quotation.decisionReason ? (
-            <NoteBlock title={t("quotations.rejectedReason")} text={quotation.decisionReason} />
-          ) : null}
-          {quotation.notes ? (
-            <NoteBlock title={t("quotations.notesToCoordinator")} text={quotation.notes} />
-          ) : null}
-
-          <QuotationActions
-            quotation={{
-              id: quotation.id,
-              label: quotation.label,
-              status: quotation.status,
-              companyId: quotation.companyId,
-              companyName: quotation.companyName,
-              projectId: quotation.projectId,
-              isLatest: quotation.isLatest,
-              smacNumber: quotation.smacNumber,
-              draft,
-            }}
-            scope={scope}
-          />
-          {report ? <div className="flex flex-wrap gap-2">{report}</div> : null}
-
-          {/* Above the lines, because it is what she reads before them: on a
-              revision the only question she has is which line is not what she
-              already priced (D76). */}
-          {changes}
-
-          <ul className="flex flex-col gap-2">
-            {items.map((item) => (
-              <li key={item.id} className="card-face flex flex-col gap-2 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-medium">
-                    {t("quotations.itemNumber", { number: item.position })}
-                  </h4>
-                  <span className="text-sm">
-                    <Money value={item.lineTotal} currency={false} />
-                  </span>
-                </div>
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
-                  <Fact label={t("common.colourCode")}>
-                    <span dir="ltr" className="num">
-                      {item.colourCode}
-                    </span>
-                  </Fact>
-                  <Fact label={t("common.supplier")}>{item.supplier}</Fact>
-                  <Fact label={t("common.fireRating")}>{item.fireRating}</Fact>
-                  <Fact label={t("common.class")}>{item.className}</Fact>
-                  <Fact label={t("common.thickness")}>
-                    <span dir="ltr" className="num">
-                      {item.thickness}
-                    </span>
-                  </Fact>
-                  <Fact label={t("quotations.sheet")}>
-                    <span dir="ltr" className="num">
-                      {item.width} × {item.length}
-                    </span>
-                  </Fact>
-                  <Fact label={t("common.qty")}>
-                    <span dir="ltr" className="num">
-                      {item.qty}
-                    </span>
-                  </Fact>
-                  <Fact label={t("common.pricePerSqm")}>
-                    <span dir="ltr" className="num">
-                      {formatMoney(item.pricePerSqm)}
-                    </span>
-                  </Fact>
-                </dl>
-              </li>
-            ))}
-          </ul>
-
-          {/* The services, in a section of their own under the panels, and
-              subtotalled apart from them (SPEC §3, P13). Only when there are
-              any: most paper has none, and a heading over nothing is a field a
-              reader has to decide is empty. */}
-          {services.length > 0 ? (
-            <section
-              data-slot="quotation-services"
-              aria-labelledby="quotation-services-heading"
-              className="flex flex-col gap-2"
-            >
-              <h3 id="quotation-services-heading" className="text-sm font-medium">
-                {t("quotations.services")}
-              </h3>
-              <ul className="flex flex-col gap-2">
-                {services.map((service) => (
-                  <li
-                    key={service.id}
-                    data-slot="quotation-service"
-                    className="card-face flex flex-col gap-2 p-3"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <h4 className="flex min-w-0 text-sm font-medium">
-                        <Clip text={service.name} />
-                      </h4>
-                      <span className="text-sm">
-                        <Money value={service.total} currency={false} />
-                      </span>
-                    </div>
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-4">
-                      <Fact label={t("common.sqm")}>
-                        <span dir="ltr" className="num">
-                          {formatSqm(service.sqm)}
-                        </span>
-                      </Fact>
-                      <Fact label={t("common.pricePerSqm")}>
-                        <span dir="ltr" className="num">
-                          {formatMoney(service.pricePerSqm)}
-                        </span>
-                      </Fact>
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-              <p
-                data-slot="services-subtotal"
-                className="flex items-baseline justify-between gap-4 text-sm"
-              >
-                <span className="text-muted-foreground">{t("quotations.servicesSubtotal")}</span>
-                <span>
-                  <span dir="ltr" className="num font-medium">
-                    {formatMoney(quotation.servicesSubtotal)}
-                  </span>{" "}
-                  {t("common.sar")}
-                </span>
-              </p>
-            </section>
-          ) : null}
-
-          <QuotationTotals
-            sqm={quotation.totalSqm}
-            split={
-              services.length > 0
-                ? { panels: quotation.panelsSubtotal, services: quotation.servicesSubtotal }
-                : undefined
-            }
-            subtotal={quotation.subtotal}
-            vat={quotation.vat}
-            total={quotation.total}
-          />
-
-          {dispatches}
-
-          {revisions.length > 1 ? (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">{t("quotations.revisions")}</h3>
-              <ul className="flex flex-wrap gap-2">
-                {revisions.map((revision) => (
-                  <li key={revision.id}>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/quotations?open=${revision.id}`}>
-                        <span dir="ltr" className="num">
-                          {revision.label}
-                        </span>
-                      </Link>
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {history}
-        </div>
-      </RecordPanel>
-    </Sheet>
-  );
-}
-
-function Fact({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
-
-/** Never a blank panel while the query runs (DESIGN §2). */
-export function QuotationSheetSkeleton() {
-  const t = useTranslations();
-  const close = useCloseDrawer();
-  return (
-  // Closable while it loads: a drawer somebody opened by mistake is closed at
-  // once, not after the record arrives and opens anyway.
-    <Sheet open onOpenChange={(next) => (next ? undefined : close())}>
-      <RecordPanel className="scroller">
-        <div aria-busy="true" className="flex flex-col gap-4 p-4">
-          <SheetTitle className="sr-only">{t("quotations.loading")}</SheetTitle>
-          <SheetDescription className="sr-only">{t("quotations.requestHint")}</SheetDescription>
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-3 w-2/3" />
-          <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
-          <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
-          <Skeleton className="h-32 w-full rounded-[calc(var(--radius)+4px)]" />
-        </div>
-      </RecordPanel>
-    </Sheet>
-  );
+  return <Empty>{t(canRequest ? "quotations.empty" : "quotations.emptyReadOnly")}</Empty>;
 }

@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { dispatchBrand } from "@/components/dispatches/dispatch-brand";
 import { DispatchDifferences } from "@/components/dispatches/dispatch-differences";
 import { DispatchHistory } from "@/components/dispatches/dispatch-history";
+import { DispatchTrouble } from "@/components/dispatches/dispatch-trouble";
 import { CREDIT_SPLIT } from "@/lib/credit";
 import { DispatchSheet } from "@/components/dispatches/dispatches-table";
 import { ReportButton } from "@/components/reports/report-dialog";
@@ -20,17 +22,28 @@ import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
  *
  * It also decides what the person looking at it may do: the coordinator runs
  * the chain, and the rep who owns the company owns the request on it (S8, S9).
+ *
+ * And a read that fails fails in the drawer's own panel, with Try again, not on
+ * the screen under it (`DispatchTrouble`, P13-G6 S12.5): the boundary stands
+ * outside the reads, so what it catches is theirs.
  */
-export async function DispatchDrawer({
+export function DispatchDrawer({
   dispatchId,
-  param,
+  param = "open",
 }: {
   dispatchId: string | null;
   /** The query parameter it was opened by — "dispatch" on the queue. */
   param?: string;
 }) {
   if (!dispatchId) return null;
+  return (
+    <DispatchTrouble param={param}>
+      <DispatchDrawerBody dispatchId={dispatchId} param={param} />
+    </DispatchTrouble>
+  );
+}
 
+async function DispatchDrawerBody({ dispatchId, param }: { dispatchId: string; param: string }) {
   const [user, locale, t] = await Promise.all([requireUser(), getLocale(), getTranslations()]);
 
   /*
@@ -53,6 +66,13 @@ export async function DispatchDrawer({
   // Read after the row and not beside it: there is nothing to say about a
   // dispatch this person may not open, and the refusal above is what decides.
   const history = await dispatchHistory(dispatch.id);
+
+  const scope = {
+    coordinator: user.role === "coordinator",
+    // The rep whose COMPANY it is — not whoever raised it, and not a
+    // manager, who sees everything and owns none of it (S8).
+    owner: mayQuote(user, dispatch.companyRepId),
+  };
 
   return (
     <DispatchSheet
@@ -110,12 +130,9 @@ export async function DispatchDrawer({
           serviceNames={dispatch.serviceNames}
         />
       }
-      scope={{
-        coordinator: user.role === "coordinator",
-        // The rep whose COMPANY it is — not whoever raised it, and not a
-        // manager, who sees everything and owns none of it (S8).
-        owner: mayQuote(user, dispatch.companyRepId),
-      }}
+      scope={scope}
+      // His own name on his own load is a word to read past (D116).
+      mine={dispatch.repId === user.id}
       // A report about this load, from the load (SPEC §3, P13), on the same
       // terms the popup's action accepts one: not on an archived customer, and
       // not on a job that is lost or archived, which the popup would open on
@@ -130,7 +147,9 @@ export async function DispatchDrawer({
             companyName={dispatch.companyName}
             projectId={dispatch.projectId ?? undefined}
             dispatchId={dispatch.id}
-            variant="outline"
+            // The brand when nothing else on the row is the work: Approve is
+            // hers, and a refused load's corrected request is his (P13-G6).
+            variant={dispatchBrand(dispatch.status, scope) === "report" ? "brand" : "outline"}
             icon
           >
             {t("common.addReport")}

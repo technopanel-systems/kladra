@@ -118,10 +118,10 @@ export function QuotationServices({
             )}
           >
             <span />
-            <span className="truncate">{t("quotations.service")}</span>
-            <span className="truncate">{t("common.sqm")}</span>
-            <span className="truncate">{t("common.pricePerSqm")}</span>
-            <span className="truncate text-end">{t("quotations.serviceTotal")}</span>
+            <span>{t("quotations.service")}</span>
+            <span>{t("common.sqm")}</span>
+            <span>{t("common.pricePerSqm")}</span>
+            <span className="text-end">{t("quotations.serviceTotal")}</span>
             <span />
           </div>
 
@@ -165,7 +165,7 @@ export function QuotationServices({
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:contents">
-                  <div className="col-span-2 flex min-w-0 flex-col gap-1.5 xl:col-auto">
+                  <div className="col-span-2 flex min-w-0 flex-col gap-2 xl:col-auto">
                     <Label id={id("service-label")} className="xl:sr-only">
                       {t("quotations.service")}
                     </Label>
@@ -183,7 +183,7 @@ export function QuotationServices({
                     />
                   </div>
 
-                  <div className="flex min-w-0 flex-col gap-1.5">
+                  <div className="flex min-w-0 flex-col gap-2">
                     <Label htmlFor={id("sqm")} className="xl:sr-only">
                       {t("common.sqm")}
                     </Label>
@@ -202,7 +202,7 @@ export function QuotationServices({
                     />
                   </div>
 
-                  <div className="flex min-w-0 flex-col gap-1.5">
+                  <div className="flex min-w-0 flex-col gap-2">
                     <Label htmlFor={id("price")} className="xl:sr-only">
                       {t("common.pricePerSqm")}
                     </Label>
@@ -225,7 +225,7 @@ export function QuotationServices({
                 <div className="flex items-baseline justify-end gap-x-2 border-t border-line pt-2 text-sm xl:contents">
                   <span
                     data-slot="service-total"
-                    className="min-w-0 text-muted-foreground xl:truncate xl:text-end"
+                    className="min-w-0 text-muted-foreground xl:text-end"
                   >
                     <span className="xl:sr-only">{t("quotations.serviceTotal")} </span>
                     <span dir="ltr" className="num font-medium text-foreground">

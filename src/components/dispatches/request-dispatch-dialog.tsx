@@ -59,8 +59,7 @@ import {
   type PaymentDetail,
   type PaymentTerms,
 } from "@/lib/payment";
-import { TONE_TEXT } from "@/lib/state-tone";
-import { cn } from "@/lib/utils";
+import { ToneNote } from "@/components/dispatches/tone-note";
 
 /**
  * Raise a dispatch, or correct one the desk has not approved (SPEC §3, S37–S40,
@@ -849,7 +848,7 @@ function LoadForm({
             <Skeleton className="h-9 w-full" />
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-32 w-full rounded-[calc(var(--radius)+4px)]" />
+            <Skeleton className="h-32 w-full rounded-xl" />
           </div>
         ) : quotation && paper === null ? (
           <p role="alert" className="text-sm text-destructive">
@@ -895,12 +894,12 @@ function LoadForm({
               />
             </div>
 
-            {/* Said the moment it is true, in the amber of "somebody will look
-                at this", and in words: the colour is never the only carrier. */}
+            {/* Said the moment it is true, with the amber dot of "somebody will
+                look at this", and in words: the colour is never the only carrier. */}
             {differs ? (
-              <p role="status" data-slot="form-differs" className={cn("text-sm", TONE_TEXT.wait)}>
+              <ToneNote tone="wait" role="status" slot="form-differs" className="text-sm">
                 {t("dispatches.formDiffers", { label: paperName })}
-              </p>
+              </ToneNote>
             ) : null}
 
             {/* Under the figure it decides: this many metres, and they count
@@ -915,94 +914,104 @@ function LoadForm({
           </>
         )}
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="dispatch-destination">{t("common.destination")}</Label>
-          <Input
-            id="dispatch-destination"
-            name="destination"
-            value={destination}
-            onChange={(event) => setDestination(event.target.value)}
-            disabled={pending}
-            placeholder={t("dispatches.destinationPlaceholder")}
-            aria-invalid={fieldErrors.destination ? true : undefined}
-            aria-describedby={fieldErrors.destination ? "dispatch-destination-error" : undefined}
-          />
-          {fieldErrors.destination ? (
-            <p id="dispatch-destination-error" role="alert" className="text-xs text-destructive">
-              {fieldErrors.destination}
-            </p>
-          ) : null}
-        </div>
+        {/* Where it goes and how it is paid for, as one labelled group (DESIGN
+            §8): a small word over an inset, under the same word the drawer reads
+            it back under, and a step of space past the load above it. */}
+        <section aria-labelledby="dispatch-terms-label" className="flex flex-col gap-2 pt-2">
+          <h3 id="dispatch-terms-label" className="text-xs font-medium text-muted-foreground">
+            {t("dispatches.terms")}
+          </h3>
+          <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface-2 p-3">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="dispatch-destination">{t("common.destination")}</Label>
+              <Input
+                id="dispatch-destination"
+                name="destination"
+                value={destination}
+                onChange={(event) => setDestination(event.target.value)}
+                disabled={pending}
+                placeholder={t("dispatches.destinationPlaceholder")}
+                aria-invalid={fieldErrors.destination ? true : undefined}
+                aria-describedby={fieldErrors.destination ? "dispatch-destination-error" : undefined}
+              />
+              {fieldErrors.destination ? (
+                <p id="dispatch-destination-error" role="alert" className="text-xs text-destructive">
+                  {fieldErrors.destination}
+                </p>
+              ) : null}
+            </div>
 
-        {/* How it is being paid for (SPEC §3): the choice, then the question
-            that choice asks, then the note finance reads on credit. Chips,
-            because three short answers a rep knows by heart are a row he
-            presses, not a list he opens. */}
-        <div className="flex flex-col gap-3">
-          <ChoiceChips
-            legend={t("common.paymentTerms")}
-            name="paymentTerms"
-            value={terms}
-            choices={PAYMENT_TERMS.map((value) => ({
-              value,
-              label: paymentTermsLabel(value, t),
-            }))}
-            onChange={(next) => {
-              setTerms(next);
-              // The second question is a different question for each of them,
-              // so an answer to the last one is not an answer to this one.
-              setDetail("");
-            }}
-            disabled={pending}
-            error={fieldErrors.paymentTerms}
-            errorId="dispatch-terms-error"
-          />
+            {/* How it is being paid for (SPEC §3): the choice, then the question
+                that choice asks, then the note finance reads on credit. Chips,
+                because three short answers a rep knows by heart are a row he
+                presses, not a list he opens. */}
+            <div className="flex flex-col gap-3">
+              <ChoiceChips
+                legend={t("common.paymentTerms")}
+                name="paymentTerms"
+                value={terms}
+                choices={PAYMENT_TERMS.map((value) => ({
+                  value,
+                  label: paymentTermsLabel(value, t),
+                }))}
+                onChange={(next) => {
+                  setTerms(next);
+                  // The second question is a different question for each of them,
+                  // so an answer to the last one is not an answer to this one.
+                  setDetail("");
+                }}
+                disabled={pending}
+                error={fieldErrors.paymentTerms}
+                errorId="dispatch-terms-error"
+              />
 
-          {terms && seconds.length > 0 ? (
-            <ChoiceChips
-              legend={t(detailLegendKey(terms))}
-              name="paymentDetail"
-              value={detail}
-              choices={seconds.map((value) => ({ value, label: paymentDetailLabel(value, t) }))}
-              onChange={setDetail}
-              disabled={pending}
-              error={fieldErrors.paymentDetail}
-              errorId="dispatch-detail-error"
-            />
-          ) : null}
+              {terms && seconds.length > 0 ? (
+                <ChoiceChips
+                  legend={t(detailLegendKey(terms))}
+                  name="paymentDetail"
+                  value={detail}
+                  choices={seconds.map((value) => ({ value, label: paymentDetailLabel(value, t) }))}
+                  onChange={setDetail}
+                  disabled={pending}
+                  error={fieldErrors.paymentDetail}
+                  errorId="dispatch-detail-error"
+                />
+              ) : null}
 
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="dispatch-payment-note">{t("common.paymentNote")}</Label>
-            <Textarea
-              id="dispatch-payment-note"
-              name="paymentNote"
-              rows={2}
-              value={paymentNote}
-              onChange={(event) => setPaymentNote(event.target.value)}
-              disabled={pending}
-              aria-invalid={fieldErrors.paymentNote ? true : undefined}
-              aria-describedby={
-                fieldErrors.paymentNote
-                  ? "dispatch-payment-note-error"
-                  : terms && needsNote(terms)
-                    ? "dispatch-payment-note-hint"
-                    : undefined
-              }
-            />
-            {/* Why it is not optional on credit, in the founder's own reason:
-                finance reviews it. Said once — as the hint before a save, as
-                the refusal after one. */}
-            {fieldErrors.paymentNote ? (
-              <p id="dispatch-payment-note-error" role="alert" className="text-xs text-destructive">
-                {fieldErrors.paymentNote}
-              </p>
-            ) : terms && needsNote(terms) ? (
-              <p id="dispatch-payment-note-hint" className="text-xs text-muted-foreground">
-                {t("dispatches.payment.noteRequired")}
-              </p>
-            ) : null}
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="dispatch-payment-note">{t("common.paymentNote")}</Label>
+                <Textarea
+                  id="dispatch-payment-note"
+                  name="paymentNote"
+                  rows={2}
+                  value={paymentNote}
+                  onChange={(event) => setPaymentNote(event.target.value)}
+                  disabled={pending}
+                  aria-invalid={fieldErrors.paymentNote ? true : undefined}
+                  aria-describedby={
+                    fieldErrors.paymentNote
+                      ? "dispatch-payment-note-error"
+                      : terms && needsNote(terms)
+                        ? "dispatch-payment-note-hint"
+                        : undefined
+                  }
+                />
+                {/* Why it is not optional on credit, in the founder's own reason:
+                    finance reviews it. Said once — as the hint before a save, as
+                    the refusal after one. */}
+                {fieldErrors.paymentNote ? (
+                  <p id="dispatch-payment-note-error" role="alert" className="text-xs text-destructive">
+                    {fieldErrors.paymentNote}
+                  </p>
+                ) : terms && needsNote(terms) ? (
+                  <p id="dispatch-payment-note-hint" className="text-xs text-muted-foreground">
+                    {t("dispatches.payment.noteRequired")}
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
       </FormBody>
 
       <FormFooter error={error} pending={pending} onCancel={onCancel} />

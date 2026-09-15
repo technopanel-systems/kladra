@@ -4,11 +4,10 @@ import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { NarrowingNote } from "@/components/metrics/narrowing-note";
 import { parseNarrowing } from "@/lib/narrowing";
+import { QuotationFlash } from "@/components/quotations/quotation-flash";
+import { QuotationSheetSkeleton } from "@/components/quotations/quotation-sheet";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
-import {
-  QuotationSheetSkeleton,
-  QuotationsTable,
-} from "@/components/quotations/quotations-table";
+import { QuotationsTable } from "@/components/quotations/quotations-table";
 import { Button } from "@/components/ui/button";
 import { requireUser } from "@/lib/authz";
 import { issuesOwnQuotations } from "@/lib/floor";
@@ -97,13 +96,29 @@ export default async function QuotationsPage({
   // Only when it came back full (D80). This list is years long on a real floor.
   const total = rows.length === LIST_LIMIT ? await countQuotations(narrowing) : rows.length;
 
+  // A chip that hides every row says how many it hides (DESIGN §8, filtered
+  // out): asked only then, of the same narrowing without the chip. The search
+  // stays in the count because the way out keeps it — "Nothing matched" under a
+  // search that matched two and a chip that hid both was false. Not behind a
+  // figure: the chips leave its cohort, so a count taken inside it would not be
+  // the rows the way out shows.
+  const hidden =
+    view === "list" && status && !cohort && rows.length === 0
+      ? await countQuotations({ ...narrowing, status: undefined })
+      : 0;
+
+  // Hers whenever there is anybody to raise one for, even with no job of her
+  // own: the dialog's "For" field says whose (SPEC §3 P13).
+  const canRequest = targets.projects.length > 0 || raisesOnBehalf(user);
+
   return (
+    // The row the reader's own act changed flashes, across the drawer and the
+    // list behind it (QuotationFlash, DESIGN §8).
+    <QuotationFlash>
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.quotations")}</h1>
-        {/* Hers whenever there is anybody to raise one for, even with no job of
-            her own: the dialog's "For" field says whose (SPEC §3 P13). */}
-        {targets.projects.length > 0 || raisesOnBehalf(user) ? (
+        {canRequest ? (
           <RequestQuotationDialog
             targets={targets}
             issuesDirectly={direct}
@@ -126,6 +141,8 @@ export default async function QuotationsPage({
         openId={open}
         view={view}
         remembered={stored}
+        hidden={hidden}
+        canRequest={canRequest}
       />
 
       <ListTail shown={rows.length} total={total} />
@@ -134,5 +151,6 @@ export default async function QuotationsPage({
         <QuotationDrawer quotationId={open} />
       </Suspense>
     </div>
+    </QuotationFlash>
   );
 }

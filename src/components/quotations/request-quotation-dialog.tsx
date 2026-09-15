@@ -29,6 +29,7 @@ import {
   servicesPayload,
   type ServiceDraft,
 } from "@/components/quotations/quotation-services";
+import { useFlashQuotation } from "@/components/quotations/quotation-flash";
 import { QuotationTotals } from "@/components/quotations/quotation-totals";
 import type { SelectOption } from "@/components/ui-ext/searchable-select";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
@@ -161,6 +162,9 @@ export function RequestQuotationDialog({
     quotationOnBehalfAction,
   );
 
+  // The row it lands on flashes, where a quotations list is behind the drawer
+  // it opens (QuotationFlash); from a company's or a job's drawer there is none.
+  const flash = useFlashQuotation();
   const onSaved = useCallback(
     (quotationId: string | undefined) => {
       toast.success(
@@ -175,10 +179,12 @@ export function RequestQuotationDialog({
         ),
       );
       setOpen(false);
-      if (quotationId) router.push(`/quotations?open=${quotationId}`);
-      else router.refresh();
+      if (quotationId) {
+        flash(quotationId);
+        router.push(`/quotations?open=${quotationId}`);
+      } else router.refresh();
     },
-    [mode, issuesDirectly, router, t],
+    [mode, issuesDirectly, router, t, flash],
   );
 
   const title =
@@ -562,7 +568,7 @@ function RequestForm({
             (P12-9): from the Quotations screen both, from a customer's drawer
             the job alone, from a job's drawer neither. */}
         {targets && !companyId ? (
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <Label id="quotation-company-label">{t("common.company")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-company-label"
@@ -592,7 +598,7 @@ function RequestForm({
         ) : null}
 
         {targets && !projectId ? (
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <Label id="quotation-project-label">{t("common.project")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-project-label"
@@ -618,7 +624,7 @@ function RequestForm({
           </div>
         ) : null}
 
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <Label id="quotation-contact-label">{t("common.contact")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-contact-label"
@@ -634,7 +640,7 @@ function RequestForm({
             />
           </div>
 
-          <div className="flex min-w-0 flex-col gap-1.5">
+          <div className="flex min-w-0 flex-col gap-2">
             <Label id="quotation-warehouse-label">{t("common.warehouse")}</Label>
             <SearchableSelect
               aria-labelledby="quotation-warehouse-label"
@@ -715,7 +721,7 @@ function RequestForm({
           </Field>
         ) : null}
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="quotation-notes">
             {t(issuesDirectly ? "quotations.notesOwn" : "quotations.notesToCoordinator")}
           </Label>

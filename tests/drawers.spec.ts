@@ -2,6 +2,7 @@ import type { Locator, Page } from "@playwright/test";
 import { login } from "./helpers/auth";
 import { one, query, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
+import { dispatchLabel, quotationLabel } from "@/lib/labels";
 
 /**
  * Every button a drawer hands to the kit still opens its dialog (DESIGN §5).
@@ -408,5 +409,244 @@ test("the project drawer shows Add report, keeps the rest in its menu, and puts 
     await page.keyboard.press("Escape");
     await expect(form).toBeHidden();
     await expect(more).toBeFocused();
+  });
+});
+
+/**
+ * The dispatch drawer has the same hierarchy (DESIGN §6, P13-G6 S12.5).
+ *
+ * It opened on a bare row of facts — quotation, raised by, date — with its
+ * square metres three screens down in the totals and its trail under the payment
+ * note, and Refuse stood at the weight of Approve beside it. Now the head is the
+ * customer's square, the load and its state, and the strip leads with the metres
+ * the load puts on the month (SPEC §3 P8). Approve is her one brand button,
+ * Refuse is last and apart in the tint, and what happened sits under them.
+ */
+test("the dispatch drawer leads with the customer and its metres, keeps Refuse last and apart, and reads its trail under the actions", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // Waiting on her, on a live paper or none, so Approve is pressable (D85).
+  const dispatch = await one<{ id: string; number: number }>(
+    `select d.id, d.number
+       from dispatches d
+       join companies c on c.id = d.company_id
+       left join quotations q on q.id = d.quotation_id
+      where d.status = 'submitted' and c.archived_at is null
+        and (q.id is null or not exists (
+              select 1 from quotations later
+               where later.number = q.number and later.revision > q.revision))
+      order by d.created_at, d.number
+      limit 1`,
+  );
+  const label = dispatchLabel(dispatch.number);
+
+  await login(page, locale, "rawan");
+  await page.goto(`/${locale}/queue?dispatch=${dispatch.id}`);
+  const drawer = page.getByRole("dialog", { name: label });
+  await expect(drawer).toBeVisible({ timeout: 30_000 });
+
+  await test.step("the head: the customer's 40px square, the load and its state", async () => {
+    const avatar = drawer.locator("[data-slot='avatar']").first();
+    await expect(avatar).toBeVisible();
+    const box = await avatar.boundingBox();
+    expect(Math.round(box?.width ?? 0)).toBe(40);
+    const radius = await avatar.evaluate((node) => parseFloat(getComputedStyle(node).borderTopLeftRadius));
+    expect(radius, "a company's avatar is drawn as a circle").toBeLessThan(20);
+    await expect(drawer.getByRole("heading").first()).toHaveText(label);
+    await expect(drawer.locator("[data-tone]").first()).toHaveText(t("dispatches.statusSubmitted"));
+  });
+
+  await test.step("the strip leads with the metres, then the paper, the day and SMAC's number", async () => {
+    const strip = drawer.locator("[data-slot='standing']");
+    await expect(strip.locator("[data-slot='figure-label']")).toHaveText([
+      t("common.sqm"),
+      t("common.quotation"),
+      t("common.date"),
+      t("common.smacDispatchNumber"),
+    ]);
+    await expect(strip.locator("[data-slot='figure-sending']")).toContainText(/\d/);
+  });
+
+  const actions = drawer.getByRole("group", { name: t("dispatches.actions") });
+  const approve = actions.getByRole("button", { name: t("dispatches.approve"), exact: true });
+  const refuse = actions.getByRole("button", { name: t("dispatches.refuse"), exact: true });
+
+  await test.step("Approve is the one brand button, and Refuse is last, apart, in the tint", async () => {
+    await expect(approve).toHaveAttribute("data-variant", "brand");
+    await expect(actions.locator("[data-variant='brand']")).toHaveCount(1);
+    await expect(refuse).toHaveAttribute("data-variant", "destructive");
+    await expect(actions.getByRole("button").last()).toHaveText(t("dispatches.refuse"));
+
+    // Apart: at the far end of its row, whichever way the row reads.
+    const row = await actions.boundingBox();
+    const end = await refuse.boundingBox();
+    expect(row, "the action row has no box").not.toBeNull();
+    expect(end, "Refuse has no box").not.toBeNull();
+    const gap =
+      locale === "ar"
+        ? (end?.x ?? 0) - (row?.x ?? 0)
+        : (row?.x ?? 0) + (row?.width ?? 0) - ((end?.x ?? 0) + (end?.width ?? 0));
+    expect(Math.round(gap), "Refuse is not at the end of its row").toBeLessThanOrEqual(1);
+  });
+
+  await test.step("what happened is read under the actions, before the load itself", async () => {
+    const order = await drawer.evaluate((node) => {
+      const group = node.querySelector("[role='group']");
+      const trail = node.querySelector("li[data-event]");
+      const item = node.querySelector("[data-slot='dispatch-item']");
+      const follows = (a: Element | null, b: Element | null) =>
+        Boolean(a && b && a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      return { trailAfterActions: follows(group, trail), itemAfterTrail: follows(trail, item) };
+    });
+    expect(order).toEqual({ trailAfterActions: true, itemAfterTrail: true });
+  });
+
+  await test.step("Refuse asks for her reason, and the button that sends it is in the tint too", async () => {
+    await refuse.click();
+    const ask = page.getByRole("dialog", { name: t("dispatches.refuseTitle", { label }) });
+    await expect(ask).toBeVisible();
+    await expect(ask.getByLabel(t("common.reason"))).toBeVisible();
+    await expect(ask.getByRole("button", { name: t("dispatches.refuse"), exact: true })).toHaveAttribute(
+      "data-variant",
+      "destructive",
+    );
+    await page.keyboard.press("Escape");
+    await expect(ask).toBeHidden();
+  });
+});
+
+/**
+ * The quotation drawer has the same hierarchy (DESIGN §6, P13-G6 S12.4).
+ *
+ * It led with the paper's number and put the company small under it; what
+ * happened to the paper came last, after the lines, the totals, the dispatches
+ * and the revisions; and Withdraw stood beside Edit request at the same weight,
+ * though it ends the request. Now the company leads with its 40px square and the
+ * number sits beside its state; one act is the brand — the one the paper is
+ * waiting on from this reader, or Add report where it waits on nothing — the
+ * trail is straight under the actions, and Withdraw is the last act in the menu,
+ * in the tint. The number is still the drawer's name, which is what opens it here.
+ */
+test("the quotation drawer leads with the company, keeps what happened under its actions, and puts Withdraw last in its menu", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const faisal = await userId("faisal@technopanel.com.sa");
+  const latest = (status: string) =>
+    one<{ id: string; number: number; revision: number; company: string }>(
+      `select q.id, q.number, q.revision, c.name as company
+         from quotations q
+         join companies c on c.id = q.company_id
+         join projects p on p.id = q.project_id
+        where q.rep_id = $1::uuid and c.rep_id = $1::uuid and q.status::text = $2::text
+          and c.archived_at is null and p.archived_at is null and p.lost_at is null
+          and not exists (select 1 from quotations later
+                           where later.number = q.number and later.revision > q.revision)
+        order by q.created_at
+        limit 1`,
+      [faisal, status],
+    );
+  const waiting = await latest("requested");
+  const label = quotationLabel(waiting.number, waiting.revision);
+
+  await login(page, locale, "faisal");
+  await page.goto(`/${locale}/quotations?view=list&open=${waiting.id}`);
+  const drawer = page.getByRole("dialog", { name: label });
+  await expect(drawer).toBeVisible({ timeout: 30_000 });
+  const actions = drawer.getByRole("group", { name: t("quotations.actions") });
+  const more = actions.getByRole("button", { name: t("common.moreFor", { name: label }) });
+
+  await test.step("the head: the company with its 40px square, then the number beside its state", async () => {
+    const avatar = drawer.locator("[data-slot='avatar']").first();
+    await expect(avatar).toBeVisible();
+    const box = await avatar.boundingBox();
+    expect(Math.round(box?.width ?? 0)).toBe(40);
+    const radius = await avatar.evaluate((node) => parseFloat(getComputedStyle(node).borderTopLeftRadius));
+    expect(radius, "a company's avatar is drawn as a circle").toBeLessThan(20);
+
+    const company = drawer.locator("[data-slot='quotation-company']");
+    await expect(company).toHaveText(waiting.company);
+    const title = drawer.getByRole("heading", { name: label, exact: true });
+    const companyBox = await company.boundingBox();
+    const titleBox = await title.boundingBox();
+    expect(companyBox?.y ?? Infinity, "the number leads the head again").toBeLessThan(titleBox?.y ?? 0);
+    await expect(drawer.locator("[data-tone]").first()).toHaveText(t("quotations.statusRequested"));
+  });
+
+  await test.step("nothing is owed on a waiting request, so Add report is the brand and Withdraw is not in sight", async () => {
+    const brand = actions.locator("[data-slot='button'][data-variant='brand']");
+    await expect(brand).toHaveCount(1);
+    await expect(brand).toHaveText(t("common.addReport"));
+    await expect(actions.getByRole("button", { name: t("quotations.editRequest") })).toHaveAttribute(
+      "data-variant",
+      "outline",
+    );
+    await expect(drawer.getByRole("button", { name: t("quotations.cancel"), exact: true })).toHaveCount(0);
+    const menuBox = await more.boundingBox();
+    expect(menuBox?.height, "the drawer head's menu button").toBe(32);
+  });
+
+  await test.step("what happened is straight under the actions, before the lines", async () => {
+    const actionsBox = await actions.boundingBox();
+    const trailBox = await drawer.locator("li[data-event]").first().boundingBox();
+    const itemBox = await drawer.locator("[data-slot='quotation-item']").first().boundingBox();
+    expect(actionsBox?.y ?? Infinity, "the trail sits above the actions").toBeLessThan(trailBox?.y ?? 0);
+    expect(trailBox?.y ?? Infinity, "the trail still comes after the lines").toBeLessThan(itemBox?.y ?? 0);
+  });
+
+  await test.step("a line's figures say what they are, and the totals' label is a word, not an eyebrow", async () => {
+    const item = drawer.locator("[data-slot='quotation-item']").first();
+    await expect(item).toContainText(t("common.sar"));
+    await expect(item).toContainText(t("common.sqm"));
+    const totalsLabel = drawer.locator("[data-slot='totals'] dt").first();
+    await expect(totalsLabel).toHaveCSS("text-transform", "none");
+    await expect(totalsLabel).toHaveCSS("letter-spacing", "normal");
+  });
+
+  await test.step("Withdraw is the menu's last act, in the tint, and its confirmation hands focus back", async () => {
+    await more.click();
+    const menu = page.getByRole("menu");
+    await expect(menu.getByRole("menuitem")).toHaveText([t("quotations.cancel")]);
+    await expect(menu.getByRole("menuitem").first()).toHaveAttribute("data-variant", "destructive");
+    await expect(menu.getByRole("separator")).toHaveCount(0);
+    await menu.getByRole("menuitem").first().click();
+
+    const ask = page.getByRole("dialog", { name: t("quotations.cancelTitle", { label }) });
+    await expect(ask.getByRole("button", { name: t("quotations.cancel") })).toHaveAttribute(
+      "data-variant",
+      "destructive",
+    );
+    await page.keyboard.press("Escape");
+    await expect(ask).toBeHidden();
+    await expect(more).toBeFocused();
+  });
+
+  await test.step("sent back to him, Edit request is the brand", async () => {
+    const returned = await latest("returned");
+    const name = quotationLabel(returned.number, returned.revision);
+    await page.goto(`/${locale}/quotations?view=list&open=${returned.id}`);
+    const sheet = page.getByRole("dialog", { name });
+    await expect(sheet).toBeVisible({ timeout: 30_000 });
+    const brand = sheet
+      .getByRole("group", { name: t("quotations.actions") })
+      .locator("[data-slot='button'][data-variant='brand']");
+    await expect(brand).toHaveCount(1);
+    await expect(brand).toHaveText(t("quotations.editRequest"));
+  });
+
+  await test.step("on her desk, Issue is the brand and Send back beside it, with no menu", async () => {
+    await login(page, locale, "rawan");
+    await page.goto(`/${locale}/queue?open=${waiting.id}`);
+    const sheet = page.getByRole("dialog", { name: label });
+    await expect(sheet).toBeVisible({ timeout: 30_000 });
+    const hers = sheet.getByRole("group", { name: t("quotations.actions") });
+    await expect(hers.getByRole("button").nth(0)).toHaveText(t("quotations.issue"));
+    await expect(hers.getByRole("button").nth(0)).toHaveAttribute("data-variant", "brand");
+    await expect(hers.getByRole("button").nth(1)).toHaveText(t("quotations.sendBack"));
+    await expect(hers.getByRole("button").nth(1)).toHaveAttribute("data-variant", "outline");
+    await expect(hers.locator("[data-slot='row-menu']")).toHaveCount(0);
   });
 });

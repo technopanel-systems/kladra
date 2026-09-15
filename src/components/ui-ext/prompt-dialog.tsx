@@ -32,6 +32,11 @@ import type { ActionResult } from "@/lib/types";
  * It is a FORM (D114): Rawan types SMAC's number and presses Enter, on her most
  * frequent act, instead of finding the button with the mouse. A reason is a
  * paragraph, so there Enter stays a new line and Ctrl/Cmd+Enter confirms.
+ *
+ * `destructive` presses a button in the tint, never the brand, for the answer
+ * that ends somebody's request — refusing a load (P13-G6, S12.5) — in the shape
+ * ConfirmDialog already takes it: the trigger that opened it is in the tint, and
+ * a brand-red Refuse behind it would say the opposite of the button pressed.
  */
 export function PromptDialog({
   trigger,
@@ -46,6 +51,7 @@ export function PromptDialog({
   onDone,
   initialValue,
   context,
+  destructive = false,
 }: {
   trigger: ReactNode;
   title: string;
@@ -66,6 +72,8 @@ export function PromptDialog({
   onConfirm: (value: string) => Promise<ActionResult<unknown>>;
   /** Runs after the action succeeds — refresh, or navigate away. */
   onDone?: () => void;
+  /** The answer ends somebody's request: the confirm button is in the tint. */
+  destructive?: boolean;
 }) {
   const guarded = useWireGuard();
   const [open, setOpen] = useState(false);
@@ -181,6 +189,7 @@ export function PromptDialog({
           pending={pending}
           onCancel={() => onOpenChange(false)}
           confirmLabel={confirmLabel}
+          confirmVariant={destructive ? "destructive" : "brand"}
         />
       </form>
     </ResponsiveDialog>

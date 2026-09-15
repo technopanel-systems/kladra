@@ -673,10 +673,23 @@ test("a rep withdraws his own request and it leaves the coordinator's queue", as
   await expect(page).toHaveURL(/\/quotations\?open=/, COLD);
 
   const label = await nameOfTheOpenQuotation(page);
+  const sheet = sheetFor(page, label);
 
-  await sheetFor(page, label).getByRole("button", { name: t("quotations.cancel") }).click();
+  // It ends the request, so it is not a button beside Edit request any more: it
+  // is the last act in the drawer's menu, in the tint (P13-G6, S12.4).
+  await expect(sheet.getByRole("button", { name: t("quotations.cancel"), exact: true })).toHaveCount(0);
+  await sheet.getByRole("button", { name: t("common.moreFor", { name: label }) }).click();
+  const withdraw = page.getByRole("menuitem", { name: t("quotations.cancel") });
+  await expect(withdraw).toHaveAttribute("data-variant", "destructive");
+  await withdraw.click();
+
   const ask = page.getByRole("dialog", { name: t("quotations.cancelTitle", { label }) });
-  await ask.getByRole("button", { name: t("quotations.cancel") }).click();
+  const confirm = ask.getByRole("button", { name: t("quotations.cancel") });
+  await expect(confirm, "the confirmation that ends a request is not in the tint").toHaveAttribute(
+    "data-variant",
+    "destructive",
+  );
+  await confirm.click();
   await expect(page.getByText(t("quotations.cancelled", { label }))).toBeVisible(COLD);
 
   await test.step("it is off Rawan's queue and still readable, marked withdrawn", async () => {
@@ -689,6 +702,83 @@ test("a rep withdraws his own request and it leaves the coordinator's queue", as
     await labelOnScreen(page, label).click();
     await expect(statusOf(sheetFor(page, label))).toHaveText(t("quotations.statusCancelled"));
   });
+});
+
+/**
+ * A chip that hides every row says how many it hides (DESIGN §8, filtered out).
+ *
+ * "Nothing is Sent back right now" over a floor of fourteen papers read like a
+ * floor of none: the sentence was true and the screen still lied about what was
+ * there. The count is the list's own — the rows the same reader sees with the
+ * chip off — so the spec reads it off that list rather than retyping the
+ * predicate beside it, and the way out is the whole list again.
+ */
+test("a chip that hides every quotation says how many it hides, and shows them all", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const turki = await userId("turki@technopanel.com.sa");
+  // The seeded floor sends none of Turki's back, and nothing earlier in a run
+  // gives him one — asked of the table, so a floor that changes says so here.
+  const [{ returned }] = await query<{ returned: number }>(
+    `select count(*)::int as returned
+       from quotations q
+       join companies c on c.id = q.company_id
+      where q.status::text = 'returned'
+        and (c.rep_id = $1::uuid
+             or exists (select 1 from company_shares s
+                         where s.company_id = c.id and s.user_id = $1::uuid))`,
+    [turki],
+  );
+  expect(returned, "Turki has a sent-back quotation, so the chip hides nothing").toBe(0);
+
+  await login(page, locale, "turki");
+  await page.goto(`/${locale}/quotations?view=list`);
+  const table = page.getByRole("table").first();
+  await expect(table).toBeVisible(COLD);
+  // Uncapped, so the rows drawn are the rows there are.
+  await expect(page.locator('[data-slot="list-tail"]')).toHaveCount(0);
+  const shown = (await table.getByRole("row").count()) - 1;
+  expect(shown, "Turki's floor has no quotations to hide").toBeGreaterThan(0);
+
+  await page.goto(`/${locale}/quotations?view=list&status=returned`);
+  const empty = page.locator('[data-slot="empty"]');
+  await expect(empty).toContainText(t("quotations.hiddenByFilter", { count: shown }), COLD);
+  await expect(empty).toContainText(
+    t("quotations.emptyStatus", { status: t("quotations.statusReturned") }),
+  );
+
+  await empty.getByRole("link", { name: t("quotations.showAll") }).click();
+  await expect(page).toHaveURL(new RegExp(`/${locale}/quotations$`), COLD);
+  await expect(page.getByRole("table").first().getByRole("row")).toHaveCount(shown + 1, COLD);
+
+  // Under a search the chip is still what hid them, and "Nothing matched" was
+  // false: the sentence counts what the search found, and the way out takes the
+  // chip off and keeps the words.
+  const [{ number }] = await query<{ number: number }>(
+    `select q.number
+       from quotations q
+       join companies c on c.id = q.company_id
+      where c.rep_id = $1::uuid and q.status::text = 'issued'
+      order by q.number
+      limit 1`,
+    [turki],
+  );
+  const term = `Q-${number}`;
+  await page.goto(`/${locale}/quotations?view=list&q=${encodeURIComponent(term)}`);
+  const found = page.getByRole("table").first();
+  await expect(found).toBeVisible(COLD);
+  const matched = (await found.getByRole("row").count()) - 1;
+  expect(matched, `the search for ${term} found none of Turki's quotations`).toBeGreaterThan(0);
+
+  await page.goto(`/${locale}/quotations?view=list&q=${encodeURIComponent(term)}&status=returned`);
+  await expect(empty).toContainText(t("quotations.hiddenByFilter", { count: matched }), COLD);
+  await expect(empty).not.toContainText(t("quotations.emptySearch", { q: term }));
+  await empty.getByRole("link", { name: t("quotations.showAll") }).click();
+  await expect(page).toHaveURL(/[?&]q=/, COLD);
+  await expect(page).not.toHaveURL(/status=/);
+  await expect(page.getByRole("table").first().getByRole("row")).toHaveCount(matched + 1, COLD);
 });
 
 /**

@@ -742,3 +742,93 @@ test("the desk refuses a dispatch with a reason, and the rep reads it on his day
     );
   }
 });
+
+/**
+ * Approve with nothing in the box is refused at the box, and nothing moves
+ * (DESIGN §8: a field's problem goes under the field; P13-G6 S12.5).
+ *
+ * SMAC's number is what approves a load and what the month counts (S41), so a
+ * blank one is the one mistake this dialog exists to stop. The sentence is the
+ * action's own, under the field, and the dispatch is still waiting afterwards.
+ */
+test("Approve with no SMAC number is refused at the field, and the load is still waiting", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const dispatch = await one<{ id: string; number: number }>(
+    `select d.id, d.number
+       from dispatches d
+       join companies c on c.id = d.company_id
+       left join quotations q on q.id = d.quotation_id
+      where d.status = 'submitted' and c.archived_at is null
+        and (q.id is null or not exists (
+              select 1 from quotations later
+               where later.number = q.number and later.revision > q.revision))
+      order by d.created_at, d.number
+      limit 1`,
+  );
+  const label = dispatchLabel(dispatch.number);
+
+  await login(page, locale, "rawan");
+  await page.goto(`/${locale}/queue?dispatch=${dispatch.id}`);
+  const sheet = sheetFor(page, label);
+  await expect(sheet).toBeVisible(COLD);
+
+  await sheet.getByRole("button", { name: t("dispatches.approve"), exact: true }).click();
+  const ask = page.getByRole("dialog", { name: t("dispatches.approveTitle", { label }) });
+  await ask.getByRole("button", { name: t("dispatches.approve"), exact: true }).click();
+
+  const box = ask.getByLabel(t("common.smacDispatchNumber"));
+  await expect(ask.getByRole("alert")).toHaveText(t("dispatches.numberRequired"), COLD);
+  await expect(box).toHaveAttribute("aria-invalid", "true");
+  // Refused, not saved: the question is still on screen, and the row still waits.
+  await expect(ask).toBeVisible();
+  const row = await one<{ status: string; smac: string | null }>(
+    "select status, smac_dispatch_number as smac from dispatches where id = $1::uuid",
+    [dispatch.id],
+  );
+  expect(row).toEqual({ status: "submitted", smac: null });
+});
+
+/**
+ * A chip that hides every load says how many it hides, and the way back to them
+ * (DESIGN §8: filtered out is its own kind of empty; P13-G6 S12.5).
+ *
+ * "Nothing is Refused right now" over a floor with loads on it read as a floor
+ * with none. Marketing sells like a rep (SPEC §3 P13), and has approved loads and
+ * no refused one on the demo floor.
+ */
+test("a status chip that hides every dispatch says how many, and shows them all again", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const marketing = await userId("marketing@technopanel.com.sa");
+  const refused = await one<{ n: number }>(
+    `select count(*)::int as n
+       from dispatches d join companies c on c.id = d.company_id
+      where c.rep_id = $1::uuid and d.status = 'refused'`,
+    [marketing],
+  );
+  expect(refused.n, "the demo floor gave marketing a refused load").toBe(0);
+
+  await login(page, locale, "marketing");
+  await page.goto(`/${locale}/dispatches?view=list`);
+  await expect(page.getByRole("heading", { name: t("common.dispatches") })).toBeVisible(COLD);
+  // The list's own rows, read off the table: what the chip is about to hide.
+  const rows = page.getByRole("table").locator("tbody tr");
+  await expect(rows.first()).toBeVisible(COLD);
+  const all = await rows.count();
+
+  await page.goto(`/${locale}/dispatches?view=list&status=refused`);
+  const empty = page.locator("[data-slot='empty']");
+  await expect(empty).toContainText(
+    t("dispatches.emptyRefused"),
+    COLD,
+  );
+  await expect(empty).toContainText(t("dispatches.hiddenByFilter", { count: all }));
+
+  await empty.getByRole("link", { name: t("dispatches.showAll"), exact: true }).click();
+  await expect(rows).toHaveCount(all, COLD);
+});

@@ -5,6 +5,7 @@
   "companyGoneMeans": "It may have been archived or handed to somebody else. Everything that is yours is in the list.",
   "companyActions": "Company actions",
   "companyFailed": "This company could not be opened.",
+  "dispatchFailed": "This dispatch could not be opened.",
   "activity": "Reports",
   "newProject": "Add project",
   "addContact": "Add contact",

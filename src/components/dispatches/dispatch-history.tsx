@@ -1,9 +1,8 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { DayText } from "@/components/ui-ext/day-text";
+import { ToneNote } from "@/components/dispatches/tone-note";
 import { Prose } from "@/components/ui-ext/prose";
 import type { DispatchEvent } from "@/lib/dispatches";
-import { TONE_TEXT } from "@/lib/state-tone";
-import { cn } from "@/lib/utils";
 
 /**
  * What happened to this dispatch, oldest first (D143).
@@ -60,9 +59,9 @@ export async function DispatchHistory({
                 moves to another paper; the label written at the time is the
                 fallback, not the rule. */}
             {event.differsFrom ? (
-              <span data-slot="trail-differs" className={cn("text-xs", TONE_TEXT.wait)}>
+              <ToneNote tone="wait" slot="trail-differs" className="text-xs">
                 {t("dispatches.differsFrom", { label: paper ?? event.differsFrom })}
-              </span>
+              </ToneNote>
             ) : null}
             {event.note && event.what === "correctNumber" ? (
               // The old number, not a sentence (D88). One key for both chains,

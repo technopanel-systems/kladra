@@ -370,3 +370,74 @@ test("a team row's body opens that person's companies, and a figure on it opens 
     await expect(page).toHaveURL(new RegExp(`rep=${faisal.id}&filter=${filter}`), COLD);
   });
 });
+
+/*
+ * P13-G6 S12.6 and S12.7 — one row on the work tabs. The day's waiting rows and
+ * its call rows were two templates side by side, and neither the day's rows nor
+ * the manager's stuck rows named a company or a person with a face. Every row
+ * now leads with its company's face and, on the day, ends with its actions in
+ * one place; a card's state is a dot before its title, never the title's colour.
+ */
+test("the day's rows and the stuck rows wear their faces, and a card's tone is a dot before its title", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  await test.step("the rep's waiting rows: a face, Add report on every row, Acknowledge on a lead", async () => {
+    await login(page, locale, "faisal");
+    await page.goto(`/${locale}/day?tab=work`);
+    const waiting = page.locator('[data-slot="waiting-list"]');
+    const rows = waiting.getByRole("listitem");
+    await expect(rows.first()).toBeVisible(COLD);
+    const count = await rows.count();
+    for (let index = 0; index < count; index += 1) {
+      const row = rows.nth(index);
+      await expect(row.locator('[data-slot="avatar"]')).toHaveCount(1);
+      // Found by the words it shows; its label adds the customer (DESIGN §5).
+      await expect(
+        row.locator('button[aria-haspopup="dialog"]').filter({ hasText: t("common.addReport") }),
+      ).toHaveCount(1);
+    }
+    const leads = rows.filter({ has: page.getByText(t("day.newLead"), { exact: true }) });
+    expect(await leads.count(), "the seed gives Faisal no lead to acknowledge").toBeGreaterThan(0);
+    for (const lead of await leads.all()) {
+      await expect(lead.getByRole("button").filter({ hasText: t("leads.acknowledge") })).toHaveCount(1);
+      // The one state a lead's face carries: nobody has said he has it.
+      await expect(lead.locator('[data-slot="avatar-state"]')).toHaveCount(1);
+    }
+  });
+
+  await test.step("the calls: a face on every row, and each band's tone a dot before its title", async () => {
+    const bands = page.locator('[data-slot="call-band"]');
+    await expect(bands.first()).toBeVisible();
+    const tones: Record<string, string> = { overdue: "bad", today: "wait", never: "open", quiet: "open" };
+    for (const band of await bands.all()) {
+      const which = (await band.getAttribute("data-band")) ?? "";
+      await expect(band.getByRole("heading", { level: 3 }).locator('[data-slot="title-dot"]')).toHaveAttribute(
+        "data-tone-dot",
+        tones[which],
+      );
+      for (const row of await band.getByRole("listitem").all()) {
+        await expect(row.locator('[data-slot="avatar"]')).toHaveCount(1);
+      }
+    }
+  });
+
+  await test.step("the manager's stuck rows: the company's face and every person the row names", async () => {
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/team?tab=work`);
+    const stuck = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { level: 2, name: t("team.stuck"), exact: true }) });
+    const rows = stuck.getByRole("listitem");
+    await expect(rows.first()).toBeVisible(COLD);
+    for (const row of await rows.all()) {
+      expect(await row.locator('[data-slot="avatar"]').count(), "a stuck row with no faces").toBeGreaterThanOrEqual(2);
+    }
+    // A group's tone is a dot on its title, one per card.
+    const cards = stuck.getByRole("heading", { level: 3 });
+    await expect(cards.locator('[data-slot="title-dot"]')).toHaveCount(await cards.count());
+  });
+});

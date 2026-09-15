@@ -62,7 +62,7 @@ export async function ChainCard({
   if (cohort.raised === 0) {
     return (
       <section className="card-face flex flex-col gap-2 p-4">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("team.chainTitle")}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t("team.chainTitle")}</h2>
         <p className="text-sm text-muted-foreground">
           {t("team.chainEmpty", { from })}
         </p>
@@ -99,7 +99,7 @@ export async function ChainCard({
   return (
     <section className="card-face flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("team.chainTitle")}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t("team.chainTitle")}</h2>
         {/* The question in words, which is the whole of D59 — and what the
             pie is a share OF, with the number in it. */}
         <p className="text-sm text-pretty">

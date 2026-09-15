@@ -2,6 +2,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Prose } from "@/components/ui-ext/prose";
 import type { QuotationEvent } from "@/lib/quotations";
+import { TONE_DOT } from "@/lib/state-tone";
+import { cn } from "@/lib/utils";
 
 /**
  * What happened to this quotation, oldest first (SPEC D72, 9A item 5).
@@ -23,10 +25,13 @@ export async function QuotationHistory({ history }: { history: readonly Quotatio
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-baseline gap-x-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h3 className="text-sm font-medium">{t("quotations.history")}</h3>
+        {/* The count is a word with the tone as a dot before it, not a word
+            painted amber (DESIGN §1: a state is a dot and its word). */}
         {returns > 0 ? (
-          <p className="text-xs text-state-wait-fg">
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span aria-hidden="true" className={cn("size-1.5 shrink-0 rounded-full", TONE_DOT.wait)} />
             {t("quotations.sentBackTimes", { count: returns })}
           </p>
         ) : null}

@@ -81,7 +81,7 @@ async function Line({ change }: { change: LineChange }) {
           every other figure on this drawer uses, rather than one sentence with
           two numbers in it. The value she is about to act on is the one in the
           reading colour; the old one is an aside beside it. */}
-      <ul className="flex flex-col gap-0.5 text-xs">
+      <ul className="flex flex-col gap-1 text-xs">
         {change.fields.map((field) => (
           <li key={field.field} className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-muted-foreground">{t(`common.${field.field}`)}</span>
@@ -114,7 +114,7 @@ async function Service({ change }: { change: ServiceChange }) {
       <span className="font-medium">
         <bdi>{change.service}</bdi>
       </span>
-      <ul className="flex flex-col gap-0.5 text-xs">
+      <ul className="flex flex-col gap-1 text-xs">
         {change.fields.map((field) => (
           <li key={field.field} className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-muted-foreground">

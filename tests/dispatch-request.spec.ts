@@ -1057,21 +1057,25 @@ test("a line added to a load with a paper says so, and at 375 the drawer's rows 
     await expect(sheet.locator('[data-slot="line-not-on-paper"]')).toHaveText(t("dispatches.lineNotOnPaper"));
     await expect(sheet.getByText(t("dispatches.notOnPaper"), { exact: true })).toHaveCount(0);
 
-    const totals = sheet.locator('[data-slot="totals"]');
-    await totals.scrollIntoViewIfNeeded();
-    // The totals block IS the `dl`, so its rows are its own children.
+    // How it travels and is paid for is its own labelled group since P13-G6
+    // (S12.5), under what the load comes to; both blocks are held to the rule.
+    const terms = sheet.locator('[data-slot="terms"]');
+    await terms.scrollIntoViewIfNeeded();
+    // The group IS the `dl`, so its rows are its own children.
     await expect(
-      totals
+      terms
         .locator(":scope > div")
         .filter({ has: page.locator("dt").getByText(t("common.shipment"), { exact: true }) })
         .locator("dd"),
     ).toBeVisible();
-    const clipped = await totals
-      .locator("dd")
-      .evaluateAll((nodes) =>
-        nodes.filter((node) => node.scrollWidth > node.clientWidth + 1).map((node) => node.textContent ?? ""),
-      );
-    expect(clipped, "a value on the drawer is cut at its edge").toEqual([]);
+    for (const block of ["totals", "terms"]) {
+      const clipped = await sheet
+        .locator(`[data-slot="${block}"] dd`)
+        .evaluateAll((nodes) =>
+          nodes.filter((node) => node.scrollWidth > node.clientWidth + 1).map((node) => node.textContent ?? ""),
+        );
+      expect(clipped, `a value in the drawer's ${block} is cut at its edge`).toEqual([]);
+    }
   } finally {
     await query("update dispatch_items set quotation_item_id = $2::uuid where id = $1::uuid", [
       load.item,

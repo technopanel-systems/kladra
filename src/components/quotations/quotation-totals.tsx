@@ -55,9 +55,10 @@ export function QuotationTotals({
   return (
     <dl data-slot="totals" className="card-face flex flex-col gap-2 p-3 text-sm">
       <div className="flex items-baseline justify-between gap-4 pb-1">
-        <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          {t("common.sqm")}
-        </dt>
+        {/* A word in a sentence's case, not an eyebrow (DESIGN §8): it was set
+            in capitals and letter-spaced, the identity §8 refuses — and m² has
+            no capital M. The `StandingStrip` label's shape since S12.K. */}
+        <dt className="text-xs text-muted-foreground">{t("common.sqm")}</dt>
         <dd data-slot="figure-sqm" className="text-2xl leading-none font-semibold">
           <span dir="ltr" className="num">
             {formatSqm(sqm)}

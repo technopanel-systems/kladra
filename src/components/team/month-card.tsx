@@ -55,50 +55,55 @@ export async function MonthCard({
     // `month-card` names it for the specs that hold it to the top of its tab
     // (SPEC §3 P13: "at the top of the first tab, always visible").
     <section data-slot="month-card" className="card-face flex flex-col gap-3 p-3 md:p-4">
-      <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
+      <h2 className="text-sm font-medium text-foreground">{title}</h2>
 
-      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
-        <p className="flex flex-col">
-          <span className="text-xs text-muted-foreground">{t("team.achieved")}</span>
-          <span className="text-2xl font-semibold">
-            <span dir="ltr" className="num" data-slot="figure-achieved">
-              {formatSqmWhole(achieved)}
-            </span>{" "}
-            <span className="text-sm font-normal text-muted-foreground">{t("common.sqm")}</span>
-          </span>
-        </p>
+      {/*
+        One primary figure, and the rest a step down (restyle, DESIGN §1): what
+        has gone out is the figure the card is for, at the top of the scale;
+        what was aimed at and where the month has got to are the two facts it
+        is read against, beside it and never folded into it (S46). Two figures
+        at 24px were two answers competing for one glance.
 
-        <p className="flex flex-col">
-          <span className="text-xs text-muted-foreground">{t("team.target")}</span>
-          <span className="text-2xl font-semibold">
-            {target === null ? (
-              <span className="text-sm font-normal text-muted-foreground">
-                {t("team.noTarget")}
-              </span>
-            ) : (
-              <>
-                <span dir="ltr" className="num" data-slot="figure-target">
-                  {formatSqmWhole(target)}
-                </span>{" "}
-                <span className="text-sm font-normal text-muted-foreground">
-                  {t("common.sqm")}
-                </span>
-              </>
-            )}
-          </span>
-        </p>
+        Labels on one line and values on the next, each row aligned on its
+        baseline, so a 24px figure and a 14.5px one sit on one line of type
+        rather than one of them floating. The pace takes the rest of the width
+        and wraps there: "The month has just started." is the longest thing on
+        the card, and on a phone it is the one that gives way.
+      */}
+      <dl className="grid grid-flow-col grid-cols-[max-content_max-content_minmax(0,1fr)] grid-rows-[auto_auto] items-baseline gap-x-6 gap-y-0.5">
+        <dt className="text-xs text-muted-foreground">{t("team.achieved")}</dt>
+        <dd className="text-2xl leading-8 font-semibold">
+          <span dir="ltr" className="num" data-slot="figure-achieved">
+            {formatSqmWhole(achieved)}
+          </span>{" "}
+          <span className="text-sm font-normal text-muted-foreground">{t("common.sqm")}</span>
+        </dd>
+
+        <dt className="text-xs text-muted-foreground">{t("team.target")}</dt>
+        <dd className="text-base font-medium">
+          {target === null ? (
+            <span className="text-sm font-normal text-muted-foreground">{t("team.noTarget")}</span>
+          ) : (
+            <>
+              <span dir="ltr" className="num" data-slot="figure-target">
+                {formatSqmWhole(target)}
+              </span>{" "}
+              <span className="text-xs font-normal text-muted-foreground">{t("common.sqm")}</span>
+            </>
+          )}
+        </dd>
 
         {/* Beside the figures, never folded into them (S46). In the first five
-            working days the ratio is noise, so it says so instead (S49). */}
-        <p className="flex flex-col">
-          <span className="text-xs text-muted-foreground">{t("team.pace")}</span>
-          <span className={cn("text-sm", tone && TONE_TEXT[tone])}>
-            {pace.justStarted
-              ? t("team.justStarted")
-              : t("team.paceLine", { elapsed: pace.elapsed, total: pace.total })}
-          </span>
-        </p>
-      </div>
+            working days the ratio is noise, so it says so instead (S49). A
+            pace behind the calendar keeps its tone: a pace is what a tone on a
+            line of words is for. */}
+        <dt className="text-xs text-muted-foreground">{t("team.pace")}</dt>
+        <dd className={cn("text-sm text-pretty", tone && TONE_TEXT[tone])}>
+          {pace.justStarted
+            ? t("team.justStarted")
+            : t("team.paceLine", { elapsed: pace.elapsed, total: pace.total })}
+        </dd>
+      </dl>
 
       {percent === null ? null : (
         <div className="flex flex-col gap-1.5">
@@ -108,8 +113,11 @@ export async function MonthCard({
             className="relative h-2 w-full overflow-hidden rounded-full bg-surface-2"
           >
             <div
+              // At the charts' 0.7 (`toneInk`): the one bar on the card is a
+              // mark on a chart, and poured at full strength it was louder
+              // than the figure it draws.
               className={cn(
-                "h-full rounded-full",
+                "h-full rounded-full opacity-70",
                 tone === "bad" && "bg-state-bad-fg",
                 tone === "wait" && "bg-state-wait-fg",
                 tone === "good" && "bg-state-good-fg",

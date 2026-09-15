@@ -49,6 +49,7 @@
   "monthAfterEmpty": "{month} had metres again after an empty {previous}",
   "monthNothing": "No metres in {previous} or {month}",
   "monthsMeans": "Approved m² per month, against that month’s target.",
+  "monthsNone": "{count, plural, one {No metres have been approved this month yet.} other {No metres have been approved in the last # months yet.}} Each month fills in as its dispatches are approved.",
   "chainMeans": "{raised, plural, one {Of the one quotation requested since {from}, this is where it got to.} other {Of the # requested since {from}, this is where each one got to.}}",
   "chainEmpty": "Nothing has been requested since {from}.",
   "chainAnswered": "{reached, plural, one {One of them was issued} other {# of them were issued}}{answered, plural, =0 {, and none came back with an answer.} one {, and one came back with an answer.} other {, and # came back with an answer.}}",

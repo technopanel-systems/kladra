@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
+import { ScrollLine } from "@/components/ui-ext/sticky-scroll";
 import { Link } from "@/i18n/navigation";
 import { doorFor, type Answer } from "@/lib/builder";
 import {
@@ -222,7 +223,7 @@ export async function BuilderCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-sm font-medium text-muted-foreground print:hidden">
+          <h2 className="text-sm font-medium text-foreground print:hidden">
             {t("metrics.title")}
           </h2>
           {/* The question in words — which is also the printed page's title. */}
@@ -343,12 +344,20 @@ export async function BuilderCard({
   );
 }
 
-/** A labelled row of chips: the question's blank, and its answers. */
+/**
+ * A labelled row of chips: the question's blank, and its answers.
+ *
+ * One line that scrolls, like every other row of chips since S12.K (S12.7): the
+ * seven measures wrapped into three rows on a phone and two in Arabic at 1366,
+ * so the builder's own question was a wall of chips before it was a chart. The
+ * chosen chip is brought into view when the line cannot show it (`ScrollLine`),
+ * and the gap is the chips' own 8, not a tighter one of its own.
+ */
 function ChoiceRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div role="group" aria-label={label} className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-3">
+    <div role="group" aria-label={label} className="flex min-w-0 flex-col gap-2 md:flex-row md:items-center md:gap-3">
       <span className="w-20 shrink-0 text-xs text-muted-foreground">{label}</span>
-      <div className="flex flex-wrap items-center gap-1">{children}</div>
+      <ScrollLine className="min-w-0 md:flex-1">{children}</ScrollLine>
     </div>
   );
 }

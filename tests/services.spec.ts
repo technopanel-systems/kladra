@@ -189,6 +189,9 @@ test("the request dialog stands at its stated width on a desk, and lines and ser
   const form = page.getByRole("dialog", { name: t("quotations.request") });
   await expect(form.getByLabel(t("common.colourCode"))).toBeVisible(COLD);
 
+  // Measured at rest: the dialog zooms in over 200ms, and since S12.4 its
+  // fields are drawn before that ends, so the label alone no longer waits it out.
+  await form.evaluate((node) => Promise.all(node.getAnimations().map((motion) => motion.finished)));
   const widthOf = async () => (await form.boundingBox())?.width ?? 0;
   const before = await widthOf();
   expect(before, "the request dialog is narrower than its stated desk width").toBeGreaterThanOrEqual(

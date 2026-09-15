@@ -41,7 +41,7 @@ export async function LossCard({ cohort }: { cohort: LossCohort }) {
   if (cohort.projects === 0) {
     return (
       <section className="card-face flex flex-col gap-2 p-4">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("team.lossTitle")}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t("team.lossTitle")}</h2>
         <p className="text-sm text-muted-foreground">
           {t("team.lossEmpty", { from })}
         </p>
@@ -90,7 +90,7 @@ export async function LossCard({ cohort }: { cohort: LossCohort }) {
   return (
     <section className="card-face flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("team.lossTitle")}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t("team.lossTitle")}</h2>
         <p className="text-sm text-pretty">
           {t("team.lossMeans", {
             projects: cohort.projects,

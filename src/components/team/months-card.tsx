@@ -67,6 +67,31 @@ export async function MonthsCard({
   const current = months[months.length - 1]?.month;
   const change = lastFinishedChange(months);
 
+  /*
+   * No history yet (S12.7): not a metre approved in any of the months, and no
+   * target on any month before this one — a person in their first month, or a
+   * floor that has not started. Six empty columns under six blank labels drew a
+   * chart of nothing that looked like a chart that had failed to load, and its
+   * sentence said "No metres in July or August" about months nobody was here
+   * for. It says so once, in words, and where the chart starts from (D127).
+   */
+  const history = months.some(
+    (month) =>
+      toNumber(month.achieved) > 0 || (month.month !== current && toNumber(month.target) > 0),
+  );
+  if (!history) {
+    return (
+      <section data-slot="months-card" className="card-face flex flex-col gap-3 p-4">
+        <h2 className="text-sm font-medium text-foreground">
+          {t("team.lastMonths", { count: months.length })}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          {t("team.monthsNone", { count: months.length })}
+        </p>
+      </section>
+    );
+  }
+
   const rows: BarRow[] = months.map((month, index) => {
     const done = toNumber(month.achieved);
     const aimed = toNumber(month.target);
@@ -97,9 +122,9 @@ export async function MonthsCard({
   });
 
   return (
-    <section className="card-face flex flex-col gap-4 p-4">
+    <section data-slot="months-card" className="card-face flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-sm font-medium text-muted-foreground">
+        <h2 className="text-sm font-medium text-foreground">
           {t("team.lastMonths", { count: months.length })}
         </h2>
 

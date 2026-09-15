@@ -75,7 +75,7 @@ export async function SegmentCard({
 
   return (
     <section className="card-face flex flex-col gap-4 p-4">
-      <h2 className="text-sm font-medium text-muted-foreground">{t("team.segments")}</h2>
+      <h2 className="text-sm font-medium text-foreground">{t("team.segments")}</h2>
 
       {/* Nothing approved in the window is a fact, not a blank card: a rep
           reading his own quarter after a quiet one should be told that, and a

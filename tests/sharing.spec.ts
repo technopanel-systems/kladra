@@ -341,7 +341,10 @@ test("two reps on one customer: a shared company, a shared project, and taking t
       // It is his: the requester's own actions are on it.
       const own = page.getByRole("dialog").first();
       await expect(own.getByRole("button", { name: t("quotations.editRequest") })).toBeVisible();
-      await expect(own.getByRole("button", { name: t("quotations.cancel") })).toBeVisible();
+      // Withdraw is last in the drawer's menu since P13-G6 S12.4.
+      await own.locator('[data-slot="row-menu"]').click();
+      await expect(page.getByRole("menuitem", { name: t("quotations.cancel"), exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
 
       // Faisal owns the company and reads everything under it, but this item
       // belongs to whoever created it, and only he edits it (SPEC §3, D147).
@@ -354,8 +357,8 @@ test("two reps on one customer: a shared company, a shared project, and taking t
         "Faisal, who did not raise this quotation, was offered Edit request on it",
       ).toHaveCount(0);
       await expect(
-        sheet.getByRole("button", { name: t("quotations.cancel") }),
-        "Faisal, who did not raise this quotation, was offered Cancel on it",
+        sheet.locator('[data-slot="row-menu"]'),
+        "Faisal, who did not raise this quotation, was offered the menu that holds Withdraw",
       ).toHaveCount(0);
     });
 

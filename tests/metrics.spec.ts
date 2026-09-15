@@ -4,6 +4,7 @@ import { one, query, personName, userId } from "./helpers/db";
 import { test, expect, type Locale, type Translate } from "./helpers/i18n";
 import { formatDay } from "@/lib/dates";
 import { formatSqmWhole } from "@/lib/money";
+import { MONTHS_SHOWN } from "@/lib/months";
 import { DEFAULT_RANGE, rangeStart, type Range } from "@/lib/ranges";
 
 /**
@@ -276,4 +277,44 @@ test("a rep reads his own metrics, in the same two cards", async ({ page, locale
   await expect(card(page, t("team.ratios"))).toContainText(
     t("team.ratioOf", { part: expected.quoted, whole: expected.projects }),
   );
+});
+
+/*
+ * A person's first month (P13-G6 S12.7). Six empty columns under six month
+ * names drew a chart of nothing that read as a chart that failed to load, and
+ * its sentence spoke of months nobody was here for. With no metres in any of
+ * the months and no target before this one, the card says so in one sentence
+ * and draws no columns; the cards under the window say their own nothing.
+ */
+test("a person with no months behind them reads a sentence, not six empty columns", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  // A rep who joined today: an account and nothing else — no target, no
+  // company, no paper. The password is the seed's, copied rather than known.
+  const joined = await one<{ id: string }>(
+    `insert into users (name, name_ar, email, password_hash, role, active)
+     select 'Nasser Al-Otaibi', 'ناصر العتيبي', 'metrics.first-month@technopanel.com.sa', password_hash, 'rep', true
+       from users where email = 'faisal@technopanel.com.sa'
+     returning id::text as id`,
+  );
+
+  try {
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/team?tab=metrics&rep=${joined.id}`);
+
+    const months = page.locator('[data-slot="months-card"]');
+    await expect(months).toBeVisible(COLD);
+    await expect(months).toContainText(t("team.monthsNone", { count: MONTHS_SHOWN }));
+    await expect(months.locator("[data-month]")).toHaveCount(0);
+
+    // The window's cards answer for the same person, each in its own words.
+    await expect(card(page, t("team.segments"))).toContainText(t("team.segmentsNone"));
+    await expect(card(page, t("team.ratios"))).toContainText(t("team.ratiosNone"));
+  } finally {
+    await query(`delete from users where id = $1::uuid`, [joined.id]);
+  }
 });

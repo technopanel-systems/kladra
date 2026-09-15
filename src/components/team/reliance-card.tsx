@@ -32,7 +32,7 @@ export async function RelianceCard({ from }: { from: Day }) {
   return (
     <section data-slot="reliance-card" className="card-face flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium text-muted-foreground">{t("team.reliance.title")}</h2>
+        <h2 className="text-sm font-medium text-foreground">{t("team.reliance.title")}</h2>
         <p className="text-sm text-pretty">
           {nothing
             ? t("team.reliance.nothing", { from: since })

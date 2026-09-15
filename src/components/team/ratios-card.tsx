@@ -44,7 +44,7 @@ export async function RatiosCard({
 
   return (
     <section className="card-face flex flex-col gap-4 p-4">
-      <h2 className="text-sm font-medium text-muted-foreground">{t("team.ratios")}</h2>
+      <h2 className="text-sm font-medium text-foreground">{t("team.ratios")}</h2>
 
       {/* A window with nothing raised in it is the answer to the question, not
           a blank card (D127). */}

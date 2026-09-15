@@ -4,10 +4,11 @@ Lives under `.claude/` because hook H2 refuses a new .md anywhere else in the re
 Part of P13-G6: the restyle is the design-system half of the front-end reshape.
 
 ## Current phase
-P2 committed (kit: states as dot + word, neutral chips, avatar state dot, 6px chips/badges, calmer charts). Next: wave 3 on the new system, then P4.
+Wave 3 building on the restyle (S12.4 quotations, S12.5 dispatches, S12.6+7 day/queue/team) in worktrees `.claude/worktrees/agent-*` from ee9af5b. The session ended mid-build once; the builders were resumed with their uncommitted work intact.
 
 ## Checkpoints (git)
-- P2 commit — shared components restyled; full suite 799/800 then the chip-row spec fixed (Arabic lookups now fit at 1366).
+- d8699e0 — DESIGN §8 records the rules audit.
+- ee9af5b P2 — shared components restyled; full suite 799/800 then the chip-row spec fixed (Arabic lookups now fit at 1366).
 - 56bd6c1 P1 — Stone tokens + Plex Sans / Noto Sans Arabic + scale; DESIGN §1; WORKFLOW §3 #7 wording.
 - 9b1778e — wave-2 gate green (drawer skeletons close).
 - 9c2f76a — wave 2 merged (S12.2 companies, S12.3 projects, S12.8 reports/leads/duplicates) + kit pass (Clip, RowMenu end list/head size, common.moreFor). Last pre-restyle commit.
@@ -59,4 +60,4 @@ P2 committed (kit: states as dot + word, neutral chips, avatar state dot, 6px ch
 - P2: full suite in 4 chunks — 799 passed, 4 skipped, 1 failed (filters chip row: the Arabic lookups now fit at 1366; spec asks overflow only on a phone) → filters.spec 8/8; lint, build green. Shots shots/rs-p2a.
 
 ## Exact next action
-Restart dev (npm run dev); `python scratchpad/make_wave3.py <P2 HEAD>`; launch S12.4, S12.5, S12.6+7 builders in worktrees (screen-builder, isolation worktree); merge each with git apply --3way; gate.
+When each builder reports: `git -C <wt> diff d8699e0 <head>`-style merge (diff from its base ee9af5b to its head, `git apply --3way` on main), typecheck, lint, build, commit with its message; then the wave-3 gate (full suite, dev 3100 stopped), kit_pass items 5–8, P4 consistency pass.

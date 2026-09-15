@@ -3,15 +3,20 @@
 import { Fragment, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { DispatchActions, type DispatchScope } from "@/components/dispatches/dispatch-actions";
+import { DispatchActions } from "@/components/dispatches/dispatch-actions";
+import type { DispatchScope } from "@/components/dispatches/dispatch-brand";
+import { ToneNote } from "@/components/dispatches/tone-note";
+import { Avatar } from "@/components/ui-ext/avatar";
+import { Clip } from "@/components/ui-ext/clip";
 import { Empty } from "@/components/ui-ext/empty";
 import { ListSearch } from "@/components/ui-ext/list-search";
+import { NoteBlock } from "@/components/ui-ext/note-block";
 import { RaisedBy } from "@/components/ui-ext/raised-by";
 import { Prose } from "@/components/ui-ext/prose";
 import type { DispatchDraft } from "@/components/dispatches/request-dispatch-dialog";
 import type { Waited } from "@/lib/waiting";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -28,7 +33,8 @@ import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { Board, type BoardColumn } from "@/components/ui-ext/board";
-import { Money, Ref } from "@/components/ui-ext/figures";
+import { Money, Ref, Sqm } from "@/components/ui-ext/figures";
+import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { paymentDetailLabel, paymentTermsLabel } from "@/lib/payment";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { WaitedFor } from "@/components/ui-ext/waited-for";
@@ -40,7 +46,7 @@ import type {
   DispatchServiceRow,
   DispatchStatus,
 } from "@/lib/dispatches";
-import { dispatchTone, TONE_TEXT } from "@/lib/state-tone";
+import { dispatchTone } from "@/lib/state-tone";
 import { formatDay } from "@/lib/dates";
 import { lossReasonLabel } from "@/lib/loss-reason";
 import { ViewSwitch } from "@/components/ui-ext/view-switch";
@@ -52,18 +58,27 @@ import { useArrivedIds } from "@/hooks/use-arrived";
  * The dispatches screen and the drawer it opens, built the same way as
  * quotations (DESIGN §2: work happens in a drawer over the list).
  *
- * A status is a word, never a colour (DESIGN §4). There are only three of them
- * here and one of them, Approved, is the whole month — so it says Approved.
+ * A status is a word with a dot in its tone (DESIGN §1, §6). There are only
+ * three of them here and one of them, Approved, is the whole month — so it says
+ * Approved.
  *
- * Money is not on this screen at all. A dispatch is goods, and what it is worth
- * is on the quotation it came from; showing a figure here would be a second
- * definition of a number finance already owns (S31).
+ * The list carries metres and never money. A dispatch is goods, and what it is
+ * worth is on the drawer, from the same function its form adds it up with; a
+ * figure in a column would be a second definition of a number finance already
+ * owns (S31).
  */
 
 const STATUS_KEYS: Record<DispatchStatus, string> = {
   submitted: "dispatches.statusSubmitted",
   approved: "dispatches.statusApproved",
   refused: "dispatches.statusRefused",
+};
+
+/** What a status chip that finds nothing says: a sentence each, in lower case. */
+const EMPTY_KEYS: Record<DispatchStatus, string> = {
+  submitted: "dispatches.emptySubmitted",
+  approved: "dispatches.emptyApproved",
+  refused: "dispatches.emptyRefused",
 };
 
 const FILTERS: DispatchStatus[] = ["submitted", "approved", "refused"];
@@ -99,20 +114,24 @@ function listHref(
   return query ? `${base}?${query}` : base;
 }
 
-function StatusBadge({ status }: { status: DispatchStatus }) {
+function StatusBadge({ status, className }: { status: DispatchStatus; className?: string }) {
   const t = useTranslations();
-  return <StateBadge tone={dispatchTone(status)}>{t(STATUS_KEYS[status])}</StateBadge>;
+  return (
+    <StateBadge tone={dispatchTone(status)} className={className}>
+      {t(STATUS_KEYS[status])}
+    </StateBadge>
+  );
 }
 
 /**
- * The load is not what its quotation said (SPEC §3, P13) — a word in the amber
- * of "somebody will look at this", never the tone alone. What differs is the
- * drawer's to say; the row only has to be found.
+ * The load is not what its quotation said (SPEC §3, P13) — a word with the
+ * amber dot of "somebody will look at this", never the tone alone. What differs
+ * is the drawer's to say; the row only has to be found.
  */
 function DiffersChip() {
   const t = useTranslations();
   return (
-    <span data-slot="differs-chip">
+    <span data-slot="differs-chip" className="flex">
       <StateBadge tone="wait">{t("dispatches.differsChip")}</StateBadge>
     </span>
   );
@@ -127,11 +146,13 @@ function ProjectOf({ row }: { row: DispatchRow }) {
   const t = useTranslations();
   return (
     <>
-      {row.projectName ?? t("dispatches.noProject")}
+      <span className="flex min-w-0">
+        <Clip text={row.projectName ?? t("dispatches.noProject")} />
+      </span>
       {row.projectLostOn ? (
-        <span data-slot="project-lost" className={cn("block text-xs", TONE_TEXT.bad)}>
+        <ToneNote tone="bad" slot="project-lost" className="text-xs text-foreground">
           {t("common.projectLost")}
-        </span>
+        </ToneNote>
       ) : null}
     </>
   );
@@ -167,12 +188,12 @@ function PaperOf({ row, desk = false }: { row: DispatchRow; desk?: boolean }) {
         </Ref>
       ) : null}
       {desk && row.superseded ? (
-        <span data-slot="revised-since" className={cn("block text-xs", TONE_TEXT.wait)}>
+        <ToneNote tone="wait" slot="revised-since" className="text-xs text-foreground">
           {t("dispatches.revisedSince")}
-        </span>
+        </ToneNote>
       ) : null}
       {row.differs && !desk ? (
-        <span className="mt-1 block">
+        <span className="mt-1 flex">
           <DiffersChip />
         </span>
       ) : null}
@@ -192,6 +213,7 @@ export function DispatchesTable({
   showFilters = true,
   showSearch = true,
   waiting,
+  hidden = 0,
 }: {
   /** "/dispatches" or "/queue" — locale-free, the way @/i18n/navigation wants it. */
   base: string;
@@ -219,6 +241,12 @@ export function DispatchesTable({
   /** How long each row has waited, by id. The queue passes it; nothing else
    *  does — see the same prop on QuotationsTable (D59). */
   waiting?: Record<string, Waited>;
+  /**
+   * How many dispatches the chosen status chip is hiding, counted by the page
+   * only when it hides every one of them — the number the filtered-out sentence
+   * says (DESIGN §8: a filter that hides every row says how many).
+   */
+  hidden?: number;
 }) {
   const t = useTranslations();
   // Rows somebody else touched in the last two seconds (D105): the companies
@@ -314,14 +342,18 @@ export function DispatchesTable({
         />
       ) : null}
 
-      <div className={cn("transition-opacity", pending && "opacity-60")} aria-busy={pending}>
+      <div
+        className={cn("transition-opacity duration-150", pending && "opacity-60")}
+        aria-busy={pending}
+      >
         {rows.length === 0 ? (
-          // Before the board: six empty columns say nothing about why (P11G).
+          // Before the board: three empty columns say nothing about why (P11G).
           <EmptyDispatches
             base={base}
             q={q}
             status={status}
             fixed={!showFilters}
+            hidden={hidden}
             onClear={clearTerm}
           />
         ) : view === "board" && showFilters ? (
@@ -337,58 +369,72 @@ export function DispatchesTable({
                   key={row.id}
                   href={listHref(base, param, q, status, row.id)}
                   className={cn(
-                    "card-face flex flex-col gap-1.5 p-3",
+                    "card-face hover-tint flex items-start gap-3 p-3",
                     arrived.has(row.id) && "row-arrived",
                   )}
                 >
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-1.5">
-                      <Ref className="font-medium">
-                        {row.smacDispatchNumber ?? row.label}
-                      </Ref>
-                      <LinkPending />
+                  {/* The company's face at a card's size (DESIGN §1b: 32 in a
+                      card, a company square), so a column of loads reads as
+                      the customers they are for before a word is read. */}
+                  <Avatar id={row.companyId} name={row.companyName} kind="company" size="md" />
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <span className="flex items-start justify-between gap-2">
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Ref className="font-medium">{row.smacDispatchNumber ?? row.label}</Ref>
+                        <LinkPending />
+                      </span>
+                      {waiting?.[row.id] ? (
+                        <WaitedFor waited={waiting[row.id]} className="shrink-0" />
+                      ) : (
+                        <StatusBadge status={row.status} className="shrink-0" />
+                      )}
                     </span>
-                    {waiting?.[row.id] ? (
-                      <WaitedFor waited={waiting[row.id]} />
-                    ) : (
-                      <StatusBadge status={row.status} />
-                    )}
+                    {/* The name at its own end (Clip): an Arabic customer on an
+                        English card kept its last word and lost its first. */}
+                    <span className="flex min-w-0 text-sm">
+                      <Clip text={row.companyName} />
+                    </span>
+                    {/* On the queue the row is somebody's request (S54, D116). */}
+                    {waiting ? (
+                      <span data-slot="row-rep" className="flex min-w-0 text-xs text-muted-foreground">
+                        <Clip text={row.repName} />
+                      </span>
+                    ) : null}
+                    <RaisedBy name={row.raisedByName} className="truncate" />
+                    {/* The paper was revised after this was raised: approval would
+                        refuse it (D85), so the row says it first (P11E). */}
+                    {waiting && row.superseded ? (
+                      <ToneNote tone="wait" slot="revised-since" className="text-xs">
+                        {t("dispatches.revisedSince")}
+                      </ToneNote>
+                    ) : null}
+                    {row.projectName || !row.quotationId ? (
+                      <span className="flex min-w-0 text-xs text-muted-foreground">
+                        <Clip text={row.projectName ?? t("dispatches.direct")} />
+                      </span>
+                    ) : null}
+                    {/* The load is not what its paper said (SPEC §3, P13): a word
+                        and a dot, on the row the desk scans. */}
+                    {row.differs ? <DiffersChip /> : null}
+                    {/* The project was marked lost after this was raised (D138). A dead
+                        project is not work to price, and nothing on her desk said so. */}
+                    {row.projectLostOn ? (
+                      <ToneNote tone="bad" slot="project-lost" className="text-xs">
+                        {t("common.projectLost")}
+                      </ToneNote>
+                    ) : null}
+                    <span className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                      <Sqm value={row.totalSqm} className="text-sm" />
+                      {waiting ? null : (
+                        <DayText
+                          day={row.approvedOn ?? row.createdOn}
+                          locale={locale}
+                          className="text-xs text-muted-foreground"
+                        />
+                      )}
+                    </span>
+                    <SplitNames names={row.creditNames} />
                   </span>
-                  <span className="truncate text-sm">{row.companyName}</span>
-                  {/* On the queue the row is somebody's request (S54, D116). */}
-                  {waiting ? (
-                    <span data-slot="row-rep" className="truncate text-xs text-muted-foreground">
-                      {row.repName}
-                    </span>
-                  ) : null}
-                  <RaisedBy name={row.raisedByName} className="truncate" />
-                  {/* The paper was revised after this was raised: approval would
-                      refuse it (D85), so the row says it first (P11E). */}
-                  {waiting && row.superseded ? (
-                    <span data-slot="revised-since" className={cn("text-xs", TONE_TEXT.wait)}>
-                      {t("dispatches.revisedSince")}
-                    </span>
-                  ) : null}
-                  <span className="truncate text-xs text-muted-foreground">
-                    {row.projectName ?? (row.quotationId ? null : t("dispatches.direct"))}
-                  </span>
-                  {/* The load is not what its paper said (SPEC §3, P13): a word
-                      and a tone, on the row the desk scans. */}
-                  {row.differs ? <DiffersChip /> : null}
-                  {/* The project was marked lost after this was raised (D138). A dead
-                      project is not work to price, and nothing on her desk said so. */}
-                  {row.projectLostOn ? (
-                    <span data-slot="project-lost" className={cn("truncate text-xs", TONE_TEXT.bad)}>
-                      {t("common.projectLost")}
-                    </span>
-                  ) : null}
-                  <span className="text-sm">
-                    <span dir="ltr" className="num">
-                      {formatSqm(row.totalSqm)}
-                    </span>
-                    <span className="ms-1 text-xs text-muted-foreground">{t("common.sqm")}</span>
-                  </span>
-                  <SplitNames names={row.creditNames} />
                 </Link>
               ))}
             </div>
@@ -397,15 +443,29 @@ export function DispatchesTable({
               <Table label={t("common.dispatches")}>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="p-3">{t("common.dispatch")}</TableHead>
-                    <TableHead className="p-3">{t("common.company")}</TableHead>
+                    <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                      {t("common.dispatch")}
+                    </TableHead>
+                    <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                      {t("common.company")}
+                    </TableHead>
                     {/* On her desk the job folds under its customer and the paper
                         under the load's own number: half a screen wide from `lg`
                         (SPEC §3 P13), six columns scrolled the wait off its edge. */}
-                    {waiting ? null : <TableHead className="p-3">{t("common.project")}</TableHead>}
-                    {waiting ? null : <TableHead className="p-3">{t("common.quotation")}</TableHead>}
-                    <TableHead className="p-3 text-end">{t("common.sqm")}</TableHead>
-                    <TableHead className="p-3">
+                    {waiting ? null : (
+                      <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                        {t("common.project")}
+                      </TableHead>
+                    )}
+                    {waiting ? null : (
+                      <TableHead className="px-3 text-xs font-normal text-muted-foreground">
+                        {t("common.quotation")}
+                      </TableHead>
+                    )}
+                    <TableHead className="px-3 text-end text-xs font-normal text-muted-foreground">
+                      {t("common.sqm")}
+                    </TableHead>
+                    <TableHead className="px-3 text-xs font-normal text-muted-foreground">
                       {waiting ? t("queue.waited") : t("common.status")}
                     </TableHead>
                   </TableRow>
@@ -425,12 +485,12 @@ export function DispatchesTable({
                           data-door
                           href={listHref(base, param, q, status, row.id)}
                           aria-current={openId === row.id ? "true" : undefined}
-                          className="block p-3"
+                          className="block px-3 py-2"
                         >
                           {/* SMAC's number leads where there is one, and Kladra's own
                               goes quietly under it (P12-11) — the same swap the
                               quotations list makes, and for the same reason. */}
-                          <span className="flex items-center gap-1.5">
+                          <span className="flex items-center gap-2">
                             <Ref slot="row-number" className="font-medium">
                               {row.smacDispatchNumber ?? row.label}
                             </Ref>
@@ -451,49 +511,65 @@ export function DispatchesTable({
                       </TableCell>
                       {/* The one cell on the desk that may wrap: the customer's
                           name is what the row is FOR, so it is the column that
-                          takes the width rather than gives it up (DESIGN §5). */}
-                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
-                        {row.companyName}
-                        {waiting ? (
-                          <span
-                            data-slot="row-rep"
-                            className="block text-xs text-muted-foreground"
-                          >
-                            {row.repName}
-                          </span>
-                        ) : null}
-                        <RaisedBy name={row.raisedByName} />
-                        {waiting ? (
-                          <>
-                            <span className="block text-xs text-muted-foreground">
-                              <ProjectOf row={row} />
-                            </span>
-                            {row.differs ? (
-                              <span className="mt-1 block">
-                                <DiffersChip />
+                          takes the width rather than gives it up (DESIGN §5). On
+                          the list it keeps one line and is cut at its own end. */}
+                      <TableCell
+                        className={cn("px-3 py-2", waiting ? "whitespace-normal" : "max-w-[18rem]")}
+                      >
+                        <span className={cn("flex min-w-0 gap-2", waiting ? "items-start" : "items-center")}>
+                          <Avatar id={row.companyId} name={row.companyName} kind="company" size="sm" />
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            {waiting ? (
+                              <span className="min-w-0 break-words">
+                                <bdi>{row.companyName}</bdi>
+                              </span>
+                            ) : (
+                              <Clip text={row.companyName} column />
+                            )}
+                            {waiting ? (
+                              <span
+                                data-slot="row-rep"
+                                className="block text-xs text-muted-foreground"
+                              >
+                                {row.repName}
                               </span>
                             ) : null}
-                          </>
-                        ) : null}
+                            <RaisedBy name={row.raisedByName} />
+                            {waiting ? (
+                              <>
+                                <span className="flex min-w-0 flex-col text-xs text-muted-foreground">
+                                  <ProjectOf row={row} />
+                                </span>
+                                {row.differs ? (
+                                  <span className="mt-1 flex">
+                                    <DiffersChip />
+                                  </span>
+                                ) : null}
+                              </>
+                            ) : null}
+                          </span>
+                        </span>
                       </TableCell>
                       {waiting ? null : (
-                        <TableCell className="p-3 text-muted-foreground">
-                          <ProjectOf row={row} />
+                        <TableCell className="max-w-[16rem] px-3 py-2 text-muted-foreground">
+                          <span className="flex min-w-0 flex-col">
+                            <ProjectOf row={row} />
+                          </span>
                         </TableCell>
                       )}
                       {waiting ? null : (
-                        <TableCell className="p-3">
+                        <TableCell className="px-3 py-2">
                           <PaperOf row={row} />
                         </TableCell>
                       )}
-                      <TableCell className="p-3 text-end">
+                      <TableCell className="px-3 py-2 text-end">
                         <span dir="ltr" className="num">
                           {formatSqm(row.totalSqm)}
                         </span>
                         <SplitNames names={row.creditNames} />
                       </TableCell>
-                      <TableCell className={cn("p-3", waiting && "whitespace-normal")}>
-                        <span className="flex flex-col gap-1">
+                      <TableCell className={cn("px-3 py-2", waiting && "whitespace-normal")}>
+                        <span className="flex flex-col items-start gap-1">
                           {waiting?.[row.id] ? (
                             <WaitedFor waited={waiting[row.id]} className="font-medium" />
                           ) : (
@@ -518,12 +594,23 @@ export function DispatchesTable({
   );
 }
 
-/** One sentence, and the action it names — where there is one (SPEC §3, D31). */
+/**
+ * Nothing to draw, and the kinds of nothing are different sentences (DESIGN §8).
+ *
+ * - **No results**: the words matched nothing, and the way out is to clear them.
+ * - **Filtered out**: the chip is hiding every dispatch there is, so the sentence
+ *   says how many and the button shows them.
+ * - **A status the page fixed** (the queue) offers no "All" to go to (P11G).
+ * - **First use**: nothing at all yet, and where a load comes from. It never
+ *   draws Request dispatch a second time (§2); it is at the top already.
+ * - **Could not load** is not an empty list; the screen's error card draws it.
+ */
 function EmptyDispatches({
   base,
   q,
   status,
   fixed,
+  hidden,
   onClear,
 }: {
   base: string;
@@ -531,45 +618,49 @@ function EmptyDispatches({
   status: DispatchStatus | null;
   /** The page chose the status (the queue): there is no "All" to go to (P11G). */
   fixed: boolean;
+  hidden: number;
   onClear: () => void;
 }) {
   const t = useTranslations();
 
   if (q) {
     return (
-      <EmptyCard sentence={t("dispatches.emptySearch", { q })}>
-        <Button type="button" variant="outline" onClick={onClear}>
-          {t("common.clear")}
-        </Button>
-      </EmptyCard>
+      <Empty
+        action={
+          <Button type="button" variant="outline" onClick={onClear}>
+            {t("common.clear")}
+          </Button>
+        }
+      >
+        {t("dispatches.emptySearch", { q })}
+      </Empty>
     );
   }
 
   if (status) {
-    return (
-      <EmptyCard sentence={t("dispatches.emptyStatus", { status: t(STATUS_KEYS[status]) })}>
-        {fixed ? null : (
+    // A sentence per state, not a state's label dropped mid-sentence: the label
+    // is a capitalised chip word and read "Nothing is Refused right now".
+    const words = t(EMPTY_KEYS[status]);
+    return fixed || hidden === 0 ? (
+      <Empty>{words}</Empty>
+    ) : (
+      <Empty
+        action={
           <Button asChild variant="outline">
-            <Link href={base}>{t("common.all")}</Link>
+            {/* A chip hides rows only on the list (the board shows every
+                state), so the way back is the list, whatever was remembered. */}
+            <Link href={listHref(base, "open", "", null, null, "list")}>{t("dispatches.showAll")}</Link>
           </Button>
-        )}
-      </EmptyCard>
+        }
+      >
+        {words} {t("dispatches.hiddenByFilter", { count: hidden })}
+      </Empty>
     );
   }
 
-  // A dispatch is raised from an issued quotation (S38), so that is where the
-  // sentence sends the rep.
-  return (
-    <EmptyCard sentence={t("dispatches.empty")}>
-      <Button asChild variant="outline">
-        <Link href="/quotations">{t("common.quotations")}</Link>
-      </Button>
-    </EmptyCard>
-  );
-}
-
-function EmptyCard({ sentence, children }: { sentence: string; children: ReactNode }) {
-  return <Empty action={children}>{sentence}</Empty>;
+  // A dispatch is raised from an issued quotation or direct (S38, SPEC §3 P13),
+  // and the button that raises one is at the top of the screen.
+  return <Empty>{t("dispatches.empty")}</Empty>;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -578,7 +669,7 @@ function EmptyCard({ sentence, children }: { sentence: string; children: ReactNo
 /* -------------------------------------------------------------------------- */
 
 /** Closing the drawer drops `?open=` and leaves the search and status alone. */
-function useCloseDrawer(param: string): () => void {
+export function useCloseDrawer(param: string): () => void {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -618,10 +709,29 @@ export type DispatchSheetProps = {
   items: DispatchItemRow[];
   draft: DispatchDraft;
   scope: DispatchScope;
+  /**
+   * Whether the reader is the person the load counts for. His own name on his
+   * own load is a word to read past (D116), so the head names him only to
+   * somebody else.
+   */
+  mine: boolean;
   /** The parameter that opened it, so closing drops the right one. */
   param?: string;
 };
 
+/**
+ * **A drawer has a hierarchy** (DESIGN §6; P13-G6, S12.5), the one the company's
+ * and the project's drawers were given. At the top, who: the customer's own
+ * square beside the load's number and where it stands, with the customer and the
+ * job under them. Then the figures the load is opened for — its square metres
+ * first, because they are the month (S41), then the paper it loads, its day and
+ * SMAC's number for it. Then what stops it, and the actions. Under the actions,
+ * what happened to it. Then the load itself: its lines, its services, what it
+ * comes to, and how it travels and is paid for.
+ *
+ * It opened on a bare row of facts, with its metres three screens down in the
+ * totals block and its trail last, under the payment note.
+ */
 export function DispatchSheet({
   dispatch,
   credit,
@@ -631,6 +741,7 @@ export function DispatchSheet({
   items,
   draft,
   scope,
+  mine,
   param = "open",
 }: DispatchSheetProps) {
   const t = useTranslations();
@@ -639,6 +750,15 @@ export function DispatchSheet({
   // What the load comes to, by the function the form adds it up with while the
   // rep types (money.ts) — on the stored figures, so the two agree to the halala.
   const totals = loadTotals(items, dispatch.services);
+  const split = credit.length > 0 && (credit.length > 1 || credit[0].userId !== dispatch.repId);
+  // Whom it counts for, where the reader is not him; "For" where the
+  // coordinator raised it on his behalf, with her name on the line under it
+  // (SPEC §3 P13).
+  const person = mine
+    ? null
+    : t(dispatch.raisedByName ? "dispatches.forName" : "common.onBehalf.raisedBy", {
+        name: dispatch.repName,
+      });
 
   return (
     <Sheet
@@ -648,75 +768,128 @@ export function DispatchSheet({
       }}
     >
       <RecordPanel className="scroller">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <SheetTitle className="text-lg">
-                <Ref>{dispatch.label}</Ref>
-              </SheetTitle>
-              <StatusBadge status={dispatch.status} />
-            </div>
-            <SheetDescription>
-              <bdi>{dispatch.companyName}</bdi> ·{" "}
-              {dispatch.projectName ? (
-                <bdi>{dispatch.projectName}</bdi>
-              ) : (
-                t("dispatches.direct")
-              )}
-            </SheetDescription>
-
-            {/* The project is lost and this material is still going out to it
-                (D138). A dispatch is not withdrawn by anybody's decision the
-                way a request can be, so the one thing the desk can do about it
-                is know before approving. */}
-            {dispatch.projectLostOn ? (
-              <p data-slot="project-lost" className={cn("text-sm", TONE_TEXT.bad)}>
-                {t("common.projectLostOn", { date: formatDay(dispatch.projectLostOn, locale) })}
-                {dispatch.projectLostReason ? (
-                  <>
-                    {" — "}
-                    <bdi>{lossReasonLabel(dispatch.projectLostReason, t)}</bdi>
-                  </>
+        <SheetHeader className="gap-4 border-b border-line p-4">
+          {/* Who: the customer's own square (DESIGN §1b: 40 at a drawer's head),
+              the load's number and where it stands, then the customer and the
+              job it is going to. */}
+          <div className="flex items-start gap-3 pe-10">
+            <Avatar id={dispatch.companyId} name={dispatch.companyName} kind="company" size="lg" />
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {/* Kladra's own name for its own record (D161): SMAC's is a figure below. */}
+                <SheetTitle className="text-lg leading-tight font-semibold">
+                  <Ref>{dispatch.label}</Ref>
+                </SheetTitle>
+                <StatusBadge status={dispatch.status} />
+              </div>
+              <SheetDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">
+                  <bdi>{dispatch.companyName}</bdi>
+                </span>
+                {/* The job, where there is one. A direct load says Direct once,
+                    where its quotation would be named, in the strip below. */}
+                {/* Each separator travels with the value after it, so a line that
+                    wraps starts with its dot rather than leaving one hanging. */}
+                {dispatch.projectName ? (
+                  <span data-slot="who-project">
+                    <span aria-hidden="true" className="me-2 text-faint">
+                      ·
+                    </span>
+                    <bdi>{dispatch.projectName}</bdi>
+                  </span>
                 ) : null}
-              </p>
-            ) : null}
+                {person ? (
+                  <span data-slot="who-for">
+                    <span aria-hidden="true" className="me-2 text-faint">
+                      ·
+                    </span>
+                    {person}
+                  </span>
+                ) : null}
+              </SheetDescription>
+              <RaisedBy name={dispatch.raisedByName} place="drawer" />
+            </div>
+          </div>
 
-            <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm">
-              <Fact label={t("common.quotation")}>
-                {dispatch.quotationId ? (
+          {/* What the drawer is opened to check, before anything about how it
+              was raised (DESIGN §6): how much, against which paper, which day,
+              and the number SMAC gave it. */}
+          <StandingStrip
+            items={[
+              {
+                label: t("common.sqm"),
+                value: (
+                  <span data-slot="figure-sending">
+                    {/* The label above already says m². */}
+                    <Sqm value={dispatch.totalSqm} unit={false} />
+                  </span>
+                ),
+              },
+              {
+                label: t("common.quotation"),
+                value: dispatch.quotationId ? (
                   <Link
                     href={`/quotations?open=${dispatch.quotationId}`}
-                    className="hover:underline"
+                    className="underline decoration-line-strong underline-offset-4 hover:decoration-current"
                   >
-                    {/* A fact has room for one number, and it is the one she
-                        would search SMAC for (P12-11). */}
+                    {/* The number she would search SMAC for (P12-11). */}
                     <Ref>{dispatch.smacNumber ?? dispatch.quotationLabel}</Ref>
                   </Link>
                 ) : (
                   // No paper behind it: the word, never a dead link (SPEC §3, P13).
                   <span data-slot="fact-direct">{t("dispatches.direct")}</span>
-                )}
-              </Fact>
-              {/* "Raised by" on everything a rep raised himself; "For" where the
-                  coordinator raised it on his behalf, with her name on the line
-                  under these facts (SPEC §3 P13). */}
-              <Fact label={t(dispatch.raisedByName ? "common.onBehalf.for" : "common.raisedBy")}>
-                {dispatch.repName}
-              </Fact>
-              <Fact label={t("common.date")}>
-                <DayText day={dispatch.createdOn} locale={locale} />
-              </Fact>
-              {dispatch.smacDispatchNumber ? (
-                <Fact label={t("common.smacDispatchNumber")}>
-                  <Ref>{dispatch.smacDispatchNumber}</Ref>
-                </Fact>
-              ) : null}
-            </dl>
-            <RaisedBy name={dispatch.raisedByName} place="drawer" />
-          </div>
+                ),
+                // And Kladra's own quietly under SMAC's, as every row names it.
+                caption:
+                  dispatch.quotationId && dispatch.smacNumber ? (
+                    <Ref>{dispatch.quotationLabel}</Ref>
+                  ) : undefined,
+              },
+              {
+                label: t("common.date"),
+                value: <DayText day={dispatch.approvedOn ?? dispatch.createdOn} locale={locale} />,
+              },
+              {
+                label: t("common.smacDispatchNumber"),
+                value: dispatch.smacDispatchNumber ? (
+                  <Ref slot="figure-smac">{dispatch.smacDispatchNumber}</Ref>
+                ) : (
+                  <span className="text-faint">—</span>
+                ),
+              },
+            ]}
+          />
 
+          {/* The project is lost and this material is still going out to it
+              (D138): a band in the tone of an ending, across the head, with the
+              day and why. A dispatch is not withdrawn by anybody's decision the
+              way a request can be, so the one thing the desk can do about it is
+              know before approving. */}
+          {dispatch.projectLostOn ? (
+            <p
+              data-slot="project-lost"
+              className="rounded-xl bg-state-bad px-3 py-2 text-sm text-state-bad-fg"
+            >
+              <span className="font-medium">
+                {t("common.projectLostOn", { date: formatDay(dispatch.projectLostOn, locale) })}
+              </span>
+              {dispatch.projectLostReason ? (
+                <>
+                  <span aria-hidden="true"> · </span>
+                  <bdi>{lossReasonLabel(dispatch.projectLostReason, t)}</bdi>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+
+          {/* Why she sent it back, in her words, where he reads it before he
+              corrects it (S53). */}
           {dispatch.status === "refused" && dispatch.refuseReason ? (
-            <Reason title={t("dispatches.refusedReason")} text={dispatch.refuseReason} />
+            <NoteBlock
+              title={t("dispatches.refusedReason")}
+              text={dispatch.refuseReason}
+              slot="refused-reason"
+            />
           ) : null}
 
           {/* Above the buttons, so the desk reads what differs before she
@@ -734,8 +907,16 @@ export function DispatchSheet({
               draft,
             }}
             scope={scope}
+            report={report}
           />
-          {report ? <div className="flex flex-wrap gap-2">{report}</div> : null}
+        </SheetHeader>
+
+        <div className="flex flex-col gap-6 p-4">
+          {/* What happened to it, straight under what can be done about it
+              (DESIGN §6): the refusal and its reason, the edit that answered
+              it, the approval and the number. It was the last thing on the
+              drawer, under the payment note. */}
+          {history}
 
           {/* The whole sheet per line, as the quotation drawer draws its own
               (SPEC §3, P13): a direct load has no paper to open, so this card is
@@ -843,8 +1024,8 @@ export function DispatchSheet({
                     className="card-face flex flex-col gap-2 p-3"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <h4 className="min-w-0 text-sm font-medium break-words">
-                        <bdi>{service.name}</bdi>
+                      <h4 className="flex min-w-0 text-sm font-medium">
+                        <Clip text={service.name} />
                       </h4>
                       <span className="text-sm" data-slot="figure-service-total">
                         <Money value={serviceTotal(service)} currency={false} />
@@ -881,22 +1062,35 @@ export function DispatchSheet({
           ) : null}
 
           <dl data-slot="totals" className="card-face flex flex-col gap-2 p-3 text-sm">
-            {/* The one figure this request is about: what it puts on the
-                month (S41). Everything under it is what it comes to, then how
-                and where. */}
-            <div className="flex items-baseline justify-between gap-4 pb-1">
-              <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                {t("common.sqm")}
-              </dt>
-              <dd
-                data-slot="figure-sending"
-                className="num text-2xl leading-none font-semibold"
-                dir="ltr"
-              >
+            {/* The figure the load puts on the month (S41), as the form's own
+                totals lead with it, then who it counts for, then what it comes
+                to. A label in the sentence's case (DESIGN §8): the capitals and
+                the tracking were the PDF's eyebrow, and in Arabic tracking pulls
+                the joins apart. */}
+            <div className="flex items-baseline justify-between gap-4">
+              <dt className="text-xs text-muted-foreground">{t("common.sqm")}</dt>
+              <dd className="num text-xl leading-none font-semibold" dir="ltr">
                 {formatSqm(dispatch.totalSqm)}
               </dd>
             </div>
-            <div className="border-t border-line pt-1" />
+            {split ? (
+              // Why his target moved by less than the figure above it. A rep
+              // who cannot see this on the row has to be told (D148).
+              <div className="flex flex-col gap-1">
+                <dt className="text-xs text-muted-foreground">{t("common.credit.label")}</dt>
+                <dd className="flex flex-col gap-1" data-slot="credit-lines">
+                  {credit.map((line) => (
+                    <span key={line.userId} className="flex items-baseline justify-between gap-4">
+                      <bdi>{line.name}</bdi>
+                      <span dir="ltr" className="num">
+                        {formatSqm(line.sqm)}
+                      </span>
+                    </span>
+                  ))}
+                </dd>
+              </div>
+            ) : null}
+            <div className="border-t border-line" />
             {/* What the load comes to, the five figures a quotation's totals
                 are, from the same function (money.ts): the panels and the
                 services apart where there are services, then before VAT, VAT
@@ -917,62 +1111,54 @@ export function DispatchSheet({
             <Row label={t("common.vatRate")} slot="figure-vat">
               <Amount value={totals.vat} sar={t("common.sar")} />
             </Row>
-            <Row label={t("common.grandTotal")} slot="figure-total" strong>
-              <Amount value={totals.total} sar={t("common.sar")} />
-            </Row>
-            {credit.length > 0 && (credit.length > 1 || credit[0].userId !== dispatch.repId) ? (
-              <>
-                <div className="border-t border-line pt-1" />
-                {/* Why his target moved by less than the figure above it. A
-                    rep who cannot see this on the row has to be told (D148). */}
-                <div className="flex flex-col gap-1">
-                  <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                    {t("common.credit.label")}
-                  </dt>
-                  <dd className="flex flex-col gap-1" data-slot="credit-lines">
-                    {credit.map((line) => (
-                      <span key={line.userId} className="flex items-baseline justify-between gap-4">
-                        <bdi>{line.name}</bdi>
-                        <span dir="ltr" className="num">
-                          {formatSqm(line.sqm)}
-                        </span>
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              </>
-            ) : null}
-            <div className="border-t border-line pt-1" />
-            {/* Where it leaves from, before how it travels and where it goes:
-                that is the order the load happens in (SPEC §3, P12-9). */}
-            <Row label={t("common.warehouse")}>
-              <bdi>{dispatch.warehouseName}</bdi>
-            </Row>
-            <Row label={t("common.shipment")}>{dispatch.shipmentMethod}</Row>
-            <Row label={t("common.destination")}>
-              <bdi>{dispatch.destination}</bdi>
-            </Row>
-            {/* The choice, then the answer it asked for, with a mark between
-                them rather than a gap: a gap says nothing (§5 #181). */}
-            <Row label={t("common.paymentTerms")}>
-              {paymentTermsLabel(dispatch.paymentTerms, t)}
-              {dispatch.paymentDetail ? (
-                <> · {paymentDetailLabel(dispatch.paymentDetail, t)}</>
-              ) : null}
-            </Row>
-            {/* The rep's own words, on their own row: on credit and tasaheel
-                they are the terms, and finance is the reader (SPEC §3). */}
-            {dispatch.paymentNote ? (
-              <Row label={t("common.paymentNote")}>
-                <bdi>{dispatch.paymentNote}</bdi>
+            <div className="border-t border-line pt-2">
+              <Row label={t("common.grandTotal")} slot="figure-total" strong>
+                <Amount value={totals.total} sar={t("common.sar")} />
               </Row>
-            ) : null}
+            </div>
           </dl>
 
-          {/* Last, as on the quotation sheet: what the drawer is opened to do
-              is at the top, and what has already happened is what you scroll
-              to (D143). */}
-          {history}
+          {/* How it leaves and how it is paid for: the labelled group (DESIGN
+              §8), each label in the drawer's one label column and its value
+              beside it (§1b). Where it leaves from, before how it travels and
+              where it goes, which is the order the load happens in (SPEC §3,
+              P12-9); then the terms, and on credit the rep's own words, which
+              finance reads (SPEC §3 P13). */}
+          <section aria-labelledby="dispatch-terms-heading" className="flex flex-col gap-2">
+            <h3 id="dispatch-terms-heading" className="text-xs font-medium text-muted-foreground">
+              {t("dispatches.terms")}
+            </h3>
+            <dl
+              data-slot="terms"
+              className="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-3 text-sm"
+            >
+              <Term label={t("common.warehouse")}>
+                <bdi>{dispatch.warehouseName}</bdi>
+              </Term>
+              <Term label={t("common.shipment")}>{dispatch.shipmentMethod}</Term>
+              <Term label={t("common.destination")}>
+                <bdi>{dispatch.destination}</bdi>
+              </Term>
+              {/* The choice, then the answer it asked for, with a mark between
+                  them rather than a gap: a gap says nothing (§5 #181). */}
+              <Term label={t("common.paymentTerms")}>
+                {paymentTermsLabel(dispatch.paymentTerms, t)}
+                {dispatch.paymentDetail ? (
+                  <>
+                    <span aria-hidden="true" className="text-faint">
+                      {" · "}
+                    </span>
+                    {paymentDetailLabel(dispatch.paymentDetail, t)}
+                  </>
+                ) : null}
+              </Term>
+              {dispatch.paymentNote ? (
+                <Term label={t("common.paymentNote")}>
+                  <Prose line text={dispatch.paymentNote} slot="payment-note" />
+                </Term>
+              ) : null}
+            </dl>
+          </section>
         </div>
       </RecordPanel>
     </Sheet>
@@ -998,7 +1184,7 @@ function SplitNames({ names }: { names: string[] }) {
         <Fragment key={name}>
           {/* A non-breaking space BEFORE the separator: the caption wraps now,
               and a break there would start a line with a bare middot. */}
-          {index > 0 ? " · " : null}
+          {index > 0 ? " · " : null}
           <bdi>{name}</bdi>
         </Fragment>
       ))}
@@ -1007,11 +1193,8 @@ function SplitNames({ names }: { names: string[] }) {
 }
 
 /**
- * A label and its value on one line, the value at the end. The value WRAPS: a
- * shipment method, a destination or a payment note is words somebody typed, and
- * at 375 "TT — a Technopanel truck" was cut at the panel's edge with nothing to
- * say so (DESIGN §5: anything whose job is to be exact wraps rather than clips).
- * The label keeps its own width and the value takes what is left of the line.
+ * A label and its figure on one line, the figure at the end: a column of money
+ * reads as a column (DESIGN §1b, numbers end).
  */
 function Row({
   label,
@@ -1028,12 +1211,25 @@ function Row({
   return (
     <div className="flex items-baseline justify-between gap-4">
       <dt className={cn("shrink-0", strong ? "font-medium" : "text-muted-foreground")}>{label}</dt>
-      <dd
-        data-slot={slot}
-        className={cn("min-w-0 text-end break-words", strong && "font-semibold")}
-      >
+      <dd data-slot={slot} className={cn("min-w-0 text-end", strong && "font-semibold")}>
         {children}
       </dd>
+    </div>
+  );
+}
+
+/**
+ * A label in the drawer's one label column and its words beside it (DESIGN §1b:
+ * `w-28` on every drawer). The value WRAPS: a shipment method, a destination or
+ * a payment note is words somebody typed, and at 375 "TT — a Technopanel truck"
+ * was cut at the panel's edge with nothing to say so (DESIGN §5: anything whose
+ * job is to be exact wraps rather than clips).
+ */
+function Term({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex gap-4">
+      <dt className="w-28 shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 flex-1 break-words">{children}</dd>
     </div>
   );
 }
@@ -1050,6 +1246,7 @@ function Amount({ value, sar }: { value: number; sar: string }) {
   );
 }
 
+/** A small label over its value, for the facts of one line of the load. */
 function Fact({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col">
@@ -1059,34 +1256,43 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Reason({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="card-face flex flex-col gap-1 p-3">
-      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      {/* Typed by the desk, so it runs in her direction and not the page's
-          (rules/words.md) — as the trail below already did. */}
-      <Prose text={text} className="text-sm" />
-    </div>
-  );
-}
-
-/** Never a blank panel while the query runs (DESIGN §2). */
+/**
+ * Never a blank panel while the query runs (DESIGN §2), and in the drawer's own
+ * shape (§1b): the customer's square and two lines, the strip of four figures,
+ * the action row, then the trail and a line of the load at its own height.
+ * Standing still.
+ */
 export function DispatchSheetSkeleton({ param = "open" }: { param?: string }) {
   const t = useTranslations();
   const close = useCloseDrawer(param);
   return (
-  // Closable while it loads: a drawer somebody opened by mistake is closed at
-  // once, not after the record arrives and opens anyway.
+    // Closable while it loads: a drawer somebody opened by mistake is closed at
+    // once, not after the record arrives and opens anyway.
     <Sheet open onOpenChange={(next) => (next ? undefined : close())}>
-      <RecordPanel className="scroller">
-        <div aria-busy="true" className="flex flex-col gap-4 p-4">
+      <RecordPanel className="scroller" aria-busy="true">
+        <SheetHeader data-slot="dispatch-skeleton" className="gap-4 border-b border-line p-4">
           <SheetTitle className="sr-only">{t("dispatches.loading")}</SheetTitle>
           <SheetDescription className="sr-only">{t("dispatches.requestHint")}</SheetDescription>
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-3 w-2/3" />
-          <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
-          <Skeleton className="h-24 w-full rounded-[calc(var(--radius)+4px)]" />
-          <Skeleton className="h-32 w-full rounded-[calc(var(--radius)+4px)]" />
+          <div className="flex items-start gap-3 pe-10">
+            <Skeleton className="size-10 rounded-md" />
+            <div className="flex flex-col gap-2 pt-1">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-3 w-52" />
+            </div>
+          </div>
+          <Skeleton className="h-28 w-full rounded-xl sm:h-16" />
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-28 max-md:h-11" />
+            <Skeleton className="h-8 w-28 max-md:h-11" />
+          </div>
+        </SheetHeader>
+        <div className="flex flex-col gap-6 p-4">
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </div>
+          <Skeleton className="h-36 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
         </div>
       </RecordPanel>
     </Sheet>

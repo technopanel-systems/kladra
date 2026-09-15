@@ -482,6 +482,35 @@ const MANIFEST: StateDef[] = [
     path: "/day?tab=metrics",
     waitFor: textVisible("common.range.month"),
   },
+  /* The day's loading states (S12.6, S12.7): arriving from another screen, the
+     title, the tabs and the work tab's shape; pressing Metrics, the tabs as they
+     are and that tab's own shape under them. Both are held on screen by
+     `keepSkeleton`, because a seeded dev database answers before a person could
+     see either. */
+  {
+    role: "rep",
+    key: "day-loading",
+    identity: "rep",
+    path: "/companies",
+    steps: chain(keepSkeleton('[data-slot="work-skeleton"]'), async (page, T) => {
+      await page.getByRole("link", { name: T("day.title"), exact: true }).first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="work-skeleton"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "day-metrics-loading",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(keepSkeleton('[data-slot="metrics-skeleton"]'), slowNetwork(), async (page, T) => {
+      await page.getByRole("link", { name: T("common.tab.metrics"), exact: true }).first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="metrics-skeleton"]').waitFor({ state: "visible" });
+    },
+  },
   { role: "rep", key: "companies", identity: "rep", path: "/companies", waitFor: heading("common.companies") },
   {
     role: "rep",
@@ -867,7 +896,8 @@ const MANIFEST: StateDef[] = [
     key: "quotations-board",
     identity: "rep",
     path: "/quotations?view=board",
-    waitFor: textVisible("quotations.statusRequested"),
+    // The phone's stage picker names every state first and is hidden at 1366.
+    waitFor: visibleText("quotations.statusRequested"),
   },
   {
     role: "rep",
@@ -894,6 +924,158 @@ const MANIFEST: StateDef[] = [
     ),
     waitFor: dialogWithText("common.company"),
   },
+  /* The quotations states S12.4 drew (P13-G6): the list and the drawer caught
+     loading on a slow line, a chip hiding every row, the drawer of an issued, an
+     accepted and a rejected paper, the customer's two answers and a revision
+     opened from them, a refused request, and Withdraw from the drawer's menu.
+     Nothing is confirmed: every dialog is opened and left, and the refused
+     request is refused before any action is asked. */
+  {
+    role: "rep",
+    key: "quotations-loading",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(slowNetwork(), async (page, T, prefix, width) => {
+      // The rail on a desk; on a phone Quotations is in the bottom bar's menu.
+      if (width < 768) {
+        await page.getByRole("button", { name: T("common.menu"), exact: true }).click();
+      }
+      await page
+        .getByRole("link", { name: T("common.quotations"), exact: true })
+        .filter({ visible: true })
+        .first()
+        .click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('main [role="status"][aria-busy="true"]').first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "quotation-drawer-loading",
+    identity: "rep",
+    path: "/quotations?view=list",
+    steps: chain(slowNetwork(), openFirstRow("open")),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="sheet-content"][aria-busy="true"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "quotations-filtered-out",
+    identity: "rep",
+    path: "/quotations?view=list&status=requested",
+    // Faisal has a paper in every state, so nothing he can press hides his whole
+    // floor. What does happen: he searches for a waiting paper's number with
+    // Issued still pressed, and the chip hides the one the search found.
+    steps: async (page) => {
+      const locale = new URL(page.url()).pathname.split("/")[1];
+      const number = (
+        await page.locator('[data-slot="row-number"]:visible').first().innerText()
+      ).trim();
+      await page.goto(
+        `${BASE}/${locale}/quotations?view=list&q=${encodeURIComponent(number)}&status=issued`,
+        { waitUntil: "load" },
+      );
+      assertHost(page);
+      await waitForHydration(page);
+    },
+    waitFor: async (page, T) => {
+      await page
+        .locator('[data-slot="empty"]')
+        .getByRole("link", { name: T("quotations.showAll"), exact: true })
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "quotation-drawer-issued",
+    identity: "rep",
+    path: "/quotations?view=list&status=issued",
+    steps: openFirstRow("open"),
+    waitFor: dialogWithText("quotations.accepted"),
+  },
+  {
+    role: "rep",
+    key: "quotation-drawer-accepted",
+    identity: "rep",
+    path: "/quotations?view=list&status=accepted",
+    steps: openFirstRow("open"),
+    waitFor: dialogWithText("quotations.revise"),
+  },
+  {
+    role: "rep",
+    key: "quotation-drawer-rejected",
+    identity: "rep",
+    path: "/quotations?view=list&status=rejected",
+    steps: openFirstRow("open"),
+    waitFor: dialogWithText("quotations.rejectedReason"),
+  },
+  {
+    role: "rep",
+    key: "quotation-accept",
+    identity: "rep",
+    path: "/quotations?view=list&status=issued",
+    steps: chain(openFirstRow("open"), async (page, T, prefix, width) => {
+      await dialogWithText("quotations.accepted")(page, T, prefix, width);
+      await page.getByRole("dialog").first().getByRole("button", { name: T("quotations.accepted"), exact: true }).click();
+    }),
+    waitFor: textWithin("quotations.acceptHint"),
+  },
+  {
+    role: "rep",
+    key: "quotation-reject",
+    identity: "rep",
+    path: "/quotations?view=list&status=issued",
+    steps: chain(openFirstRow("open"), async (page, T, prefix, width) => {
+      await dialogWithText("quotations.rejected")(page, T, prefix, width);
+      await page.getByRole("dialog").first().getByRole("button", { name: T("quotations.rejected"), exact: true }).click();
+    }),
+    waitFor: textWithin("quotations.rejectHint"),
+  },
+  {
+    role: "rep",
+    key: "quotation-revise",
+    identity: "rep",
+    path: "/quotations?view=list&status=accepted",
+    steps: chain(openFirstRow("open"), async (page, T, prefix, width) => {
+      await dialogWithText("quotations.revise")(page, T, prefix, width);
+      await page.getByRole("dialog").first().getByRole("button", { name: T("quotations.revise"), exact: true }).click();
+    }),
+    waitFor: async (page, T) => {
+      await page
+        .getByRole("dialog", { name: T("quotations.revise"), exact: true })
+        .locator('[data-slot="quotation-line"]')
+        .first()
+        .waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "quotation-request-refused",
+    identity: "rep",
+    path: "/quotations?view=list",
+    steps: chain(clickButton("quotations.request"), async (page, T) => {
+      const form = page.getByRole("dialog", { name: T("quotations.request"), exact: true });
+      await form.locator('[data-slot="quotation-line"]').first().waitFor({ state: "visible" });
+      await form.getByRole("button", { name: T("common.save"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "quotation-withdraw",
+    identity: "rep",
+    path: "/quotations?view=list&status=requested",
+    steps: chain(openFirstRow("open"), async (page, T, prefix, width) => {
+      await dialogWithText("quotations.editRequest")(page, T, prefix, width);
+      await page.getByRole("dialog").first().locator('[data-slot="row-menu"]').first().click();
+      await page.getByRole("menuitem", { name: T("quotations.cancel"), exact: true }).click();
+    }),
+    waitFor: textWithin("quotations.cancelHint"),
+  },
   {
     role: "rep",
     key: "dispatches-list",
@@ -906,7 +1088,9 @@ const MANIFEST: StateDef[] = [
     key: "dispatches-board",
     identity: "rep",
     path: "/dispatches?view=board",
-    waitFor: textVisible("dispatches.statusSubmitted"),
+    // The column's own heading: the phone's stage picker says the same word
+    // first in the document, and at 1366 it is hidden.
+    waitFor: visibleText("dispatches.statusSubmitted"),
   },
   {
     role: "rep",
@@ -923,6 +1107,131 @@ const MANIFEST: StateDef[] = [
     path: "/dispatches?view=list",
     steps: clickButton("dispatches.request"),
     waitFor: dialogWithText("dispatches.pickQuotationFirst"),
+  },
+  /* The dispatch states S12.5 reshaped (P13-G6): the request filled — its lines,
+     a service and the live total — a refused load and an approved one with their
+     trails, the terms on credit, the drawer on its way, and a chip that hides
+     every row. Nothing is saved: the form is filled and left open. */
+  {
+    role: "rep",
+    key: "dispatch-request-filled",
+    identity: "rep",
+    path: "/dispatches?view=list",
+    steps: chain(
+      clickButton("dispatches.request"),
+      pickCombobox("common.company"),
+      async (page, T) => {
+        const form = page.getByRole("dialog").first();
+        await form.locator('[data-slot="dispatch-line"]').first().waitFor({ state: "visible" });
+        // A direct load opens on an empty line: give it what a rep types.
+        const colour = form.getByLabel(T("common.colourCode"), { exact: true }).first();
+        if ((await colour.inputValue()) === "") {
+          await colour.fill("168");
+          for (const key of ["common.supplier", "common.fireRating", "common.class"]) {
+            await form.getByRole("combobox", { name: T(key), exact: true }).first().click();
+            await page.getByRole("option").first().click();
+          }
+          await form.getByLabel(T("common.pricePerSqm"), { exact: true }).first().fill("95");
+        }
+        await form.getByRole("button", { name: T("quotations.addService"), exact: true }).click();
+        const service = form.locator('[data-slot="quotation-service"]').last();
+        await service.getByRole("combobox", { name: T("quotations.service"), exact: true }).click();
+        await page.getByRole("option").first().click();
+        await service.getByLabel(T("common.sqm"), { exact: true }).fill("12");
+        await service.getByLabel(T("common.pricePerSqm"), { exact: true }).fill("25");
+        await form.getByLabel(T("common.destination"), { exact: true }).fill("الدرعية — موقع المشروع");
+        // The chip's label is the control; its radio is out of the layout.
+        await form.getByText(T("dispatches.payment.credit"), { exact: true }).click();
+      },
+    ),
+    waitFor: async (page) => {
+      const totals = page.getByRole("dialog").first().locator('[data-slot="totals"]');
+      await totals.waitFor({ state: "visible" });
+      await totals.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    role: "rep",
+    key: "dispatch-refused",
+    identity: "rep",
+    path: "/dispatches?view=list&status=refused",
+    steps: openFirstRow("open"),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").locator('[data-slot="refused-reason"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "dispatch-approved-trail",
+    identity: "rep",
+    path: "/dispatches?view=list&status=approved",
+    steps: openFirstRow("open"),
+    waitFor: async (page) => {
+      const approval = page.getByRole("dialog").locator("li[data-event='approve']");
+      await approval.waitFor({ state: "visible" });
+      await approval.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    role: "rep",
+    key: "dispatch-refused-trail",
+    identity: "rep",
+    path: "/dispatches?view=list&status=refused",
+    steps: openFirstRow("open"),
+    waitFor: async (page) => {
+      const refusal = page.getByRole("dialog").locator("li[data-event='refuse']");
+      await refusal.waitFor({ state: "visible" });
+      await refusal.scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    role: "rep",
+    key: "dispatch-credit",
+    identity: "rep",
+    // The newest load on the demo floor is paid for on credit, with the note.
+    path: "/dispatches?view=list",
+    steps: openFirstRow("open"),
+    waitFor: async (page) => {
+      const note = page.getByRole("dialog").locator('[data-slot="payment-note"]');
+      await note.waitFor({ state: "visible" });
+      await page.getByRole("dialog").locator('[data-slot="terms"]').scrollIntoViewIfNeeded();
+    },
+  },
+  {
+    role: "rep",
+    key: "dispatch-drawer-loading",
+    identity: "rep",
+    path: "/dispatches?view=list",
+    steps: chain(slowNetwork(), openFirstRow("open")),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="sheet-content"][aria-busy="true"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "rep",
+    key: "dispatches-filtered-out",
+    // Marketing sells like a rep (SPEC §3 P13) and has one approved load on the
+    // demo floor, so Refused hides the whole of it.
+    identity: "marketing",
+    path: "/dispatches?view=list&status=refused",
+    waitFor: textVisible("dispatches.showAll"),
+  },
+  {
+    role: "rep",
+    key: "dispatches-loading",
+    identity: "rep",
+    path: "/day?tab=work",
+    steps: chain(slowNetwork(), async (page, T) => {
+      const link = page.getByRole("link", { name: T("common.dispatches"), exact: true }).filter({ visible: true });
+      // On a phone Dispatches is in the bottom bar's menu, not on the bar.
+      if ((await link.count()) === 0) {
+        await page.getByRole("button", { name: T("common.menu"), exact: true }).click();
+      }
+      await link.first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="dispatches-skeleton"]').waitFor({ state: "visible" });
+    },
   },
   { role: "rep", key: "reports", identity: "rep", path: "/reports", waitFor: heading("reports.title") },
   // The states S12.8 reshaped. The popup pressed with nothing chosen and nothing
@@ -1077,12 +1386,58 @@ const MANIFEST: StateDef[] = [
     steps: openFirstRow("dispatch"),
     waitFor: dialogVisible(),
   },
+  // S12.5: her two answers. Approve pressed with no number, which the action
+  // refuses before it reads the load; Refuse with its reason typed and left open.
+  {
+    role: "coordinator",
+    key: "queue-dispatch-approve-refused",
+    identity: "coordinator",
+    path: "/queue",
+    steps: chain(openFirstRow("dispatch"), async (page, T) => {
+      const sheet = page.getByRole("dialog").first();
+      await sheet.getByRole("button", { name: T("dispatches.approve"), exact: true }).click();
+      const ask = page.getByRole("dialog").filter({ hasText: T("dispatches.approveHint") });
+      await ask.getByRole("button", { name: T("dispatches.approve"), exact: true }).click();
+    }),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").getByRole("alert").first().waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "coordinator",
+    key: "queue-dispatch-refuse",
+    identity: "coordinator",
+    path: "/queue",
+    steps: chain(openFirstRow("dispatch"), async (page, T) => {
+      const sheet = page.getByRole("dialog").first();
+      await sheet.getByRole("button", { name: T("dispatches.refuse"), exact: true }).click();
+      await page
+        .getByRole("dialog")
+        .getByLabel(T("common.reason"), { exact: true })
+        .fill("طريقة الشحن ليست كما في سماك لهذا المشروع.");
+    }),
+    waitFor: textWithin("dispatches.refuseHint"),
+  },
   {
     role: "coordinator",
     key: "day-work",
     identity: "coordinator",
     path: "/day?tab=work",
     waitFor: textVisible("day.whoToCall"),
+  },
+  // Her desk while it reads, in its own shape (S12.6): arrived at from her day.
+  {
+    role: "coordinator",
+    key: "queue-loading",
+    identity: "coordinator",
+    path: "/day?tab=work",
+    // By its address: the bottom bar names the queue with a shorter word.
+    steps: chain(keepSkeleton('[data-slot="queue-skeleton"]'), async (page) => {
+      await page.locator('a[href$="/queue"]:visible').first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="queue-skeleton"]').waitFor({ state: "visible" });
+    },
   },
 
   /* ------------------------------- manager ------------------------------ */
@@ -1106,6 +1461,47 @@ const MANIFEST: StateDef[] = [
     identity: "manager",
     path: "/team?tab=team",
     waitFor: heading("shell.team"),
+  },
+  /* The manager's tabs while they read (S12.7), each in its own shape under the
+     tabs, reached by pressing the tab; and the metrics tab at its full height, so
+     every card, every slice's word and its figure are in one picture however far
+     below 900px they fall. */
+  {
+    role: "manager",
+    key: "team-metrics-loading",
+    identity: "manager",
+    path: "/team?tab=work",
+    steps: chain(keepSkeleton('[data-slot="metrics-skeleton"]'), slowNetwork(), async (page, T) => {
+      await page.getByRole("link", { name: T("common.tab.metrics"), exact: true }).first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="metrics-skeleton"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "manager",
+    key: "team-team-loading",
+    identity: "manager",
+    path: "/team?tab=work",
+    steps: chain(keepSkeleton('[data-slot="people-skeleton"]'), slowNetwork(), async (page, T) => {
+      await page.getByRole("link", { name: T("common.tab.team"), exact: true }).first().click();
+    }),
+    waitFor: async (page) => {
+      await page.locator('[data-slot="people-skeleton"]').waitFor({ state: "visible" });
+    },
+  },
+  {
+    role: "manager",
+    key: "team-metrics-full",
+    identity: "manager",
+    path: "/team?tab=metrics",
+    waitFor: async (page, T, prefix, width) => {
+      await textVisible("common.range.month")(page, T, prefix, width);
+      await page.locator('[data-slot="builder"]').waitFor({ state: "visible" });
+      // The viewport grown to the document, so the capture is the whole tab.
+      const height = await page.evaluate(() => document.documentElement.scrollHeight);
+      await page.setViewportSize({ width, height });
+    },
   },
   {
     role: "manager",

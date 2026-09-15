@@ -5,13 +5,12 @@ import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-
 import { QuotationHistory } from "@/components/quotations/quotation-history";
 import { RevisionChanges } from "@/components/quotations/revision-changes";
 import { CREDIT_SPLIT } from "@/lib/credit";
-import { QuotationSheet } from "@/components/quotations/quotations-table";
-import { ReportButton } from "@/components/reports/report-dialog";
+import { QuotationSheet } from "@/components/quotations/quotation-sheet";
 import { mayReportOn } from "@/lib/activities";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { issuesOwnQuotations, mayWrite } from "@/lib/floor";
-import { mayRaiseFor } from "@/lib/visibility";
+import { maySeeCompany, mayRaiseFor } from "@/lib/visibility";
 import { raisesOnBehalf } from "@/lib/on-behalf";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
 import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
@@ -94,6 +93,9 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
     quotation.isLatest &&
     dispatchable(quotation.status);
 
+  const opensCompany =
+    !quotation.companyArchived && maySeeCompany(user, quotation.companyRepId, quotation.shared);
+
   return (
     <QuotationSheet
       dispatches={
@@ -122,26 +124,22 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
       changes={changes ? <RevisionChanges changes={changes} /> : null}
       // A report about this paper, from the paper (SPEC §3, P13): his own
       // customer or one shared with him — the same sentence the popup's action
-      // asks, so the button is here exactly when the report would be accepted.
+      // asks, so the button is there exactly when the report would be accepted.
       // And not on an archived customer, nor on a job that is lost or archived,
       // because the popup opens on this paper's job and the action refuses all
       // three (D176) — the project sheet's `reports && !lost`, asked here too.
-      report={
+      reportable={
         !quotation.companyArchived &&
         !quotation.projectArchived &&
         !quotation.projectLostOn &&
-        mayReportOn(user, quotation.companyRepId, quotation.shared) ? (
-          <ReportButton
-            companyId={quotation.companyId}
-            companyName={quotation.companyName}
-            projectId={quotation.projectId}
-            quotationId={quotation.id}
-            variant="outline"
-            icon
-          >
-            {t("common.addReport")}
-          </ReportButton>
-        ) : null
+        mayReportOn(user, quotation.companyRepId, quotation.shared)
+      }
+      // The company's and the job's drawers are doors from the head, for a
+      // reader whose floor they are on — the question both drawers ask before
+      // they open (D139). An archived one has no drawer to open onto.
+      companyHref={opensCompany ? `/companies?open=${quotation.companyId}` : null}
+      projectHref={
+        opensCompany && !quotation.projectArchived ? `/projects?open=${quotation.projectId}` : null
       }
       quotation={quotation}
       credit={quotation.credit}

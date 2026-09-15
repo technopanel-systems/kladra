@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { CallBand, type CallBandData } from "@/components/day/call-band";
-import { WORK_CARD } from "@/components/team/work-grid";
+import { WorkTitle } from "@/components/team/work-grid";
 import { Empty } from "@/components/ui-ext/empty";
 import type { CompanyRow } from "@/lib/companies";
 import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
@@ -21,12 +21,14 @@ import { NEVER_CONTACTED_DAYS, type FollowUpCounts } from "@/lib/followups";
  * four — nobody is expecting a call today — and it is the one that loses
  * customers, which is why it is here at all rather than in a report.
  *
- * Each band is a card of its own in the day's grid (P13-S8), so a day with an
- * overdue call and nothing else is one card and not four headings; the section
- * around them is `contents` — it names the calls for a reader and a spec, and
- * lends the grid its children rather than drawing a box of its own. A band
- * with nobody in it is not drawn at all, and a day with nobody to call is one
- * card that says so.
+ * Each band is a card of its own (P13-S8), so a day with an overdue call and
+ * nothing else is one card and not four headings. The section around them is
+ * the day's second stack (S12.6): the calls, one card under another, beside
+ * what came back to him on a desk and under it on a phone. It names the calls
+ * for a reader and a spec with a heading nobody needs to see — every card under
+ * it carries its own. A band with nobody in it is not drawn at all, and a day
+ * with nobody to call is that heading, shown, over the space the cards would
+ * take.
  *
  * This file decides WHAT the bands are; `CallBand` draws one, on the client,
  * from rows passed as data (D82). The report a call ends in opens in the one
@@ -80,7 +82,11 @@ export async function CallList({
       },
       {
         key: "common.goneQuiet",
-        tone: "over",
+        // Blue, as its pair above and as the manager's stuck card for the same
+        // customers: nobody is waiting on this call today, and it is how
+        // customers are lost (D63). It was grey here and blue there — one
+        // state in two colours (S12.6).
+        tone: "open",
         rows: quiet,
         total: totals.goneQuiet,
         filter: "quiet",
@@ -89,19 +95,20 @@ export async function CallList({
     ] satisfies CallBandData[]
   ).filter((band) => band.rows.length > 0);
 
+  // Nobody to call: the title over the space the cards would take, not a card
+  // with a dashed box inside it — two edges saying one thing (DESIGN §1b).
   if (bands.length === 0) {
     return (
-      <section className={WORK_CARD}>
-        <h2 className="text-sm font-medium">{t("day.whoToCall")}</h2>
+      <section data-slot="calls" className="flex min-w-0 flex-col gap-3">
+        <WorkTitle as="h2">{t("day.whoToCall")}</WorkTitle>
         <Empty size="panel">{t("day.nobodyToCall")}</Empty>
       </section>
     );
   }
 
   return (
-    <section className="contents">
-      {/* Absolutely placed, so it takes no cell of the grid: the band cards
-          each carry their own visible heading under it. */}
+    <section data-slot="calls" className="flex min-w-0 flex-col gap-6">
+      {/* Read, not drawn: each band card carries its own visible heading. */}
       <h2 className="sr-only">{t("day.whoToCall")}</h2>
       {bands.map((band) => (
         <CallBand key={band.key} band={band} />

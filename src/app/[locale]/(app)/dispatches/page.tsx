@@ -84,6 +84,13 @@ export default async function DispatchesPage({
 
   // Only when it came back full (D80).
   const total = rows.length === LIST_LIMIT ? await countDispatches(narrowing) : rows.length;
+  // A status chip that hides every row says how many it hides (DESIGN §8), so
+  // "nothing is waiting" over a floor of forty loads does not read as a floor
+  // of none. Counted only then, by the list's own predicate without the chip.
+  const hidden =
+    rows.length === 0 && narrowing.status && !q
+      ? await countDispatches({ ...narrowing, status: undefined })
+      : 0;
   const forOthers = raisesOnBehalf(user);
 
   return (
@@ -114,6 +121,7 @@ export default async function DispatchesPage({
         openId={open}
         view={view}
         remembered={stored}
+        hidden={hidden}
       />
 
       <ListTail shown={rows.length} total={total} />

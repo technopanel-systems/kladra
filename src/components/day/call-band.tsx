@@ -2,8 +2,16 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { ReportButton } from "@/components/reports/report-dialog";
-import { WORK_CARD, WORK_ROW, WORK_ROWS } from "@/components/team/work-grid";
+import {
+  WORK_CARD,
+  WORK_ROW,
+  WORK_ROW_ACTIONS,
+  WORK_ROWS,
+  WorkTitle,
+} from "@/components/team/work-grid";
+import { Avatar } from "@/components/ui-ext/avatar";
 import { DayText } from "@/components/ui-ext/day-text";
+import { LinkPending } from "@/components/ui-ext/link-pending";
 import { PhoneLinks } from "@/components/ui-ext/phone-links";
 import { Prose } from "@/components/ui-ext/prose";
 import { Link } from "@/i18n/navigation";
@@ -21,6 +29,11 @@ import { cn } from "@/lib/utils";
  * props, once per card: a hundred cards put half a megabyte of that under the
  * rep's home screen before a single row was readable (DESIGN §5, D82). Drawn
  * here, the page carries the rows as data and the card once, as code.
+ *
+ * Since the restyle the band's tone is a dot before its title and never the
+ * title's own colour (DESIGN §1): "Overdue" in red and "Never contacted" in blue
+ * made four headings as loud as the dates under them. The date keeps its tone
+ * where it is late or due, because a late date is what `TONE_TEXT` is for.
  */
 
 export type CallBandData = {
@@ -39,98 +52,109 @@ export type CallBandData = {
 export function CallBand({ band }: { band: CallBandData }) {
   const t = useTranslations();
   const locale = useLocale();
+  // Only a date that is late or due today is coloured; a band that is about
+  // silence carries no blame in its dates (D141).
+  const dateTone = band.tone === "bad" || band.tone === "wait" ? TONE_TEXT[band.tone] : "text-muted-foreground";
 
   return (
     <section data-slot="call-band" data-band={band.filter} className={WORK_CARD}>
       <div className="flex flex-col gap-0.5">
-        <h3 className={cn("text-sm font-medium", TONE_TEXT[band.tone])}>
-          {t(band.key)}{" "}
-          <span dir="ltr" className="num">
-            {band.total}
-          </span>
-        </h3>
+        <WorkTitle tone={band.tone} count={band.total}>
+          {t(band.key)}
+        </WorkTitle>
         {/* "Overdue" and "Due today" say what they are; "Gone quiet" is a
-            rule, and a rule with a threshold in it says the threshold. */}
-        {band.means ? <p className="text-xs text-muted-foreground">{band.means}</p> : null}
+            rule, and a rule with a threshold in it says the threshold. Under
+            the words, not under the dot. */}
+        {band.means ? <p className="ps-4 text-xs text-muted-foreground">{band.means}</p> : null}
       </div>
 
       <ul className={WORK_ROWS}>
         {band.rows.map((row) => (
           <li key={row.id} className={cn(WORK_ROW, "row-door flex flex-col gap-2")}>
-            {/* The customer and the day on one line, what to press on the
-                next. The card is a third of a desk wide in the day's grid and
-                the whole of a phone, so the name has the line to itself but
-                for the date: sharing it with the phone chip as well left about
-                150px, and «شركة أنماء للمقاولات» came out «شركة أنماء لـ…» — a
-                rep cannot tell which customer he is about to call (D65). */}
-            <span className="flex items-start justify-between gap-3">
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <Link
-                  data-door
-                  href={`/companies?open=${row.id}`}
-                  // The whole card is the target; the phone link on top of it is
-                  // the exception, which is why it carries a z-index
-                  // (globals.css `row-door`). It wraps rather than truncates:
-                  // beside the date in a third of a desk, a long Arabic name
-                  // cut at the end is a customer nobody can tell apart (D65).
-                  className="text-sm font-medium break-words"
-                >
-                  <bdi>{row.name}</bdi>
-                </Link>
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                  {/* The same words the customer list uses when there is nobody
-                      to call (D98): a card on "Calls due" with no contact and no
-                      number said nothing, and the rep read it as a card to tap. */}
-                  {row.mainContactName ? (
-                    <bdi>{row.mainContactName}</bdi>
-                  ) : row.mainContactPhone ? null : (
-                    <span className="text-faint">{t("companies.noContact")}</span>
-                  )}
-                  {row.cityName ? <span>{row.cityName}</span> : null}
+            {/* The company's face, the name and the day on one line, what to
+                press under it. The name has the line to itself but for the
+                date: sharing it with the phone chip as well left about 150px,
+                and «شركة أنماء للمقاولات» came out «شركة أنماء لـ…» — a rep
+                cannot tell which customer he is about to call (D65). */}
+            <span className="flex items-start gap-3">
+              {/* The face every screen gives this company (DESIGN §1b). A dot
+                  on it only for an overdue follow-up, the one state §1b gives a
+                  company; the card's title says the word. */}
+              <Avatar
+                id={row.id}
+                name={row.name}
+                kind="company"
+                size="sm"
+                ring={band.filter === "overdue" ? "bad" : undefined}
+              />
+              <span className="flex min-w-0 flex-1 items-start justify-between gap-3">
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <Link
+                    data-door
+                    href={`/companies?open=${row.id}`}
+                    // The whole card is the target; the controls under it are
+                    // the exception, which is why they carry a z-index
+                    // (globals.css `row-door`). It wraps rather than truncates:
+                    // beside the date in half a desk, a long Arabic name cut at
+                    // the end is a customer nobody can tell apart (D65).
+                    className="flex items-center gap-1.5 text-sm font-medium break-words"
+                  >
+                    <bdi>{row.name}</bdi>
+                    <LinkPending />
+                  </Link>
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    {/* The same words the customer list uses when there is
+                        nobody to call (D98). */}
+                    {row.mainContactName ? (
+                      <bdi>{row.mainContactName}</bdi>
+                    ) : row.mainContactPhone ? null : (
+                      <span className="text-faint">{t("companies.noContact")}</span>
+                    )}
+                    {row.mainContactName && row.cityName ? (
+                      <span aria-hidden="true" className="text-faint">
+                        ·
+                      </span>
+                    ) : null}
+                    {row.cityName ? <bdi>{row.cityName}</bdi> : null}
+                  </span>
+                  {/* Why the call is owed: the last thing written about him, one
+                      line, in the writer's own direction (D111). */}
+                  {row.lastActivityText ? (
+                    <Prose
+                      line
+                      text={row.lastActivityText}
+                      slot="last-said"
+                      className="line-clamp-1 text-xs text-muted-foreground"
+                    />
+                  ) : null}
                 </span>
-                {/* Why the call is owed: the last thing written about him, one
-                    line, in the writer's own direction (D111). Without it the
-                    card was a name and a date, and the reason lived two presses
-                    away on the drawer's Activity tab. A line, not a paragraph:
-                    it starts where the card starts, whichever way it reads. */}
-                {row.lastActivityText ? (
-                  <Prose
-                    line
-                    text={row.lastActivityText}
-                    slot="last-said"
-                    className="line-clamp-1 text-xs text-muted-foreground"
+
+                {row.nextFollowUp ? (
+                  <DayText
+                    day={row.nextFollowUp}
+                    locale={locale}
+                    className={cn("shrink-0 text-xs", dateTone)}
                   />
                 ) : null}
               </span>
-
-              {row.nextFollowUp ? (
-                <DayText
-                  day={row.nextFollowUp}
-                  locale={locale}
-                  className={cn("shrink-0 text-xs", TONE_TEXT[band.tone])}
-                />
-              ) : null}
             </span>
 
-            <span className="flex flex-wrap items-center gap-2">
-              {/* Above the stretched link, like the phone number: the card
-                  is one target and these two are the exceptions (D71). The
-                  report a call ends in opens on this customer and the person on
-                  the card (SPEC §3 P13). */}
-              <span className="relative z-10">
-                <ReportButton
-                  companyId={row.id}
-                  companyName={row.name}
-                  contactId={row.mainContactId}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  aria-label={t("reports.addFor", { name: row.name })}
-                  icon
-                >
-                  {t("common.addReport")}
-                </ReportButton>
-              </span>
+            {/* Above the stretched link, like the phone number: the card is one
+                target and these are the exceptions (D71). The report a call
+                ends in opens on this customer and the person on the card (SPEC
+                §3 P13). Lined up with the words, not with the face. */}
+            <span className={WORK_ROW_ACTIONS}>
+              <ReportButton
+                companyId={row.id}
+                companyName={row.name}
+                contactId={row.mainContactId}
+                variant="outline"
+                size="sm"
+                aria-label={t("reports.addFor", { name: row.name })}
+                icon
+              >
+                {t("common.addReport")}
+              </ReportButton>
 
               {row.mainContactPhone ? (
                 <PhoneLinks
@@ -146,8 +170,7 @@ export function CallBand({ band }: { band: CallBandData }) {
 
       {/* The rest of them are one press away, on the list that narrows to
           this same band — the count above says how many there are, and
-          this says where they are (D80). Printing all ninety on a phone
-          is not showing them, it is burying the first one. */}
+          this says where they are (D80). */}
       {band.total > band.rows.length ? (
         <Link
           href={`/companies?filter=${band.filter}`}

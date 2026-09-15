@@ -50,14 +50,27 @@ import { cn } from "@/lib/utils";
 /**
  * The table's thirteen columns from `xl`: the line's number, the nine fields,
  * its m², its total, and the remove control. Written once for the header row and
- * every line, so the two cannot drift a pixel apart. The fractions are the pixel
- * budget of a 1,120px table in sixteenths, looked at in both scripts: the three
- * choices with no default need about 104px to still say "Choose…", a colour
- * code 92 for "RAL 9016", a quantity 56, and a line total 104 for a six-figure
- * line and its halalas.
+ * every line, so the two cannot drift a pixel apart.
+ *
+ * Each fraction is the pixels that column's longest value needs, measured in the
+ * dialog at its stated width (1,152px at 1280 and at 1366 alike, so the table's
+ * narrowest desk width is its only one) and in both scripts (S12.4). A choice is
+ * 46px of edge, padding, gap and chevron around its words; a box is 22. So the
+ * three choices with no default need 104 to say "Choose…" (56px of it in English,
+ * 41 in Arabic); Width 84 for a sheet typed as "1.245"; Thickness 76 for "10.0";
+ * the colour code 84 for "RAL 9016"; the quantity 56; the length 60 for "5.806";
+ * the price 72; the m² 68 for "12,345.67"; the line's total 92 for a seven-figure
+ * line and its halalas. They come to 904 of the table's 925, and the rest is
+ * shared out in the same proportions.
+ *
+ * Width read "1…" at 4.75 sixteenths, 73px, 27 of them for its words — a figure
+ * that truncates is a different figure (DESIGN §5) — and Supplier cut "Choose…"
+ * by three pixels. The room came from the columns that measured under what they
+ * had: the price, the line total and the thickness, not the two choices beside
+ * Supplier, which were already exactly as wide as "Choose…".
  */
 const LINE_GRID =
-  "xl:grid xl:grid-cols-[1.5rem_minmax(0,5.75fr)_minmax(0,6.5fr)_minmax(0,6.75fr)_minmax(0,6.75fr)_minmax(0,3.5fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,4.75fr)_minmax(0,5.25fr)_minmax(0,4.75fr)_minmax(0,6.5fr)_2rem] xl:items-center xl:gap-x-2";
+  "xl:grid xl:grid-cols-[1.5rem_minmax(0,84fr)_minmax(0,104fr)_minmax(0,104fr)_minmax(0,104fr)_minmax(0,56fr)_minmax(0,76fr)_minmax(0,84fr)_minmax(0,60fr)_minmax(0,72fr)_minmax(0,68fr)_minmax(0,92fr)_2rem] xl:items-center xl:gap-x-2";
 
 /**
  * One line in the form: the nine fields, plus React's key.
@@ -186,18 +199,20 @@ export function QuotationLines({
             LINE_GRID,
           )}
         >
+          {/* A column's name wraps rather than clips: a label is never cut
+              (DESIGN §5). */}
           <span />
-          <span className="truncate">{t("common.colourCode")}</span>
-          <span className="truncate">{t("common.supplier")}</span>
-          <span className="truncate">{t("common.fireRating")}</span>
-          <span className="truncate">{t("common.class")}</span>
-          <span className="truncate">{t("common.qty")}</span>
-          <span className="truncate">{t("common.thickness")}</span>
-          <span className="truncate">{t("common.width")}</span>
-          <span className="truncate">{t("common.length")}</span>
-          <span className="truncate">{t("common.pricePerSqm")}</span>
-          <span className="truncate text-end">{t("common.sqm")}</span>
-          <span className="truncate text-end">{t("common.lineTotal")}</span>
+          <span>{t("common.colourCode")}</span>
+          <span>{t("common.supplier")}</span>
+          <span>{t("common.fireRating")}</span>
+          <span>{t("common.class")}</span>
+          <span>{t("common.qty")}</span>
+          <span>{t("common.thickness")}</span>
+          <span>{t("common.width")}</span>
+          <span>{t("common.length")}</span>
+          <span>{t("common.pricePerSqm")}</span>
+          <span className="text-end">{t("common.sqm")}</span>
+          <span className="text-end">{t("common.lineTotal")}</span>
           <span />
         </div>
 
@@ -250,7 +265,7 @@ export function QuotationLines({
               </div>
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:contents">
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label htmlFor={id("colour")} className="xl:sr-only">
                     {t("common.colourCode")}
                   </Label>
@@ -273,7 +288,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label id={id("supplier-label")} className="xl:sr-only">
                     {t("common.supplier")}
                   </Label>
@@ -291,7 +306,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label id={id("fire-label")} className="xl:sr-only">
                     {t("common.fireRating")}
                   </Label>
@@ -309,7 +324,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label id={id("class-label")} className="xl:sr-only">
                     {t("common.class")}
                   </Label>
@@ -327,7 +342,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label htmlFor={id("qty")} className="xl:sr-only">
                     {t("common.qty")}
                   </Label>
@@ -345,7 +360,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label id={id("thickness-label")} className="xl:sr-only">
                     {t("common.thickness")}
                   </Label>
@@ -363,7 +378,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label id={id("width-label")} className="xl:sr-only">
                     {t("common.width")}
                   </Label>
@@ -382,7 +397,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label htmlFor={id("length")} className="xl:sr-only">
                     {t("common.length")}
                   </Label>
@@ -400,7 +415,7 @@ export function QuotationLines({
                   />
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label htmlFor={id("price")} className="xl:sr-only">
                     {t("common.pricePerSqm")}
                   </Label>
@@ -423,13 +438,13 @@ export function QuotationLines({
                   figures of the row from xl, where the column names say what
                   they are. */}
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line pt-2 text-sm xl:contents">
-                <span className="min-w-0 text-muted-foreground xl:truncate xl:text-end">
+                <span className="min-w-0 text-muted-foreground xl:text-end">
                   <span className="xl:sr-only">{t("common.sqm")} </span>
                   <span dir="ltr" className="num font-medium text-foreground">
                     {formatSqm(sqm)}
                   </span>
                 </span>
-                <span className="min-w-0 text-muted-foreground xl:truncate xl:text-end">
+                <span className="min-w-0 text-muted-foreground xl:text-end">
                   <span className="xl:sr-only">{t("common.lineTotal")} </span>
                   <span dir="ltr" className="num font-medium text-foreground">
                     {formatMoney(total)}

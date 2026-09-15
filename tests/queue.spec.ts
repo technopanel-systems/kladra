@@ -187,17 +187,67 @@ test("archiving the oldest request's company moves the wait to the next one, rat
         );
       });
     } else {
-      await test.step("nothing is left waiting, and the strip says so", async () => {
+      await test.step("nothing is left waiting, and the desk says so once", async () => {
         await expect(longest.locator("dd").first()).toHaveText("—");
-        await expect(longest.locator('[data-slot="figure-caption"]')).toHaveText(
-          t("queue.nothingWaiting"),
-        );
+        await expect(longest.locator('[data-slot="figure-caption"]')).toHaveCount(0);
+        await expect(page.getByText(t("queue.clear"), { exact: true })).toHaveCount(1);
       });
     }
   } finally {
     await query(
       "update companies set archived_at = null, archive_reason = null where id = $1::uuid",
       [oldest!.companyId],
+    );
+  }
+});
+
+/*
+ * The desk two coordinators share is clear more often than any other screen is
+ * empty (S12.6). It said so twice — "nothing waiting" under the longest wait,
+ * and "Nothing is waiting on you. The desk is clear." under the strip — and a
+ * sentence read twice is a sentence skimmed the third time. The strip keeps its
+ * dash, the sentence is said once, and no search box stands over lists that are
+ * not there.
+ */
+test("a clear desk says so once: a dash in the strip and one sentence under it", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow();
+
+  // Every company with anything on the desk, put aside for the length of the
+  // test: the same predicate the lists ask (`oldestRaised`), so the desk is
+  // clear by the page's own rule and not by a second one.
+  const held = await query<{ id: string }>(
+    `update companies set archived_at = now(), archive_reason = 'queue.spec clear desk'
+      where archived_at is null
+        and (exists (select 1 from quotations q where q.company_id = companies.id and q.status = 'requested')
+          or exists (select 1 from dispatches d where d.company_id = companies.id and d.status = 'submitted'))
+      returning id::text as id`,
+  );
+  expect(held.length, "the seeded desk had nothing on it to clear").toBeGreaterThan(0);
+
+  try {
+    expect(await oldestRaised(), "the desk is not clear").toBeNull();
+
+    await login(page, locale, "rawan");
+    await expect(page).toHaveURL(new RegExp(`/${locale}/queue`), COLD);
+
+    const longest = longestWaitTile(page, t);
+    await expect(longest.locator("dd").first()).toHaveText("—", COLD);
+    await expect(longest.locator('[data-slot="figure-caption"]')).toHaveCount(0);
+    await expect(page.getByText(t("queue.clear"), { exact: true })).toHaveCount(1);
+
+    // One sentence, not a sentence over two empty halves and a search box.
+    await expect(listSection(page, t("common.quotations"))).toHaveCount(0);
+    await expect(listSection(page, t("common.dispatches"))).toHaveCount(0);
+    await expect(page.getByRole("main").getByRole("searchbox")).toHaveCount(0);
+  } finally {
+    await query(
+      `update companies set archived_at = null, archive_reason = null
+        where id = any($1::uuid[])`,
+      [held.map((row) => row.id)],
     );
   }
 });

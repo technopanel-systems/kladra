@@ -4,7 +4,6 @@
   "longestWait": "أطول انتظار",
   "since": "منذ {day}",
   "workingDays": "{days, plural, =0 {اليوم} zero {لا أيام عمل} one {يوم عمل واحد} two {يوما عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}",
-  "nothingWaiting": "لا شيء بالانتظار",
   "latePart": "{late, plural, =0 {لا شيء تجاوز {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}} zero {لا شيء تجاوز {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}} one {واحد تجاوز {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}} two {اثنان تجاوزا {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}} few {# تجاوزت {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}} many {# تجاوزت {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}} other {# تجاوزت {days, plural, one {يوم عمل واحد} two {يومي عمل} few {# أيام عمل} many {# يوم عمل} other {# يوم عمل}}}}",
   "answeredToday": "تمت الإجابة اليوم",
   "arrivedToday": "{arrived, plural, =0 {لم يصل شيء اليوم} zero {لم يصل شيء اليوم} one {وصل طلب واحد اليوم} two {وصل طلبان اليوم} few {وصلت # طلبات اليوم} many {وصل # طلبًا اليوم} other {وصل # طلب اليوم}}",

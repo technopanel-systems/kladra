@@ -1,9 +1,8 @@
 import { getTranslations } from "next-intl/server";
 import type { Difference, DifferenceField } from "@/lib/dispatch-difference";
 import type { DispatchItemRow, DispatchServiceRow } from "@/lib/dispatches";
+import { ToneNote } from "@/components/dispatches/tone-note";
 import { formatNumber } from "@/lib/money";
-import { TONE_TEXT } from "@/lib/state-tone";
-import { cn } from "@/lib/utils";
 
 /**
  * "Differs from Q-12" — what this load changed from the quotation it was
@@ -12,7 +11,7 @@ import { cn } from "@/lib/utils";
  *
  * On the drawer for everybody who can open it, above the actions, so the desk
  * reads it before she presses Approve and the rep reads what he sent. Under an
- * amber heading — somebody will look at this — and never the colour alone: the
+ * heading with the amber dot — somebody will look at this — and never the colour alone: the
  * heading says it, and every entry says what moved.
  *
  * The same three-part shape the revision's "what changed" uses, and for the same
@@ -113,12 +112,10 @@ export async function DispatchDifferences({
 
   return (
     <section data-slot="differs" aria-labelledby="dispatch-differs-heading" className="card-face flex flex-col gap-2 p-3">
-      <h3
-        id="dispatch-differs-heading"
-        data-tone="wait"
-        className={cn("text-sm font-medium", TONE_TEXT.wait)}
-      >
-        {t("dispatches.differsFrom", { label })}
+      {/* A title stays in the text colour and its tone is the dot before it
+          (DESIGN §1 Stone): the amber heading was the loudest words on the drawer. */}
+      <h3 id="dispatch-differs-heading" data-tone="wait" className="text-sm font-medium">
+        <ToneNote tone="wait">{t("dispatches.differsFrom", { label })}</ToneNote>
       </h3>
 
       <ul className="flex flex-col gap-2">
@@ -161,7 +158,7 @@ export async function DispatchDifferences({
                       <bdi>{service?.name ?? ""}</bdi>
                     )}
                   </span>
-                  <ul className="flex flex-col gap-0.5 text-xs">
+                  <ul className="flex flex-col gap-1 text-xs">
                     {entry.changes.flatMap((change) => {
                       if (change.change !== "changed") return [];
                       const to = shown(change.field, change.to);

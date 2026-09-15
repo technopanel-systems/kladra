@@ -5,6 +5,7 @@
   "companyGoneMeans": "ربما أُرشفت أو سُلّمت إلى شخص آخر. كل ما هو لديك موجود في القائمة.",
   "companyActions": "إجراءات الشركة",
   "companyFailed": "تعذّر فتح هذه الشركة.",
+  "dispatchFailed": "تعذّر فتح هذا التوريد.",
   "activity": "التقارير",
   "newProject": "إضافة مشروع",
   "addContact": "إضافة جهة اتصال",
