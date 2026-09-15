@@ -57,6 +57,12 @@ export type LiveState = {
    * refresh was in flight starts its two seconds now. Stable across renders.
    */
   landed: () => void;
+  /**
+   * The reader's own write, named by the id its action handed back: flashed on
+   * its row when the list that shows it lands. A report's live event names its
+   * company, not the entry, so without this the entry itself never flashed.
+   */
+  expect: (id: string) => void;
 };
 
 const EMPTY_IDS: ReadonlySet<string> = new Set<string>();
@@ -139,6 +145,10 @@ export function LiveProvider({
     for (const id of ids) markArrived(id);
   }, [markArrived]);
 
+  const expect = useCallback((id: string) => {
+    if (id) waiting.current.set(id, Date.now());
+  }, []);
+
   useEffect(() => {
     if (!userId) return;
 
@@ -220,8 +230,8 @@ export function LiveProvider({
   }, []);
 
   const value = useMemo<LiveState>(
-    () => ({ unread, arrivedIds, lastEvent, landed }),
-    [unread, arrivedIds, lastEvent, landed],
+    () => ({ unread, arrivedIds, lastEvent, landed, expect }),
+    [unread, arrivedIds, lastEvent, landed, expect],
   );
 
   return <LiveContext.Provider value={value}>{children}</LiveContext.Provider>;

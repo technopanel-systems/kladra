@@ -27,7 +27,7 @@ export function FormBody({ children }: { children: ReactNode }) {
       // column shrinks its children before it scrolls, and a card carries
       // `overflow: hidden`, so the totals block here was squeezed to 26px at
       // 375 and silently ate three of its four rows (globals.css, DESIGN §5).
-      className="scroll-hint scroller flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4"
+      className="scroll-hint scroller flex min-h-0 flex-1 flex-col gap-4 px-4 pt-2 pb-4"
     >
       {children}
     </div>

@@ -1,6 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { ActivityList } from "@/components/activities/activity-list";
-import { ProjectSheet } from "@/components/projects/project-sheet";
+import { ProjectGone, ProjectSheet } from "@/components/projects/project-sheet";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Empty } from "@/components/ui-ext/empty";
@@ -43,13 +43,13 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   const [user, locale, t] = await Promise.all([requireUser(), getLocale(), getTranslations()]);
 
   /*
-   * No drawer, and no error page, over a link that no longer works — whichever
-   * way it fails. An id that is not a uuid would take the cast down in
+   * No error page over a link that no longer works — whichever way it fails —
+   * but a drawer that says so (ProjectGone), as the company's does. An id that is not a uuid would take the cast down in
    * Postgres; a project on somebody else's company throws NotAllowed, and a rep
    * following a colleague's link is told there is nothing here rather than
    * shown that a project he cannot open exists.
    */
-  if (!z.uuid().safeParse(projectId).success) return null;
+  if (!z.uuid().safeParse(projectId).success) return <ProjectGone />;
 
   let project: Awaited<ReturnType<typeof getProject>> = null;
   try {
@@ -57,7 +57,7 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
   } catch (error) {
     if (!(error instanceof NotAllowed)) throw error;
   }
-  if (!project) return null;
+  if (!project) return <ProjectGone />;
 
   const [quotations, standing] = await Promise.all([
     listQuotationsForProject(user, project.id),

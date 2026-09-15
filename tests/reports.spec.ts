@@ -88,7 +88,7 @@ test("a rep adds a report from the top bar on a phone: the company, its main con
       await box.fill(written);
       await box.press("Enter");
       await expect(dialog).toBeHidden(COLD);
-      await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
+      await expect(page.getByText(t("reports.dialog.added", { company: company.name }), { exact: true })).toBeVisible(COLD);
     });
 
     await test.step("4 · it is written as he said it, and audited in the same breath", async () => {

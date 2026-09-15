@@ -32,6 +32,9 @@ test("the letters are the name's, in the script it is written in", () => {
   expect(initialsOf("شركة الرواسي للمقاولات العامة")).toBe("ر");
   expect(initialsOf("مصنع سدرة للصناعات المعدنية")).toBe("س");
   expect(initialsOf("الرواد")).toBe("ر");
+  // A hamza below the alef reads as "!" at 24px, so the bare alef is drawn.
+  expect(initialsOf("ورشة الإتقان للتشكيل المعدني")).toBe("ا");
+  expect(initialsOf("أحمد")).toBe("أ");
   // Nothing to draw is nothing, not a crash.
   expect(initialsOf("")).toBe("");
   expect(initialsOf("—")).toBe("");

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { ArrivedEntry } from "@/components/activities/arrived-entry";
 import { KIND_ICON } from "@/components/activities/kinds";
 import { Badge } from "@/components/ui/badge";
 import { DayText } from "@/components/ui-ext/day-text";
@@ -76,11 +77,7 @@ export function ActivityList({
         const dispatch = entry.dispatchNumber !== null ? dispatchLabel(entry.dispatchNumber) : null;
         const named = entry.contactName || entry.projectName || quotation || dispatch;
         return (
-          <li
-            key={entry.id}
-            data-slot="report-entry"
-            className="card-face flex flex-col gap-1.5 p-3"
-          >
+          <ArrivedEntry key={entry.id} id={entry.id} className="card-face flex flex-col gap-1.5 p-3">
             {/* The customer, first, on the screen where the entry is about him
                 rather than filed under him — and a door to him, because a
                 reader of a day is one press from wanting the whole history. Not
@@ -194,7 +191,7 @@ export function ActivityList({
                   )}
               </p>
             ) : null}
-          </li>
+          </ArrivedEntry>
         );
       })}
     </ol>

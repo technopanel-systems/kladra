@@ -44,6 +44,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type { Channel } from "@/db/schema";
+import { useLiveOptional } from "@/components/live/live-provider";
 import { useRouter } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -277,6 +278,7 @@ function ReportPanel({
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const live = useLiveOptional();
   const ids = useId();
   const guarded = useWireGuard();
   const [pending, startTransition] = useTransition();
@@ -506,7 +508,17 @@ function ReportPanel({
         toast.error(result.error);
         return;
       }
-      toast.success(t(entry ? "reports.dialog.corrected" : "reports.dialog.added"));
+      // A toast names the result (DESIGN §8): "Report added" over a drawer and
+      // a list of forty companies did not say which one it went on.
+      toast.success(
+        entry
+          ? t("reports.dialog.corrected")
+          : t("reports.dialog.added", { company: companyName || t("common.company") }),
+      );
+      // The entry flashes where it lands, added or corrected, as a save
+      // elsewhere does (S12.3).
+      const saved = entry ? entry.id : result.data?.activityId;
+      if (saved) live?.expect(saved);
       onOpenChange(false);
       // Every list that shows reports is server rendered; one refresh brings
       // them all up to date (SPEC §3: no refresh buttons).

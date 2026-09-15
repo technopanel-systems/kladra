@@ -450,6 +450,27 @@ export function ProjectSheet({
  * four figures, the follow-up strip, the action row with its menu at the end,
  * the tabs, and entries at an entry's height. Standing still.
  */
+/**
+ * A project link that opens nothing: archived, lost to a colleague's floor, or
+ * never a project at all. It said nothing — the skeleton drew and vanished — while
+ * the company drawer beside it names what happened and what is left (S12.2).
+ * The same sentence shape, closable the same way.
+ */
+export function ProjectGone() {
+  const t = useTranslations();
+  const close = useCloseDrawer();
+  return (
+    <Sheet open onOpenChange={(next) => (next ? undefined : close())}>
+      <RecordPanel>
+        <div data-slot="project-gone" className="flex flex-col gap-2 p-4 pe-12">
+          <SheetTitle className="text-base">{t("drawer.projectGone")}</SheetTitle>
+          <SheetDescription>{t("drawer.projectGoneMeans")}</SheetDescription>
+        </div>
+      </RecordPanel>
+    </Sheet>
+  );
+}
+
 export function ProjectSheetSkeleton() {
   const t = useTranslations();
   const close = useCloseDrawer();

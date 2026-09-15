@@ -49,7 +49,10 @@ export function initialsOf(name: string): string {
   if (ARABIC.test(firstLetter(words[0]))) {
     const named = words.length > 1 && ARABIC_KIND.has(words[0]) ? words[1] : words[0];
     const bare = named.length > 3 && named.startsWith("ال") ? named.slice(2) : named;
-    return firstLetter(bare);
+    // An alef with its hamza BELOW (إ) or a wasla (ٱ) is drawn as the bare alef:
+    // at 24px the hamza under the stroke read as an exclamation mark («ورشة
+    // الإتقان» wore a «!»). The hamza above (أ, آ) stays; it reads as itself.
+    return firstLetter(bare).replace(/[إٱ]/u, "ا");
   }
 
   const bare = words.map((word) => word.replace(/^(al|el)-(?=\p{L})/iu, ""));

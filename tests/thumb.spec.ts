@@ -119,7 +119,7 @@ test("log, project and quotation: a bottom sheet each, Save under the thumb, and
     const written = `With one thumb ${Date.now()}`;
     await answerReport(form, t, locale, { kind: "call", text: written });
     await save.click();
-    await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
+    await expect(page.getByText(t("reports.dialog.added", { company: company.name }), { exact: true })).toBeVisible(COLD);
     await expect(form).toBeHidden();
     await expect(drawer.getByText(written)).toBeVisible(COLD);
   });

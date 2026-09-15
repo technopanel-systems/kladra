@@ -173,7 +173,11 @@ export function SearchableSelect({
           aria-invalid={invalid || undefined}
           disabled={disabled}
           className={cn(
+            // Drawn as a field, not as an outline button (restyle): beside a
+            // text box it wore the canvas as a fill and read as a different
+            // kind of control. The same edge, fill and height as `Input`.
             "h-9 w-full justify-between gap-2 px-2.5 font-normal",
+            "border-input bg-transparent hover:bg-transparent dark:bg-input/30 dark:hover:bg-input/30",
             shown === null && "text-muted-foreground",
             className,
           )}

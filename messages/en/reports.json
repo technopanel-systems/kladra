@@ -68,7 +68,7 @@
     "linkPaper": "About a project, quotation or dispatch",
     "noCompanies": "No companies on your floor yet.",
     "happenedOn": "When",
-    "added": "Report added.",
+    "added": "Report added on {company}.",
     "corrected": "Report corrected."
   },
   "refused": {

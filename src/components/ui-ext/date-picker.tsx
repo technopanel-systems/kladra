@@ -130,7 +130,9 @@ export function DatePicker({
           aria-invalid={invalid || undefined}
           aria-describedby={ariaDescribedBy}
           className={cn(
+            // A field like `Input` and `SearchableSelect`, not an outline button.
             "h-9 w-full justify-start gap-2 px-2.5 font-normal",
+            "border-input bg-transparent hover:bg-transparent dark:bg-input/30 dark:hover:bg-input/30",
             value === null && "text-muted-foreground",
             className,
           )}

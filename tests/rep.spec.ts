@@ -205,11 +205,14 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     await pickDay(page, dialog.getByRole("button", { name: t("common.pickDate") }), tomorrow);
 
     await dialog.getByRole("button", { name: t("common.save") }).click();
-    await expect(page.getByText(t("reports.dialog.added"))).toBeVisible();
+    await expect(page.getByText(t("reports.dialog.added", { company: fixture.company }))).toBeVisible();
 
     // Newest first (SPEC S24) — the entry just written is the first one.
     const entries = dialogNamed(page, fixture.company).locator("ol > li");
     await expect(entries.first()).toContainText(fixture.visit);
+    // And it takes the arrived flash where it lands, so nobody reads the list to
+    // find what they just wrote (P13-G6).
+    await expect(entries.first()).toHaveClass(/row-arrived/);
   });
 
   await test.step("4 · The follow-up comes due: the strip counts it and lists the company", async () => {
@@ -591,6 +594,20 @@ test("a stale or foreign ?open= leaves the list standing", async ({ page, locale
       await expect(page.getByText(t("drawer.companyGone"))).toBeVisible();
       // Said as what may have happened, not as "nothing here yet".
       await expect(page.getByText(t("drawer.companyGoneMeans"))).toBeVisible();
+    });
+  }
+
+  // A project link that opens nothing says so the same way (P13-G6): it drew
+  // its skeleton and vanished, which reads as a drawer that failed to load.
+  for (const open of ["not-a-uuid", "00000000-0000-4000-8000-000000000000"]) {
+    await test.step(`a project link: ${open}`, async () => {
+      const response = await page.goto(`/${locale}/projects?open=${open}`);
+      expect(response?.status()).toBe(200);
+      await expect(page.getByText(t("drawer.projectGone"))).toBeVisible();
+      await expect(page.getByText(t("drawer.projectGoneMeans"))).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(page.getByText(t("drawer.projectGone"))).toHaveCount(0);
+      await expect(page).not.toHaveURL(/[?&]open=/);
     });
   }
 });

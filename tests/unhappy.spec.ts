@@ -107,7 +107,7 @@ test("a report written with the server out of reach is kept, said, and saved whe
   await test.step("the wire is back: the same press saves it", async () => {
     await mendTheWire(page);
     await form.getByRole("button", { name: t("common.save") }).click();
-    await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
+    await expect(page.getByText(t("reports.dialog.added", { company: company.name }), { exact: true })).toBeVisible(COLD);
     await expect(form).toBeHidden();
     await expect(drawer.getByText(written)).toBeVisible(COLD);
   });
@@ -175,7 +175,7 @@ test("a confirmation the wire refused says so and keeps its question open", asyn
 
 test("a report whose answer was lost is written once, not twice", async ({ page, locale, t }) => {
   await login(page, locale, "faisal");
-  const { drawer, form, box } = await openReport(page, locale, t);
+  const { company, drawer, form, box } = await openReport(page, locale, t);
   const written = `Answer lost on the way back ${Date.now()}`;
   await answerReport(form, t, locale, { text: written });
 
@@ -189,7 +189,7 @@ test("a report whose answer was lost is written once, not twice", async ({ page,
   expect(landed[0].n, "the answer was lost but the request never landed").toBe(1);
   await mendTheWire(page);
   await form.getByRole("button", { name: t("common.save") }).click();
-  await expect(page.getByText(t("reports.dialog.added"), { exact: true })).toBeVisible(COLD);
+  await expect(page.getByText(t("reports.dialog.added", { company: company.name }), { exact: true })).toBeVisible(COLD);
   await expect(form).toBeHidden();
   await expect(drawer.getByText(written)).toBeVisible(COLD);
 
