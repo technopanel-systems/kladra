@@ -247,6 +247,9 @@ export function QuotationActions({
         description={t("quotations.rejectHint")}
         label={t("common.reason")}
         multiline
+        // The answer that ends the chase, in the tint as Mark lost is: the
+        // brand is for the answer the paper was waiting on (D202).
+        destructive
         confirmLabel={t("quotations.rejected")}
         successMessage={t("quotations.rejectedDone", { label })}
         onConfirm={(reason) => withId(decideQuotationAction, { decision: "rejected", reason })()}

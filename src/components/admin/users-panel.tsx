@@ -23,7 +23,6 @@ import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -173,7 +172,7 @@ export function UsersPanel({
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="font-medium">{name}</span>
-                      {user.active ? null : <Badge variant="outline">{t("admin.inactive")}</Badge>}
+                      {user.active ? null : <span data-slot="attribute" className="text-xs text-muted-foreground">{t("admin.inactive")}</span>}
                     </span>
                     {/* The address is the one thing here that must never be
                         cut: it is what the person signs in with. */}
@@ -219,7 +218,7 @@ export function UsersPanel({
                           <Avatar id={user.id} name={name} size="sm" />
                           <span className="font-medium">{name}</span>
                           {user.active ? null : (
-                            <Badge variant="outline">{t("admin.inactive")}</Badge>
+                            <span data-slot="attribute" className="text-xs text-muted-foreground">{t("admin.inactive")}</span>
                           )}
                         </span>
                       </TableCell>

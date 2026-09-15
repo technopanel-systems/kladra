@@ -210,8 +210,16 @@ below by number.
                   - [x] S12.7 The rep's day and the manager's three tabs, metrics and the builder.
                   - [x] S12.8 Reports, leads, duplicates.
                   - [x] S12.9 Admin: users, targets, lookups, holidays, use, archive, export.
-                  - [ ] S12.10 The stranger's pass: every state again, before beside after in one contact sheet for
+                  - [x] S12.10 The stranger's pass: every state again, before beside after in one contact sheet for
                         Jerom; whatever still reads as another hand is reshaped here.
+                        **Done** (2026-09-15): first the founder's three-times-reported stock form — the request
+                        dialogs' lines are items (`LineItem`, `FormSection`, `FormSplit`, D205) — and an Arabic name
+                        for every demo person; then the whole manifest, 111 states × 8 (`shots/s1210`), read by three
+                        cold readers. Fixed centrally: placeholders one tier below labels (faint, dark token #99948f
+                        for 4.5:1); Customer rejected and a project's unsharing in the tint; admin's attribute words
+                        unboxed; manifest rows that opened the wrong record. Read and kept, with reasons, in
+                        `.claude/UX-RESTYLE-PROGRESS.md`. Contact sheets sent. Full suite 815 passed, 4 skipped, one
+                        worker crash green on rerun.
       - [ ] **Stage 3 (Fable)** — audit everything as a stranger, refix, push, report; `/cost` at the end.
         Pushing is no longer held for Stage 3 (founder, 2026-09-15): forty-four commits on one machine were the
         risk, not an origin that has not been audited. `main` was pushed at cfa0de2 and is pushed after each green commit.
@@ -241,8 +249,10 @@ D195–D204. A consistency pass over 20 core states in all eight variants fixed 
 suite is green (five failures, each fixed or green on rerun). Progress, decisions and known issues:
 `.claude/UX-RESTYLE-PROGRESS.md`. On 2026-09-15 the founder overruled holding the push for Stage 3 and `main` went to
 origin; before S12.10 come the quotation request's line editor (reported three times as a stock form) and an Arabic name
-for every demo person. **Next: S12.10** — every remaining state in the manifest (dialogs, empty, refused, loading,
-offline) shot and read against Stone as the 20 were, before beside after for Jerom; then Stage 2 ends. When the machine is
+for every demo person. S12.10 is done: the line editor rebuilt as items, the seed's names in Arabic, the whole manifest shot and read, what
+repeated fixed in the kit, and the before-beside-now sheets sent to the founder. **Stage 2 is over. Next: Stage 3 (Fable)**
+— `/audit`. Open for the founder: a fire rating's «Normal» has no Arabic (a lookup with one name column), and avatar tints
+are a hash, so two colleagues can share one (DESIGN §1b). When the machine is
 short of memory the full suite runs as four `npx playwright test` calls over a quarter of `tests/*.spec.ts` each, a
 fresh test server for each, because one seventy-minute run was killed twice. The dev database is `seed:demo` on 0026; `seed:volume` after
 it puts the volume back. A dev server that has served a session's edits is restarted, not reused.

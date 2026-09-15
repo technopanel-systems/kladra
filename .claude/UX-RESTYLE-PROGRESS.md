@@ -4,7 +4,7 @@ Lives under `.claude/` because hook H2 refuses a new .md anywhere else in the re
 Part of P13-G6: the restyle is the design-system half of the front-end reshape.
 
 ## Current phase
-Restyle phases P0–P4 done and committed; final gate green; `main` pushed (founder, 2026-09-15, overruling the Stage 3 hold).
+S12.10 done (full suite 815 passed, 4 skipped, one worker crash green on rerun); Stage 2 over. Restyle phases P0–P4 done and committed; final gate green; `main` pushed (founder, 2026-09-15, overruling the Stage 3 hold).
 Founder's 2026-09-15 order: (1) the request dialogs' line editor rebuilt as items — built, shot-looked, Arabic-reviewed,
 targeted specs running; (2) every demo person has an Arabic name — done (seed + dev DB; reading.spec makes the fallback
 for one screen); (3) S12.10 — full manifest shoot `shots/s1210` running; (4) leftover worktree folder — deleted;
@@ -60,9 +60,16 @@ for one screen); (3) S12.10 — full manifest shoot `shots/s1210` running; (4) l
 - Arabic: `dispatches.sending` «في هذا التوريد», `quotations.removeItem` «حذف البند» (en "Remove item"); typed figures in an Arabic item align with the chosen values (`rtl:text-end`).
 - Shots: `shots/lines-before` vs `shots/lines-3` (`rep__quotation-request-full`, new manifest state).
 
+## S12.10 — the stranger's pass (2026-09-15)
+- Shot: the whole manifest, 111 states × 8 (`shots/s1210`); read by three cold readers from one tile per state plus full-size 1366 en dark and 375 ar light (`scratchpad/tiles.py`).
+- Manifest fixes: `openRowOffering` opens the first row whose drawer offers a button (an accepted quotation revised since offers no Revise); the team tab clicked in `page-tabs` (the rail's «الفريق» came first); company-drawer opens a list row, not the lead the lead state opens; new `quotation-request-full`.
+- Repeated, fixed centrally: a placeholder in the muted colour read as a typed value once labels went muted ("Tower A" under Required, the report's example sentence under its refusal) → placeholders are `text-faint` in Input, Textarea, Select, SearchableSelect and DatePicker, and the dark faint token rose #8f8a85 → #99948f so a placeholder on a dialog's field keeps 4.5:1.
+- Fixed: Customer rejected's confirm was the brand → the tint, as Mark lost; the project's Leave and Remove sharing now wear the tint the company's do; admin's Inactive / Hidden / For management were outlined boxes → a muted word.
+- Read and kept, with the reason: Arabic dates that "look reversed" (rules/words.md — `reading.spec` measures the order and passed); the company gone notice as a short bottom sheet at 375 (it follows the company drawer's phone shape, D128; a sentence needs no 88% sheet); report chip rows at 375 (they carry the ScrollLine fade, D198); the "1 Issue" dev badge on the missing screen (a dev-server compile moment; the page logs nothing).
+- Recorded, not changed: avatar tints are a hash of the id, so two colleagues can share one (seed: Rawan and Marketing, Faisal and Turki) — only a stored per-person tint guarantees it (DESIGN §1b now says so).
+
 ## Remaining (in order)
-1. S12.10: shoot every remaining manifest state (dialogs, empty, refused, loading, offline) at both widths, locales, themes; sweep against Stone; fix what repeats centrally.
-2. Then Stage 2 ends: "switch to Fable and /audit", /cost.
+1. Stage 2 is over: /cost, then "switch to Fable and /audit" (Stage 3).
 
 ## Known issues / notes
 - React hydration warning when the search palette opens while the day's tab body is still streaming (Radix aria-hides the not-yet-hydrated page). Harmless; seen as the dev "2 Issues" badge in search-palette shots.
@@ -72,8 +79,9 @@ for one screen); (3) S12.10 — full manifest shoot `shots/s1210` running; (4) l
 - `TaskStop` on the chunk loop leaves the loop alive; `touch scratchpad/STOP`, then kill Kladra's node processes.
 
 ## Verification status
+- S12.10 gate: typecheck, lint, build green; full suite 815 passed, 4 skipped, 1 worker crash (schema.spec, 70/70 on rerun); contact sheets `scratchpad/contact/kladra-before-now-*.jpg` sent.
 - Final gate (0d69156 tree): build green; full suite 811 passed, 4 skipped, 5 failed → sharing ×2 and drawers ×1 fixed in specs, admin (hydration timeout) and services (ERR_NETWORK_CHANGED) green on rerun; drawers 14/14, sharing/admin/services 26/26.
 - Before/after sheets: scratchpad/before_after_1.jpg, before_after_2.jpg (rs-before vs rs-after).
 
 ## Exact next action
-S12.10: `npx tsx scripts/shots.ts --label=s1210` over the whole manifest (dev 3100 up), sweep with a shot-looker per batch, fix centrally.
+Stage 3 (Fable): `/audit` — everything built, as a stranger.

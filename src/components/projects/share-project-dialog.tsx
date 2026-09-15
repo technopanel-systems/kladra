@@ -80,6 +80,7 @@ export function ShareProjectDialog({
         onOpenChange={onOpenChange}
         title={t("drawer.share.leaveTitle", { name: projectName })}
         description={t("drawer.share.leaveProjectWarning")}
+        destructive
         confirmLabel={t("drawer.share.leave")}
         successMessage={t("drawer.share.left", { label: projectName })}
         onConfirm={() => unshareProjectAction(projectId, me)}
@@ -192,6 +193,7 @@ function ShareProjectBody({
                   }
                   title={t("drawer.share.removeProjectTitle", { name: person.name })}
                   description={t("drawer.share.removeProjectWarning")}
+                  destructive
                   confirmLabel={t("drawer.share.remove")}
                   successMessage={t("drawer.share.removed", {
                     name: person.name,

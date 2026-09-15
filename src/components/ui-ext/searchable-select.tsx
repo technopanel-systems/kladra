@@ -178,7 +178,7 @@ export function SearchableSelect({
             // kind of control. The same edge, fill and height as `Input`.
             "h-9 w-full justify-between gap-2 px-2.5 font-normal",
             "border-input bg-transparent hover:bg-transparent dark:bg-input/30 dark:hover:bg-input/30",
-            shown === null && "text-muted-foreground",
+            shown === null && "text-faint",
             className,
           )}
         >

@@ -225,6 +225,31 @@ function openFirstRow(paramName = "open"): Step {
   };
 }
 
+/**
+ * The first row whose drawer offers this button. A list filtered by a state still
+ * holds papers the button is not for — an accepted quotation that has been revised
+ * since offers no Revise — so the rows are opened in turn until one does.
+ */
+function openRowOffering(key: string, paramName = "open"): Step {
+  return async (page, T) => {
+    const rows = page.locator(`a[href*="${paramName}="]:visible`);
+    await rows.first().waitFor({ state: "visible" });
+    const count = Math.min(await rows.count(), 12);
+    for (let index = 0; index < count; index += 1) {
+      await rows.nth(index).click();
+      const button = page.getByRole("dialog").first().getByRole("button", { name: T(key), exact: true });
+      try {
+        await button.first().waitFor({ state: "visible", timeout: 6_000 });
+        return;
+      } catch {
+        await page.keyboard.press("Escape");
+        await page.getByRole("dialog").first().waitFor({ state: "hidden" });
+      }
+    }
+    throw new Error(`no row in the first ${count} offers ${key}`);
+  };
+}
+
 function clickButton(key: string, params?: Record<string, string | number>): Step {
   return async (page, T) => {
     await page.getByRole("button", { name: T(key, params), exact: true }).first().click();
@@ -528,7 +553,11 @@ const MANIFEST: StateDef[] = [
     key: "company-drawer",
     identity: "rep",
     path: "/companies",
-    steps: openFirstRow("open"),
+    // A company from the list, not the leads band above it: the band's first card
+    // is what company-drawer-lead opens, and the two states were one picture.
+    steps: async (page) => {
+      await page.locator('a[href*="open="]:not([data-slot="leads-band"] a):visible').first().click();
+    },
     waitFor: dialogWithText("drawer.activity"),
   },
   {
@@ -1042,7 +1071,7 @@ const MANIFEST: StateDef[] = [
     key: "quotation-drawer-accepted",
     identity: "rep",
     path: "/quotations?view=list&status=accepted",
-    steps: openFirstRow("open"),
+    steps: openRowOffering("quotations.revise"),
     waitFor: dialogWithText("quotations.revise"),
   },
   {
@@ -1080,7 +1109,7 @@ const MANIFEST: StateDef[] = [
     key: "quotation-revise",
     identity: "rep",
     path: "/quotations?view=list&status=accepted",
-    steps: chain(openFirstRow("open"), async (page, T, prefix, width) => {
+    steps: chain(openRowOffering("quotations.revise"), async (page, T, prefix, width) => {
       await dialogWithText("quotations.revise")(page, T, prefix, width);
       await page.getByRole("dialog").first().getByRole("button", { name: T("quotations.revise"), exact: true }).click();
     }),
@@ -1526,7 +1555,12 @@ const MANIFEST: StateDef[] = [
     identity: "manager",
     path: "/team?tab=work",
     steps: chain(keepSkeleton('[data-slot="people-skeleton"]'), slowNetwork(), async (page, T) => {
-      await page.getByRole("link", { name: T("common.tab.team"), exact: true }).first().click();
+      // The tab, not the rail: in Arabic both say «الفريق», and the rail's is first.
+      await page
+        .locator('[data-slot="page-tabs"]')
+        .getByRole("link", { name: T("common.tab.team"), exact: true })
+        .first()
+        .click();
     }),
     waitFor: async (page) => {
       await page.locator('[data-slot="people-skeleton"]').waitFor({ state: "visible" });

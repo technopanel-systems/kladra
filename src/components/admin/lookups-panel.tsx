@@ -17,7 +17,6 @@ import { FilterChip } from "@/components/ui-ext/filter-chip";
 import { FilterRow } from "@/components/ui-ext/filter-row";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -140,13 +139,13 @@ export function LookupsPanel({
                   >
                     {named(row.label)}
                   </span>
-                  {row.active ? null : <Badge variant="outline">{t("admin.hidden")}</Badge>}
+                  {row.active ? null : <span data-slot="attribute" className="text-xs text-muted-foreground">{t("admin.hidden")}</span>}
                   {/* Why this row is missing from a rep's list (SPEC §3). Said on
                       the screen that owns the row, because the admin may rename it
                       in either language and nothing else here would tell him the
                       rename does not change what it does. */}
                   {row.restricted ? (
-                    <Badge variant="outline">{t("admin.forManagement")}</Badge>
+                    <span data-slot="attribute" className="text-xs text-muted-foreground">{t("admin.forManagement")}</span>
                   ) : null}
                 </span>
 

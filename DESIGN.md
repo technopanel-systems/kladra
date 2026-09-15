@@ -61,7 +61,7 @@ both themes and both directions, at 1366 and 375 (`scripts/shots.ts --look`):
 | line (border) / strong (input) | `rgba(236,233,229,.08)` / `.14` | `rgba(33,29,26,.10)` / `.17` |
 | text | `#ece9e5` | `#211d1a` |
 | text-muted | `#ada8a3` | `#605b56` |
-| text-faint | `#8f8a85` | `#706b66` |
+| text-faint | `#99948f` | `#706b66` |
 | rail (sidebar, bottom bar) | `#0e0c0a` | `#f2f0ed`, text `#605b56`, strong `#211d1a` |
 | brand (primary) / hover | `#b95651` / `#c4625d` | `#b33333` / `#a0292a` |
 | ring (focus) | the text colour | the text colour |
@@ -158,7 +158,9 @@ word, with the article and a leading شركة or مؤسسة set aside), round fo
 at the head of a drawer. The hue comes from a hash of the record's
 own id across eight quiet tints (`--avatar-1` … `--avatar-8`, defined for both themes,
 low saturation, text in the same hue's foreground), so one person is one colour on every
-screen and no two colleagues in the team table share one by accident. That is identity,
+screen. A hash cannot promise that no two colleagues share one: in the seed Rawan and Marketing
+do, and so do Faisal and Turki (S12.10); only a tint stored per person, the least used one given
+at creation, would, which is a schema change left to the founder. That is identity,
 not state — the rule "colour only means something" (SPEC §3) holds because the meaning is
 "this is Faisal" — and it is a solid tint, never a gradient (§1: the running app has none).
 A state dot (the `ring` prop, which kept its name) sits on the avatar's outer (start)
