@@ -4,9 +4,12 @@ Lives under `.claude/` because hook H2 refuses a new .md anywhere else in the re
 Part of P13-G6: the restyle is the design-system half of the front-end reshape.
 
 ## Current phase
-Wave 3 building on the restyle (S12.4 quotations, S12.5 dispatches, S12.6+7 day/queue/team) in worktrees `.claude/worktrees/agent-*` from ee9af5b. The session ended mid-build once; the builders were resumed with their uncommitted work intact.
+Restyle phases P0–P4 done and committed; final gate green. Remaining: S12.10 (every other manifest state read against Stone).
 
 ## Checkpoints (git)
+- 0d69156 — P4 consistency (state dot+word unboxed, avatar dot outer corner, neutral lead cards, one TableHead, strip figures 16px); final gate green.
+- 602dc06 — P4 kit pass (36px fields drawn alike, 16px dialog titles, stale project drawer, report toast names company, own report flashes, إ initial).
+- 3db54fd — wave 3 (S12.4 quotations, S12.5 dispatches, S12.6+7 day/queue/team) + SPEC D195–D204; suite 814 passed then services width spec fixed.
 - d8699e0 — DESIGN §8 records the rules audit.
 - ee9af5b P2 — shared components restyled; full suite 799/800 then the chip-row spec fixed (Arabic lookups now fit at 1366).
 - 56bd6c1 P1 — Stone tokens + Plex Sans / Noto Sans Arabic + scale; DESIGN §1; WORKFLOW §3 #7 wording.
@@ -47,17 +50,20 @@ Wave 3 building on the restyle (S12.4 quotations, S12.5 dispatches, S12.6+7 day/
 - CHANGE — Sandstone's warm chroma, 12/16 radii, rail dark in both themes. Evolves into restrained stone neutrals, 8/12 radii, a themed rail. Founder brief 2026-09-14 overrides S1's palette; the red and dark-default carry over.
 
 ## Remaining (in order)
-1. Wave 3 on the new system: `python scratchpad/make_wave3.py <HEAD>` (now folds in restyle_contract.md), three builders in worktrees, merge, gate.
-2. P4 consistency pass: every screen, 1366 + 375, en + ar, light + dark; fix repeated problems centrally. Seen so far: day cards colour their titles (Overdue red, Never contacted blue) → dot + neutral title; quotation rows 64px (status over date); pace text in amber.
-3. DESIGN §8 verdicts; SPEC §4 defaults; full suite; WORKFLOW where-I-stopped; kit_pass items 5–8.
+1. S12.10: shoot every remaining manifest state (dialogs, empty, refused, loading, offline) at both widths, locales, themes; sweep against Stone; fix what repeats centrally.
+2. Then Stage 2 ends: "switch to Fable and /audit", /cost.
 
 ## Known issues / notes
-- A global sonner `closeButton` was tried and dropped: error toasts already carry their own Close action (admin.spec export), and two Close buttons fail strict locators.
-- First p2 run died in cascades of worker exits (0xC0000142) with dev 3100 + test 3101 + browsers up; rerun with 3100 stopped.
+- React hydration warning when the search palette opens while the day's tab body is still streaming (Radix aria-hides the not-yet-hydrated page). Harmless; seen as the dev "2 Issues" badge in search-palette shots.
+- The quotation request dialog's 13-column line grid still reads as a stock form (S12.4/S12.5 both said so).
+- Some seed people have no Arabic name (Turki Al-Shammari shows in Latin on Arabic screens) — seed data, not design.
+- Global sonner `closeButton` dropped: error toasts carry their own Close action.
+- `TaskStop` on the chunk loop leaves the loop alive; `touch scratchpad/STOP`, then kill Kladra's node processes.
+- `.claude/worktrees/agent-aa8a45a0147ff5b72` keeps a locked tailwind oxide .node file; delete when the lock is gone.
 
 ## Verification status
-- P1: typecheck, lint, build green; 40 touched specs green; Arabic font verified by CDP probe + shots/rs-p1c.
-- P2: full suite in 4 chunks — 799 passed, 4 skipped, 1 failed (filters chip row: the Arabic lookups now fit at 1366; spec asks overflow only on a phone) → filters.spec 8/8; lint, build green. Shots shots/rs-p2a.
+- Final gate (0d69156 tree): build green; full suite 811 passed, 4 skipped, 5 failed → sharing ×2 and drawers ×1 fixed in specs, admin (hydration timeout) and services (ERR_NETWORK_CHANGED) green on rerun; drawers 14/14, sharing/admin/services 26/26.
+- Before/after sheets: scratchpad/before_after_1.jpg, before_after_2.jpg (rs-before vs rs-after).
 
 ## Exact next action
-When each builder reports: `git -C <wt> diff d8699e0 <head>`-style merge (diff from its base ee9af5b to its head, `git apply --3way` on main), typecheck, lint, build, commit with its message; then the wave-3 gate (full suite, dev 3100 stopped), kit_pass items 5–8, P4 consistency pass.
+S12.10: `npx tsx scripts/shots.ts --label=s1210` over the whole manifest (dev 3100 up), sweep with a shot-looker per batch, fix centrally.
