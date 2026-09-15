@@ -176,7 +176,7 @@ function ContactForm({
             checked={isMain}
             onCheckedChange={(checked) => setIsMain(checked === true)}
           />
-          <Label htmlFor="contact-is-main" className="font-normal">
+          <Label htmlFor="contact-is-main" className="font-normal text-foreground">
             {t("forms.makeMain")}
           </Label>
           <input type="hidden" name="isMain" value={isMain ? "true" : "false"} />

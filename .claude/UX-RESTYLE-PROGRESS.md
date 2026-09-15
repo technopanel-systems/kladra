@@ -4,7 +4,11 @@ Lives under `.claude/` because hook H2 refuses a new .md anywhere else in the re
 Part of P13-G6: the restyle is the design-system half of the front-end reshape.
 
 ## Current phase
-Restyle phases P0–P4 done and committed; final gate green. Remaining: S12.10 (every other manifest state read against Stone).
+Restyle phases P0–P4 done and committed; final gate green; `main` pushed (founder, 2026-09-15, overruling the Stage 3 hold).
+Founder's 2026-09-15 order: (1) the request dialogs' line editor rebuilt as items — built, shot-looked, Arabic-reviewed,
+targeted specs running; (2) every demo person has an Arabic name — done (seed + dev DB; reading.spec makes the fallback
+for one screen); (3) S12.10 — full manifest shoot `shots/s1210` running; (4) leftover worktree folder — deleted;
+(5) full suite, tick S12.10, commit, push, /cost, "switch to Fable and /audit".
 
 ## Checkpoints (git)
 - 0d69156 — P4 consistency (state dot+word unboxed, avatar dot outer corner, neutral lead cards, one TableHead, strip figures 16px); final gate green.
@@ -49,17 +53,23 @@ Restyle phases P0–P4 done and committed; final gate green. Remaining: S12.10 (
 - CHANGE — fonts (Readex Pro, Plex Mono for figures) and the type scale. Plex Sans + Plex Sans Arabic; figures in tabular sans. The legibility reason ("an Arabic name on a phone stays legible") stays as a check in P1's review at 375 ar.
 - CHANGE — Sandstone's warm chroma, 12/16 radii, rail dark in both themes. Evolves into restrained stone neutrals, 8/12 radii, a themed rail. Founder brief 2026-09-14 overrides S1's palette; the red and dark-default carry over.
 
+## The line editor (founder 2026-09-15, reported three times as a stock form)
+- Cause: a 13-column grid from `xl` with every label hidden under one header row, nine boxes of one weight, m² one more cell; services a second copy of the same table. Not the form kit's fields — the kit had no piece for a line of a paper, so each dialog hand-drew a spreadsheet.
+- Kit: `ui-ext/line-item.tsx` (`LineItem` card: head = "Item N" + m² figure + money + remove; `LineFields` rows of 4 / 5 with a hairline between; `LineField` label always drawn; `LineFigure`), `FormSection` (14.5px semibold part name + hint + action), `FormSplit` (parts beside a sticky aside on a desk), `FormFooter summary` (m² and total over Save below xl). `Label` is the muted colour app-wide; values stay the text colour.
+- Quotation and dispatch requests: who band → Panels (items) → Services (compact rows, units inside the boxes, subtotal row) → notes / Delivery and payment; totals, credit and SMAC number in the aside. A carried load line writes "Left to send N" under its count.
+- Arabic: `dispatches.sending` «في هذا التوريد», `quotations.removeItem` «حذف البند» (en "Remove item"); typed figures in an Arabic item align with the chosen values (`rtl:text-end`).
+- Shots: `shots/lines-before` vs `shots/lines-3` (`rep__quotation-request-full`, new manifest state).
+
 ## Remaining (in order)
 1. S12.10: shoot every remaining manifest state (dialogs, empty, refused, loading, offline) at both widths, locales, themes; sweep against Stone; fix what repeats centrally.
 2. Then Stage 2 ends: "switch to Fable and /audit", /cost.
 
 ## Known issues / notes
 - React hydration warning when the search palette opens while the day's tab body is still streaming (Radix aria-hides the not-yet-hydrated page). Harmless; seen as the dev "2 Issues" badge in search-palette shots.
-- The quotation request dialog's 13-column line grid still reads as a stock form (S12.4/S12.5 both said so).
-- Some seed people have no Arabic name (Turki Al-Shammari shows in Latin on Arabic screens) — seed data, not design.
+- Fire rating «Normal» shows in Latin on Arabic screens: `fire_ratings` (like suppliers and classes) has one name column, the founder's own values (B1 / A2 / Normal). A name_ar there is a schema change — founder's call.
+- The request dialogs are taller than the grid was (a two-item paper scrolls at 1366): the price of every box carrying its label.
 - Global sonner `closeButton` dropped: error toasts carry their own Close action.
 - `TaskStop` on the chunk loop leaves the loop alive; `touch scratchpad/STOP`, then kill Kladra's node processes.
-- `.claude/worktrees/agent-aa8a45a0147ff5b72` keeps a locked tailwind oxide .node file; delete when the lock is gone.
 
 ## Verification status
 - Final gate (0d69156 tree): build green; full suite 811 passed, 4 skipped, 5 failed → sharing ×2 and drawers ×1 fixed in specs, admin (hydration timeout) and services (ERR_NETWORK_CHANGED) green on rerun; drawers 14/14, sharing/admin/services 26/26.

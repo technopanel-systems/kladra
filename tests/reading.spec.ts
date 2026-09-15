@@ -385,15 +385,17 @@ test("a person is named in the reader's script, not the account's", async ({ pag
   test.skip(locale !== "ar", "The whole question is what an Arabic screen calls somebody.");
   test.slow();
 
-  // Seeded on purpose: six accounts carry an Arabic name and one does not, so
-  // both the translation and the fallback are things somebody has seen (D68).
+  // Every seeded account carries an Arabic name (founder, 2026-09-15), so the
+  // fallback is made for step 2 and put back after it (D68).
   const people = await query<{ name: string; name_ar: string | null; role: string }>(
     `select name, name_ar, role from users where active = true`,
   );
   const translated = people.filter((row) => row.name_ar);
-  const untranslated = people.filter((row) => !row.name_ar);
   expect(translated.length, "nobody in the seed has an Arabic name").toBeGreaterThan(0);
-  expect(untranslated.length, "everybody has one, so the fallback is untested").toBeGreaterThan(0);
+  expect(
+    people.filter((row) => !row.name_ar).map((row) => row.name),
+    "a demo person has no Arabic name",
+  ).toEqual([]);
 
   await login(page, locale, "abdulrahman");
   await expect(page).toHaveURL(/\/ar\/team/, { timeout: 20_000 });
@@ -420,11 +422,19 @@ test("a person is named in the reader's script, not the account's", async ({ pag
     }
   });
 
-  await test.step("2 · and the one without an Arabic name keeps his own", async () => {
+  await test.step("2 · and one without an Arabic name keeps his own", async () => {
     // The fallback is not a blank and not a key: it is the name he was added
     // with, on an Arabic screen, which is what an account added in a hurry has.
-    const fallback = untranslated[0]?.name as string;
-    await expect(page.getByText(fallback).filter({ visible: true }).first()).toBeVisible();
+    // Turki's Arabic name is taken away for this screen and given back after it.
+    const turki = people.find((row) => row.name === "Turki Al-Shammari");
+    expect(turki?.name_ar, "Turki is not in the seed with an Arabic name").toBeTruthy();
+    await query(`update users set name_ar = null where email = 'turki@technopanel.com.sa'`);
+    try {
+      await page.reload();
+      await expect(page.getByText(turki?.name as string).filter({ visible: true }).first()).toBeVisible({ timeout: 20_000 });
+    } finally {
+      await query(`update users set name_ar = $1 where email = 'turki@technopanel.com.sa'`, [turki?.name_ar]);
+    }
   });
 
   await test.step("3 · the shell names the reader himself in Arabic", async () => {

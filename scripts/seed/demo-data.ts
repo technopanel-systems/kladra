@@ -75,8 +75,10 @@ export type UserSeed = {
  */
 export const USERS: UserSeed[] = [
   // Both names on every account, because the Arabic screens name people too
-  // (D68) — and one account deliberately without, so the fallback is a thing
-  // somebody has seen rather than a branch nobody exercises (rules/data.md).
+  // (D68). Turki was seeded without one so the Latin fallback was a thing
+  // somebody had seen; the founder asked for every demo person in Arabic
+  // (2026-09-15), and the fallback is now shown by tests/reading.spec.ts, which
+  // takes his Arabic name away for the length of one screen.
   {
     key: "jerom",
     name: "Jerom",
@@ -131,11 +133,10 @@ export const USERS: UserSeed[] = [
     role: "rep",
     locale: "en",
   },
-  // No Arabic name: a rep added in a hurry, whose Latin one shows on every
-  // screen in both languages.
   {
     key: "turki",
     name: "Turki Al-Shammari",
+    nameAr: "تركي الشمري",
     email: "turki@technopanel.com.sa",
     role: "rep",
     locale: "en",

@@ -969,12 +969,14 @@ test("a load with one price left blank is refused at that price, on its own line
 });
 
 /**
- * The line table's column names, measured rather than looked at (P13 review):
- * "Sending n…", "Length (…" and «المطلوب…» were cut at 1366, a label being the
- * one thing that may never be (DESIGN §5). Both shapes of the table, since a load
- * from a paper has a column a direct one does not.
+ * The line's labels, measured rather than looked at (P13 review): "Sending n…",
+ * "Length (…" and «المطلوب…» were cut at 1366 when they were a table's column
+ * names, a label being the one thing that may never be (DESIGN §5). Since the
+ * lines became items (founder, 2026-09-15) each box carries its own label; they
+ * are measured on both kinds of load, since a load from a paper writes what is
+ * left under its count and a direct one does not.
  */
-test("the line table's column names are whole at 1366, on a load from a paper and on a direct one", async ({
+test("a load line's labels are whole at 1366, on a load from a paper and on a direct one", async ({
   page,
   locale,
   t,
@@ -987,10 +989,11 @@ test("the line table's column names are whole at 1366, on a load from a paper an
   const label = quotationLabel(paper.number, paper.revision);
 
   const cut = async (form: Locator): Promise<string[]> => {
-    const head = form.locator('[data-slot="dispatch-lines-head"]');
-    await expect(head).toBeVisible(COLD);
-    return head
-      .locator("span")
+    const line = form.locator('[data-slot="dispatch-line"]').first();
+    await expect(line).toBeVisible(COLD);
+    await expect(line.locator("label")).toHaveCount(9);
+    return line
+      .locator("label, [data-slot='line-left']")
       .evaluateAll((nodes) =>
         nodes
           .filter((node) => (node.textContent ?? "").trim() !== "" && node.scrollWidth > node.clientWidth + 1)

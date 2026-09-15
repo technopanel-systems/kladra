@@ -924,6 +924,48 @@ const MANIFEST: StateDef[] = [
     ),
     waitFor: dialogWithText("common.company"),
   },
+  /* The request as a paper a rep actually sends (founder, 2026-09-15): two items
+     of the same sheet in two colours, and a service with its m² and price. The
+     line editor was reported three times as a stock form, and a form of one line
+     and nothing else never showed what it looks like with a paper on it. */
+  {
+    role: "rep",
+    key: "quotation-request-full",
+    identity: "rep",
+    path: "/quotations?view=list",
+    steps: chain(
+      clickButton("quotations.request"),
+      pickCombobox("common.company"),
+      pickCombobox("common.project"),
+      async (page, T) => {
+        const form = page.getByRole("dialog").first();
+        const lines = form.locator('[data-slot="quotation-line"]');
+        const first = lines.first();
+        await first.getByLabel(T("common.colourCode"), { exact: true }).fill("RAL 9016");
+        for (const key of ["common.supplier", "common.fireRating", "common.class"]) {
+          await first.getByRole("combobox", { name: T(key), exact: true }).click();
+          await page.getByRole("option").first().click();
+        }
+        await first.getByLabel(T("common.qty"), { exact: true }).fill("40");
+        await first.getByLabel(T("common.pricePerSqm"), { exact: true }).fill("118");
+        // The second opens on the sheet above it (D163): its colour, count and price are typed.
+        await form.getByRole("button", { name: T("quotations.addItem"), exact: true }).click();
+        const second = lines.nth(1);
+        await second.getByLabel(T("common.colourCode"), { exact: true }).fill("168");
+        await second.getByLabel(T("common.qty"), { exact: true }).fill("12");
+        await second.getByLabel(T("common.pricePerSqm"), { exact: true }).fill("126.5");
+        await form.getByRole("button", { name: T("quotations.addService"), exact: true }).click();
+        const service = form.locator('[data-slot="quotation-service"]').last();
+        await service.getByRole("combobox", { name: T("quotations.service"), exact: true }).click();
+        await page.getByRole("option").first().click();
+        await service.getByLabel(T("common.sqm"), { exact: true }).fill("86");
+        await service.getByLabel(T("common.pricePerSqm"), { exact: true }).fill("22");
+      },
+    ),
+    waitFor: async (page) => {
+      await page.getByRole("dialog").first().locator('[data-slot="quotation-service"]').waitFor({ state: "visible" });
+    },
+  },
   /* The quotations states S12.4 drew (P13-G6): the list and the drawer caught
      loading on a slow line, a chip hiding every row, the drawer of an issued, an
      accepted and a rejected paper, the customer's two answers and a revision

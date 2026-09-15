@@ -50,7 +50,7 @@ export function ChoiceChips<T extends string>({
 }) {
   return (
     <fieldset className="flex flex-col gap-1.5" disabled={disabled}>
-      <legend className="mb-1.5 text-sm font-medium">{legend}</legend>
+      <legend className="mb-1.5 text-sm font-medium text-muted-foreground">{legend}</legend>
       <div className="flex flex-wrap gap-2">
         {choices.map(({ value: option, label, Icon }) => (
           <label

@@ -30,14 +30,14 @@ import {
   type ServiceDraft,
 } from "@/components/quotations/quotation-services";
 import { useFlashQuotation } from "@/components/quotations/quotation-flash";
-import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { PaperSummary, QuotationTotals } from "@/components/quotations/quotation-totals";
 import type { SelectOption } from "@/components/ui-ext/searchable-select";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { CreditField } from "@/components/ui-ext/credit-field";
-import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { FormBody, FormFooter, FormSection, FormSplit } from "@/components/ui-ext/form-shell";
 import { RaisedForField, useOnBehalf } from "@/components/ui-ext/raised-for-field";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -655,18 +655,69 @@ function RequestForm({
           </div>
         </div>
 
-        <QuotationLines
-          lookups={lookups}
-          lines={lines}
-          onChange={setLines}
-          disabled={pending}
-          refused={lineRefusal("items", fieldErrors)}
-        />
+        {/* The paper's parts in one column — the panels, the services, the
+            note — and what it comes to beside them on a desk, held in view while
+            the items scroll (SPEC §3, P13; founder 2026-09-15). */}
+        <FormSplit
+          aside={
+            <>
+              <QuotationTotals
+                sqm={totals.sqm}
+                split={{ panels: totals.panels, services: totals.services }}
+                subtotal={totals.subtotal}
+                vat={totals.vat}
+                total={totals.total}
+              />
 
-        {/* The services under the panels, as their own section, and what the
-            whole paper comes to beside them on a desk — the way an invoice
-            closes under its table — or under them on a phone (SPEC §3, P13). */}
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
+              {/* Under the totals, because that is the sentence it finishes: this
+                  much paper, and it counts for him (D148). */}
+              <CreditField
+                people={choices?.people ?? []}
+                value={countsFor}
+                onChange={(next) => setCreditPick(creditKey ? { key: creditKey, value: next } : null)}
+                id="quotation-credit"
+              />
+
+              {/* The number SMAC gave it, which is the act of issuing it (S31). Only
+                  she sees this field, and it is never prefilled on a revision: SMAC
+                  gives a revision a number of its own. Empty on an EDIT too, which
+                  she never reaches — her own paper is issued the moment she raises
+                  it, so there is no request of hers waiting to be edited. Beside
+                  the figures it issues, over the button that issues them. */}
+              {issuesDirectly ? (
+                <Field data-invalid={fieldErrors.smacNumber ? true : undefined}>
+                  <FieldLabel htmlFor="quotation-smac">{t("common.smacNumber")}</FieldLabel>
+                  <Input
+                    id="quotation-smac"
+                    name="smacNumber"
+                    // The same three as the SMAC prompt on the queue, for the same
+                    // reasons: the number is typed, so whichever script it is typed in
+                    // decides which way it runs; it is a code, so there is nothing to
+                    // correct and nothing to suggest.
+                    dir="auto"
+                    autoComplete="off"
+                    spellCheck={false}
+                    disabled={pending}
+                    aria-invalid={fieldErrors.smacNumber ? true : undefined}
+                    aria-describedby={fieldErrors.smacNumber ? "quotation-smac-error" : undefined}
+                    placeholder={t("common.asSmacIssuedIt")}
+                  />
+                  <FieldError id="quotation-smac-error">{fieldErrors.smacNumber}</FieldError>
+                </Field>
+              ) : null}
+            </>
+          }
+        >
+          <FormSection title={t("quotations.panels")}>
+            <QuotationLines
+              lookups={lookups}
+              lines={lines}
+              onChange={setLines}
+              disabled={pending}
+              refused={lineRefusal("items", fieldErrors)}
+            />
+          </FormSection>
+
           <QuotationServices
             choices={serviceChoices}
             services={services}
@@ -676,67 +727,23 @@ function RequestForm({
             refused={lineRefusal("services", fieldErrors)}
           />
 
-          <QuotationTotals
-            sqm={totals.sqm}
-            split={{ panels: totals.panels, services: totals.services }}
-            subtotal={totals.subtotal}
-            vat={totals.vat}
-            total={totals.total}
-          />
-        </div>
-
-        {/* Under the totals, because that is the sentence it finishes: this
-            much paper, and it counts for him (D148). */}
-        <CreditField
-          people={choices?.people ?? []}
-          value={countsFor}
-          onChange={(next) => setCreditPick(creditKey ? { key: creditKey, value: next } : null)}
-          id="quotation-credit"
-        />
-
-        {/* The number SMAC gave it, which is the act of issuing it (S31). Only
-            she sees this field, and it is never prefilled on a revision: SMAC
-            gives a revision a number of its own. Empty on an EDIT too, which
-            she never reaches — her own paper is issued the moment she raises
-            it, so there is no request of hers waiting to be edited. */}
-        {issuesDirectly ? (
-          <Field data-invalid={fieldErrors.smacNumber ? true : undefined}>
-            <FieldLabel htmlFor="quotation-smac">{t("common.smacNumber")}</FieldLabel>
-            <Input
-              id="quotation-smac"
-              name="smacNumber"
-              // The same three as the SMAC prompt on the queue, for the same
-              // reasons: the number is typed, so whichever script it is typed in
-              // decides which way it runs; it is a code, so there is nothing to
-              // correct and nothing to suggest.
-              dir="auto"
-              autoComplete="off"
-              spellCheck={false}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="quotation-notes">
+              {t(issuesDirectly ? "quotations.notesOwn" : "quotations.notesToCoordinator")}
+            </Label>
+            <Textarea
+              id="quotation-notes"
+              name="notes"
+              rows={3}
               disabled={pending}
-              aria-invalid={fieldErrors.smacNumber ? true : undefined}
-              aria-describedby={fieldErrors.smacNumber ? "quotation-smac-error" : undefined}
-              placeholder={t("common.asSmacIssuedIt")}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder={t(
+                issuesDirectly ? "quotations.notesOwnPlaceholder" : "quotations.notesPlaceholder",
+              )}
             />
-            <FieldError id="quotation-smac-error">{fieldErrors.smacNumber}</FieldError>
-          </Field>
-        ) : null}
-
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="quotation-notes">
-            {t(issuesDirectly ? "quotations.notesOwn" : "quotations.notesToCoordinator")}
-          </Label>
-          <Textarea
-            id="quotation-notes"
-            name="notes"
-            rows={3}
-            disabled={pending}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder={t(
-              issuesDirectly ? "quotations.notesOwnPlaceholder" : "quotations.notesPlaceholder",
-            )}
-          />
-        </div>
+          </div>
+        </FormSplit>
       </FormBody>
 
       <FormFooter
@@ -744,6 +751,7 @@ function RequestForm({
         pending={pending}
         onCancel={onCancel}
         confirmLabel={issuesDirectly ? t("quotations.issue") : undefined}
+        summary={<PaperSummary sqm={totals.sqm} total={totals.total} />}
       />
     </form>
   );

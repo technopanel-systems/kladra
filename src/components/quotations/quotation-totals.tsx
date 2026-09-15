@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { LineFigure } from "@/components/ui-ext/line-item";
 import { formatMoney, formatSqm } from "@/lib/money";
 
 /**
@@ -135,5 +136,23 @@ function Row({
         {children}
       </dd>
     </div>
+  );
+}
+
+/**
+ * The two figures a paper's form keeps over Save where its totals block has
+ * scrolled out of sight — below `xl`, where the block follows the items instead
+ * of standing beside them (`FormFooter`'s `summary`). The m² first and larger, the
+ * total after it: the same order and weight the block gives them.
+ */
+export function PaperSummary({ sqm, total }: { sqm: string | number; total: string | number }) {
+  const t = useTranslations();
+  return (
+    <>
+      <LineFigure strong value={formatSqm(sqm)} unit={t("common.sqm")} />
+      <span className="text-muted-foreground">
+        {t("common.grandTotal")} <LineFigure value={formatMoney(total)} unit={t("common.sar")} />
+      </span>
+    </>
   );
 }

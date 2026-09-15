@@ -271,6 +271,19 @@ drawer a record opens in — one width, one edge and one border for a company, a
 quotation or a dispatch, and for the skeleton that stands in while each of them loads (D166); and, from P13-S1,
 `Avatar` (a person or a company, §1b), `Empty` (nothing here, and why), `StickyScroll` (a wide
 surface with its scrollbar at the top) and the `hover-tint` and `reveal` utilities.
+**A long form is a paper of parts** (founder, 2026-09-15, after the request dialogs were reported
+three times as a stock form): `FormSection` names a part with a 14.5px semibold word, a sentence
+under it where the part needs one and the part's own action at its end (Add service beside
+Services); `FormSplit` puts the parts in a column and what the paper comes to beside them on a
+desk, held in view while the column scrolls, with `FormFooter`'s `summary` keeping the m² and the
+total over Save below `xl`; and `LineItem` (with `LineFields`, `LineField`, `LineFigure`) draws one
+line of a paper as an item — a card whose head names it and says what it comes to, the m² as the
+figure and the money beside it, and its boxes in rows that each answer one question, every box
+under its own label at every width. A line of nine boxes is never a table row under one row of
+column names: the names hid, the boxes all weighed the same, and nothing said which of them
+belonged together. A short line of three answers — a service — is one row of a list with its
+units written in its boxes. A field's label is the muted colour and its value the text colour,
+so a form reads by its values and a part's word stands over both.
 Logical utilities only (`ms-`, `pe-`,
 `text-start`, `start-0`); hook H3 blocks physical ones. Radix `DirectionProvider` follows
 `<html dir>`.

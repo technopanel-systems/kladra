@@ -1,17 +1,16 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { QuotationLookups } from "@/actions/forms";
+import { LineField, LineFields, LineFigure, LineItem } from "@/components/ui-ext/line-item";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { LineRefusal } from "@/lib/line-refusal";
 import { formatMoney, formatSqm, lineSqm, lineTotal } from "@/lib/money";
 import type { DraftLine } from "@/lib/quotation-draft";
 import { STANDARD_LENGTH, STANDARD_WIDTH, STANDARD_WIDTHS } from "@/lib/sheet";
-import { cn } from "@/lib/utils";
 
 /**
  * The lines of a quotation, as a rep fills them in (SPEC §3, S32).
@@ -30,47 +29,21 @@ import { cn } from "@/lib/utils";
  * number he came with while he answers three questions about the standard sheet
  * that are already filled in (P12-9, §5 #178).
  *
- * A card per line on a phone and a TABLE on a desk (P13). Nine columns do not
- * fit across 375px and a dialog that scrolls sideways is a dialog nobody fills in
- * on site, so below `xl` each line is a card that widens into four columns where
- * there is room. The dialog is wide from `lg` (`ResponsiveDialog size="wide"`),
- * and from `xl`, where it stands at its full stated width — at 1024 it was 960px
- * and three choices read "Ch…" — the same markup lays out as one row per line
- * under one row of column names: the card's three parts step aside (`xl:contents`) and their fields
- * become the cells. One DOM for both, so a label, an id and a test locator mean
- * the same thing at every width. The columns are fractions of the dialog's
- * stated width with a floor of nothing (`minmax(0, …fr)`), never sized by what is
- * typed into them, which is what kept the old form moving under the rep's hands.
+ * Each line is an ITEM (`LineItem`, founder 2026-09-15): a card whose head says
+ * "Item 2" and what it comes to — its m² as the figure, its money beside it — and
+ * whose nine boxes sit in two rows that keep the founder's order and split it
+ * where the sentence a rep says does: what the panel is (colour, supplier,
+ * rating, class), then how many, on what sheet, at what price. It was a
+ * thirteen-column table from `xl` with every label hidden under one row of
+ * names, and it was reported three times as a stock form. Every label is drawn
+ * at every width now, so no column has to be measured to fit a name: a row of
+ * four and a row of five share the card, and a figure has the room it needs
+ * (DESIGN §5: a figure that truncates is a different figure).
  *
  * The widths a sheet actually comes in are offered as a list, and anything else
  * is typed (§3: 1.24 / 1.5 / 2.0 / Other → number). 4 mm and 5.8 m are what a
  * new line opens on, because that is the standard sheet.
  */
-
-/**
- * The table's thirteen columns from `xl`: the line's number, the nine fields,
- * its m², its total, and the remove control. Written once for the header row and
- * every line, so the two cannot drift a pixel apart.
- *
- * Each fraction is the pixels that column's longest value needs, measured in the
- * dialog at its stated width (1,152px at 1280 and at 1366 alike, so the table's
- * narrowest desk width is its only one) and in both scripts (S12.4). A choice is
- * 46px of edge, padding, gap and chevron around its words; a box is 22. So the
- * three choices with no default need 104 to say "Choose…" (56px of it in English,
- * 41 in Arabic); Width 84 for a sheet typed as "1.245"; Thickness 76 for "10.0";
- * the colour code 84 for "RAL 9016"; the quantity 56; the length 60 for "5.806";
- * the price 72; the m² 68 for "12,345.67"; the line's total 92 for a seven-figure
- * line and its halalas. They come to 904 of the table's 925, and the rest is
- * shared out in the same proportions.
- *
- * Width read "1…" at 4.75 sixteenths, 73px, 27 of them for its words — a figure
- * that truncates is a different figure (DESIGN §5) — and Supplier cut "Choose…"
- * by three pixels. The room came from the columns that measured under what they
- * had: the price, the line total and the thickness, not the two choices beside
- * Supplier, which were already exactly as wide as "Choose…".
- */
-const LINE_GRID =
-  "xl:grid xl:grid-cols-[1.5rem_minmax(0,84fr)_minmax(0,104fr)_minmax(0,104fr)_minmax(0,104fr)_minmax(0,56fr)_minmax(0,76fr)_minmax(0,84fr)_minmax(0,60fr)_minmax(0,72fr)_minmax(0,68fr)_minmax(0,92fr)_2rem] xl:items-center xl:gap-x-2";
 
 /**
  * One line in the form: the nine fields, plus React's key.
@@ -186,89 +159,57 @@ export function QuotationLines({
     onChange(lines.filter((line) => line.key !== key));
   }
 
+  const choice = {
+    disabled,
+    placeholder: t("forms.choose"),
+    searchPlaceholder: t("forms.searchList"),
+    emptyText: t("forms.noMatch"),
+  };
+
   return (
     <div className="flex flex-col gap-3">
-      <div data-slot="quotation-lines" className="flex flex-col gap-3 xl:card-face xl:gap-0">
-        {/* The column names, once, from `xl`. Hidden from a screen reader
-            because every cell below carries its own label, which is what a
-            reader hears as the caret lands in it. */}
-        <div
-          aria-hidden="true"
-          className={cn(
-            "hidden border-b border-line bg-surface-2 px-3 py-2 text-xs text-muted-foreground",
-            LINE_GRID,
-          )}
-        >
-          {/* A column's name wraps rather than clips: a label is never cut
-              (DESIGN §5). */}
-          <span />
-          <span>{t("common.colourCode")}</span>
-          <span>{t("common.supplier")}</span>
-          <span>{t("common.fireRating")}</span>
-          <span>{t("common.class")}</span>
-          <span>{t("common.qty")}</span>
-          <span>{t("common.thickness")}</span>
-          <span>{t("common.width")}</span>
-          <span>{t("common.length")}</span>
-          <span>{t("common.pricePerSqm")}</span>
-          <span className="text-end">{t("common.sqm")}</span>
-          <span className="text-end">{t("common.lineTotal")}</span>
-          <span />
-        </div>
-
+      <div data-slot="quotation-lines" className="flex flex-col gap-3">
         {lines.map((line, index) => {
           const id = (fieldName: string) => `${line.key}-${fieldName}`;
-          const sqm = lineSqm(line);
-          const total = lineTotal(line);
           const refusedHere = refused?.index === index ? refused : null;
           const refusedBox = (name: string) => refusedHere?.field === name;
           const describedBy = (name: string) => (refusedBox(name) ? id("refused") : undefined);
 
           return (
-            <div
+            <LineItem
               key={line.key}
               // Named so a walk can read the nine boxes in the order they are
               // drawn: the founder's order is a decision (§3) and an order nothing
               // checks is an order that drifts back (P12-9).
               data-slot="quotation-line"
-              className={cn(
-                "card-face flex flex-col gap-3 p-3",
-                // From xl a row of the table rather than a card of its own.
-                "xl:overflow-visible xl:rounded-none xl:border-x-0 xl:border-t-0 xl:bg-transparent xl:px-3 xl:py-2 xl:shadow-none xl:last:border-b-0",
-                LINE_GRID,
-              )}
+              heading={t("quotations.itemNumber", { number: index + 1 })}
+              figures={
+                <>
+                  <LineFigure strong value={formatSqm(lineSqm(line))} unit={t("common.sqm")} />
+                  <LineFigure
+                    label={t("common.lineTotal")}
+                    value={formatMoney(lineTotal(line))}
+                    unit={t("common.sar")}
+                  />
+                </>
+              }
+              // The only line cannot be removed: a quotation with no lines is
+              // not a quotation, and a button that refuses on press is the dead
+              // control this app does not ship (DESIGN §5).
+              onRemove={lines.length > 1 ? () => remove(line.key) : undefined}
+              removeLabel={t("quotations.removeItem")}
+              disabled={disabled}
+              alert={
+                refusedHere ? (
+                  <p id={id("refused")} role="alert" className="text-xs text-destructive">
+                    {refusedHere.message}
+                  </p>
+                ) : null
+              }
             >
-              <div className="flex items-center justify-between gap-2 xl:contents">
-                <h4 className="text-sm font-medium xl:text-xs xl:font-normal xl:text-muted-foreground">
-                  <span className="xl:sr-only">{t("quotations.itemNumber", { number: index + 1 })}</span>
-                  <span aria-hidden="true" className="num hidden xl:inline">
-                    {index + 1}
-                  </span>
-                </h4>
-                {/* The only line cannot be removed: a quotation with no lines is
-                    not a quotation, and a button that refuses on press is the
-                    dead control this app does not ship (DESIGN §5). Last in the
-                    row from xl, where it is a column of its own. */}
-                {lines.length > 1 ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={disabled}
-                    onClick={() => remove(line.key)}
-                    className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive xl:order-last xl:size-8 xl:justify-self-end xl:px-0"
-                  >
-                    <Trash2 aria-hidden="true" className="size-3.5" />
-                    <span className="xl:sr-only">{t("quotations.removeItem")}</span>
-                  </Button>
-                ) : null}
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:contents">
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label htmlFor={id("colour")} className="xl:sr-only">
-                    {t("common.colourCode")}
-                  </Label>
+              {/* What the panel is. */}
+              <LineFields cols={4}>
+                <LineField label={t("common.colourCode")} htmlFor={id("colour")}>
                   <Input
                     id={id("colour")}
                     required
@@ -279,188 +220,118 @@ export function QuotationLines({
                     // first letter does, so "RAL 9016" in an Arabic form starts
                     // at its R rather than losing it off the start of the box.
                     dir="auto"
-                    className="h-9"
                     value={line.colourCode}
                     onChange={(event) => patch(line.key, { colourCode: event.target.value })}
                     aria-invalid={refusedBox("colourCode") || undefined}
                     aria-describedby={describedBy("colourCode")}
                     placeholder={t("quotations.colourPlaceholder")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label id={id("supplier-label")} className="xl:sr-only">
-                    {t("common.supplier")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.supplier")} labelId={id("supplier-label")}>
                   <SearchableSelect
+                    {...choice}
                     aria-labelledby={id("supplier-label")}
                     value={line.supplierId}
                     onChange={(value) => patch(line.key, { supplierId: value })}
                     options={lookups.suppliers}
-                    disabled={disabled}
                     invalid={refusedBox("supplierId") || undefined}
                     aria-describedby={describedBy("supplierId")}
-                    placeholder={t("forms.choose")}
-                    searchPlaceholder={t("forms.searchList")}
-                    emptyText={t("forms.noMatch")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label id={id("fire-label")} className="xl:sr-only">
-                    {t("common.fireRating")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.fireRating")} labelId={id("fire-label")}>
                   <SearchableSelect
+                    {...choice}
                     aria-labelledby={id("fire-label")}
                     value={line.fireRatingId}
                     onChange={(value) => patch(line.key, { fireRatingId: value })}
                     options={lookups.fireRatings}
-                    disabled={disabled}
                     invalid={refusedBox("fireRatingId") || undefined}
                     aria-describedby={describedBy("fireRatingId")}
-                    placeholder={t("forms.choose")}
-                    searchPlaceholder={t("forms.searchList")}
-                    emptyText={t("forms.noMatch")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label id={id("class-label")} className="xl:sr-only">
-                    {t("common.class")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.class")} labelId={id("class-label")}>
                   <SearchableSelect
+                    {...choice}
                     aria-labelledby={id("class-label")}
                     value={line.classId}
                     onChange={(value) => patch(line.key, { classId: value })}
                     options={lookups.classes}
-                    disabled={disabled}
                     invalid={refusedBox("classId") || undefined}
                     aria-describedby={describedBy("classId")}
-                    placeholder={t("forms.choose")}
-                    searchPlaceholder={t("forms.searchList")}
-                    emptyText={t("forms.noMatch")}
                   />
-                </div>
+                </LineField>
+              </LineFields>
 
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label htmlFor={id("qty")} className="xl:sr-only">
-                    {t("common.qty")}
-                  </Label>
+              {/* How many, on what sheet, at what price. */}
+              <LineFields cols={5}>
+                <LineField label={t("common.qty")} htmlFor={id("qty")}>
                   <Input
                     id={id("qty")}
                     required
                     disabled={disabled}
                     inputMode="numeric"
                     dir="ltr"
-                    className="num h-9 text-start"
+                    className="num text-start rtl:text-end"
                     value={line.qty}
                     onChange={(event) => patch(line.key, { qty: event.target.value })}
                     aria-invalid={refusedBox("qty") || undefined}
                     aria-describedby={describedBy("qty")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label id={id("thickness-label")} className="xl:sr-only">
-                    {t("common.thickness")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.thickness")} labelId={id("thickness-label")}>
                   <SearchableSelect
+                    {...choice}
                     aria-labelledby={id("thickness-label")}
                     value={line.thicknessId}
                     onChange={(value) => patch(line.key, { thicknessId: value })}
                     options={lookups.thicknesses}
-                    disabled={disabled}
                     invalid={refusedBox("thicknessId") || undefined}
                     aria-describedby={describedBy("thicknessId")}
-                    placeholder={t("forms.choose")}
-                    searchPlaceholder={t("forms.searchList")}
-                    emptyText={t("forms.noMatch")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label id={id("width-label")} className="xl:sr-only">
-                    {t("common.width")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.width")} labelId={id("width-label")}>
                   <SearchableSelect
+                    {...choice}
                     aria-labelledby={id("width-label")}
                     value={line.width}
                     onChange={(value) => patch(line.key, { width: value })}
                     options={STANDARD_WIDTHS.map((width) => ({ value: width, label: width }))}
-                    disabled={disabled}
                     invalid={refusedBox("width") || undefined}
                     aria-describedby={describedBy("width")}
                     allowCustom
-                    placeholder={t("forms.choose")}
                     searchPlaceholder={t("quotations.widthOther")}
-                    emptyText={t("forms.noMatch")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label htmlFor={id("length")} className="xl:sr-only">
-                    {t("common.length")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.length")} htmlFor={id("length")}>
                   <Input
                     id={id("length")}
                     required
                     disabled={disabled}
                     inputMode="decimal"
                     dir="ltr"
-                    className="num h-9 text-start"
+                    className="num text-start rtl:text-end"
                     value={line.length}
                     onChange={(event) => patch(line.key, { length: event.target.value })}
                     aria-invalid={refusedBox("length") || undefined}
                     aria-describedby={describedBy("length")}
                   />
-                </div>
-
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label htmlFor={id("price")} className="xl:sr-only">
-                    {t("common.pricePerSqm")}
-                  </Label>
+                </LineField>
+                <LineField label={t("common.pricePerSqm")} htmlFor={id("price")}>
                   <Input
                     id={id("price")}
                     required
                     disabled={disabled}
                     inputMode="decimal"
                     dir="ltr"
-                    className="num h-9 text-start"
+                    className="num text-start rtl:text-end"
                     value={line.pricePerSqm}
                     onChange={(event) => patch(line.key, { pricePerSqm: event.target.value })}
                     aria-invalid={refusedBox("pricePerSqm") || undefined}
                     aria-describedby={describedBy("pricePerSqm")}
                   />
-                </div>
-              </div>
-
-              {/* Its m² and its total: under the card on a phone, the last two
-                  figures of the row from xl, where the column names say what
-                  they are. */}
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line pt-2 text-sm xl:contents">
-                <span className="min-w-0 text-muted-foreground xl:text-end">
-                  <span className="xl:sr-only">{t("common.sqm")} </span>
-                  <span dir="ltr" className="num font-medium text-foreground">
-                    {formatSqm(sqm)}
-                  </span>
-                </span>
-                <span className="min-w-0 text-muted-foreground xl:text-end">
-                  <span className="xl:sr-only">{t("common.lineTotal")} </span>
-                  <span dir="ltr" className="num font-medium text-foreground">
-                    {formatMoney(total)}
-                  </span>
-                  <span className="xl:sr-only"> {t("common.sar")}</span>
-                </span>
-              </div>
-
-              {/* What the action refused on this line, under it — across the
-                  whole row from xl (D43). */}
-              {refusedHere ? (
-                <p id={id("refused")} role="alert" className="text-xs text-destructive xl:col-span-full xl:pt-1">
-                  {refusedHere.message}
-                </p>
-              ) : null}
-            </div>
+                </LineField>
+              </LineFields>
+            </LineItem>
           );
         })}
       </div>

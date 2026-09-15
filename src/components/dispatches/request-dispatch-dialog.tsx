@@ -27,13 +27,13 @@ import {
 } from "@/components/dispatches/dispatch-lines";
 import { blankLine } from "@/components/quotations/quotation-lines";
 import { QuotationServices, type ServiceDraft } from "@/components/quotations/quotation-services";
-import { QuotationTotals } from "@/components/quotations/quotation-totals";
+import { PaperSummary, QuotationTotals } from "@/components/quotations/quotation-totals";
 import { ChoiceChips } from "@/components/ui-ext/choice-chips";
 import { CreditField } from "@/components/ui-ext/credit-field";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { useDispatchLookups, useQuotationLookups } from "@/components/ui-ext/form-lookups";
-import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
+import { FormBody, FormFooter, FormSection, FormSplit } from "@/components/ui-ext/form-shell";
 import { RaisedForField, useOnBehalf } from "@/components/ui-ext/raised-for-field";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect, type SelectOption } from "@/components/ui-ext/searchable-select";
@@ -678,6 +678,104 @@ function LoadForm({
   // chip, the drawer and the trail name it — one paper, one name (D179).
   const paperName = paper ? (paper.smacNumber ?? paper.label) : label;
 
+  // Where it goes and how it is paid for, as one labelled group (DESIGN §8), under
+  // the same word the drawer reads it back under: the last part of the main column
+  // once the load is drawn, and the form's only part before it is.
+  const termsSection = (
+    <FormSection title={t("dispatches.terms")}>
+      <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface-2 p-3">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="dispatch-destination">{t("common.destination")}</Label>
+          <Input
+            id="dispatch-destination"
+            name="destination"
+            value={destination}
+            onChange={(event) => setDestination(event.target.value)}
+            disabled={pending}
+            placeholder={t("dispatches.destinationPlaceholder")}
+            aria-invalid={fieldErrors.destination ? true : undefined}
+            aria-describedby={fieldErrors.destination ? "dispatch-destination-error" : undefined}
+          />
+          {fieldErrors.destination ? (
+            <p id="dispatch-destination-error" role="alert" className="text-xs text-destructive">
+              {fieldErrors.destination}
+            </p>
+          ) : null}
+        </div>
+
+        {/* How it is being paid for (SPEC §3): the choice, then the question
+            that choice asks, then the note finance reads on credit. Chips,
+            because three short answers a rep knows by heart are a row he
+            presses, not a list he opens. */}
+        <div className="flex flex-col gap-3">
+          <ChoiceChips
+            legend={t("common.paymentTerms")}
+            name="paymentTerms"
+            value={terms}
+            choices={PAYMENT_TERMS.map((value) => ({
+              value,
+              label: paymentTermsLabel(value, t),
+            }))}
+            onChange={(next) => {
+              setTerms(next);
+              // The second question is a different question for each of them,
+              // so an answer to the last one is not an answer to this one.
+              setDetail("");
+            }}
+            disabled={pending}
+            error={fieldErrors.paymentTerms}
+            errorId="dispatch-terms-error"
+          />
+
+          {terms && seconds.length > 0 ? (
+            <ChoiceChips
+              legend={t(detailLegendKey(terms))}
+              name="paymentDetail"
+              value={detail}
+              choices={seconds.map((value) => ({ value, label: paymentDetailLabel(value, t) }))}
+              onChange={setDetail}
+              disabled={pending}
+              error={fieldErrors.paymentDetail}
+              errorId="dispatch-detail-error"
+            />
+          ) : null}
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="dispatch-payment-note">{t("common.paymentNote")}</Label>
+            <Textarea
+              id="dispatch-payment-note"
+              name="paymentNote"
+              rows={2}
+              value={paymentNote}
+              onChange={(event) => setPaymentNote(event.target.value)}
+              disabled={pending}
+              aria-invalid={fieldErrors.paymentNote ? true : undefined}
+              aria-describedby={
+                fieldErrors.paymentNote
+                  ? "dispatch-payment-note-error"
+                  : terms && needsNote(terms)
+                    ? "dispatch-payment-note-hint"
+                    : undefined
+              }
+            />
+            {/* Why it is not optional on credit, in the founder's own reason:
+                finance reviews it. Said once — as the hint before a save, as
+                the refusal after one. */}
+            {fieldErrors.paymentNote ? (
+              <p id="dispatch-payment-note-error" role="alert" className="text-xs text-destructive">
+                {fieldErrors.paymentNote}
+              </p>
+            ) : terms && needsNote(terms) ? (
+              <p id="dispatch-payment-note-hint" className="text-xs text-muted-foreground">
+                {t("dispatches.payment.noteRequired")}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </FormSection>
+  );
+
   return (
     <form
       ref={form}
@@ -842,179 +940,97 @@ function LoadForm({
              the customer and its source are named. */
           <p className="text-sm text-muted-foreground">{t("dispatches.pickQuotationFirst")}</p>
         ) : paper === undefined ? (
-          // The lines' own shape while the paper is read: a table head, three
-          // rows, and the services and totals beside each other under them.
-          <div aria-busy="true" className="flex flex-col gap-3">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-32 w-full rounded-xl" />
+          // The load's own shape while the paper is read: an item, a service
+          // row, and what it comes to beside them.
+          <div aria-busy="true" className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_19rem]">
+            <div className="flex flex-col gap-3">
+              <Skeleton className="h-5 w-24" />
+              <Skeleton className="h-44 w-full rounded-xl" />
+              <Skeleton className="h-14 w-full rounded-xl" />
+            </div>
+            <Skeleton className="h-60 w-full rounded-xl" />
           </div>
         ) : quotation && paper === null ? (
           <p role="alert" className="text-sm text-destructive">
             {t("forms.listsUnavailable")}
           </p>
         ) : (
-          <>
-            <DispatchLines
-              lookups={lineLists}
-              lines={lines}
-              carried={carried}
-              base={base}
-              paper={Boolean(paper)}
-              onChange={(next) => setLinesPick({ key: sourceKey, lines: next })}
-              disabled={pending}
-              refused={lineRefusal("items", fieldErrors)}
-            />
-            {sentInFull ? (
-              <p data-slot="sent-in-full" className="text-xs text-muted-foreground">
-                {t("dispatches.sentInFull", { items: sentInFull })}
-              </p>
-            ) : null}
+          <FormSplit
+            aside={
+              <>
+                {/* The totals are money.ts's, the same five figures the
+                    quotation's are (SPEC §3). */}
+                <QuotationTotals
+                  sqm={totals.sqm}
+                  split={{ panels: totals.panels, services: totals.services }}
+                  subtotal={totals.subtotal}
+                  vat={totals.vat}
+                  total={totals.total}
+                />
 
-            {/* The services under the panels, and what the whole load comes to
-                beside them on a desk or under them on a phone — the totals are
-                money.ts's, the same five figures the quotation's are (SPEC §3). */}
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_22rem] xl:items-start xl:gap-6">
-              <QuotationServices
-                choices={serviceChoices}
-                choicesFor={serviceChoicesFor}
-                services={services}
-                subtotal={totals.services}
-                onChange={(next) => setServicesPick({ key: sourceKey, services: next })}
+                {/* Said the moment it is true, with the amber dot of "somebody will
+                    look at this", and in words: the colour is never the only carrier. */}
+                {differs ? (
+                  <ToneNote tone="wait" role="status" slot="form-differs" className="text-sm">
+                    {t("dispatches.formDiffers", { label: paperName })}
+                  </ToneNote>
+                ) : null}
+
+                {/* Under the figure it decides: this many metres, and they count
+                    for him (D148). */}
+                <CreditField
+                  people={creditChoices?.people ?? []}
+                  value={countsFor}
+                  onChange={(next) => setCreditPick({ source: creditSource, value: next })}
+                  sqm={totals.sqm}
+                  id="dispatch-credit"
+                />
+              </>
+            }
+          >
+            <FormSection
+              title={t("quotations.panels")}
+              hint={
+                sentInFull ? (
+                  <span data-slot="sent-in-full">{t("dispatches.sentInFull", { items: sentInFull })}</span>
+                ) : undefined
+              }
+            >
+              <DispatchLines
+                lookups={lineLists}
+                lines={lines}
+                carried={carried}
+                base={base}
+                paper={Boolean(paper)}
+                onChange={(next) => setLinesPick({ key: sourceKey, lines: next })}
                 disabled={pending}
-                refused={lineRefusal("services", fieldErrors)}
+                refused={lineRefusal("items", fieldErrors)}
               />
-              <QuotationTotals
-                sqm={totals.sqm}
-                split={{ panels: totals.panels, services: totals.services }}
-                subtotal={totals.subtotal}
-                vat={totals.vat}
-                total={totals.total}
-              />
-            </div>
+            </FormSection>
 
-            {/* Said the moment it is true, with the amber dot of "somebody will
-                look at this", and in words: the colour is never the only carrier. */}
-            {differs ? (
-              <ToneNote tone="wait" role="status" slot="form-differs" className="text-sm">
-                {t("dispatches.formDiffers", { label: paperName })}
-              </ToneNote>
-            ) : null}
-
-            {/* Under the figure it decides: this many metres, and they count
-                for him (D148). */}
-            <CreditField
-              people={creditChoices?.people ?? []}
-              value={countsFor}
-              onChange={(next) => setCreditPick({ source: creditSource, value: next })}
-              sqm={totals.sqm}
-              id="dispatch-credit"
+            <QuotationServices
+              choices={serviceChoices}
+              choicesFor={serviceChoicesFor}
+              services={services}
+              subtotal={totals.services}
+              onChange={(next) => setServicesPick({ key: sourceKey, services: next })}
+              disabled={pending}
+              refused={lineRefusal("services", fieldErrors)}
             />
-          </>
+
+            {termsSection}
+          </FormSplit>
         )}
 
-        {/* Where it goes and how it is paid for, as one labelled group (DESIGN
-            §8): a small word over an inset, under the same word the drawer reads
-            it back under, and a step of space past the load above it. */}
-        <section aria-labelledby="dispatch-terms-label" className="flex flex-col gap-2 pt-2">
-          <h3 id="dispatch-terms-label" className="text-xs font-medium text-muted-foreground">
-            {t("dispatches.terms")}
-          </h3>
-          <div className="flex flex-col gap-4 rounded-xl border border-line bg-surface-2 p-3">
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="dispatch-destination">{t("common.destination")}</Label>
-              <Input
-                id="dispatch-destination"
-                name="destination"
-                value={destination}
-                onChange={(event) => setDestination(event.target.value)}
-                disabled={pending}
-                placeholder={t("dispatches.destinationPlaceholder")}
-                aria-invalid={fieldErrors.destination ? true : undefined}
-                aria-describedby={fieldErrors.destination ? "dispatch-destination-error" : undefined}
-              />
-              {fieldErrors.destination ? (
-                <p id="dispatch-destination-error" role="alert" className="text-xs text-destructive">
-                  {fieldErrors.destination}
-                </p>
-              ) : null}
-            </div>
-
-            {/* How it is being paid for (SPEC §3): the choice, then the question
-                that choice asks, then the note finance reads on credit. Chips,
-                because three short answers a rep knows by heart are a row he
-                presses, not a list he opens. */}
-            <div className="flex flex-col gap-3">
-              <ChoiceChips
-                legend={t("common.paymentTerms")}
-                name="paymentTerms"
-                value={terms}
-                choices={PAYMENT_TERMS.map((value) => ({
-                  value,
-                  label: paymentTermsLabel(value, t),
-                }))}
-                onChange={(next) => {
-                  setTerms(next);
-                  // The second question is a different question for each of them,
-                  // so an answer to the last one is not an answer to this one.
-                  setDetail("");
-                }}
-                disabled={pending}
-                error={fieldErrors.paymentTerms}
-                errorId="dispatch-terms-error"
-              />
-
-              {terms && seconds.length > 0 ? (
-                <ChoiceChips
-                  legend={t(detailLegendKey(terms))}
-                  name="paymentDetail"
-                  value={detail}
-                  choices={seconds.map((value) => ({ value, label: paymentDetailLabel(value, t) }))}
-                  onChange={setDetail}
-                  disabled={pending}
-                  error={fieldErrors.paymentDetail}
-                  errorId="dispatch-detail-error"
-                />
-              ) : null}
-
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="dispatch-payment-note">{t("common.paymentNote")}</Label>
-                <Textarea
-                  id="dispatch-payment-note"
-                  name="paymentNote"
-                  rows={2}
-                  value={paymentNote}
-                  onChange={(event) => setPaymentNote(event.target.value)}
-                  disabled={pending}
-                  aria-invalid={fieldErrors.paymentNote ? true : undefined}
-                  aria-describedby={
-                    fieldErrors.paymentNote
-                      ? "dispatch-payment-note-error"
-                      : terms && needsNote(terms)
-                        ? "dispatch-payment-note-hint"
-                        : undefined
-                  }
-                />
-                {/* Why it is not optional on credit, in the founder's own reason:
-                    finance reviews it. Said once — as the hint before a save, as
-                    the refusal after one. */}
-                {fieldErrors.paymentNote ? (
-                  <p id="dispatch-payment-note-error" role="alert" className="text-xs text-destructive">
-                    {fieldErrors.paymentNote}
-                  </p>
-                ) : terms && needsNote(terms) ? (
-                  <p id="dispatch-payment-note-hint" className="text-xs text-muted-foreground">
-                    {t("dispatches.payment.noteRequired")}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </section>
+        {source && paper !== undefined && !(quotation && paper === null) ? null : termsSection}
       </FormBody>
 
-      <FormFooter error={error} pending={pending} onCancel={onCancel} />
+      <FormFooter
+        error={error}
+        pending={pending}
+        onCancel={onCancel}
+        summary={lines.length > 0 && source ? <PaperSummary sqm={totals.sqm} total={totals.total} /> : undefined}
+      />
     </form>
   );
 }
