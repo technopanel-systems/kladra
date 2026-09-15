@@ -202,13 +202,13 @@ below by number.
                         desk; a filter row that scrolls in one line; an idle chip with an edge.
                   - [x] S12.1 The shell: rail, top bar, bottom bar, search palette, bell and notifications, sign-in,
                         error and missing screens, the view-as banner.
-                  - [ ] S12.2 Companies and contacts: list, strip, drawer, forms, hand-over, share, archive.
-                  - [ ] S12.3 Projects: list, board, drawer, forms, lost.
-                  - [ ] S12.4 Quotations: list, board, the drawer rebuilt, request dialog, history, revision.
-                  - [ ] S12.5 Dispatches: list, board, drawer, request dialog, trail.
-                  - [ ] S12.6 The coordinator's desk.
-                  - [ ] S12.7 The rep's day and the manager's three tabs, metrics and the builder.
-                  - [ ] S12.8 Reports, leads, duplicates.
+                  - [x] S12.2 Companies and contacts: list, strip, drawer, forms, hand-over, share, archive.
+                  - [x] S12.3 Projects: list, board, drawer, forms, lost.
+                  - [x] S12.4 Quotations: list, board, the drawer rebuilt, request dialog, history, revision.
+                  - [x] S12.5 Dispatches: list, board, drawer, request dialog, trail.
+                  - [x] S12.6 The coordinator's desk.
+                  - [x] S12.7 The rep's day and the manager's three tabs, metrics and the builder.
+                  - [x] S12.8 Reports, leads, duplicates.
                   - [x] S12.9 Admin: users, targets, lookups, holidays, use, archive, export.
                   - [ ] S12.10 The stranger's pass: every state again, before beside after in one contact sheet for
                         Jerom; whatever still reads as another hand is reshaped here.
@@ -229,8 +229,16 @@ G6 starts with S12.0, the cold inventory, read from a fresh `shots/now` set agai
 skill's `lens.md`. Wave 1 is merged: the kit (S12.K), the shell (S12.1) and admin (S12.9). Admin's row menu, the confirm it
 opens and the arrived flash then moved into `ui-ext` (`RowMenu`, `ConfirmDialog` with a hosted `open`, `useOpener`,
 `useRowFlash`) so the drawers of wave 2 share one of each. The wave's full suite is green: its two failures were one test
-still pressing an Edit button that now lives in the user row's menu. Wave 2 (S12.2, S12.3, S12.8) is building, each in its
-own worktree on its own port and database, because the suite on 3101 clears whatever database stands behind it. When the machine is
+still pressing an Edit button that now lives in the user row's menu. Wave 2 (S12.2, S12.3, S12.8) is merged and green,
+each built in its own worktree on its own port and database, because the suite on 3101 clears whatever database stands behind it.
+Then the founder's restyle brief (2026-09-14) came in, with "any design rule that refuses the restyle is not absolute":
+Sandstone became **Stone** (DESIGN §1: near-neutral surfaces, a flat red, no gradients, Plex Sans with Noto Sans Arabic, a
+wider type scale, no card shadow, a state as a dot and its word), the rules it met were audited and recorded (DESIGN §8), and
+the kit was restyled before wave 3 (S12.4, S12.5, S12.6+S12.7) was built on it and merged; SPEC §4 holds the G6 defaults as
+D195–D204. A consistency pass over 20 core states in all eight variants fixed what repeated, in the kit, and the last full
+suite is green (five failures, each fixed or green on rerun). Progress, decisions and known issues:
+`.claude/UX-RESTYLE-PROGRESS.md`. **Next: S12.10** — every remaining state in the manifest (dialogs, empty, refused, loading,
+offline) shot and read against Stone as the 20 were, before beside after for Jerom; then Stage 2 ends. When the machine is
 short of memory the full suite runs as four `npx playwright test` calls over a quarter of `tests/*.spec.ts` each, a
 fresh test server for each, because one seventy-minute run was killed twice. The dev database is `seed:demo` on 0026; `seed:volume` after
 it puts the volume back. A dev server that has served a session's edits is restarted, not reused.
