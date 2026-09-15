@@ -213,6 +213,8 @@ below by number.
                   - [ ] S12.10 The stranger's pass: every state again, before beside after in one contact sheet for
                         Jerom; whatever still reads as another hand is reshaped here.
       - [ ] **Stage 3 (Fable)** — audit everything as a stranger, refix, push, report; `/cost` at the end.
+        Pushing is no longer held for Stage 3 (founder, 2026-09-15): forty-four commits on one machine were the
+        risk, not an origin that has not been audited. `main` was pushed at cfa0de2 and is pushed after each green commit.
 
 **Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
@@ -237,7 +239,9 @@ wider type scale, no card shadow, a state as a dot and its word), the rules it m
 the kit was restyled before wave 3 (S12.4, S12.5, S12.6+S12.7) was built on it and merged; SPEC §4 holds the G6 defaults as
 D195–D204. A consistency pass over 20 core states in all eight variants fixed what repeated, in the kit, and the last full
 suite is green (five failures, each fixed or green on rerun). Progress, decisions and known issues:
-`.claude/UX-RESTYLE-PROGRESS.md`. **Next: S12.10** — every remaining state in the manifest (dialogs, empty, refused, loading,
+`.claude/UX-RESTYLE-PROGRESS.md`. On 2026-09-15 the founder overruled holding the push for Stage 3 and `main` went to
+origin; before S12.10 come the quotation request's line editor (reported three times as a stock form) and an Arabic name
+for every demo person. **Next: S12.10** — every remaining state in the manifest (dialogs, empty, refused, loading,
 offline) shot and read against Stone as the 20 were, before beside after for Jerom; then Stage 2 ends. When the machine is
 short of memory the full suite runs as four `npx playwright test` calls over a quarter of `tests/*.spec.ts` each, a
 fresh test server for each, because one seventy-minute run was killed twice. The dev database is `seed:demo` on 0026; `seed:volume` after
