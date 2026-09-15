@@ -27,6 +27,13 @@ npm run dev                   # http://localhost:3100
 `/` redirects to `/en`; `/ar` is the same product right-to-left. Dark is the default
 theme. `npm run db:clear` empties every table; `npm run seed:demo` fills it again.
 
+**To try Kladra from nothing:** `npm run db:fresh` empties every table and puts back only
+Jerom's admin account and the lists every form chooses from (cities, categories, lead
+sources, suppliers, fire ratings, classes, thicknesses, warehouses, shipment methods,
+services, outcomes, positions). No other person, company, paper, target, holiday or
+notice: Jerom adds the people from Admin → Users, and they take it from there.
+`npm run seed:demo` brings the whole demo back whenever it is wanted.
+
 `npm run seed:volume` runs AFTER the demo seed and puts eight hundred more companies
 behind it, with the projects, quotations and dispatches to match. It is for looking at
 the app at the size it will actually be used at — every list caps at twenty, twenty-five

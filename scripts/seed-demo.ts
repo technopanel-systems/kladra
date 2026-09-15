@@ -93,7 +93,7 @@ import {
 loadEnv();
 
 if (process.env.NODE_ENV === "production") {
-  console.error("seed:demo refuses to run with NODE_ENV=production.");
+  console.error("seed:demo and db:fresh refuse to run with NODE_ENV=production.");
   process.exit(1);
 }
 if (!process.env.DATABASE_URL) {
@@ -276,16 +276,16 @@ async function clearEverything(): Promise<void> {
 // Phase 1 — users
 // ============================================================================
 
-async function seedUsers(): Promise<Map<string, string>> {
+async function seedUsers(accounts = USERS): Promise<Map<string, string>> {
   const hashes = new Map<string, string>();
-  for (const u of USERS) hashes.set(u.key, await hash(PASSWORD, 10));
+  for (const u of accounts) hashes.set(u.key, await hash(PASSWORD, 10));
 
   const ids = new Map<string, string>();
   await db.transaction(async (tx) => {
     const rows = await tx
       .insert(users)
       .values(
-        USERS.map((u) => ({
+        accounts.map((u) => ({
           name: u.name,
           nameAr: u.nameAr ?? null,
           email: u.email,
@@ -303,7 +303,7 @@ async function seedUsers(): Promise<Map<string, string>> {
         })),
       )
       .returning({ id: users.id, email: users.email });
-    for (const u of USERS) {
+    for (const u of accounts) {
       const row = rows.find((r) => r.email === u.email);
       if (!row) throw new Error(`user ${u.email} did not come back from the insert`);
       ids.set(u.key, row.id);
@@ -2089,6 +2089,36 @@ async function printFaisalFollowUps(): Promise<void> {
 }
 
 // ============================================================================
+
+/*
+ * `npm run db:fresh` (founder, 2026-09-15: "remove all data to try fully new, keep only
+ * Jerom's account"). Everything goes, as below, and two things come back: Jerom, the
+ * admin who adds everybody else, and the lists — cities, categories, lead sources,
+ * suppliers, fire ratings, classes, thicknesses, warehouses, shipment methods, services,
+ * outcomes and positions — because without them no form in the app can be filled in,
+ * and the admin edits them rather than typing them from nothing. No company, person,
+ * paper, target, holiday or notice: the first of each is the tester's.
+ */
+if (process.argv.includes("--fresh")) {
+  try {
+    console.log(`db:fresh — Riyadh today is ${TODAY}`);
+    await clearEverything();
+    const jerom = USERS.filter((u) => u.key === "jerom");
+    await seedUsers(jerom);
+    const lk = await seedLookups();
+    console.log(`  kept             Jerom (${jerom[0]?.email}), admin`);
+    console.log(`  lookups          ${lk.countryByCode.size} countries, ${lk.cityByName.size} cities, and every other list`);
+    console.log(`
+  Jerom signs in with SEED_PASSWORD (default "kladra2026")
+`);
+  } catch (err) {
+    console.error("db:fresh failed:", err instanceof Error ? (err.stack ?? err.message) : err);
+    process.exitCode = 1;
+  } finally {
+    await pool.end();
+  }
+  process.exit();
+}
 
 try {
   console.log(`seed:demo — Riyadh today is ${TODAY}`);
