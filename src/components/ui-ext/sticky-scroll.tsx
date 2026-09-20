@@ -40,8 +40,24 @@ import { cn } from "@/lib/utils";
  * first paint — and when it was a block of its own, everything under it (the
  * whole table, the whole board) moved down by its height the moment it did, on
  * every visit. So the sticky element is a shelf of no height and the bar hangs
- * from it, laid over the surface's top edge: appearing moves nothing, and the
- * space it covers is the header row's padding or the board's top gutter.
+ * from it, laid over the surface's top edge: appearing moves nothing.
+ *
+ * **And it lands on nothing (P14, 14G).** "The space it covers is the header
+ * row's padding or the board's top gutter" was true of a table and wrong of a
+ * board: the gutter is 8px and the bar is 12, so it sat across the column
+ * headings, and the founder read the words through it. The surface reserves a
+ * rail's worth of space at its own top now, always — inside the scroller, so
+ * the component's box does not move and the rule above still holds — and the
+ * bar hangs in that space instead of over the first thing in it.
+ *
+ * **It is drawn rather than left to Windows** (`scroll-rail` in globals.css):
+ * thin, round, in the theme's own tokens, and visible without hunting for it.
+ * And it is opaque, because a sticky bar travels: as the page scrolls it rides
+ * down over the cards, and `background: inherit` is transparent unless every
+ * element above it painted something — which on a board is nothing at all, so
+ * the bar and the card titles were drawn on top of each other. `surface` says
+ * what is behind it: the page, a card, or whatever the caller has already
+ * painted.
  *
  * **Where it sticks.** `sticky` sticks inside the nearest ancestor that SCROLLS —
  * `overflow: hidden` makes one, `clip` does not — so the same `top` can mean two
@@ -65,11 +81,26 @@ import { cn } from "@/lib/utils";
 /** The top bar's height and its border, which is where a page-scrolled bar stops. */
 const UNDER_TOP_BAR = "calc(3.5rem + 1px)";
 
+/**
+ * The room kept at the top of a surface for its bar: a 12px rail and 8px of air
+ * under it (P14, 14G). Reserved whether or not the surface overflows, so the
+ * bar's arrival still moves nothing.
+ */
+const RAIL_SPACE = "1.25rem";
+
+/** What is behind the bar, which is what it has to paint to cover anything. */
+const BACKING = {
+  page: "bg-canvas",
+  card: "bg-surface",
+  inherit: "bg-inherit",
+} as const;
+
 export function StickyScroll({
   children,
   label,
   className,
   barClassName,
+  surface = "page",
 }: {
   children: ReactNode;
   /** What the region is, for a reader moving by landmarks and for the Tab stop. */
@@ -77,6 +108,12 @@ export function StickyScroll({
   className?: string;
   /** Where the proxy sticks, when the caller knows better than the walk above. */
   barClassName?: string;
+  /**
+   * What the bar is drawn on, so it covers the content it travels over: the
+   * page, a card, or `inherit` where the caller has painted the surface itself
+   * and every element between (the kit's table).
+   */
+  surface?: keyof typeof BACKING;
 }) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const shelfRef = useRef<HTMLDivElement>(null);
@@ -144,15 +181,23 @@ export function StickyScroll({
       <div
         ref={shelfRef}
         hidden={!overflows}
-        className={cn("sticky top-0 z-10 h-0 bg-inherit", barClassName)}
+        className={cn("sticky top-0 z-10 h-0", BACKING[surface], barClassName)}
       >
+        {/* The band is what covers the content the bar travels over, and the
+            bar sits at the top of it with the rest as air: a rail with rows
+            sliding along its underside reads as a rail sitting on them. */}
         <div
-          ref={barRef}
-          aria-hidden="true"
-          data-slot="sticky-scroll-bar"
-          className="absolute inset-x-0 top-0 overflow-x-auto overflow-y-hidden bg-inherit [scrollbar-width:thin]"
+          data-slot="sticky-scroll-band"
+          className={cn("absolute inset-x-0 top-0 pb-2", BACKING[surface])}
         >
-          <div style={{ inlineSize: inner, blockSize: 1 }} />
+          <div
+            ref={barRef}
+            aria-hidden="true"
+            data-slot="sticky-scroll-bar"
+            className="scroll-rail overflow-x-auto overflow-y-hidden"
+          >
+            <div style={{ inlineSize: inner, blockSize: 1 }} />
+          </div>
         </div>
       </div>
       <div
@@ -161,6 +206,7 @@ export function StickyScroll({
         aria-label={label}
         // A scroller a keyboard cannot reach is a scroller a keyboard cannot use.
         tabIndex={overflows ? 0 : undefined}
+        style={{ paddingBlockStart: RAIL_SPACE }}
         className={cn(
           "overflow-x-auto overscroll-x-contain",
           overflows && "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
@@ -281,7 +327,7 @@ export function ScrollLine({
       // off both ends of it, and gave the whole page a sideways scroll — an
       // Arabic phone opened scrolled to its far side and showed nothing.
       className={cn(
-        "relative -m-1 overflow-x-auto overflow-y-hidden overscroll-x-contain p-1 scroll-px-8 [scrollbar-width:thin]",
+        "scroll-rail relative -m-1 overflow-x-auto overflow-y-hidden overscroll-x-contain p-1 scroll-px-8",
         "[--line-fade-to:to_right] rtl:[--line-fade-to:to_left]",
         "[mask-image:linear-gradient(var(--line-fade-to),transparent,#000_var(--line-fade-start),#000_calc(100%_-_var(--line-fade-end)),transparent)]",
         className,

@@ -160,6 +160,10 @@
   --scrim: rgba(20, 18, 16, 0.32);
   --line: rgba(33, 29, 26, 0.1);
   --line-strong: rgba(33, 29, 26, 0.17);
+  /* The bar a wide surface scrolls by (P14, 14G). Darker than a hairline,
+     because it is a control somebody drags and not an edge. */
+  --scrollbar: rgba(33, 29, 26, 0.26);
+  --scrollbar-hover: rgba(33, 29, 26, 0.42);
 
   /* Three tiers of text: what is read, what explains it, what can be skipped.
      Each passes 4.5:1 on canvas and surface-2. */
@@ -260,6 +264,9 @@
   --scrim: rgba(0, 0, 0, 0.6);
   --line: rgba(236, 233, 229, 0.08);
   --line-strong: rgba(236, 233, 229, 0.14);
+  /* Light on a dark ground, as every other line here is (P14, 14G). */
+  --scrollbar: rgba(236, 233, 229, 0.22);
+  --scrollbar-hover: rgba(236, 233, 229, 0.38);
 
   --text: #ece9e5;
   --text-muted: #ada8a3;
@@ -333,6 +340,50 @@
   overscroll-behavior: contain;
   & > * {
     flex-shrink: 0;
+  }
+}
+
+/*
+ * The bar a wide surface is scrolled by, drawn by us (P14, 14G).
+ *
+ * The founder's sentence: "the horizontal scrollbar sits on the card title
+ * text — separate it with real space, style it for both themes instead of the
+ * browser default". Two of those three are here; the space is
+ * `src/components/ui-ext/sticky-scroll.tsx`.
+ *
+ * Windows draws a scrollbar in the system's colours, which on a near-black
+ * screen is a pale slab, and Chromium's overlay bar fades out entirely until
+ * the pointer finds it — on a board, where the bar is the only sign that there
+ * are more columns, a bar nobody can see is the whole defect. `scrollbar-color`
+ * settles both: it turns the overlay bar into a drawn one and it takes the
+ * theme's own tokens. The `::-webkit-` rules under it are for the versions
+ * that have the pseudo-elements and not the property; where both work, the
+ * property wins and they are ignored.
+ *
+ * Thin, round, and no track: the surface behind it is the track.
+ */
+@utility scroll-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+
+  &::-webkit-scrollbar {
+    block-size: 10px;
+    inline-size: 10px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar);
+    border-radius: 999px;
+  }
+  @media (hover: hover) {
+    &:hover {
+      scrollbar-color: var(--scrollbar-hover) transparent;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+      background-color: var(--scrollbar-hover);
+    }
   }
 }
 

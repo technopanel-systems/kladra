@@ -44,7 +44,12 @@ export async function EarlierTargetsTable({ earlier }: { earlier: EarlierTargets
     <div className="flex flex-col gap-2">
       <p className="text-xs text-muted-foreground">{t("admin.earlierHint")}</p>
 
-      <StickyScroll label={t("admin.earlierMonths")} barClassName="top-14" className="card-face">
+      <StickyScroll
+        label={t("admin.earlierMonths")}
+        surface="card"
+        barClassName="top-14"
+        className="card-face"
+      >
         <table data-slot="earlier-targets" className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-line">

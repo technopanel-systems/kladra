@@ -182,6 +182,50 @@ test("inside the kit's card, the leads table's bar still stops under the top bar
     .toBe(Math.round(banner!.y + banner!.height));
 });
 
+test("the bar stands clear of the words and paints over what it passes", async ({
+  page,
+  locale,
+  t,
+}) => {
+  // The founder's sentence (P14, 14G): "the horizontal scrollbar sits on the
+  // card title text — separate it with real space, style it for both themes
+  // instead of the browser default". A board's top gutter was 8px and the bar
+  // is 12, so the bar was drawn across the column headings — and being
+  // `background: inherit` over a page that paints nothing, the words showed
+  // through it.
+  await page.setViewportSize(DESK);
+  await login(page, locale, "abdulrahman");
+  await page.goto(`/${locale}/projects?view=board`);
+
+  const { bar, surface } = wide(page, t("common.viewBoard"));
+  await expect(bar, "five columns and more fit at 1366 — nothing to prove").toBeVisible(COLD);
+
+  // Real space: the whole bar is above the first thing on the board, with air
+  // between them, and not one pixel of it is over the heading.
+  const [rail, heading] = await Promise.all([
+    bar.boundingBox(),
+    surface.locator("[data-slot='board'] > section header").first().boundingBox(),
+  ]);
+  expect(heading, "the board has no column headings at 1366").not.toBeNull();
+  expect(
+    heading!.y - (rail!.y + rail!.height),
+    "the bar is on the column headings, or flush against them",
+  ).toBeGreaterThanOrEqual(4);
+
+  // Opaque: it travels down over the cards as the page scrolls, so what is
+  // behind it has to be painted, not inherited from a page that paints nothing.
+  const band = page.locator("[data-slot='sticky-scroll-band']").first();
+  const behind = await band.evaluate((node) => getComputedStyle(node).backgroundColor);
+  expect(behind, "the bar is transparent, so the board reads through it").not.toMatch(
+    /transparent|rgba\(0, 0, 0, 0\)/,
+  );
+
+  // Drawn by us in both themes, rather than left to Windows: the thumb takes
+  // the theme's own token (`scroll-rail` in globals.css).
+  const thumb = await bar.evaluate((node) => getComputedStyle(node).scrollbarColor);
+  expect(thumb, "the rail is the browser's own colour").not.toBe("auto");
+});
+
 test("a table that fits its card draws no scrollbar of its own", async ({ page, locale, t }) => {
   await page.setViewportSize(DESK);
   await login(page, locale, "faisal");

@@ -23,7 +23,7 @@ function Table({
 }: React.ComponentProps<"table"> & { label?: string }) {
   const t = useTranslations("common")
   return (
-    <StickyScroll label={label ?? t("table")} className="w-full bg-inherit">
+    <StickyScroll label={label ?? t("table")} surface="inherit" className="w-full bg-inherit">
       <table
         data-slot="table"
         className={cn("w-full caption-bottom text-sm", className)}

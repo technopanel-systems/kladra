@@ -513,7 +513,7 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "A board's horizontal scrollbar must not sit on the card titles",
-    owed: "14.3",
+    tests: ["the bar stands clear of the words and paints over what it passes"],
   },
   {
     says: "Each export carries the filters of the screen it came from",

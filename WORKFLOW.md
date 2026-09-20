@@ -244,8 +244,15 @@ below by number.
             is posted from the form — a hidden field that decides where the business came from is
             the same defect one layer down — and it refuses out loud where that row is gone. The
             word is still shown, because the rep who opens the customer tomorrow reads it too.
-      - [ ] 14.3 Every board and wide table: the scrollbar clear of the card titles, drawn for both
+      - [x] 14.3 Every board and wide table: the scrollbar clear of the card titles, drawn for both
             themes instead of the browser's own (14G).
+            **Done.** The kit keeps a rail's worth of room at the top of every wide surface —
+            inside the scroller, so the bar's arrival still moves nothing — and hangs the bar in
+            it on an opaque band, because a sticky bar travels over the cards as the page scrolls
+            and an inherited background over a page that paints nothing let the words read through
+            it. The rail itself is drawn: thin, round, in the theme's tokens, with
+            `scrollbar-color` so Windows stops fading it out. Every board, every wide table and
+            the chip lines take it from one utility.
       - [ ] 14.4 Edge: every popup scrolls, fixed at the cause, held by the Edge project (14F).
       - [ ] 14.5 A paper may name more than one warehouse — the quotation, the dispatch, and the
             difference flag that compares them.

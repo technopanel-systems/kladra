@@ -219,7 +219,10 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
           <div
             data-slot="board"
             className={cn(
-              "flex snap-x gap-3 px-1 pt-2 pb-2",
+              // No top padding of its own: the surface keeps a rail's worth
+              // of room above everything in it (StickyScroll, P14 14G), and a
+              // second gutter here would be 20px of nothing over the columns.
+              "flex snap-x gap-3 px-1 pb-2",
               // How many whole columns fit at their least width (14.5rem) with
               // the gap (0.75rem) after each and the sliver (3rem) plus the
               // start gutter (0.25rem) left over: k columns need k × 15.25 +

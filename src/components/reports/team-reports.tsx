@@ -346,7 +346,7 @@ export async function TeamWeek({
   const nameOfDay = (day: Day) => weekdays.format(new Date(Date.UTC(1970, 0, 4 + weekday(day))));
 
   return (
-    <StickyScroll label={t("byWeek")} barClassName="top-14" className="card-face">
+    <StickyScroll label={t("byWeek")} surface="card" barClassName="top-14" className="card-face">
       {/*
        * Fixed columns, each day as wide as the widest date either script prints:
        * «28/أغسطس/2026» is 106px in the caption face against 80px for the widest

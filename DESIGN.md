@@ -233,7 +233,14 @@ that stays on screen while the surface is, synced both ways, so nobody scrolls t
 of forty rows to find the fifth column. Direction needs no arithmetic: the proxy and the
 surface inherit the same `dir`, so both count `scrollLeft` from the same edge with the same
 sign in any browser, and copying the number is right in Arabic too — what would break it is
-giving the proxy a direction of its own.
+giving the proxy a direction of its own. The surface keeps a rail's worth of room at its own
+top for it (1.25rem, inside the scroller so the component's box does not move when the bar
+arrives), and the bar is drawn on an opaque band in the theme's own tokens — `scroll-rail`,
+thin and round, with `scrollbar-color` so Windows draws ours rather than its own and the
+overlay bar stops fading out. Both are P14 14G: a board's gutter was 8px against a 12px bar,
+so the bar sat across the column headings, and over a page that paints nothing an inherited
+background let the words read straight through it. `surface` on `StickyScroll` says what is
+behind the bar — the page, a card, or a chain the caller has already painted.
 
 ## §2 Principles
 
