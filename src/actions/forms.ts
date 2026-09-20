@@ -31,6 +31,7 @@ import {
   listCountries,
   listFireRatings,
   listLeadSources,
+  marketingLeadSource,
   seesEveryLeadSource,
   listPositions,
   listShipmentMethods,
@@ -79,6 +80,12 @@ export type FormLookups = {
   saudiCountry: string | null;
   /** Riyadh — the first pinned Saudi city (SPEC §3). */
   defaultCity: string | null;
+  /**
+   * Marketing's own lead source, for the form that states it instead of asking
+   * (P14, 14D). Null where the row is gone; the form then says nothing and the
+   * action refuses, rather than filing the lead under something else.
+   */
+  marketingSource: Option | null;
 };
 
 /** A company already on file that this one might be (SPEC D8). Never blocks. */
@@ -119,7 +126,7 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
   }
 
   try {
-    const [categories, leadSources, positions, countryRows] = await Promise.all([
+    const [categories, leadSources, positions, countryRows, marketing] = await Promise.all([
       listCategories(),
       // Management and marketing are offered the whole list; a rep is not
       // offered Marketing (SPEC §3, narrowing D1), and `addCompanyAction`
@@ -127,6 +134,7 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
       listLeadSources(undefined, seesEveryLeadSource(actor.role)),
       listPositions(),
       listCountries(),
+      marketingLeadSource(),
     ]);
 
     const saudi =
@@ -150,6 +158,7 @@ export async function formLookupsAction(): Promise<ActionResult<FormLookups>> {
         cities: cityRows.map(toOption),
         saudiCountry: saudi ? String(saudi.id) : null,
         defaultCity: riyadh ? String(riyadh.id) : null,
+        marketingSource: marketing ? toOption(marketing) : null,
       },
     };
   } catch {

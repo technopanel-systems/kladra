@@ -76,6 +76,13 @@ import { cn } from "@/lib/utils";
 
 const DEBOUNCE_MS = 400;
 
+/**
+ * A field's word over something that is not a field. The `Label` component is a
+ * `<label>` and a `<label>` wants a control; this is the same word, in the same
+ * place in the rhythm, over a fact (P14, 14D).
+ */
+const LABEL_AS_FACT = "flex items-center gap-2 text-sm leading-none font-medium text-muted-foreground";
+
 /*
  * The labelled group (DESIGN §8), in one spelling for the three groups here:
  * the word and what the group is for above, sentence case and never tracked;
@@ -153,7 +160,6 @@ export function NewLeadDialog({
 type LeadDraft = {
   name: string;
   categoryId: string;
-  leadSourceId: string;
   countryId: string;
   cityId: string;
   cityText: string;
@@ -185,7 +191,6 @@ function LeadForm({
   const [draft, setDraft] = useState<LeadDraft>(() => ({
     name: "",
     categoryId: "",
-    leadSourceId: "",
     countryId: lookups.saudiCountry ?? "",
     cityId: lookups.defaultCity ?? "",
     cityText: "",
@@ -329,24 +334,32 @@ function LeadForm({
             {fieldError("categoryId", id("category-error"))}
           </div>
 
-          {/* Where it came from — the whole list for this role, Marketing on it
-              (SPEC §3, narrowing D1; `seesEveryLeadSource`). */}
-          <div className="flex flex-col gap-2">
-            <Label htmlFor={id("lead-source")}>{t("common.leadSource")}</Label>
-            <SearchableSelect
-              id={id("lead-source")}
-              value={draft.leadSourceId}
-              onChange={(next) => change({ leadSourceId: next })}
-              options={lookups.leadSources}
-              placeholder={t("forms.choose")}
-              searchPlaceholder={t("forms.searchList")}
-              emptyText={t("forms.noMatch")}
-              invalid={Boolean(error("leadSourceId"))}
-              aria-describedby={error("leadSourceId") ? id("lead-source-error") : undefined}
-            />
-            <input type="hidden" name="leadSourceId" value={draft.leadSourceId} />
-            {fieldError("leadSourceId", id("lead-source-error"))}
-          </div>
+          {/* Where it came from, said and not asked (P14, 14D).
+              It was the whole list for this role, Marketing on it. But marketing
+              is the one bringing the lead in, so the list had one right answer
+              on it and every other answer was a way of losing the credit for
+              marketing's own work. The action sets it and nothing is posted
+              from here — a hidden field that decides where the business came
+              from is the same defect one layer down.
+
+              Stated rather than silent, because the rep who opens this customer
+              tomorrow reads "Marketing" on it, and the person filing it should
+              see the same word. A value, not a control: no box, no caret,
+              nothing to press. */}
+          {lookups.marketingSource ? (
+            <div className="flex flex-col gap-2">
+              <span id={id("lead-source")} className={LABEL_AS_FACT}>
+                {t("common.leadSource")}
+              </span>
+              <p
+                data-slot="lead-source"
+                aria-labelledby={id("lead-source")}
+                className="flex h-9 items-center text-sm font-medium"
+              >
+                <bdi>{lookups.marketingSource.label}</bdi>
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

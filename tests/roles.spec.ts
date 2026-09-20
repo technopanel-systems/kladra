@@ -69,7 +69,7 @@ test("the restricted lead source is one row of the list, and it is Marketing", a
   expect(rows.length).toBeGreaterThan(restricted.length);
 });
 
-test("a rep is not offered the Marketing lead source, and marketing is", async ({
+test("a rep is not offered the Marketing lead source, and marketing is not asked", async ({
   page,
   locale,
   t,
@@ -95,18 +95,18 @@ test("a rep is not offered the Marketing lead source, and marketing is", async (
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
 
-  // Marketing is offered the source that names its own work — on its own form,
-  // which since P12-7 is New lead and not Add company (SPEC §3).
+  // And marketing is not offered it either, because it is not asked (P14,
+  // 14D): the source that names marketing's own work is what a lead marketing
+  // files has, so its form states the word and carries no list at all. The rep
+  // above cannot pick it; marketing does not have to.
   await login(page, locale, "marketing");
   await page.goto(`/${locale}/leads`);
   await page.getByRole("button", { name: t("leads.new") }).first().click();
 
   const theirs = page.getByRole("dialog", { name: t("leads.new") });
   await expect(theirs.getByLabel(t("common.company"))).toBeVisible(COLD);
-  await theirs.getByRole("combobox", { name: t("common.leadSource") }).click();
-  await expect(
-    page.getByRole("listbox").last().getByRole("option", { name: hidden.name, exact: true }),
-  ).toBeVisible();
+  await expect(theirs.locator("[data-slot='lead-source']")).toHaveText(hidden.name);
+  await expect(theirs.getByRole("combobox", { name: t("common.leadSource") })).toHaveCount(0);
 });
 
 /** Her own job — the floor SPEC §3 gave her, read from the role rather than a name. */

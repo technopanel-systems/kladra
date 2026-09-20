@@ -26,6 +26,7 @@
   "shareWho": "Choose who to share it with.",
   "shareOwner": "It is already theirs.",
   "leadSourceNotYours": "That lead source is for management and marketing.",
+  "noMarketingSource": "Marketing’s own lead source is missing from the lists, so the lead cannot be filed. An admin can put it back under Lookups.",
   "leadNeedsAFloor": "Choose someone a company can sit with.",
   "duplicateWhichOne": "Say which record continues.",
   "duplicateAnswered": "Somebody has already answered this one."

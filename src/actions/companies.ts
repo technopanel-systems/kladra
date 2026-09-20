@@ -45,7 +45,7 @@ import { parseDay } from "@/lib/dates";
 import { field, fieldErrorsOf, type FieldErrors } from "@/lib/form-fields";
 import { liveAudienceFor, liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { clearNotifications, createNotification } from "@/lib/notify";
-import { SAUDI_CODE, seesEveryLeadSource } from "@/lib/lookups";
+import { marketingLeadSource, SAUDI_CODE, seesEveryLeadSource } from "@/lib/lookups";
 import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
@@ -379,10 +379,16 @@ export async function createCompanyAction(
  * — so the schema has nowhere to put one, and a notes field posted anyway is
  * never read.
  */
+/**
+ * No `leadSourceId` (P14, 14D). A lead marketing files came from marketing, so
+ * the source is not a field on this form and not a value the wire may carry
+ * — the action reads the one row it can be. What a form does not ask, an
+ * action does not accept: a posted source would be the hidden field that
+ * decides where the business came from.
+ */
 const leadSchema = z.object({
   name: companyFields.name,
   categoryId: companyFields.categoryId,
-  leadSourceId: companyFields.leadSourceId,
   countryId: companyFields.countryId,
   cityId: companyFields.cityId,
   cityText: companyFields.cityText,
@@ -419,7 +425,6 @@ export async function createLeadAction(
     const parsed = leadSchema.safeParse({
       name: field(formData, "name"),
       categoryId: field(formData, "categoryId"),
-      leadSourceId: field(formData, "leadSourceId"),
       countryId: field(formData, "countryId"),
       cityId: field(formData, "cityId"),
       cityText: field(formData, "cityText"),
@@ -437,18 +442,22 @@ export async function createLeadAction(
     }
     const input = parsed.data;
 
-    // The same rule Add company asks, asked here because this form has the same
-    // field on it. It says yes to marketing, which is the whole of who may be
-    // standing here today — and it is the sentence, not the list of roles, that
-    // decides, so a second role added to the lead module later cannot quietly
-    // acquire a source it may not claim.
-    if (await claimsRestrictedSource(actor, input.leadSourceId)) {
-      return {
-        ok: false,
-        error: t("leadSourceNotYours"),
-        fieldErrors: { leadSourceId: t("leadSourceNotYours") },
-      };
-    }
+    /*
+     * Where it came from, decided rather than asked (P14, 14D).
+     *
+     * The form used to offer the whole list to this role and the action used to
+     * refuse the ones it may not claim. Both are gone: marketing is the one
+     * bringing the lead in, so the answer is marketing's own source, and the
+     * screen states it.
+     *
+     * Refused out loud where that row is missing — deactivated, or a database
+     * nobody seeded. Filing the lead under some other source would put
+     * marketing's work in somebody else's column on the one figure this field
+     * exists for.
+     */
+    const marketing = await marketingLeadSource();
+    if (!marketing) return { ok: false, error: t("noMarketingSource") };
+    const leadSourceId = marketing.id;
 
     // Onto a floor that exists and can hold a company. Asked of the database
     // rather than trusted from the picker, because the picker is the courtesy
@@ -506,7 +515,7 @@ export async function createLeadAction(
       sameField(input.repId, twin.repId) &&
       sameField(input.query, twin.query) &&
       sameField(input.categoryId, twin.categoryId) &&
-      sameField(input.leadSourceId, twin.leadSourceId) &&
+      sameField(leadSourceId, twin.leadSourceId) &&
       sameField(input.countryId, twin.countryId) &&
       sameField(place.cityId, twin.cityId) &&
       sameField(place.cityText, twin.cityText)
@@ -532,7 +541,7 @@ export async function createLeadAction(
         .values({
           name: input.name,
           categoryId: input.categoryId,
-          leadSourceId: input.leadSourceId,
+          leadSourceId,
           countryId: input.countryId,
           cityId: place.cityId,
           cityText: place.cityText,

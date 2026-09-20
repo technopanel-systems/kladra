@@ -261,7 +261,7 @@ export const SPEC3: Spec3Entry[] = [
   {
     says: "The Marketing lead source is not offered to a rep adding a company",
     tests: [
-      "a rep is not offered the Marketing lead source, and marketing is",
+      "a rep is not offered the Marketing lead source, and marketing is not asked",
       // The other half of the same sentence: not offered is about CHOOSING, and
       // a company handed to him already filed under it stays his to work (#168).
       "a company filed as marketing's stays editable by the rep it is handed to",
@@ -498,7 +498,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "A marketing lead's source is Marketing, fixed, not chosen",
-    owed: "14.2",
+    tests: [
+      "marketing files a lead with a phone and the customer's query as its one note, and the rep acknowledges it from the band above his companies",
+      "a rep is not offered the Marketing lead source, and marketing is not asked",
+    ],
   },
   {
     says: "thirty days off is one entry with its dates and its length",

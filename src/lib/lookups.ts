@@ -113,6 +113,41 @@ export async function listLeadSources(locale?: string, all = false): Promise<Loo
 }
 
 /**
+ * Marketing's own source, for the form that does not ask (P14, 14D).
+ *
+ * A lead marketing files came from marketing; offering it the list was a
+ * question with one answer, and a question with one answer is a way of getting
+ * the wrong one. So the lead form states it and the action sets it, and both
+ * read it here.
+ *
+ * The RESTRICTED row, not the one called "Marketing": the admin may rename any
+ * of these lists in either language, and a rule that matches on a name stops
+ * being true the first time somebody types «تسويق رقمي» (src/db/schema.ts).
+ * Restricted is the flag that already means "this one is marketing's own work",
+ * it is set by the seed and there is no control anywhere that sets a second
+ * one; the order is there so that a database which somehow grew two answers
+ * gives the same one every time rather than whichever came back first.
+ *
+ * Null where the row is gone — a database nobody seeded, or a source somebody
+ * deactivated. The caller says so out loud rather than filing the lead under
+ * some other source.
+ */
+export async function marketingLeadSource(locale?: string): Promise<LookupOption | null> {
+  const l = await labelLocale(locale);
+  const [row] = await db
+    .select({
+      id: leadSources.id,
+      name: isArabic(l) ? leadSources.nameAr : leadSources.nameEn,
+      alt: isArabic(l) ? leadSources.nameEn : leadSources.nameAr,
+    })
+    .from(leadSources)
+    .where(and(eq(leadSources.active, true), eq(leadSources.restricted, true)))
+    .orderBy(asc(leadSources.sortOrder), asc(leadSources.id))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
  * Who is offered the whole list: management, and marketing itself.
  *
  * Marketing is on it because the source describes marketing's own work — box 7

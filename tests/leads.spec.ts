@@ -151,8 +151,12 @@ test("marketing files a lead with a phone and the customer's query as its one no
 
     await form.getByLabel(t("common.company")).fill(name);
     await pickFirst(form.getByRole("combobox", { name: t("common.category") }));
-    // Marketing is on the list of where it came from, for this role.
-    await choose(page, form.getByRole("combobox", { name: t("common.leadSource") }), source);
+
+    // Where it came from is stated, not chosen (P14, 14D): marketing is the one
+    // bringing the lead in. So the form says Marketing and offers no list, and
+    // there is nothing here to pick.
+    await expect(form.locator("[data-slot='lead-source']")).toHaveText(source);
+    await expect(form.getByRole("combobox", { name: t("common.leadSource") })).toHaveCount(0);
     // By its accessible name: the label's "*" is drawn for the eye only.
     await form.getByRole("textbox", { name: t("common.name"), exact: true }).fill("سلطان الحربي");
     await form.getByLabel(t("common.phone")).fill("0551117788");
@@ -332,7 +336,6 @@ test("a lead marketing files onto itself is acknowledged at once, and nobody is 
   await expect(form.getByLabel(t("common.company"))).toBeVisible(COLD);
   await form.getByLabel(t("common.company")).fill(name);
   await pickFirst(form.getByRole("combobox", { name: t("common.category") }));
-  await pickFirst(form.getByRole("combobox", { name: t("common.leadSource") }));
   await form.getByRole("textbox", { name: t("common.name"), exact: true }).fill("هشام العمري");
   await form.getByLabel(t("common.phone")).fill(locale === "en" ? "0552204418" : "0552204419");
   await form.getByLabel(t("leads.query")).fill("ديكور مكتب صغير، يسأل عن الألوان");

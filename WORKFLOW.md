@@ -237,7 +237,13 @@ below by number.
             ring that says nothing). The figure above the card is the whole desk and its caption
             says how many are past the line, in the sentence her own screen carries.
             `tests/awaiting.spec.ts`, both locales.
-      - [ ] 14.2 A marketing lead's source is Marketing, fixed and not chosen (14D).
+      - [x] 14.2 A marketing lead's source is Marketing, fixed and not chosen (14D).
+            **Done.** The lead form states the source and does not ask: marketing is the one
+            bringing the lead in, so the list had one right answer on it and every other answer
+            lost marketing its own credit. The action reads the restricted row itself and nothing
+            is posted from the form — a hidden field that decides where the business came from is
+            the same defect one layer down — and it refuses out loud where that row is gone. The
+            word is still shown, because the rep who opens the customer tomorrow reads it too.
       - [ ] 14.3 Every board and wide table: the scrollbar clear of the card titles, drawn for both
             themes instead of the browser's own (14G).
       - [ ] 14.4 Edge: every popup scrolls, fixed at the cause, held by the Edge project (14F).
