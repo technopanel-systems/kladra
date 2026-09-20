@@ -34,13 +34,10 @@ import { join } from "node:path";
  * often; the verb is written `سجّل` and that is what is listed.
  */
 const ADDRESSED_TO_A_MAN = [
-  // "leave it" with its object attached, which whole-word matching cannot
-  // see through: "فاتركه" shipped in admin.lastDayHint until the P11H reviewer read it.
-  // The ATTACHED OBJECT still needs listing; the attached conjunction does not
-  // any more — see `CONJUNCTIONS` below.
+  // "leave it" — the bare verb only. Neither the conjunction in front of it nor
+  // the object behind it is written out here any more: see `CONJUNCTIONS` and
+  // `OBJECTS` below.
   "اترك",
-  "اتركه",
-  "اتركها",
   "اتصل",
   "اتّصل",
   "اختر",
@@ -60,12 +57,8 @@ const ADDRESSED_TO_A_MAN = [
   "أغلق",
   "استخدم",
   "اجعل",
-  "اجعلها",
-  "اجعله",
   "راجع",
   "أعد",
-  "أعدها",
-  "أعده",
   "اضغط",
   "انقر",
   "قم",
@@ -106,10 +99,43 @@ const forbidden = new Set(ADDRESSED_TO_A_MAN.map((word) => word.replace(HARAKAT,
  */
 const CONJUNCTIONS = ["ف", "و"];
 
-/** Is this word an order to a man, with or without a conjunction in front? */
+/**
+ * The pronouns Arabic glues to the BACK of a verb, and the hole they left.
+ *
+ * `اختره` — "choose it" — shipped in errors.warehouseGone in P14 and this
+ * check read straight past it, because whole-word matching cannot see through a
+ * suffix any more than it could see through the prefix in `فاكتب` or the object in
+ * `فاتركه`. Those two were each answered by hand, one entry at a time, and the
+ * same shape came back a third time: an order stops being an order for this
+ * check as soon as anything is attached to it. So it peels instead, and the list
+ * above went back to bare verbs.
+ *
+ * Only the third person — `ه`, `ها`, `هم`, `هن`, `هما`. `نا` would read
+ * `تأكدنا` ("we made sure") as an order, and a check that fires on a sentence
+ * about ourselves is the one nobody keeps (DESIGN §5).
+ */
+const OBJECTS = ["ه", "ها", "هم", "هن", "هما"];
+
+/** The word with its conjunction and its object taken off, if it has either. */
+function* stems(bare: string): Generator<string> {
+  const withoutPrefix = CONJUNCTIONS.some((letter) => bare.startsWith(letter))
+    ? [bare, bare.slice(1)]
+    : [bare];
+  for (const word of withoutPrefix) {
+    yield word;
+    for (const object of OBJECTS) {
+      // Never down to nothing: a bare `ه` is not a verb with its object taken off.
+      if (word.length > object.length && word.endsWith(object)) {
+        yield word.slice(0, -object.length);
+      }
+    }
+  }
+}
+
+/** Is this word an order to a man, whatever is glued to either end of it? */
 function addressesAMan(bare: string): boolean {
-  if (forbidden.has(bare)) return true;
-  return CONJUNCTIONS.some((letter) => bare.startsWith(letter) && forbidden.has(bare.slice(1)));
+  for (const stem of stems(bare)) if (forbidden.has(stem)) return true;
+  return false;
 }
 
 type Finding = { file: string; key: string; word: string; text: string };

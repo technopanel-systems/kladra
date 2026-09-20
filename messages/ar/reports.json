@@ -2,7 +2,7 @@
   "title": "التقارير",
   "today": "اليوم",
   "written": "التقارير المكتوبة",
-  "recorded": "سجّله النظام",
+  "recorded": "سجل النظام",
   "recordedNothing": "لم يُسجَّل شيء.",
   "reportsCount": "{count, plural, =0 {لا توجد تقارير} one {تقرير واحد} two {تقريران} few {# تقارير} many {# تقريرًا} other {# تقرير}}",
   "calendarDay": "{count, plural, =0 {لم يُكتب شيء} one {تقرير واحد} two {تقريران} few {# تقارير} many {# تقريرًا} other {# تقرير}}",

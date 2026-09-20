@@ -19,7 +19,7 @@
   "alreadyLost": "This project is already marked lost.",
   "projectNotAtCompany": "That project belongs to another company.",
   "contactNotAtCompany": "That contact belongs to another company.",
-  "warehouseGone": "One of the warehouses chosen is no longer there. Choose it again.",
+  "warehouseGone": "One of the warehouses chosen is no longer there. Choose another.",
   "handOverWho": "Choose who takes this company.",
   "handOverSame": "This company is already theirs.",
   "activityDayClosed": "That day is closed. Today’s reports and the last working day’s can still be corrected.",

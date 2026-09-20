@@ -265,10 +265,18 @@ test("a person on leave wears the leave ring and says so, and a person with a st
 }) => {
   test.slow();
 
-  const everybody = await people();
   await login(page, locale, "abdulrahman");
   await page.goto(`/${locale}/team?tab=team`);
   await expect(page.getByRole("table")).toBeVisible(COLD);
+  // Read AFTER the table is on the screen, not before the login.
+  //
+  // Every figure here is counted in working days from Riyadh's today, so the
+  // answer changes at midnight — and this ran at 23:59:5x with the page
+  // rendering at 00:00:0x, which is how a badge saying 4 met an expectation of
+  // 3 in one run of a suite that had passed all night. The two cannot be made
+  // simultaneous, but a query taken once the table is up is milliseconds from
+  // the render rather than a login and a navigation away from it.
+  const everybody = await people();
 
   await test.step("on leave today: the leave ring, and the words beside it", async () => {
     const away = everybody.find((person) => person.away);
