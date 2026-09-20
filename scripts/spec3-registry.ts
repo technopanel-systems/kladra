@@ -467,4 +467,53 @@ export const SPEC3: Spec3Entry[] = [
     says: "applied everywhere in one sweep",
     owed: "P13-S12",
   },
+
+  /*
+   * P14 — the third round of real use (2026-09-20). Each decision is owed to
+   * the slice that builds it and is rewritten as tests the moment it lands, so
+   * a run of the gate always says which of the ten are still words.
+   */
+  {
+    says: "the document as a whole takes one warehouse normally and allows a second or a third",
+    owed: "14.5",
+  },
+  {
+    says: "whoever asks writes a mandatory reason, the request goes to the manager",
+    owed: "14.8",
+  },
+  {
+    says: "A rep ticks whether he believes the company is registered in SMAC",
+    owed: "14.6",
+  },
+  {
+    says: "Beside the target is a tick that lets a zero-target person share anyway",
+    owed: "14.7",
+  },
+  {
+    says: "appears in the manager's awaiting section the moment it is submitted",
+    tests: [
+      "a request is on the manager's awaiting list the morning it is raised",
+      "the awaiting figure is the whole desk, and only the late part is red",
+    ],
+  },
+  {
+    says: "A marketing lead's source is Marketing, fixed, not chosen",
+    owed: "14.2",
+  },
+  {
+    says: "thirty days off is one entry with its dates and its length",
+    owed: "14.9",
+  },
+  {
+    says: "A popup must scroll in Microsoft Edge",
+    owed: "14.4",
+  },
+  {
+    says: "A board's horizontal scrollbar must not sit on the card titles",
+    owed: "14.3",
+  },
+  {
+    says: "Each export carries the filters of the screen it came from",
+    owed: "14.10",
+  },
 ];

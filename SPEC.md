@@ -243,6 +243,49 @@ each overrides whatever earlier default it touches — the defaults it overrules
   scale, consistent density, colour that only means something, motion that explains, empty and loading
   states everywhere; both themes, both directions, the phone; proved with side-by-side screenshots.
 
+Phase 14 is the third round of real use: the reps, Rawan, Abdulrahman and Jerom have worked in
+Kladra a third time, and every line below came out of that use. None of it is speculation, and each
+decision overrides whatever earlier line or default it touches — the ones it overrules are named. (P14)
+
+- **A quotation or a dispatch may name more than one warehouse.** Never per line — that would confuse
+  the reps — but the document as a whole takes one warehouse normally and allows a second or a third
+  in the rare case. Quotations and dispatches both, and the dispatch difference flag compares the
+  warehouses as it compares the panels and the services. **Narrows the P12 line above**: "never per
+  line" stands, "one per whole paper" does not.
+- **Archiving is a request with a reason, and the sales manager answers it.** A company, a project or
+  anything else archivable: whoever asks writes a mandatory reason, the request goes to the manager,
+  and he approves or refuses it. A refusal comes back carrying his reason, exactly as a refused
+  dispatch does, and it can be corrected and asked again. His own archives happen at once. Pending
+  requests sit in the awaiting section of his dashboard. One approval path for everything archivable,
+  not one per kind of record. **Overrules the P3 line above**, where the owner archived and only the
+  admin could put it back.
+- **SMAC registration is a tick, not a number.** Reps have no SMAC numbers. A rep ticks whether he
+  believes the company is registered in SMAC, the ERP that holds the money. Rawan is the one who
+  actually registers it, while she is creating a quotation, and she can tick it there — hers is the
+  authoritative answer. Who ticked it and when is recorded. She is given a way to see which companies
+  are not registered yet, or the tick is a dead field nobody acts on.
+- **A rep whose target is zero earns no share of any quotation or dispatch.** Beside the target is a
+  tick that lets a zero-target person share anyway. A rep with no target is support, not sales: he may
+  raise the work without it counting for him. This is said wherever credit is chosen, so nobody has to
+  wonder where the metres went.
+- **A request waiting on the coordinator appears in the manager's awaiting section the moment it is
+  submitted.** Requests here are answered the same day, so holding one back for two working days hides
+  exactly what he opened the screen to see. Every other delay of the same shape is asked the same
+  question — does waiting help anyone? — and the answers are in §4.
+- **A marketing lead's source is Marketing, fixed, not chosen.** Marketing is the one bringing the lead
+  in; offering it the list is a question with one answer.
+- **The holidays and leave tab and the users tab belong to the sales manager as well as the admin.**
+  What he may not do in them is in §4. And leave is compacted: thirty days off is one entry with its
+  dates and its length, not thirty rows, expandable where somebody wants the days.
+- **A popup must scroll in Microsoft Edge.** They open now (P13) and scroll badly; fixed at the cause
+  for every popup, and Edge stays in the test matrix.
+- **A board's horizontal scrollbar must not sit on the card titles.** Real space between them and a bar
+  drawn for both themes instead of the browser's own, on every board and every wide table.
+- **Everything exports**: companies, contacts, projects, quotations with their lines and services,
+  dispatches with their lines, reports, leads, targets and achievement, users, holidays and leave. Each
+  export carries the filters of the screen it came from, comes in both languages, writes dates as
+  04/Aug/2026, and opens in Excel with its numbers as numbers and its Arabic intact.
+
 ## §4 Defaults Claude chose — founder may change
 
 - D1 Lead sources, in order: Field visit · Direct contact · Referral · Exhibition · Marketing · Online · WhatsApp · Other (FACET's list with "Online or WhatsApp" split and "Consultant or architect" dropped, per §3).
@@ -500,6 +543,8 @@ each overrides whatever earlier default it touches — the defaults it overrules
 - D203 **Dispatches** (P13-G6 S12.5). The drawer shows who, then a strip of m², the quotation, the date (approval day, or request day while waiting) and SMAC's number, then the actions, what happened, the items, the totals, and one Delivery and payment group. The who line names the rep only to someone who is not that rep. Refuse stays a button in sight, last, at the row's end, in the tint; the brand is Approve for the coordinator, Edit request for the rep after a refusal, and Add report otherwise. A status chip that hides every dispatch says how many and offers Show all. The first-use empty list is a sentence, with no Quotations button. DEFAULT — founder may change.
 - D204 **The day, the desk and the manager's tabs** (P13-G6 S12.6, S12.7). Every waiting row on the day leads with its company's face and offers Add report, started on its paper; a lead offers Acknowledge in place. Work tabs and metrics cards lay out as two stacks on a desk rather than a grid of equal cards. The manager's strip colours only a figure a person is late on (requests waiting, follow-ups long overdue); never contacted and gone quiet are uncoloured, and gone quiet is blue as a dot on the day and the manager's screen alike. The coordinator's quotation and dispatch counts carry no colour; lateness is the caption, the longest wait and each row's late. A stuck request's age reads red, a duplicate's and a lead's amber, silence uncoloured. DEFAULT — founder may change.
 - D205 **A paper's lines are items** (founder, 2026-09-15: the request dialogs reported three times as a stock form). In the quotation and dispatch request dialogs each panel line is a card: its head says Item N, its m² as the figure and its money beside it, and a remove button; its nine boxes keep the founder's order (§3) in two labelled rows, what the panel is (colour code, supplier, fire rating, class) and then how many, on what sheet, at what price. A service is one row of a short list, its m² and price with their units written in the boxes, closed by the services' subtotal. The parts are headed Panels, Services and, on a load, Delivery and payment; on a desk the totals, the credit question and the SMAC number stand beside them and stay in view while the items scroll, and below that width the m² and the total sit over Save. A load line carried from its paper writes what is left to send under its count. Every form's labels are the muted colour and its values the text colour. DEFAULT — founder may change.
+
+- D206 **Every other delay was asked the same question** (P14, 14B: “does waiting help anyone?”). Four other clocks hide something until it is old enough, and each was read again. **A follow-up on the manager's stuck list, three working days past its date** — kept: the rep's own day carries it the morning it is due and the manager's table counts every overdue one on the person's row, so the stuck list is what has stopped rather than what is due, and without the line it would hold the whole floor's diary. **A lead nobody has acknowledged, two working days** — kept, and it is the founder's own sentence (§3, P12): it is in the rep's band from the minute it lands, highlighted, with a notification, so the delay hides nothing from the person who can act; it decides when it stops being his alone. **Never contacted and gone quiet, fourteen days** — kept: fourteen days IS the definition of the silence, not a wait before showing work somebody could have done yesterday. **A ratio in the first five working days of a month** — kept: it says the month has just started instead of printing 400% of pace, which is a figure nobody should act on. What made the request delay different is that the work was already on somebody's desk and answerable that morning, and the one screen that could chase it said nothing. A duplicate flag and a follow-up due today on the floor of somebody on leave have never had a delay, for the same reason. DEFAULT — founder may change.
 
 ## §5 One word per thing
 

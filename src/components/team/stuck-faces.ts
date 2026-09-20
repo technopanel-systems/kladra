@@ -2,7 +2,7 @@ import "server-only";
 import { eq, inArray, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "@/db";
-import { companies, duplicateFlags, projects, quotations } from "@/db/schema";
+import { companies, dispatches, duplicateFlags, projects, quotations } from "@/db/schema";
 import type { Stuck } from "@/lib/team";
 
 /**
@@ -11,8 +11,9 @@ import type { Stuck } from "@/lib/team";
  *
  * A face is hashed from the record's own id — one company, one colour, one
  * person, on every screen — and the stuck list names both only in words: a
- * request's id is the paper's, a project follow-up's the project's, a pair's the
- * flag's, and the person is a name. So each row's company and the person holding
+ * request's id is the paper's — the quotation's or the load's — a project
+ * follow-up's the project's, a pair's the flag's, and the person is a name. So
+ * each row's company and the person holding
  * it are read here, by the row's own key, through the same joins the list read
  * them through (`companies.rep_id`, as `src/lib/team.ts` does for every group),
  * and nothing else is: no status, no age, no order. Whether a row is stuck and
@@ -39,7 +40,16 @@ export async function stuckFaces(stuck: Stuck): Promise<Map<string, StuckFace>> 
   const projectIds = [...stuck.followUps.rows, ...stuck.uncovered.rows]
     .filter((row) => row.kind === "project")
     .map((row) => row.id);
-  const quotationIds = stuck.requests.rows.map((row) => row.id);
+  // The requests group holds both halves of the coordinator's desk (P14, 14B),
+  // and each half is a different table to look the company up in. A dispatch
+  // read as a quotation finds nothing and the row wears a face hashed from its
+  // own id — a second colour for a company that already has one (DESIGN §1b).
+  const quotationIds = stuck.requests.rows
+    .filter((row) => row.kind === "quotation")
+    .map((row) => row.id);
+  const dispatchIds = stuck.requests.rows
+    .filter((row) => row.kind === "dispatch")
+    .map((row) => row.id);
   const flagIds = stuck.duplicates.rows.map((row) => row.id);
 
   const sideA = alias(companies, "side_a");
@@ -47,7 +57,7 @@ export async function stuckFaces(stuck: Stuck): Promise<Map<string, StuckFace>> 
   const dayOf = (createdAt: typeof sideA.createdAt | typeof sideB.createdAt) =>
     sql`(${createdAt} at time zone 'Asia/Riyadh')::date`;
 
-  const [ofCompanies, ofProjects, ofQuotations, ofPairs] = await Promise.all([
+  const [ofCompanies, ofProjects, ofQuotations, ofDispatches, ofPairs] = await Promise.all([
     companyIds.length > 0
       ? db
           .select({ id: companies.id, companyId: companies.id, repId: companies.repId })
@@ -68,6 +78,13 @@ export async function stuckFaces(stuck: Stuck): Promise<Map<string, StuckFace>> 
           .innerJoin(companies, eq(companies.id, quotations.companyId))
           .where(inArray(quotations.id, quotationIds))
       : [],
+    dispatchIds.length > 0
+      ? db
+          .select({ id: dispatches.id, companyId: companies.id, repId: companies.repId })
+          .from(dispatches)
+          .innerJoin(companies, eq(companies.id, dispatches.companyId))
+          .where(inArray(dispatches.id, dispatchIds))
+      : [],
     flagIds.length > 0
       ? db
           .select({
@@ -86,7 +103,7 @@ export async function stuckFaces(stuck: Stuck): Promise<Map<string, StuckFace>> 
   ]);
 
   const faces = new Map<string, StuckFace>();
-  for (const row of [...ofCompanies, ...ofProjects, ...ofQuotations]) {
+  for (const row of [...ofCompanies, ...ofProjects, ...ofQuotations, ...ofDispatches]) {
     faces.set(row.id, { companyId: row.companyId, people: [row.repId] });
   }
   for (const pair of ofPairs) {

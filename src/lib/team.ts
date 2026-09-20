@@ -22,14 +22,21 @@
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { companies, companyTargets, quotations, targets, users } from "@/db/schema";
+import {
+  companies,
+  companyTargets,
+  dispatches,
+  quotations,
+  targets,
+  users,
+} from "@/db/schema";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { achievedByRep, companyAchievedSqm } from "@/lib/dispatches";
 import { countOpenDuplicates, listOpenDuplicates } from "@/lib/duplicates";
 import { carriesMetres } from "@/lib/floor";
 import { followUpCountsForRep, NEVER_CONTACTED_DAYS } from "@/lib/followups";
-import { quotationLabel } from "@/lib/labels";
+import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import {
   ageLeads,
   lateLeads,
@@ -387,12 +394,24 @@ export const STUCK_FOLLOW_UP_WORKING_DAYS = 3;
 export type StuckRequest = {
   id: string;
   label: string;
+  /** Which desk it is on: a quotation to issue, or a load to approve. */
+  kind: RequestKind;
   companyName: string;
   repName: string;
   /** The Riyadh day it was asked for. */
   since: Day;
   workingDaysWaiting: number;
+  /**
+   * Past the two-working-day line, and therefore somebody's lateness rather
+   * than simply today's work (P14, 14B). Every request is on this list from the
+   * moment it is raised; this is the one that is also late, and lateness is the
+   * only thing that colours a row or counts on a person (`stuckByPerson`).
+   */
+  late: boolean;
 };
+
+/** A quotation on its way to being issued, or a load on its way to being approved. */
+export type RequestKind = "quotation" | "dispatch";
 
 export type StuckFollowUp = {
   id: string;
@@ -452,6 +471,16 @@ const top = <Row,>(rows: Row[]): StuckGroup<Row> => topOf(rows, STUCK_SHOWN);
 
 export type Stuck = {
   requests: StuckGroup<StuckRequest>;
+  /**
+   * How many of the requests waiting are past the two-working-day line (P14,
+   * 14B).
+   *
+   * Counted here, off the whole list before it is capped for drawing, because a
+   * figure counted off the rows a screen shows is the length of a capped list
+   * (D144). The group above is every request on the desk; this is the part of
+   * it that is late, and the only part that colours anything.
+   */
+  lateRequests: number;
   followUps: StuckGroup<StuckFollowUp>;
   /**
    * Due today or already past, and the rep is on leave. First on the screen
@@ -517,8 +546,9 @@ export type StuckDuplicate = {
 type RawLate = {
   requests: {
     id: string;
-    number: number;
-    revision: number;
+    /** Said the way both screens say it: Q-12, Q-12/2, D-3. */
+    label: string;
+    kind: RequestKind;
     companyName: string;
     repName: string;
     repId: string;
@@ -529,7 +559,7 @@ type RawLate = {
 };
 
 async function readLate(locale: string): Promise<RawLate> {
-  const [waiting, followUps, leads] = await Promise.all([
+  const [waitingQuotations, waitingDispatches, followUps, leads] = await Promise.all([
     db
       .select({
         id: quotations.id,
@@ -545,6 +575,32 @@ async function readLate(locale: string): Promise<RawLate> {
       .innerJoin(users, eq(users.id, companies.repId))
       .where(and(eq(quotations.status, "requested"), isNull(companies.archivedAt)))
       .orderBy(asc(quotations.createdAt)),
+
+    /*
+     * The other half of the same desk (P14, 14B). "A request waiting on the
+     * coordinator" is the founder's phrase, and a load waiting to be approved
+     * is one: it sat on her desk exactly as a quotation request does, and
+     * appeared on no screen of his.
+     *
+     * The two statuses are the two `/queue` reads, said the same way — a
+     * quotation `requested` and a dispatch `submitted` are what her screen
+     * lists, and a third definition of "on her desk" is how two screens come
+     * apart (rules/data.md).
+     */
+    db
+      .select({
+        id: dispatches.id,
+        number: dispatches.number,
+        companyName: companies.name,
+        repName: personName(locale),
+        repId: companies.repId,
+        since: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+      })
+      .from(dispatches)
+      .innerJoin(companies, eq(companies.id, dispatches.companyId))
+      .innerJoin(users, eq(users.id, companies.repId))
+      .where(and(eq(dispatches.status, "submitted"), isNull(companies.archivedAt)))
+      .orderBy(asc(dispatches.createdAt)),
 
     db.execute<{
       id: string;
@@ -598,8 +654,34 @@ async function readLate(locale: string): Promise<RawLate> {
     unacknowledgedLeads(),
   ]);
 
+  /*
+   * One list, oldest first, because that is the order the desk is worked down
+   * and the order the manager reads it in. Both halves came back sorted, so
+   * this is a merge on the day each was raised.
+   */
+  const requests = [
+    ...waitingQuotations.map((row) => ({
+      id: row.id,
+      label: quotationLabel(row.number, row.revision),
+      kind: "quotation" as const,
+      companyName: row.companyName,
+      repName: row.repName,
+      repId: row.repId,
+      since: row.since as Day,
+    })),
+    ...waitingDispatches.map((row) => ({
+      id: row.id,
+      label: dispatchLabel(row.number),
+      kind: "dispatch" as const,
+      companyName: row.companyName,
+      repName: row.repName,
+      repId: row.repId,
+      since: row.since as Day,
+    })),
+  ].sort((a, b) => (a.since < b.since ? -1 : a.since > b.since ? 1 : 0));
+
   return {
-    requests: waiting.map((row) => ({ ...row, since: row.since as Day })),
+    requests,
     followUps: followUps.rows.map((row) => ({
       id: row.id,
       name: row.name,
@@ -638,24 +720,31 @@ type LateWork = {
 };
 
 /**
- * The three clocks, applied once: a request more than two working days on the
- * desk (office days), a follow-up more than three working days past its date
- * (counted against the person whose call it is, so his own leave is not
+ * The clocks, applied once: a follow-up more than three working days past its
+ * date (counted against the person whose call it is, so his own leave is not
  * lateness — S48, D141), and a lead nobody acknowledged in two (`lateLeads`).
+ *
+ * A request is not one of them any more (P14, 14B). It was dropped from this
+ * list until it had sat for two working days, and the founder's answer after a
+ * third round of use is that a request here is cleared the same day, so the
+ * delay hid exactly what he opens the screen for. Every request on the desk is
+ * carried now, from the morning it is raised; the two-day line survives as
+ * `late`, which is what colours a row and what counts against a person.
  */
 function ageLate(raw: RawLate, day: Day, nonWorking: NonWorking[]): LateWork {
   const requests: LateWork["requests"] = [];
   for (const row of raw.requests) {
     const days = workingDaysBetween(row.since, day, nonWorking);
-    if (days <= STUCK_REQUEST_WORKING_DAYS) continue;
     requests.push({
       id: row.id,
-      label: quotationLabel(row.number, row.revision),
+      label: row.label,
+      kind: row.kind,
       companyName: row.companyName,
       repName: row.repName,
       repId: row.repId,
       since: row.since,
       workingDaysWaiting: days,
+      late: days > STUCK_REQUEST_WORKING_DAYS,
     });
   }
 
@@ -767,6 +856,7 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
 
   return {
     requests: top(late.requests),
+    lateRequests: late.requests.filter((row) => row.late).length,
     // Due TODAY counts here, which is the difference between this band and the
     // stuck one, so nothing is filtered — only aged, against the person whose
     // call it is: his own leave is not lateness (S48, D141).
@@ -840,7 +930,11 @@ export async function stuckByPerson(day: Day = todayRiyadh()): Promise<Map<strin
   const late = ageLate(raw, day, nonWorking);
 
   const counts = new Map<string, number>();
-  for (const row of [...late.requests, ...late.followUps, ...late.leads]) {
+  // Only the requests past the line: every request on the desk is on the list
+  // now (P14, 14B), and a red ring on everybody who raised a quotation this
+  // morning is a ring on everybody, which is a ring that says nothing.
+  const lateRequests = late.requests.filter((row) => row.late);
+  for (const row of [...lateRequests, ...late.followUps, ...late.leads]) {
     counts.set(row.repId, (counts.get(row.repId) ?? 0) + 1);
   }
   return counts;

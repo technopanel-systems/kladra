@@ -12,7 +12,7 @@ import { formatDay } from "@/lib/dates";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { LEAD_LATE_WORKING_DAYS } from "@/lib/leads";
 import type { StateTone } from "@/lib/state-tone";
-import type { Stuck } from "@/lib/team";
+import { STUCK_REQUEST_WORKING_DAYS, type Stuck } from "@/lib/team";
 
 /**
  * What is waiting longer than it should be (SPEC D14).
@@ -21,7 +21,8 @@ import type { Stuck } from "@/lib/team";
  * telephone number and are waiting on him to say whether they are one customer
  * (P12-8), work due today on the floor of somebody who is on leave (D75), a
  * lead marketing handed somebody and nobody has picked up (§3, P12-7), a
- * quotation request more than two WORKING days on the coordinator's desk, a
+ * request on the coordinator's desk — a quotation to issue or a load to
+ * approve, from the morning it is raised (P14, 14B) — a
  * follow-up more than three days past its date, a company added more than
  * fourteen days ago and never contacted, and a customer somebody DID contact and
  * then dropped — no next step anywhere on him and nothing logged for a fortnight
@@ -157,16 +158,27 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     noteTone: "wait",
   }));
 
+  /*
+   * Everything on the coordinator's desk, from the morning it is raised (P14,
+   * 14B), quotations and loads in one list oldest first: the manager asked for
+   * the requests waiting, and until now he was shown only the ones that had sat
+   * two working days, which on a desk cleared the same day is an empty group
+   * under a heading promising the opposite.
+   *
+   * The two-day line is still drawn, in the one place it means something: a row
+   * past it is red, a row inside it amber, both saying how long in the same
+   * words. One clock, two states of it (D59).
+   */
   const requests: StuckRowData[] = stuck.requests.rows.map((row) => ({
-    key: row.id,
-    href: `/quotations?open=${row.id}`,
+    key: `${row.kind}-${row.id}`,
+    href: row.kind === "quotation" ? `/quotations?open=${row.id}` : `/dispatches?open=${row.id}`,
     label: row.label,
     companyName: row.companyName,
     face: face(row.id, row.companyName),
     who: row.repName,
     people: people(row.id, [row.repName]),
     note: t("team.waitingDays", { count: row.workingDaysWaiting }),
-    noteTone: "bad",
+    noteTone: row.late ? "bad" : "wait",
   }));
 
   const followUps: StuckRowData[] = stuck.followUps.rows.map((row) => ({
@@ -240,7 +252,10 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     stuck.requests.total > 0 && {
       key: "requests",
       title: t("team.stuckRequests"),
-      tone: "bad" as const,
+      // The card's dot is red only where something on it is actually late: a
+      // desk with this morning's work on it is waiting, not failing.
+      tone: stuck.lateRequests > 0 ? ("bad" as const) : ("wait" as const),
+      means: t("team.stuckRequestsGroupMeans", { days: STUCK_REQUEST_WORKING_DAYS }),
       rows: requests,
       more: stuck.requests.total - requests.length,
     },

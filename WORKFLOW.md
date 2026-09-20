@@ -224,6 +224,36 @@ below by number.
         Pushing is no longer held for Stage 3 (founder, 2026-09-15): forty-four commits on one machine were the
         risk, not an origin that has not been audited. `main` was pushed at cfa0de2 and is pushed after each green commit.
 
+- [ ] **P14 The third round of real use** — the founder's decisions of 2026-09-20 (SPEC §3, P14). Each
+      a slice a person could try, each green and committed and pushed, each ending with shot-looker,
+      arabic-reviewer, web-design-guidelines, the axe spec and the critic's pass. P13's Stage 3 follows
+      them rather than the other way round, so the stranger reads what the third round left.
+      - [x] 14.1 The manager sees a request the moment it is raised, not two working days later (14B),
+            and every other delay of that shape is asked whether waiting helps anyone — answers in SPEC §4.
+            **Done.** Every request on the coordinator's desk is on his awaiting card from the
+            morning it is raised, and a load waiting to be approved is one of them — it was on no
+            screen of his. The two-day line survives where it means something: what turns a row
+            and the card's dot red, and what counts on a person's row (a ring on everybody is a
+            ring that says nothing). The figure above the card is the whole desk and its caption
+            says how many are past the line, in the sentence her own screen carries.
+            `tests/awaiting.spec.ts`, both locales.
+      - [ ] 14.2 A marketing lead's source is Marketing, fixed and not chosen (14D).
+      - [ ] 14.3 Every board and wide table: the scrollbar clear of the card titles, drawn for both
+            themes instead of the browser's own (14G).
+      - [ ] 14.4 Edge: every popup scrolls, fixed at the cause, held by the Edge project (14F).
+      - [ ] 14.5 A paper may name more than one warehouse — the quotation, the dispatch, and the
+            difference flag that compares them.
+      - [ ] 14.6 SMAC registration is a tick: the rep's belief, the coordinator's authoritative answer
+            while she quotes, who ticked it and when, and her list of what is not registered yet.
+      - [ ] 14.7 A zero target earns no share of any paper unless the admin ticks it beside the target,
+            and that is said wherever credit is chosen.
+      - [ ] 14.8 Archiving is a request with a mandatory reason that the sales manager approves or
+            refuses, one path for everything archivable, pending in his awaiting section.
+      - [ ] 14.9 Holidays and leave as periods, a month read at a glance, and both that tab and Users
+            open to the sales manager with what he may not do written in SPEC §4 (14E).
+      - [ ] 14.10 Export everything, each from the screen it belongs to and carrying that screen's
+            filters, both languages, 04/Aug/2026 dates, numbers Excel reads as numbers, Arabic intact (14H).
+
 **Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
 on real screens and one chosen without a stop; the last group is a full re-audit and reshaping of the
@@ -250,8 +280,9 @@ suite is green (five failures, each fixed or green on rerun). Progress, decision
 `.claude/UX-RESTYLE-PROGRESS.md`. On 2026-09-15 the founder overruled holding the push for Stage 3 and `main` went to
 origin; before S12.10 come the quotation request's line editor (reported three times as a stock form) and an Arabic name
 for every demo person. S12.10 is done: the line editor rebuilt as items, the seed's names in Arabic, the whole manifest shot and read, what
-repeated fixed in the kit, and the before-beside-now sheets sent to the founder. **Stage 2 is over. Next: Stage 3 (Fable)**
-— `/audit`. Open for the founder: a fire rating's «Normal» has no Arabic (a lookup with one name column), and avatar tints
+repeated fixed in the kit, and the before-beside-now sheets sent to the founder. **Stage 2 is over**, and on 2026-09-20 the founder sent the third round of real
+use — ten decisions from the floor (SPEC §3, P14) — to be built before the audit, so P14 above comes first and
+Stage 3's `/audit` reads what it leaves. Open for the founder: a fire rating's «Normal» has no Arabic (a lookup with one name column), and avatar tints
 are a hash, so two colleagues can share one (DESIGN §1b). When the machine is
 short of memory the full suite runs as four `npx playwright test` calls over a quarter of `tests/*.spec.ts` each, a
 fresh test server for each, because one seventy-minute run was killed twice. The dev database is `seed:demo` on 0026; `seed:volume` after

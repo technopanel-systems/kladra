@@ -187,8 +187,16 @@ async function TeamWork() {
                 {stuck.requests.total}
               </span>
             ),
-            caption: t("team.stuckRequestsMeans", { days: STUCK_REQUEST_WORKING_DAYS }),
-            tone: stuck.requests.total > 0 ? "bad" : null,
+            /* What is on her desk, and how much of it is late — the same
+               sentence her own screen carries under the same figure (P14, 14B).
+               The count is red only for the late part: the figure itself is
+               this morning's work, and a red number on every morning with a
+               request in it is a colour that has stopped meaning anything. */
+            caption: t("team.stuckRequestsMeans", {
+              days: STUCK_REQUEST_WORKING_DAYS,
+              late: stuck.lateRequests,
+            }),
+            tone: stuck.lateRequests > 0 ? "bad" : null,
           },
           {
             label: t("team.stuckFollowUps"),
@@ -418,6 +426,7 @@ async function TeamPeople() {
           requests: t("team.stuckRequests"),
           followUps: t("team.stuckFollowUps"),
           leads: t("team.stuckLeads"),
+          days: STUCK_REQUEST_WORKING_DAYS,
         })}
       </p>
       <TeamTable members={month.members} stuck={stuckPeople} />
