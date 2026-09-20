@@ -286,8 +286,18 @@ below by number.
             month so the state is on the floor.
       - [ ] 14.8 Archiving is a request with a mandatory reason that the sales manager approves or
             refuses, one path for everything archivable, pending in his awaiting section.
-      - [ ] 14.9 Holidays and leave as periods, a month read at a glance, and both that tab and Users
+      - [x] 14.9 Holidays and leave as periods, a month read at a glance, and both that tab and Users
             open to the sales manager with what he may not do written in SPEC §4 (14E).
+            **Done.** No migration: a day off is still a row a day, because that is what pace,
+            the reminders and the daily report count — the screen groups them. Consecutive days
+            for one subject are one entry with its dates and its length in WORKING days, a
+            weekend or a company holiday inside it no break at all; it expands to its days and a
+            day inside it still goes on its own. Above the list is one month at a glance, its
+            month in the address, saying what the shade and the dot mean in words as well as in
+            colour. Both tabs open to the sales manager through one predicate that the page gate
+            and the action guard share; whose account he may not touch is the same predicate
+            again, asked of the held row at the moment of the write. D209 and D210 say what he
+            may not do.
       - [ ] 14.10 Export everything, each from the screen it belongs to and carrying that screen's
             filters, both languages, 04/Aug/2026 dates, numbers Excel reads as numbers, Arabic intact (14H).
 

@@ -136,11 +136,25 @@ const team: NavItem = {
   icon: UsersRound,
 };
 
+const users: NavItem = { href: "/admin/users", labelKey: "common.users", icon: Users };
+const holidays: NavItem = {
+  href: "/admin/holidays",
+  labelKey: "common.holidays",
+  icon: CalendarDays,
+};
+
+/**
+ * The two the sales manager shares with the admin (SPEC §3, P14; `runsTheOffice`
+ * in src/lib/authz.ts). They sit where they always sat in the admin's own list,
+ * so his rail did not move when the manager gained them.
+ */
+const officeItems: NavItem[] = [users, holidays];
+
 const adminItems: NavItem[] = [
-  { href: "/admin/users", labelKey: "common.users", icon: Users },
+  users,
   { href: "/admin/targets", labelKey: "common.targets", icon: Target },
   { href: "/admin/lookups", labelKey: "common.lookups", icon: ListTree },
-  { href: "/admin/holidays", labelKey: "common.holidays", icon: CalendarDays },
+  holidays,
   { href: "/admin/use", labelKey: "admin.use", icon: Activity },
   { href: "/admin/archive", labelKey: "admin.archive", icon: Archive },
   { href: "/admin/export", labelKey: "common.export", icon: Download },
@@ -152,6 +166,9 @@ const adminItems: NavItem[] = [
  * of seven went unswept for three phases (D99).
  */
 export const ADMIN_PATHS: readonly string[] = adminItems.map((item) => item.href);
+
+/** The subset a sales manager reaches too — the same list, read the same way. */
+export const OFFICE_PATHS: readonly string[] = officeItems.map((item) => item.href);
 
 export function navFor(role: Role): NavGroup[] {
   switch (role) {
@@ -177,8 +194,16 @@ export function navFor(role: Role): NavGroup[] {
     // already a band on his own screen. Last also keeps his phone bar the four
     // it was.
     case "manager":
+      // His work, then the office (SPEC §3, P14). The two tabs are a section of
+      // their own rather than eight more rows in one list, for the reason the
+      // admin's are: they are not customer work, and a heading is what says so
+      // before the labels do. He must be able to reach them without typing a
+      // URL, which is the whole of the founder's sentence — so they are in the
+      // rail, in the phone's menu sheet, and (being last) not on its bottom
+      // bar, which holds the four he presses all day.
       return [
         { items: [team, reports, companies, projects, quotations, dispatches, duplicates, leads] },
+        { labelKey: "shell.adminSection", items: officeItems },
       ];
     case "admin":
       return [

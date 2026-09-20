@@ -2402,3 +2402,20 @@ export const LEAVE_DAYS_AHEAD = 7;
  */
 export const AWAY_REP: RepKey = "saad";
 export const AWAY_WORKING_DAYS = 3;
+
+/*
+ * And Turki takes a fortnight next month.
+ *
+ * Leave is stored a row a day and read as a period (P14, D210), and the longest
+ * stretch this floor had was Saad's three days — so the screen that groups them
+ * had never grouped more than three, and the sentence the founder asked for
+ * ("thirty days off is one entry with its dates and its length") was a sentence
+ * about a state the demo never reached. Fourteen calendar days from the twelfth:
+ * two weekends inside it, and the company holiday on the twenty-third inside it
+ * as well, so the entry reads ten working days rather than fourteen and the one
+ * arithmetic nobody would check by hand is on a screen somebody has looked at
+ * (rules/data.md).
+ */
+export const FORTNIGHT_REP: RepKey = "turki";
+export const FORTNIGHT_START_DAY_OF_MONTH = 12;
+export const FORTNIGHT_CALENDAR_DAYS = 14;

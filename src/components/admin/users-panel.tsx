@@ -37,7 +37,7 @@ import {
 import { useRouter } from "@/i18n/navigation";
 import type { AdminUser } from "@/lib/admin";
 import { personNameFrom } from "@/lib/person-name";
-import { ROLES } from "@/lib/types";
+import type { Role } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /**
@@ -61,18 +61,34 @@ import { cn } from "@/lib/utils";
  *
  * The dialogs the menu opens are mounted once, here, and told whose row asked
  * (DESIGN §5: a list mounts one dialog and draws its rows as data).
+ *
+ * **Two readers since P14**, and the screen is not the same screen for both.
+ * The sales manager owns the reps, marketing and the coordinator; an admin's
+ * account and another manager's are out of his reach, and so is View as. Those
+ * rows keep their person, their address, their role and their count — he came
+ * here to read the list as much as to change it — and carry no menu, because a
+ * menu of three things the action would refuse is worse than no menu. The
+ * sentence under the heading says it once, at the top, instead of fourteen
+ * times down the rows (`mayManage`, decided in `src/lib/authz.ts`).
  */
 
 type Act = "edit" | "password" | "active";
 
+/** A row, with the one thing about it that depends on who is reading. */
+export type PanelUser = AdminUser & { mayManage: boolean };
+
 export function UsersPanel({
   title,
   users,
-  meId,
+  me,
+  roles,
 }: {
   title: string;
-  users: AdminUser[];
-  meId: string;
+  users: PanelUser[];
+  /** Who is reading: his own row is not offered View as, and his role decides the rest. */
+  me: { id: string; role: Role };
+  /** The roles this reader may hand out — the picker's whole list (P14, §4). */
+  roles: Role[];
 }) {
   const t = useTranslations();
   // This list is a screen like any other: it names people in the reader's
@@ -84,10 +100,10 @@ export function UsersPanel({
 
   // Whose row asked, kept while the dialog closes so its words do not blank
   // during the exit; and which dialog is open, if any.
-  const [subject, setSubject] = useState<AdminUser | null>(null);
+  const [subject, setSubject] = useState<PanelUser | null>(null);
   const [act, setAct] = useState<Act | null>(null);
   const remember = useOpener(act !== null);
-  const choose = (user: AdminUser, next: Act) => (opener: HTMLElement | null) => {
+  const choose = (user: PanelUser, next: Act) => (opener: HTMLElement | null) => {
     remember(opener);
     setSubject(user);
     setAct(next);
@@ -97,12 +113,13 @@ export function UsersPanel({
   };
 
   /** A row marks itself by id after an edit, by email after an add. */
-  const rowFlash = (user: AdminUser) => {
+  const rowFlash = (user: PanelUser) => {
     const byId = flashOf(user.id);
     return byId.className ? byId : flashOf(user.email);
   };
 
-  const menuFor = (user: AdminUser) => {
+  const menuFor = (user: PanelUser) => {
+    if (!user.mayManage) return null;
     const name = personNameFrom(user, locale);
     return (
       <RowMenu
@@ -118,9 +135,9 @@ export function UsersPanel({
                 icon: UserX,
                 destructive: true,
                 onSelect: choose(user, "active"),
-                // The action refuses the admin's own account; the menu says so
+                // The action refuses your own account; the menu says so
                 // first, where he would have pressed (D119).
-                refused: user.id === meId ? t("admin.cannotDeactivateSelf") : undefined,
+                refused: user.id === me.id ? t("admin.cannotDeactivateSelf") : undefined,
               }
             : { label: t("admin.activate"), icon: UserCheck, onSelect: choose(user, "active") }
         }
@@ -136,6 +153,7 @@ export function UsersPanel({
         <h1 className="text-xl font-semibold">{title}</h1>
         <UserDialog
           mode="create"
+          roles={roles}
           trigger={
             <Button variant="brand">
               <Plus aria-hidden="true" />
@@ -148,6 +166,13 @@ export function UsersPanel({
           }}
         />
       </div>
+
+      {/* Said once, at the top, where the absences down the list are explained
+          before they are met. The admin is told nothing, because nothing on
+          this screen is withheld from him. */}
+      {me.role === "admin" ? null : (
+        <p className="max-w-prose text-sm text-muted-foreground">{t("admin.usersOfficeHint")}</p>
+      )}
 
       {users.length === 0 ? (
         // Not a state this screen reaches — the admin reading it is on the
@@ -183,7 +208,7 @@ export function UsersPanel({
                       {t(`common.${user.role}`)} · {t("admin.companiesOnFloor", { count: user.companies })}
                     </span>
                     <span className="flex items-center gap-2">
-                      <ViewAs user={user} meId={meId} />
+                      <ViewAs user={user} me={me} />
                       <span className="ms-auto">{menuFor(user)}</span>
                     </span>
                   </div>
@@ -235,7 +260,7 @@ export function UsersPanel({
                       </TableCell>
                       <TableCell className="px-3 py-2">
                         <span className="flex items-center justify-end gap-2">
-                          <ViewAs user={user} meId={meId} />
+                          <ViewAs user={user} me={me} />
                           {menuFor(user)}
                         </span>
                       </TableCell>
@@ -253,6 +278,7 @@ export function UsersPanel({
           <UserDialog
             mode="edit"
             user={subject}
+            roles={roles}
             open={act === "edit"}
             onOpenChange={closeTo}
             onSaved={() => {
@@ -304,13 +330,18 @@ export function UsersPanel({
  * already looking at the list of people (P8.8) — the row's one visible action.
  * Not offered on his own row — that is not viewing, it is just working — and
  * not on a deactivated account, because it would be a way round deactivation.
+ *
+ * And the admin's alone, which the screen has to say for itself now that a
+ * sales manager reads it too (P14). `mayViewAs` is the admin and nobody else,
+ * and `startViewingAction` checks the REAL session against it; drawing the
+ * button for a manager would be a control that always fails (DESIGN §5).
  */
-function ViewAs({ user, meId }: { user: AdminUser; meId: string }) {
+function ViewAs({ user, me }: { user: AdminUser; me: { id: string; role: Role } }) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
 
-  if (!user.active || user.id === meId) return null;
+  if (me.role !== "admin" || !user.active || user.id === me.id) return null;
   const name = personNameFrom(user, locale);
 
   return (
@@ -449,6 +480,7 @@ function ResetPasswordDialog({
 function UserDialog({
   mode,
   user,
+  roles,
   trigger,
   open: held,
   onOpenChange,
@@ -456,6 +488,8 @@ function UserDialog({
 }: {
   mode: "create" | "edit";
   user?: AdminUser;
+  /** What the picker offers this reader (P14, §4). */
+  roles: Role[];
   trigger?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -482,6 +516,7 @@ function UserDialog({
         key={user?.id ?? "new"}
         mode={mode}
         user={user}
+        roles={roles}
         onClose={() => setOpen(false)}
         onSaved={onSaved}
       />
@@ -492,11 +527,13 @@ function UserDialog({
 function UserForm({
   mode,
   user,
+  roles,
   onClose,
   onSaved,
 }: {
   mode: "create" | "edit";
   user?: AdminUser;
+  roles: Role[];
   onClose: () => void;
   onSaved: (email: string) => void;
 }) {
@@ -526,7 +563,10 @@ function UserForm({
   const form = useRef<HTMLFormElement>(null);
   useFocusFirstError(form, answer);
 
-  const options = ROLES.map((value) => ({ value, label: t(`common.${value}`) }));
+  // Only what this reader may hand out: a sales manager makes reps, marketing
+  // and the coordinator, and a list that offered him Admin would be a question
+  // whose one honest answer is a refusal (P14, §4; `assignableRoles`).
+  const options = roles.map((value) => ({ value, label: t(`common.${value}`) }));
 
   return (
     <form ref={form} action={submit} noValidate className="flex min-h-0 flex-1 flex-col">

@@ -18,7 +18,16 @@ import {
   targets,
   users,
 } from "@/db/schema";
-import { addMonths, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
+import {
+  addDays,
+  addMonths,
+  diffDays,
+  firstOfMonth,
+  lastOfMonth,
+  todayRiyadh,
+  type Day,
+} from "@/lib/dates";
+import { isWeekend, isWorkingDay, type NonWorking } from "@/lib/workdays";
 import { LOOKUP_FIELDS, tableName, type LookupKind, type LookupRow } from "@/lib/lookup-kinds";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { CARRIES_METRES } from "@/lib/team";
@@ -341,6 +350,217 @@ export async function listNonWorking(from: Day): Promise<NonWorkingRow[]> {
     userName: row.userName ?? null,
     note: row.note ?? null,
   }));
+}
+
+/**
+ * One stretch of days off: a person's leave, or a company holiday (SPEC §3,
+ * P14: "thirty days off is one entry with its dates and its length, not thirty
+ * rows, expandable where somebody wants the days").
+ *
+ * The STORAGE does not change and must not: one row per day is what the
+ * working-day arithmetic counts, what the daily report marks a day off from and
+ * what the pace denominator skips. This is a reading of those rows, and it is
+ * the only one — the days are still in it, because removing one day out of the
+ * middle of a fortnight is a thing that happens and the entry has to allow it.
+ */
+export type NonWorkingPeriod = {
+  /** Stable across a redraw: the subject and the day it starts on. */
+  key: string;
+  kind: "holiday" | "leave";
+  userId: string | null;
+  /** Whose leave it is, in the reader's script; null for a company holiday. */
+  userName: string | null;
+  from: Day;
+  until: Day;
+  /**
+   * How many working days it actually takes out — what "11 working days" says.
+   * For one person's leave, a weekend inside it was never his to work and
+   * neither was a company holiday. For a company holiday, the office being shut
+   * IS the period, so only the weekend comes off.
+   */
+  workingDays: number;
+  /** What was typed on it — one note for the whole stretch, by construction. */
+  note: string | null;
+  /** Every day inside, oldest first — what the entry expands to. */
+  days: { id: number; day: Day; note: string | null }[];
+};
+
+/**
+ * A gap this long always has a working day in it, so the walk below stops
+ * rather than counting a fortnight of nothing. Two weekends and the days
+ * between them are nine; ten is the first gap no run of weekends can fill.
+ */
+const LONGEST_JOINABLE_GAP = 10;
+
+/**
+ * Do two days off belong to one stretch? Only if nothing workable stood between
+ * them — the weekend in the middle of a fortnight's leave, or a company holiday
+ * the person was already off for. `isWorkingDay` answers it; the arithmetic
+ * stays in `src/lib/workdays.ts`, which owns it (rules/data.md).
+ */
+function joins(previous: Day, next: Day, shut: NonWorking[]): boolean {
+  if (diffDays(previous, next) > LONGEST_JOINABLE_GAP) return false;
+  for (let day = addDays(previous, 1); day < next; day = addDays(day, 1)) {
+    if (isWorkingDay(day, shut)) return false;
+  }
+  return true;
+}
+
+function periodOf(run: NonWorkingRow[], shut: NonWorking[]): NonWorkingPeriod {
+  const first = run[0];
+  return {
+    key: `${first.kind}|${first.userId ?? ""}|${first.day}`,
+    kind: first.kind,
+    userId: first.userId,
+    userName: first.userName,
+    from: first.day,
+    until: run[run.length - 1].day,
+    workingDays: run.filter((row) =>
+      first.kind === "leave" ? isWorkingDay(row.day, shut) : !isWeekend(row.day),
+    ).length,
+    // One note for the whole stretch, because a stretch IS one note (below).
+    note: first.note ?? null,
+    days: run.map((row) => ({ id: row.id, day: row.day, note: row.note })),
+  };
+}
+
+/**
+ * The rows read as periods, soonest first.
+ *
+ * Grouped per subject — one person, or the company — because two people off on
+ * the same fortnight are two answers to "who is away", not one thirty-day
+ * block; and per note, because two closures that happen to touch are two
+ * closures. Pure, so `tests/leave.spec.ts` can hand it a known week rather than
+ * whichever one the suite happens to run in.
+ */
+export function nonWorkingPeriods(rows: NonWorkingRow[]): NonWorkingPeriod[] {
+  // The days the whole office is shut: what a person's leave runs THROUGH
+  // without breaking, and what it does not spend a working day on.
+  const shut: NonWorking[] = rows
+    .filter((row) => row.userId === null)
+    .map((row) => ({ day: row.day, userId: null }));
+
+  const bySubject = new Map<string, NonWorkingRow[]>();
+  for (const row of rows) {
+    const subject = row.userId ?? "";
+    const list = bySubject.get(subject);
+    if (list) list.push(row);
+    else bySubject.set(subject, [row]);
+  }
+
+  const periods: NonWorkingPeriod[] = [];
+  for (const list of bySubject.values()) {
+    list.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+    let run: NonWorkingRow[] = [];
+    for (const row of list) {
+      const last = run[run.length - 1];
+      // A stretch is one subject, unbroken, saying ONE thing. The note is the
+      // third of those because it is the only word on the entry: the National
+      // Day and the Founding Day fall a day apart, and folded into one entry
+      // they were a two-day closure with no name on it at all — both the words
+      // somebody typed gone from the screen, which is the one thing this list
+      // is for. Two notes are two entries.
+      const changed = last && (last.note ?? "") !== (row.note ?? "");
+      if (last && (changed || !joins(last.day, row.day, shut))) {
+        periods.push(periodOf(run, shut));
+        run = [];
+      }
+      run.push(row);
+    }
+    if (run.length > 0) periods.push(periodOf(run, shut));
+  }
+
+  // Soonest first, and where two start on one day the company's own closure
+  // reads before anybody's leave: "the office is shut" is the fact that
+  // explains the rest of the row.
+  return periods.sort((a, b) => {
+    if (a.from !== b.from) return a.from < b.from ? -1 : 1;
+    if (a.kind !== b.kind) return a.kind === "holiday" ? -1 : 1;
+    return (a.userName ?? "").localeCompare(b.userName ?? "");
+  });
+}
+
+/**
+ * The longest stretch of days off that can be written in one go, and therefore
+ * the longest one that can exist: longer than any leave anybody takes here, and
+ * short enough that a typo in the last day is refused rather than entered.
+ *
+ * It is also how far back the holidays screen reads before the month it shows,
+ * so a fortnight that began in August and runs into September reads as the one
+ * entry it is. Defined here rather than beside the action because two answers
+ * to "how long can a period be" would put the screen and the write out of step.
+ */
+export const LONGEST_PERIOD_DAYS = 62;
+
+/**
+ * How many months either side of this one the holidays strip will show.
+ *
+ * A year each way: Eid is set months ahead and last year's is worth checking
+ * against, and past that a month strip is a way of scrolling through an empty
+ * calendar. The bound is also what keeps the screen's one read a small one.
+ */
+export const STRIP_MONTHS = 12;
+
+/** The month the strip is showing, from the address; this one when it says nothing. */
+export function stripMonth(value: unknown, today: Day = todayRiyadh()): Day {
+  const now = firstOfMonth(today);
+  if (typeof value !== "string" || !/^\d{4}-\d{2}$/.test(value)) return now;
+  const wanted = `${value}-01`;
+  const earliest = addMonths(now, -STRIP_MONTHS);
+  const latest = addMonths(now, STRIP_MONTHS);
+  return wanted < earliest || wanted > latest ? now : wanted;
+}
+
+/**
+ * The months the arrows lead to, or null at the edge — the screen draws no
+ * arrow rather than a dead one (DESIGN §5).
+ */
+export function stripSteps(
+  month: Day,
+  today: Day = todayRiyadh(),
+): { back: Day | null; next: Day | null } {
+  const now = firstOfMonth(today);
+  const back = addMonths(month, -1);
+  const next = addMonths(month, 1);
+  return {
+    back: back < addMonths(now, -STRIP_MONTHS) ? null : back,
+    next: next > addMonths(now, STRIP_MONTHS) ? null : next,
+  };
+}
+
+/** What one day of the month strip is marked with. */
+export type DayMark = {
+  /** The office is shut — a company holiday, with its note where it has one. */
+  shut: boolean;
+  note: string | null;
+  /** Whose own leave falls on it, in the reader's script. */
+  away: { id: string; name: string }[];
+};
+
+/**
+ * The shown month as marks by day, for the strip at the top of the screen.
+ *
+ * Built from the same rows the list below is built from, so the two can never
+ * disagree about a day (rules/data.md: one definition per figure).
+ */
+export function monthMarks(month: Day, rows: NonWorkingRow[]): Record<Day, DayMark> {
+  const from = firstOfMonth(month);
+  const to = lastOfMonth(month);
+  const marks: Record<Day, DayMark> = {};
+  for (const row of rows) {
+    if (row.day < from || row.day > to) continue;
+    const mark = (marks[row.day] ??= { shut: false, note: null, away: [] });
+    if (row.userId === null) {
+      mark.shut = true;
+      mark.note = row.note;
+    } else if (!mark.away.some((person) => person.id === row.userId)) {
+      mark.away.push({ id: row.userId, name: row.userName ?? "" });
+    }
+  }
+  for (const mark of Object.values(marks)) {
+    mark.away.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return marks;
 }
 
 // ---- the archive (D24) -------------------------------------------------------

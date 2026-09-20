@@ -70,6 +70,9 @@ import {
   AWAY_WORKING_DAYS,
   HOLIDAY_DAY_OF_MONTH,
   HOLIDAY_NOTE,
+  FORTNIGHT_CALENDAR_DAYS,
+  FORTNIGHT_REP,
+  FORTNIGHT_START_DAY_OF_MONTH,
   LEAVE_DAYS_AHEAD,
   LEAVE_NOTE,
   NOTIFICATIONS,
@@ -2076,6 +2079,15 @@ async function seedNonWorkingDays(userIds: Map<string, string>): Promise<void> {
     if (!isWeekend(d)) away.push(d);
   }
 
+  // Turki's fortnight next month, written the way the form writes one: every
+  // calendar day of it, weekends and the company holiday included, so the
+  // screen has a real period to group and a real figure to work out (D210).
+  const fortnightFrom =
+    nextMonth.slice(0, 8) + String(FORTNIGHT_START_DAY_OF_MONTH).padStart(2, "0");
+  const fortnight: Day[] = Array.from({ length: FORTNIGHT_CALENDAR_DAYS }, (_, i) =>
+    addDays(fortnightFrom, i),
+  );
+
   await db.transaction(async (tx) => {
     await tx.insert(nonWorkingDays).values([
       { day: holiday, kind: "holiday" as const, userId: null, note: HOLIDAY_NOTE },
@@ -2084,6 +2096,12 @@ async function seedNonWorkingDays(userIds: Map<string, string>): Promise<void> {
         day,
         kind: "leave" as const,
         userId: must(userIds, AWAY_REP, "user"),
+        note: LEAVE_NOTE,
+      })),
+      ...fortnight.map((day) => ({
+        day,
+        kind: "leave" as const,
+        userId: must(userIds, FORTNIGHT_REP, "user"),
         note: LEAVE_NOTE,
       })),
     ]);

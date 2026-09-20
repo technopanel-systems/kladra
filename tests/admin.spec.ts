@@ -395,6 +395,32 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     const leave = page.locator('li[data-kind="leave"]').first();
     await expect(leave.locator('[data-slot="avatar"]')).toHaveCount(1);
 
+    // And the list is ENTRIES, not days (P14: "thirty days off is one entry").
+    // Read against the table rather than against a number typed here: whatever
+    // the seed and this walk have put on the calendar, the screen draws fewer
+    // rows than there are days, because every stretch is folded into one.
+    const days = await one<{ n: number }>(
+      `select count(*)::int as n from non_working_days
+        where day >= date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)`,
+    );
+    const entries = await page.locator("li[data-kind]").count();
+    expect(entries, "the calendar is still drawn a day at a time").toBeLessThan(days.n);
+
+    // Saad's own stretch is one of them, saying how many working days it costs.
+    const saad = await one<{ id: string; n: number }>(
+      `select users.id,
+              (select count(*)::int from non_working_days
+                where non_working_days.user_id = users.id
+                  and non_working_days.day >= date_trunc('month', (now() at time zone 'Asia/Riyadh')::date)) as n
+         from users where users.email = 'saad@technopanel.com.sa'`,
+    );
+    const his = page
+      .locator('li[data-kind="leave"]')
+      .filter({ hasText: await personName("saad@technopanel.com.sa", locale) })
+      .first();
+    await expect(his).toHaveAttribute("data-days", String(saad.n));
+    await expect(his).toContainText(t("admin.workingDaysOff", { count: saad.n }));
+
     await page.goto(`/${locale}/team`);
     await expect(page.getByRole("heading", { name: t("shell.team") })).toBeVisible(COLD);
     const after = paceOf(await row(page, faisal.name).locator("[data-slot='figure-pace']").innerText());

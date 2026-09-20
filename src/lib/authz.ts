@@ -9,7 +9,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { seesAllRoles } from "./floor";
 import { shouldView, VIEW_AS_COOKIE } from "./view-as";
-import type { Role, SessionUser } from "./types";
+import { ROLES, type Role, type SessionUser } from "./types";
 
 /**
  * The one authorization layer (rules/data.md). Every server component, route
@@ -116,18 +116,88 @@ export async function requireUser(): Promise<SessionUser> {
 }
 
 /**
- * The admin's screens, and only his (SPEC §3: admin only). Anybody else who
- * types the URL is put back on his own home — not an error page, a floor
- * (DESIGN §5). Seven pages carried this as two hand-copied lines each, and the
- * test that sweeps them was a third copy of the list that had missed one (D99).
+ * A screen this role may not open: back to his own home — not an error page, a
+ * floor (DESIGN §5). Seven pages carried the test as two hand-copied lines
+ * each, and the spec that swept them was a third copy of the list that had
+ * missed one (D99). It is one sentence per gate below, and nothing anywhere
+ * else.
  */
-export async function requireAdmin(): Promise<SessionUser> {
+async function requireRole(mayOpen: (role: Role) => boolean): Promise<SessionUser> {
   const user = await requireUser();
-  if (user.role !== "admin") {
+  if (!mayOpen(user.role)) {
     const locale = await getLocale();
     redirect({ href: homeFor(user.role), locale });
   }
   return user;
+}
+
+/** The admin's screens, and only his (SPEC §3): targets, lookups, use, archive, export. */
+export async function requireAdmin(): Promise<SessionUser> {
+  return requireRole((role) => role === "admin");
+}
+
+/**
+ * Who runs the office, as against who runs the app (SPEC §3, P14: "the holidays
+ * and leave tab and the users tab belong to the sales manager as well as the
+ * admin").
+ *
+ * Those two tabs are not administration of the software, they are the running
+ * of a fourteen-person business: who works here, and which days they are here.
+ * Abdulrahman hires the rep, signs his leave and is asked on a Tuesday when
+ * Saad is back — and until P14 the only person in the building who could answer
+ * any of it from Kladra was Jerom, who does not sell. The other five admin tabs
+ * stay the admin's: a target is the figure a person is measured against, a
+ * lookup changes every dropdown in the app, and the archive, the use screen and
+ * the export are the app itself.
+ *
+ * One predicate and one gate, because the alternative is the copied role list
+ * at seven pages that D99 already caught once.
+ */
+export function runsTheOffice(role: Role): boolean {
+  return role === "admin" || role === "manager";
+}
+
+/**
+ * The same sentence as a list, for the action guards, which take roles rather
+ * than a predicate. Derived from `ROLES` and never typed out beside it: a hand
+ * list next to a predicate is the drift that made `mayTouch` a bug (D42).
+ */
+export const OFFICE_ROLES: Role[] = ROLES.filter(runsTheOffice);
+
+/** Users, and Holidays and leave: the admin's, and the sales manager's (P14). */
+export async function requireOffice(): Promise<SessionUser> {
+  return requireRole(runsTheOffice);
+}
+
+/**
+ * May this person create, edit, deactivate or reset the password of an account
+ * in this role? (SPEC §4, P14, from the founder's "decide what he may not do".)
+ *
+ * The admin, anybody. The sales manager, anybody BELOW him — a rep, marketing,
+ * the coordinator — and nobody at his own level or above it: not the admin, not
+ * another sales manager, and not his own account either, which is level with
+ * his own by the same arithmetic and needs no exception written for it.
+ *
+ * That the answer is `runsTheOffice` again is not a coincidence worth hiding:
+ * the people who can change accounts are exactly the people whose accounts a
+ * manager may not change. Written as one predicate, it cannot drift into two.
+ *
+ * Nothing else on the two tabs is narrowed. Holidays and leave are his
+ * outright, the admin's own leave included — a day off is not a power, it is a
+ * day the office does not have him.
+ */
+export function mayActOnUser(actor: Role, subject: Role): boolean {
+  if (actor === "admin") return true;
+  return actor === "manager" && !runsTheOffice(subject);
+}
+
+/**
+ * Which roles this person may hand out, derived from the sentence above rather
+ * than listed beside it: a manager may not make an admin or a second manager,
+ * because he may not act on one either.
+ */
+export function assignableRoles(actor: Role): Role[] {
+  return ROLES.filter((role) => mayActOnUser(actor, role));
 }
 
 /**

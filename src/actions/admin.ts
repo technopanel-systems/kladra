@@ -33,28 +33,51 @@ import {
   targets,
   users,
 } from "@/db/schema";
-import { ARCHIVE_KINDS } from "@/lib/admin";
+import { ARCHIVE_KINDS, LONGEST_PERIOD_DAYS } from "@/lib/admin";
 import { holdsFloor } from "@/lib/floor";
 import { isLookupKind, LOOKUP_FIELDS, tableName } from "@/lib/lookup-kinds";
-import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
+import { mayActOnUser, NotAllowed, OFFICE_ROLES, refusalKey, requireActor } from "@/lib/authz";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { addDays, diffDays, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
-import type { ActionResult, SessionUser } from "@/lib/types";
+import type { ActionResult, Role, SessionUser } from "@/lib/types";
 
 /** bcrypt cost. The same one the seed uses, so a reset and a seed match. */
 const BCRYPT_ROUNDS = 10;
 
-async function guard<T>(
+async function guarded<T>(
+  roles: Role[],
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
 ): Promise<ActionResult<T>> {
   const t = await getTranslations("common");
   try {
-    return await run(await requireActor("admin"));
+    return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     console.error("admin action failed", error);
     return { ok: false, error: t("somethingWrong") };
   }
+}
+
+/** Targets, lookups and the archive: the admin's alone (SPEC §3). */
+async function guard<T>(
+  run: (actor: SessionUser) => Promise<ActionResult<T>>,
+): Promise<ActionResult<T>> {
+  return guarded(["admin"], run);
+}
+
+/**
+ * Users, and holidays and leave: the admin's, and the sales manager's (SPEC §3,
+ * P14). The roles come from `OFFICE_ROLES`, which is `runsTheOffice` filtered
+ * over `ROLES` — the same sentence the pages are gated by, not a second list.
+ *
+ * Getting through this door is not the whole answer for an account: WHOSE
+ * account it is decides too, and that is `mayActOnUser`, asked inside each of
+ * the four below on the row as it stands in the database.
+ */
+async function officeGuard<T>(
+  run: (actor: SessionUser) => Promise<ActionResult<T>>,
+): Promise<ActionResult<T>> {
+  return guarded(OFFICE_ROLES, run);
 }
 
 function revalidateAdmin(): void {
@@ -82,6 +105,36 @@ async function record(
 
 const roleSchema = z.enum(["rep", "marketing", "coordinator", "manager", "admin"]);
 
+/**
+ * The account about to be changed, held until this transaction commits, with
+ * the role it has NOW rather than the one the form thought it had.
+ *
+ * `FOR UPDATE` and not a plain read (rules/data.md, D85): the manager may act
+ * on a rep and not on a manager, so a promotion committing between the check
+ * and the write would let the second half of it through on the strength of the
+ * first half's answer.
+ */
+async function heldUser(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  id: string,
+): Promise<{ role: Role } | null> {
+  const [row] = await tx
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, id))
+    .for("update")
+    .limit(1);
+  return row ? { role: row.role as Role } : null;
+}
+
+/** What a refused write on somebody else's account comes back saying (P14, §4). */
+type UserOutcome = "ok" | "gone" | "refused";
+
+async function answerFor(outcome: Exclude<UserOutcome, "ok">): Promise<ActionResult<undefined>> {
+  const ta = await getTranslations("admin");
+  return { ok: false, error: outcome === "gone" ? ta("notFound") : ta("accountIsAdmins") };
+}
+
 /** Long enough to be worth having; nothing else, because a rule nobody can meet
  *  is a rule everybody writes on a sticky note. */
 const passwordSchema = z.string().min(8).max(200);
@@ -91,7 +144,7 @@ export async function createUserAction(
   _prev: ActionResult<undefined> | null,
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
-  return guard(async (actor) => {
+  return officeGuard(async (actor) => {
     const tc = await getTranslations("common");
     const ta = await getTranslations("admin");
 
@@ -118,6 +171,14 @@ export async function createUserAction(
         error: tc("invalid"),
         fieldErrors: fieldErrorsOf(parsed.error, tc("required"), tc("invalid")),
       };
+    }
+
+    // A sales manager adds a rep, marketing or the coordinator; an admin or a
+    // second manager is the admin's to create (P14, §4). The picker offers him
+    // only the three, and this is the same sentence behind it — the form is
+    // four fields and a hand-made POST is four fields too.
+    if (!mayActOnUser(actor.role, parsed.data.role)) {
+      return { ok: false, error: ta("roleIsAdmins"), fieldErrors: { role: ta("roleIsAdmins") } };
     }
 
     const [existing] = await db
@@ -158,7 +219,7 @@ export async function updateUserAction(
   _prev: ActionResult<undefined> | null,
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
-  return guard(async (actor) => {
+  return officeGuard(async (actor) => {
     const tc = await getTranslations("common");
     const ta = await getTranslations("admin");
 
@@ -187,6 +248,13 @@ export async function updateUserAction(
       };
     }
 
+    // The role he is handing out, before anything is read (P14, §4). Where the
+    // account itself is out of his reach the answer comes from the held row
+    // below, because the form's word for whose account this is proves nothing.
+    if (!mayActOnUser(actor.role, parsed.data.role)) {
+      return { ok: false, error: ta("roleIsAdmins"), fieldErrors: { role: ta("roleIsAdmins") } };
+    }
+
     const [clash] = await db
       .select({ id: users.id })
       .from(users)
@@ -210,7 +278,11 @@ export async function updateUserAction(
       }
     }
 
-    const changed = await db.transaction(async (tx) => {
+    const outcome = await db.transaction(async (tx): Promise<UserOutcome> => {
+      const held = await heldUser(tx, parsed.data.userId);
+      if (!held) return "gone";
+      if (!mayActOnUser(actor.role, held.role)) return "refused";
+
       const rows = await tx
         .update(users)
         .set({
@@ -223,14 +295,14 @@ export async function updateUserAction(
         .returning({ id: users.id });
       // An audit row for a change that did not happen is a lie in the log (D87):
       // the row is written only when the database handed one back.
-      if (rows.length === 0) return false;
+      if (rows.length === 0) return "gone";
       await record(tx, actor.id, "user.update", "user", parsed.data.userId, {
         email: parsed.data.email,
         role: parsed.data.role,
       });
-      return true;
+      return "ok";
     });
-    if (!changed) return { ok: false, error: ta("notFound") };
+    if (outcome !== "ok") return answerFor(outcome);
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -248,7 +320,7 @@ export async function resetPasswordAction(
   _prev: ActionResult<undefined> | null,
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
-  return guard(async (actor) => {
+  return officeGuard(async (actor) => {
     const ta = await getTranslations("admin");
 
     const parsed = z
@@ -267,19 +339,26 @@ export async function resetPasswordAction(
 
     const passwordHash = await hash(parsed.data.password, BCRYPT_ROUNDS);
 
-    const changed = await db.transaction(async (tx) => {
+    const outcome = await db.transaction(async (tx): Promise<UserOutcome> => {
+      const held = await heldUser(tx, parsed.data.userId);
+      if (!held) return "gone";
+      // A rep's password is the manager's to reset; an admin's or another
+      // manager's is not (P14, §4) — otherwise the line above it would be a
+      // line anybody could walk round in one press.
+      if (!mayActOnUser(actor.role, held.role)) return "refused";
+
       const rows = await tx
         .update(users)
         .set({ passwordHash })
         .where(eq(users.id, parsed.data.userId))
         .returning({ id: users.id });
-      if (rows.length === 0) return false;
+      if (rows.length === 0) return "gone";
       await tx.delete(sessions).where(eq(sessions.userId, parsed.data.userId));
       // The password itself is never in the log, only that it changed (S55).
       await record(tx, actor.id, "user.resetPassword", "user", parsed.data.userId, {});
-      return true;
+      return "ok";
     });
-    if (!changed) return { ok: false, error: ta("notFound") };
+    if (outcome !== "ok") return answerFor(outcome);
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -297,7 +376,7 @@ export async function setUserActiveAction(
   _prev: ActionResult<undefined> | null,
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
-  return guard(async (actor) => {
+  return officeGuard(async (actor) => {
     const tc = await getTranslations("common");
     const ta = await getTranslations("admin");
 
@@ -311,18 +390,22 @@ export async function setUserActiveAction(
       return { ok: false, error: ta("cannotDeactivateSelf") };
     }
 
-    const changed = await db.transaction(async (tx) => {
+    const outcome = await db.transaction(async (tx): Promise<UserOutcome> => {
+      const held = await heldUser(tx, parsed.data.userId);
+      if (!held) return "gone";
+      if (!mayActOnUser(actor.role, held.role)) return "refused";
+
       const rows = await tx
         .update(users)
         .set({ active })
         .where(eq(users.id, parsed.data.userId))
         .returning({ id: users.id });
-      if (rows.length === 0) return false;
+      if (rows.length === 0) return "gone";
       if (!active) await tx.delete(sessions).where(eq(sessions.userId, parsed.data.userId));
       await record(tx, actor.id, active ? "user.activate" : "user.deactivate", "user", parsed.data.userId, {});
-      return true;
+      return "ok";
     });
-    if (!changed) return { ok: false, error: ta("notFound") };
+    if (outcome !== "ok") return answerFor(outcome);
 
     revalidateAdmin();
     return { ok: true, data: undefined };
@@ -570,14 +653,18 @@ export async function setLookupActiveAction(
  * the only difference is whether a user is named. A rep back from two weeks off
  * must not be told he is behind.
  */
-/** Longer than any leave a person takes; a typo in the last day is refused, not written. */
-const MAX_SPAN_DAYS = 62;
+/**
+ * Longer than any leave a person takes; a typo in the last day is refused, not
+ * written. One number, in `src/lib/admin.ts`, because the screen reads back
+ * that far to draw a period whole and the two have to agree.
+ */
+const MAX_SPAN_DAYS = LONGEST_PERIOD_DAYS;
 
 export async function addNonWorkingAction(
   _prev: ActionResult<{ added: number }> | null,
   formData: FormData,
 ): Promise<ActionResult<{ added: number }>> {
-  return guard(async (actor) => {
+  return officeGuard(async (actor) => {
     const tc = await getTranslations("common");
 
     const dayShape = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -658,33 +745,49 @@ export async function addNonWorkingAction(
 }
 
 /**
- * Takes a day back off the calendar.
+ * Takes days back off the calendar — one, or a whole period at once (P14).
  *
  * The one delete in this file, and it is right: a holiday entered on the wrong
  * date is not history, it is a typo, and leaving it would quietly shorten
  * somebody's month for ever.
+ *
+ * One action for both, because it is one act: the screen now reads a stretch of
+ * days as an entry, so Remove on the entry removes the stretch and Remove on a
+ * day inside it removes the day. A second action would be a second answer to
+ * "what does removing mean". The trail keeps one row per DAY either way, since
+ * the record is the day (D104) and a span is however many of them there were —
+ * the same shape the add writes.
  */
 export async function removeNonWorkingAction(
   _prev: ActionResult<undefined> | null,
   formData: FormData,
 ): Promise<ActionResult<undefined>> {
-  return guard(async (actor) => {
+  return officeGuard(async (actor) => {
     const tc = await getTranslations("common");
     const ta = await getTranslations("admin");
 
-    const parsed = z.coerce.number().int().positive().safeParse(field(formData, "id"));
+    // A period is at most `MAX_SPAN_DAYS` long, because that is the longest one
+    // that can be written; a list longer than that did not come from a screen.
+    const parsed = z
+      .array(z.coerce.number().int().positive())
+      .min(1)
+      .max(MAX_SPAN_DAYS)
+      .safeParse((field(formData, "ids") ?? "").split(",").filter(Boolean));
     if (!parsed.success) return { ok: false, error: tc("invalid") };
 
-    const changed = await db.transaction(async (tx) => {
+    const removed = await db.transaction(async (tx) => {
       const rows = await tx
         .delete(nonWorkingDays)
-        .where(eq(nonWorkingDays.id, parsed.data))
-        .returning({ id: nonWorkingDays.id });
-      if (rows.length === 0) return false;
-      await record(tx, actor.id, "nonWorking.remove", "nonWorkingDay", String(parsed.data), {});
-      return true;
+        .where(inArray(nonWorkingDays.id, parsed.data))
+        .returning({ id: nonWorkingDays.id, day: nonWorkingDays.day });
+      for (const row of rows) {
+        await record(tx, actor.id, "nonWorking.remove", "nonWorkingDay", String(row.id), {
+          day: row.day,
+        });
+      }
+      return rows.length;
     });
-    if (!changed) return { ok: false, error: ta("notFound") };
+    if (removed === 0) return { ok: false, error: ta("notFound") };
 
     revalidateAdmin();
     return { ok: true, data: undefined };

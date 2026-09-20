@@ -516,7 +516,12 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "thirty days off is one entry with its dates and its length",
-    owed: "14.9",
+    tests: [
+      "a fortnight off is one entry with its dates and its length, and the days are inside it",
+      "the sales manager reaches the office tabs from his rail, and nothing else of the admin's",
+      "the sales manager works a rep's account and is offered nothing on the admin's",
+      "an account that became a manager while the screen was open is refused at the write",
+    ],
   },
   {
     says: "A popup must scroll in Microsoft Edge",

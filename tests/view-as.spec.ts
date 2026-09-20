@@ -197,7 +197,8 @@ test("a manager is offered no way to become somebody else", async ({ page, local
   await login(page, locale, "abdulrahman");
   await page.goto(`/${locale}/admin/users`);
 
-  // Not his screen at all — the admin section is the admin's (D15).
-  await expect(page).toHaveURL(new RegExp(`/${locale}/team`), COLD);
+  // His screen since P14 — who works here is the sales manager's to run — and
+  // still no way on it to become anybody (D15, and `mayViewAs`).
+  await expect(page.getByRole("heading", { name: t("common.users") })).toBeVisible(COLD);
   await expect(page.getByRole("button", { name: t("viewAs.start") })).toHaveCount(0);
 });
