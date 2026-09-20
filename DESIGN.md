@@ -308,6 +308,16 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   new value brought the screen down when it was opened again. `translate="no"` sits on `<html>` in
   the root layout and nowhere else, so it covers every popup rendered into `<body>`. A searchable
   picker's rows are keyed so that no row's value is empty, because cmdk never highlights one.
+- **A wheel inside a popup belongs to the popup** (P14, 14F). A dialog locks the page's
+  scrolling, and the lock cancels any wheel that did not start inside the dialog's own subtree —
+  so a popover, which is portalled to `<body>`, opened a list of two hundred countries that the
+  wheel did nothing to. `PopoverContent` stops the event at itself, by a listener put on the node
+  through a CALLBACK ref: an object ref is still empty when the effect that would use it runs,
+  behind Radix's own mounting, and the listener was never attached. Nothing is prevented — the
+  event is simply not the page's business. The kit's Select needs none of this: Radix locks
+  scrolling for it, and the innermost lock is the one that lets its own list scroll. Every popup
+  list carries `overscroll-behavior: contain` too, so a wheel that reaches the end of a list does
+  not go on to move the page under it.
 - **Direction follows the first strong character, never a forced `ltr`.** A formatted date
   carries a month NAME, so `dir="ltr"` around `04/سبتمبر/2026` puts the month in its own
   right-to-left run and reclassifies the year after it as an Arabic number; the two swap and

@@ -338,9 +338,50 @@
 @utility scroller {
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* The same rail a wide surface has (P14, 14G): one bar in this app, drawn by
+     us, in both themes. */
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
   & > * {
     flex-shrink: 0;
   }
+}
+
+/*
+ * A popup scrolls its own list, and nothing else (P14, 14F).
+ *
+ * The founder's third round: "dropdowns open now but scroll badly". Two causes,
+ * both of them a second scroller nobody meant to make.
+ *
+ * Radix's select viewport carries `overflow: hidden auto` inline AND injects a
+ * rule that hides its scrollbar, so the list scrolled with no bar on it; the
+ * kit's own `SelectContent` then added `overflow-y-auto` of its own, and the
+ * wheel over a long list moved the inner one until it bottomed out and the
+ * outer one after that — while item-aligned mode was moving the whole popup on
+ * the same scroll events. The Content clips now and the viewport is the one
+ * scroller, with its bar given back.
+ *
+ * The attribute is doubled on purpose. Radix injects its `scrollbar-width: none`
+ * into the head at runtime, which is later in the cascade than this file at the
+ * same specificity, so a single `[data-radix-select-viewport]` loses the tie.
+ *
+ * `overscroll-behavior: contain` on every popup list is the other half: without
+ * it a wheel that reaches the end of the list goes on to scroll the page behind
+ * it, which on a popup pinned to its trigger drags the list out from under the
+ * pointer.
+ */
+[data-radix-select-viewport][data-radix-select-viewport] {
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+[data-radix-select-viewport][data-radix-select-viewport]::-webkit-scrollbar {
+  display: block;
+  inline-size: 10px;
+}
+[data-radix-select-viewport][data-radix-select-viewport]::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar);
+  border-radius: 999px;
 }
 
 /*

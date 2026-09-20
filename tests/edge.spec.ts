@@ -356,6 +356,87 @@ for (const locale of LOCALES) {
       expect(await everyKind(page, page.locator("main"), true)).toContain("picker");
     });
 
+    test("a popup's list scrolls in Edge, and it is the only thing that scrolls", async ({
+      page,
+    }) => {
+      test.setTimeout(WALK);
+      const t = await signIn(page, locale, "faisal");
+
+      // The founder's third round (P14, 14F): "dropdowns open now but scroll
+      // badly". Two second scrollers nobody meant to make — Radix's select
+      // viewport scrolling under a `SelectContent` that also scrolled, and a
+      // list with no `overscroll-behavior`, which hands the wheel to the page
+      // behind the moment it reaches the end.
+      await open(page, t, locale, "/companies");
+      await page.getByRole("button", { name: t("forms.addCompany"), exact: true }).first().click();
+      const form = newestDialog(page);
+      await expect(form).toBeVisible();
+      await expect(form.locator('[data-slot="skeleton"]')).toHaveCount(0, { timeout: 15_000 });
+
+      // The country picker: every country there is, which is the one list in
+      // the app that is longer than any screen.
+      const picker = form.getByRole("combobox", { name: t("common.country") });
+      await picker.click();
+      const list = page.locator('[data-slot="command-list"]').last();
+      await expect(list).toBeVisible();
+      await expect
+        .poll(() => list.evaluate((node) => node.scrollHeight - node.clientHeight))
+        .toBeGreaterThan(40);
+
+      // It scrolls under the wheel...
+      const box = (await list.boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.wheel(0, 400);
+      await expect.poll(() => list.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+
+      // ...and nothing else does: the wheel stays in the list at its end
+      // (`overscroll-behavior: contain`), and the bar on it is ours in the
+      // theme's colours rather than the browser's own.
+      const held = await list.evaluate((node) => getComputedStyle(node).overscrollBehaviorY);
+      expect(held, "the wheel runs on into the page behind the list").toBe("contain");
+      const rail = await list.evaluate((node) => getComputedStyle(node).scrollbarColor);
+      expect(rail, "the list wears the browser's own scrollbar").not.toBe("auto");
+      await page.keyboard.press("Escape");
+
+      // And a Select has ONE scroller: Radix's viewport, not the popup around
+      // it as well. Two of them is what "scrolls badly" was. The report popup
+      // is where the kit's Select lives on a rep's screens (the outcome, and
+      // what happened).
+      await open(page, t, locale, "/day");
+      await page.locator('[data-slot="add-report"]').click();
+      const report = newestDialog(page);
+      await expect(report).toBeVisible();
+      await expect(report.locator('[data-slot="skeleton"]')).toHaveCount(0, { timeout: 15_000 });
+      // The outcome and what happened arrive once the popup knows whose customer
+      // this is, so the customer is chosen first (as `everyKind` discovers).
+      const customer = await firstOf(report, "picker");
+      expect(customer, "the report popup has no customer picker").not.toBeNull();
+      await customer!.click();
+      await page.locator('[role="option"]:not([data-disabled="true"])').first().click();
+      await expect(report.locator('[data-slot="skeleton"]')).toHaveCount(0, { timeout: 15_000 });
+
+      const trigger = await firstOf(report, "select");
+      expect(trigger, "no Select in the report popup to prove this on").not.toBeNull();
+      await trigger!.click();
+      const popup = await popupOf(page, trigger!);
+      await expect(popup).toBeVisible();
+      const scrolls = await popup.evaluate((node) => {
+        const viewport = node.querySelector("[data-radix-select-viewport]");
+        return {
+          outer: getComputedStyle(node).overflowY,
+          inner: viewport ? getComputedStyle(viewport).overflowY : null,
+          held: viewport ? getComputedStyle(viewport).overscrollBehaviorY : null,
+        };
+      });
+      expect(scrolls.outer, "the popup scrolls as well as its list").toBe("hidden");
+      expect(scrolls.inner, "the list inside the popup does not scroll").toBe("auto");
+      expect(scrolls.held, "the wheel runs on out of the list").toBe("contain");
+      // Left open: this walk proves scrolling, and the next screen it opens is
+      // what closes the popup. Pressing Escape out of a form somebody has
+      // touched is the back-guard's question, which is another spec's.
+    });
+
+
     test("every popup on Rawan's screens opens in Edge by click and by keyboard, and takes a choice", async ({
       page,
     }) => {

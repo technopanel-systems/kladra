@@ -509,7 +509,7 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "A popup must scroll in Microsoft Edge",
-    owed: "14.4",
+    tests: ["a popup's list scrolls in Edge, and it is the only thing that scrolls"],
   },
   {
     says: "A board's horizontal scrollbar must not sit on the card titles",

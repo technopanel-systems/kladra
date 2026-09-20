@@ -253,7 +253,14 @@ below by number.
             it. The rail itself is drawn: thin, round, in the theme's tokens, with
             `scrollbar-color` so Windows stops fading it out. Every board, every wide table and
             the chip lines take it from one utility.
-      - [ ] 14.4 Edge: every popup scrolls, fixed at the cause, held by the Edge project (14F).
+      - [x] 14.4 Edge: every popup scrolls, fixed at the cause, held by the Edge project (14F).
+            **Done.** The cause was the page's scroll lock: a dialog cancels any wheel that did
+            not start inside its own subtree, and a popover is portalled to the body, so a list of
+            two hundred countries opened and the wheel did nothing to it. The popover stops the
+            event at itself — through a callback ref, because an object ref is still empty when
+            the effect behind Radix's mounting would use it. Radix's select viewport is the one
+            scroller in a Select now (the popup around it clipped instead), every popup list
+            contains its overscroll, and each wears the same rail as a board.
       - [ ] 14.5 A paper may name more than one warehouse — the quotation, the dispatch, and the
             difference flag that compares them.
       - [ ] 14.6 SMAC registration is a tick: the rep's belief, the coordinator's authoritative answer

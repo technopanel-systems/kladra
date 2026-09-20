@@ -23,15 +23,50 @@ function PopoverTrigger({
   )
 }
 
+/**
+ * A wheel inside a popover belongs to the popover (P14, 14F).
+ *
+ * "Dropdowns open now but scroll badly" was the founder's third round, and the
+ * cause is the page's scroll lock. A dialog locks scrolling with
+ * `react-remove-scroll`, which listens for `wheel` on the DOCUMENT and cancels
+ * any that did not start inside the dialog's own subtree. A popover is
+ * portalled to the body, so a long list inside a dialog — every country, every
+ * customer — was one the wheel did nothing to at all.
+ *
+ * The listener is on `document` and it does not capture, so an event stopped at
+ * the popover never reaches it, and the browser scrolls the list as it would
+ * anywhere else. Nothing is prevented here: the event is simply not the page's
+ * business.
+ *
+ * Native, not React's `onWheel`: the popover is portalled outside the app's
+ * root, and only a listener on the element itself is certain to run before the
+ * document's.
+ */
+function useOwnWheel() {
+  return React.useCallback((node: HTMLDivElement | null) => {
+    if (!node) return;
+    const keep = (event: Event) => event.stopPropagation();
+    node.setAttribute("data-own-wheel", "true");
+    node.addEventListener("wheel", keep, { passive: true });
+    node.addEventListener("touchmove", keep, { passive: true });
+    return () => {
+      node.removeEventListener("wheel", keep);
+      node.removeEventListener("touchmove", keep);
+    };
+  }, []);
+}
+
 function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
+  const own = useOwnWheel();
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Content
+        ref={own}
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
