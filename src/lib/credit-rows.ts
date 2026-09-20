@@ -1,10 +1,11 @@
 import "server-only";
 
-import { asc, eq, inArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, or, sql, type SQL } from "drizzle-orm";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
-import { dispatchCredits, quotationCredits, users } from "@/db/schema";
+import { dispatchCredits, quotationCredits, targets, users } from "@/db/schema";
 import { CREDIT_SPLIT, creditOrder, creditShares } from "@/lib/credit";
+import { firstOfMonth, todayRiyadh } from "@/lib/dates";
 import { personName } from "@/lib/people";
 
 /**
@@ -39,13 +40,51 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
  * the write behind it would reject (DESIGN §5).
  */
 export async function creditPool(projectId: string | null, actorId: string): Promise<string[]> {
-  if (!projectId) return [actorId];
-  return creditOrder([...(await peopleOnProject(projectId)), actorId]);
+  const onTheJob = projectId ? [...(await peopleOnProject(projectId)), actorId] : [actorId];
+  return creditOrder(await earners(onTheJob));
+}
+
+/**
+ * Who among these people may earn metres this month (P14, founder).
+ *
+ * "A rep whose target is zero earns no share of any quotation or dispatch.
+ * Beside the target is a tick that lets a zero-target person share anyway. A
+ * rep with no target is support, not sales: they may raise work without it
+ * counting."
+ *
+ * So the question is asked of the target row for the CURRENT Riyadh month, and
+ * of nothing else: a target above nought, or the tick beside it. A person with
+ * no row at all has no target, which is the same answer as nought.
+ *
+ * This month and not the paper's month, because a paper waiting on the desk has
+ * no month yet — a dispatch earns its metres on the day it is approved, which
+ * may be next month — and the honest answer to "who does this count for" is
+ * the one true when it is asked. The credit rows are rewritten on every
+ * correction, so a person who gains a target tomorrow gains it on the next save.
+ *
+ * Returned in the order it was given; the caller sorts.
+ */
+export async function earners(userIds: readonly string[]): Promise<string[]> {
+  const ids = [...new Set(userIds)];
+  if (ids.length === 0) return [];
+  const month = firstOfMonth(todayRiyadh());
+  const rows = await db
+    .select({ userId: targets.userId })
+    .from(targets)
+    .where(
+      and(
+        inArray(targets.userId, ids),
+        eq(targets.month, month),
+        or(gt(targets.sqm, "0"), eq(targets.shares, true)),
+      ),
+    );
+  const may = new Set(rows.map((row) => row.userId));
+  return ids.filter((id) => may.has(id));
 }
 
 /**
  * Turn the form's answer into the people it names, or null if it names anybody
- * who is not on the job.
+ * who is not on the job — or is on it and earns nothing (P14).
  *
  * Re-read inside the transaction that writes the record, never trusted from the
  * form: the list the dialog was drawn with is a minute old, and a share is a
@@ -57,7 +96,10 @@ export async function resolveCredit(
   answer: string | undefined,
 ): Promise<string[] | null> {
   const pool = await creditPool(projectId, actorId);
-  if (!answer || answer === actorId) return [actorId];
+  // Nobody named, and the person raising it earns nothing: the work is raised
+  // and counts for no one (P14, "support, not sales"). An empty list, not his
+  // name — `creditQuotation` writes no rows for it.
+  if (!answer || answer === actorId) return pool.includes(actorId) ? [actorId] : [];
   if (answer === CREDIT_SPLIT) return pool;
   return pool.includes(answer) ? [answer] : null;
 }
@@ -96,17 +138,25 @@ export async function peopleOnProject(projectId: string): Promise<string[]> {
 export async function creditPoolNamed(
   projectId: string | null,
   actorId: string,
-): Promise<{ value: string; label: string }[]> {
-  const ids = await creditPool(projectId, actorId);
-  if (ids.length === 0) return [];
+): Promise<{ people: { value: string; label: string }[]; withoutTarget: string[] }> {
+  const onTheJob = projectId
+    ? creditOrder([...(await peopleOnProject(projectId)), actorId])
+    : [actorId];
+  if (onTheJob.length === 0) return { people: [], withoutTarget: [] };
+  const may = new Set(await earners(onTheJob));
   const locale = await getLocale();
-  return (
-    await db
-      .select({ value: users.id, label: personName(locale) })
-      .from(users)
-      .where(inArray(users.id, ids))
-      .orderBy(asc(personName(locale)))
-  ).map((row) => ({ value: row.value, label: row.label }));
+  const named = await db
+    .select({ value: users.id, label: personName(locale) })
+    .from(users)
+    .where(inArray(users.id, onTheJob))
+    .orderBy(asc(personName(locale)));
+  return {
+    people: named.filter((row) => may.has(row.value)),
+    // Named, so the form can say where the metres went rather than quietly
+    // dropping somebody off a list (P14: "make this visible wherever credit is
+    // chosen").
+    withoutTarget: named.filter((row) => !may.has(row.value)).map((row) => row.label),
+  };
 }
 
 /**
@@ -119,17 +169,20 @@ export async function creditPoolNamed(
  */
 export async function creditQuotation(tx: Tx, quotationId: string, userIds: readonly string[]) {
   await tx.delete(quotationCredits).where(eq(quotationCredits.quotationId, quotationId));
-  await tx
-    .insert(quotationCredits)
-    .values(creditOrder(userIds).map((userId) => ({ quotationId, userId })));
+  // Nobody is a real answer since P14: a rep with no target raises the work and
+  // it counts for no one. An insert of no rows is an error in Drizzle, and this
+  // is the one place that would hit it.
+  const people = creditOrder(userIds);
+  if (people.length === 0) return;
+  await tx.insert(quotationCredits).values(people.map((userId) => ({ quotationId, userId })));
 }
 
 /** The same for a dispatch, and for the same reason. */
 export async function creditDispatch(tx: Tx, dispatchId: string, userIds: readonly string[]) {
   await tx.delete(dispatchCredits).where(eq(dispatchCredits.dispatchId, dispatchId));
-  await tx
-    .insert(dispatchCredits)
-    .values(creditOrder(userIds).map((userId) => ({ dispatchId, userId })));
+  const people = creditOrder(userIds);
+  if (people.length === 0) return;
+  await tx.insert(dispatchCredits).values(people.map((userId) => ({ dispatchId, userId })));
 }
 
 /** One name on a record, and what it takes of the record's metres. */

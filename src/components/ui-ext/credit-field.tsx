@@ -26,6 +26,15 @@ import {
  * every day and never uses — the founder's line is that the question is not
  * asked at all there.
  *
+ * **But it says where the metres went** (P14, founder: "make this visible
+ * wherever credit is chosen, so nobody wonders where the metres went"). A rep
+ * whose target is nought earns no share of anything, which means he is not on
+ * this list — and a name quietly missing from a list is exactly the wondering
+ * the founder is describing. So the people on the job who earn nothing this
+ * month are named under it, and where the person filling the form is one of
+ * them the field says so with no control at all: the work is raised, and it
+ * counts for nobody.
+ *
  * The value is a person's id, or the word `split`. `split` is not a person and
  * cannot be one: it means everybody on the job at the moment of the raise, and
  * the server resolves it then, so a rep put on the job between opening this
@@ -38,12 +47,18 @@ export function CreditField({
   value,
   onChange,
   sqm,
+  withoutTarget = [],
+  earnsNothing = false,
   id = "credit",
 }: {
-  /** Everybody on the job, named. Fewer than two and nothing is drawn. */
+  /** Everybody on the job who may earn. Fewer than two and no control is drawn. */
   people: { value: string; label: string }[];
   value: string;
   onChange: (next: string) => void;
+  /** People on the job with no target this month, named, so their absence is said. */
+  withoutTarget?: string[];
+  /** The person this paper is for has no target: it counts for nobody at all. */
+  earnsNothing?: boolean;
   /**
    * What this record is worth as it stands, so a split can say what it comes
    * to before it is saved rather than after. Optional: a quotation's m² is an
@@ -53,7 +68,24 @@ export function CreditField({
   id?: string;
 }) {
   const t = useTranslations();
-  if (people.length < 2) return null;
+  const asked = people.length >= 2;
+  // Nothing to choose and nothing to explain: the founder's silent case.
+  if (!asked && !earnsNothing && withoutTarget.length === 0) return null;
+
+  // No control, one sentence: the metres of this paper are nobody's. Said in
+  // the place the question would have been, so the answer is where the reader
+  // looks for it.
+  if (!asked) {
+    return (
+      <Field>
+        <FieldLabel htmlFor={id}>{t("common.credit.label")}</FieldLabel>
+        <p data-slot="credit-none" id={id} className="text-sm">
+          {earnsNothing ? t("common.credit.earnsNothing") : t("common.credit.forNobody")}
+        </p>
+        {withoutTarget.length > 0 ? <WithoutTarget names={withoutTarget} /> : null}
+      </Field>
+    );
+  }
 
   // The same division the database will do, on the figure showing above this
   // field — `creditShares` is the one function and it is pure, so the browser
@@ -82,6 +114,7 @@ export function CreditField({
           <SelectItem value={CREDIT_SPLIT}>{t("common.credit.split")}</SelectItem>
         </SelectContent>
       </Select>
+      {withoutTarget.length > 0 ? <WithoutTarget names={withoutTarget} /> : null}
       {shares.length > 0 ? (
         <FieldDescription data-slot="credit-preview" className="flex flex-col gap-0.5">
           {shares.map((share) => (
@@ -96,5 +129,32 @@ export function CreditField({
       ) : null}
       <FieldDescription>{t("common.credit.help")}</FieldDescription>
     </Field>
+  );
+}
+
+/**
+ * Who on this job earns nothing this month, by name (P14).
+ *
+ * The names are separate runs with a mark between them, never joined into one
+ * string: a dot is neutral and settles against the paragraph, so two Arabic
+ * names with only a space between them read in the wrong order on an English
+ * screen (rules/words.md).
+ */
+function WithoutTarget({ names }: { names: string[] }) {
+  const t = useTranslations();
+  return (
+    <FieldDescription data-slot="credit-without-target">
+      {t("common.credit.withoutTarget", { count: names.length })}{" "}
+      {names.map((name, index) => (
+        <span key={name}>
+          {index > 0 ? (
+            <span aria-hidden="true" className="text-faint">
+              {" · "}
+            </span>
+          ) : null}
+          <bdi>{name}</bdi>
+        </span>
+      ))}
+    </FieldDescription>
   );
 }

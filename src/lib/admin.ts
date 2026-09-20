@@ -87,6 +87,12 @@ export type TargetRow = {
   sqm: string | null;
   /** The month before's figure, so an empty box says what it was and one press keeps it (D115). */
   previous: string | null;
+  /**
+   * This person shares a paper's metres even at nought (P14). Support, not
+   * sales, is the default: a rep with no target earns no share of anything, and
+   * this is the tick beside the box that says otherwise.
+   */
+  shares: boolean;
 };
 
 export type TargetsThisMonth = {
@@ -123,7 +129,12 @@ export async function targetsThisMonth(today: Day = todayRiyadh()): Promise<Targ
       .where(and(eq(users.active, true), CARRIES_METRES))
       .orderBy(asc(personName(locale))),
     db
-      .select({ userId: targets.userId, month: targets.month, sqm: targets.sqm })
+      .select({
+        userId: targets.userId,
+        month: targets.month,
+        sqm: targets.sqm,
+        shares: targets.shares,
+      })
       .from(targets)
       .where(inArray(targets.month, [month, before])),
     db
@@ -134,6 +145,9 @@ export async function targetsThisMonth(today: Day = todayRiyadh()): Promise<Targ
 
   const byUser = new Map(
     rows.filter((row) => row.month === month).map((row) => [row.userId, String(row.sqm)]),
+  );
+  const sharesNow = new Set(
+    rows.filter((row) => row.month === month && row.shares).map((row) => row.userId),
   );
   const byUserBefore = new Map(
     rows.filter((row) => row.month === before).map((row) => [row.userId, String(row.sqm)]),
@@ -150,6 +164,7 @@ export async function targetsThisMonth(today: Day = todayRiyadh()): Promise<Targ
       role: person.role as Role,
       sqm: byUser.get(person.id) ?? null,
       previous: byUserBefore.get(person.id) ?? null,
+      shares: sharesNow.has(person.id),
     })),
   };
 }

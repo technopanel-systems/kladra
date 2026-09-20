@@ -3,6 +3,7 @@ import { login } from "./helpers/auth";
 import { one, personName, query, userId } from "./helpers/db";
 import { test, expect, type Translate } from "./helpers/i18n";
 import { formatDay, type Day } from "@/lib/dates";
+import { LATE_AFTER_WORKING_DAYS } from "@/lib/waiting";
 import { formatSqmWhole } from "@/lib/money";
 
 /**
@@ -319,6 +320,9 @@ test("a person on leave wears the leave ring and says so, and a person with a st
         requests: t("team.stuckRequests"),
         followUps: t("team.stuckFollowUps"),
         leads: t("team.stuckLeads"),
+        // The line the requests group is counted past since P14 (14B): every
+        // request is on the work tab now, and only a late one counts here.
+        days: LATE_AFTER_WORKING_DAYS,
       }),
     ),
   ).toBeVisible();

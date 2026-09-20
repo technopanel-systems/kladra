@@ -358,11 +358,19 @@ export async function setTargetAction(
     const tc = await getTranslations("common");
 
     const parsed = z
-      .object({ month: monthSchema, userId: z.uuid().optional(), sqm: sqmSchema })
+      .object({
+        month: monthSchema,
+        userId: z.uuid().optional(),
+        sqm: sqmSchema,
+        // The tick beside the box (P14): this person shares the work even at
+        // nought. Only a person has one; the company's target is nobody's.
+        shares: z.enum(["true", "false"]).default("false"),
+      })
       .safeParse({
         month: field(formData, "month"),
         userId: field(formData, "userId"),
         sqm: field(formData, "sqm") ?? "",
+        shares: field(formData, "shares") ?? "false",
       });
     if (!parsed.success) {
       return {
@@ -373,6 +381,7 @@ export async function setTargetAction(
     }
 
     const { month, userId, sqm } = parsed.data;
+    const shares = parsed.data.shares === "true";
 
     // This month and only this month (SPEC §3 P13). The screen offers no other,
     // and this is what holds when a month turns over under an open tab, or a
@@ -387,20 +396,29 @@ export async function setTargetAction(
 
     await db.transaction(async (tx) => {
       if (userId) {
-        if (value === null) {
+        /*
+         * A blank box is no target, and no target is no row — unless the tick
+         * beside it says this person shares anyway (P14). The tick has to live
+         * somewhere, and the row is where a month's answer lives, so ticking it
+         * on an empty box writes a target of nought: which is exactly the case
+         * the founder is describing, "a rep whose target is zero", made
+         * deliberate instead of absent.
+         */
+        if (value === null && !shares) {
           await tx
             .delete(targets)
             .where(and(eq(targets.userId, userId), eq(targets.month, month)));
         } else {
+          const sqmValue = value ?? "0.00";
           await tx
             .insert(targets)
-            .values({ userId, month, sqm: value })
+            .values({ userId, month, sqm: sqmValue, shares })
             .onConflictDoUpdate({
               target: [targets.userId, targets.month],
-              set: { sqm: value },
+              set: { sqm: sqmValue, shares },
             });
         }
-        await record(tx, actor.id, "target.set", "user", userId, { month, sqm: value });
+        await record(tx, actor.id, "target.set", "user", userId, { month, sqm: value, shares });
         return;
       }
 

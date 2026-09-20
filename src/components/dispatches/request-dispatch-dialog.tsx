@@ -983,6 +983,8 @@ function LoadForm({
                   value={countsFor}
                   onChange={(next) => setCreditPick({ source: creditSource, value: next })}
                   sqm={totals.sqm}
+                  withoutTarget={creditChoices?.withoutTarget ?? []}
+                  earnsNothing={creditChoices?.mineEarnsNothing ?? false}
                   id="dispatch-credit"
                 />
               </>

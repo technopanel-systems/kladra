@@ -2223,6 +2223,21 @@ export const FIRST_TARGET_MONTHS_AGO: Partial<Record<RepKey, number>> = {
 };
 
 /**
+ * Who is support this month, and not sales (P14, founder: "a rep with no target
+ * is support, not sales: they may raise work without it counting").
+ *
+ * A rule with nobody on the wrong side of it is a rule nobody has seen work
+ * (rules/data.md). Turki has no target this month: he is covering the floor
+ * while the others sell, so the manager's table shows his dash, a paper raised
+ * for him says in words that it counts for nobody, and the tick on the admin's
+ * targets screen is the one press that changes it back.
+ *
+ * His earlier months keep their figures — he was selling then — and so do the
+ * metres already credited to him on papers raised before today.
+ */
+export const SUPPORT_THIS_MONTH: RepKey[] = ["turki"];
+
+/**
  * A rep who has left. His account is deactivated, never deleted (S7), so the
  * months he was measured against keep his name in the history — while the
  * boxes for this month, which list only people who carry metres now, have none

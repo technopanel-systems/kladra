@@ -265,8 +265,16 @@ below by number.
             difference flag that compares them.
       - [ ] 14.6 SMAC registration is a tick: the rep's belief, the coordinator's authoritative answer
             while she quotes, who ticked it and when, and her list of what is not registered yet.
-      - [ ] 14.7 A zero target earns no share of any paper unless the admin ticks it beside the target,
+      - [x] 14.7 A zero target earns no share of any paper unless the admin ticks it beside the target,
             and that is said wherever credit is chosen.
+            **Done.** Migration 0027 puts `shares` on the target row. The credit pool is filtered
+            to the people who may earn this month — a target above nought, or the tick — so a
+            zero-target rep is not an answer to "counts for", is not part of a split, and a paper
+            he raises is written with no credit rows at all. Where the question would have been
+            the form says so in words, and names anybody on the job whose metres will not count,
+            because a name quietly missing from a list is the wondering the founder asked to stop.
+            The admin's tick sits beside the box it depends on; the seed leaves Turki support this
+            month so the state is on the floor.
       - [ ] 14.8 Archiving is a request with a mandatory reason that the sales manager approves or
             refuses, one path for everything archivable, pending in his awaiting section.
       - [ ] 14.9 Holidays and leave as periods, a month read at a glance, and both that tab and Users

@@ -79,6 +79,7 @@ import {
   DESK_TARGET_LAST_MONTH,
   DESK_TARGET_THIS_MONTH,
   FIRST_TARGET_MONTHS_AGO,
+  SUPPORT_THIS_MONTH,
   FORMER_REP,
   FORMER_REP_TARGET_MONTHS_AGO,
   MARKETING_TARGET_LAST_MONTH,
@@ -1770,7 +1771,10 @@ async function seedTargets(userIds: Map<string, string>): Promise<void> {
   // A person whose first target came later has none in the months before it,
   // so the earlier months on the targets screen carry a real dash (P13-S10).
   const hadTarget = (key: string, monthsAgo: number) =>
-    monthsAgo <= (FIRST_TARGET_MONTHS_AGO[key as keyof typeof FIRST_TARGET_MONTHS_AGO] ?? Infinity);
+    monthsAgo <= (FIRST_TARGET_MONTHS_AGO[key as keyof typeof FIRST_TARGET_MONTHS_AGO] ?? Infinity) &&
+    // Support this month, and no target to show for it (P14): the wrong side of
+    // the rule, on the floor, where somebody can see what it does.
+    !(monthsAgo === 0 && (SUPPORT_THIS_MONTH as string[]).includes(key));
 
   // The rep who has left: deactivated, never deleted (S7), so his months keep
   // his name. Made here rather than with the seven because nothing but his

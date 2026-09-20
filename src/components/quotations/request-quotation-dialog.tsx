@@ -675,6 +675,8 @@ function RequestForm({
                 people={choices?.people ?? []}
                 value={countsFor}
                 onChange={(next) => setCreditPick(creditKey ? { key: creditKey, value: next } : null)}
+                withoutTarget={choices?.withoutTarget ?? []}
+                earnsNothing={choices?.mineEarnsNothing ?? false}
                 id="quotation-credit"
               />
 

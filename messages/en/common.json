@@ -141,7 +141,10 @@
     "label": "Counts for",
     "split": "Split between everyone on the project",
     "help": "Chosen for this one, and never carried to the next.",
-    "notOnProject": "That person is not on this project."
+    "notOnProject": "That person is not on this project.",
+    "earnsNothing": "Nobody. No target this month, so these metres count for no one.",
+    "forNobody": "Nobody on this job has a target this month, so these metres count for no one.",
+    "withoutTarget": "{count, plural, one {No target this month, so nothing counts for} other {No target this month, so nothing counts for}}"
   },
   "onBehalf": {
     "for": "For",

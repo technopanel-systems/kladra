@@ -487,7 +487,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Beside the target is a tick that lets a zero-target person share anyway",
-    owed: "14.7",
+    tests: [
+      "a rep with no target this month raises the work, and it counts for nobody",
+      "the tick beside the target puts a zero-target rep back among the answers",
+    ],
   },
   {
     says: "appears in the manager's awaiting section the moment it is submitted",

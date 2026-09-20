@@ -26,6 +26,7 @@
   "companiesOnFloor": "{count, plural, =0 {لا توجد شركات} one {شركة واحدة} two {شركتان} few {# شركات} many {# شركة} other {# شركة}}",
   "noTarget": "بلا هدف",
   "companyTarget": "هدف الشركة",
+  "sharesWithoutTarget": "تُحتسب له الأمتار ولو بلا هدف",
   "targetsHint": "الهدف بالمتر المربع (م²) لكل شهر. الخانة الفارغة تعني بلا هدف، وتظهر شرطة في شاشة الفريق لا صفرًا.",
   "targetSaved": "تم حفظ الهدف.",
   "lastMonthWas": "الشهر الماضي {sqm} م²",

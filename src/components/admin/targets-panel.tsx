@@ -8,6 +8,7 @@ import { useRowFlash } from "@/components/ui-ext/use-row-flash";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
@@ -65,6 +66,7 @@ export function TargetsPanel({ targets }: { targets: TargetsThisMonth }) {
             label={person.name}
             value={person.sqm}
             previous={person.previous}
+            shares={person.shares}
             flash={flashOf(person.userId)}
             onSaved={() => flash([person.userId])}
           />
@@ -80,6 +82,7 @@ function TargetBox({
   label,
   value,
   previous,
+  shares: sharesNow,
   flash,
   onSaved,
 }: {
@@ -89,6 +92,11 @@ function TargetBox({
   value: string | null;
   /** Last month's figure, or null when there was none (D115). */
   previous: string | null;
+  /**
+   * Whether this person shares a paper's metres with no target (P14). Undefined
+   * on the company's own box — a company target is nobody's share.
+   */
+  shares?: boolean;
   flash: ReturnType<ReturnType<typeof useRowFlash>["flashOf"]>;
   onSaved: () => void;
 }) {
@@ -98,6 +106,7 @@ function TargetBox({
   // Whole metres in the box: a target is a round number somebody agreed out
   // loud, and ".00" on every row is noise.
   const [typed, setTyped] = useState(value === null ? "" : String(Number(value)));
+  const [shares, setShares] = useState(sharesNow ?? false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const guarded = useWireGuard();
@@ -108,6 +117,7 @@ function TargetBox({
       form.set("month", month);
       if (userId) form.set("userId", userId);
       form.set("sqm", typed.trim());
+      if (userId) form.set("shares", shares ? "true" : "false");
       const result = await guarded(setTargetAction)(null, form);
       if (!result.ok) {
         setError(result.error);
@@ -171,6 +181,27 @@ function TargetBox({
               {error}
             </span>
           ) : null}
+          {/* Who earns a share of a paper's metres, and who is support (P14).
+              A rep whose target is nought earns no share of any quotation or
+              dispatch — he may raise the work, and it counts for nobody — and
+              this is the founder's exception beside the figure it depends on.
+              Drawn on every person's row rather than only on the empty ones, so
+              it does not appear and disappear under the hand of somebody
+              typing; the hint says when it means anything. */}
+          {userId ? (
+            <span className="flex items-center gap-2 pb-1">
+              <Checkbox
+                id={`${id}-shares`}
+                checked={shares}
+                onCheckedChange={(checked) => setShares(checked === true)}
+                disabled={pending}
+              />
+              <Label htmlFor={`${id}-shares`} className="font-normal text-foreground">
+                {t("admin.sharesWithoutTarget")}
+              </Label>
+            </span>
+          ) : null}
+
           {/* An empty box says what last month was, and one press keeps it;
               the admin still presses Save, because a target is a number
               somebody agreed out loud (D115). */}

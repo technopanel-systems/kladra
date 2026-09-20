@@ -1291,6 +1291,21 @@ export const targets = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     month: date("month").notNull(),
     sqm: numeric("sqm", { precision: 12, scale: 2 }).notNull(),
+    /**
+     * This person earns a share of a paper's metres even with no target
+     * (P14, founder: a zero target earns no share of any quotation or
+     * dispatch, and beside the target is a tick that lets a zero-target
+     * person share anyway).
+     *
+     * The rule it turns off: a rep with no target is support, not sales. He
+     * may raise the work — his own customer, somebody else's job — and
+     * nothing he raises counts for anybody unless this is ticked.
+     *
+     * On the target row, so it is a month's answer like the target beside it:
+     * somebody who covers a floor in August and sells in September is two
+     * different answers, and a flag on the user would be one.
+     */
+    shares: boolean("shares").notNull().default(false),
     ...stamps,
   },
   (t) => [

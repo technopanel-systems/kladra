@@ -353,10 +353,22 @@ export async function contactChoicesAction(input: unknown): Promise<ActionResult
  * is the courtesy; that is the law.
  */
 export type CreditChoices = {
-  /** Everybody on the job, named in the reader's script (D68). Empty when there is nothing to ask. */
+  /** Everybody on the job who may earn metres, named in the reader's script (D68). */
   people: Option[];
   /** The one the form starts on: whoever is filling it in. */
   mine: string;
+  /**
+   * People on the job whose metres this cannot count for: no target this month
+   * and no tick beside it (P14). Named, because a name quietly missing from a
+   * list is the founder's "nobody wonders where the metres went" the wrong way
+   * round.
+   */
+  withoutTarget: string[];
+  /**
+   * Whether the person filling the form is one of them — the case where the
+   * work is raised and counts for nobody at all.
+   */
+  mineEarnsNothing: boolean;
 };
 
 export async function creditChoicesAction(
@@ -399,11 +411,16 @@ export async function creditChoicesAction(
       const project = await getProject(reader, projectId);
       if (!project) return { ok: false, error: t("somethingWrong") };
     }
-    const people = await creditPoolNamed(projectId, reader.id);
+    const pool = await creditPoolNamed(projectId, reader.id);
+    const mineEarnsNothing = !pool.people.some((person) => person.value === reader.id);
     // One name is not a question. The founder's own line: where the project
-    // has one rep the dialog asks nothing at all.
-    if (people.length < 2) return { ok: true, data: { people: [], mine: reader.id } };
-    return { ok: true, data: { people, mine: reader.id } };
+    // has one rep the dialog asks nothing at all. The sentence under it is not
+    // a question either, and is said whenever there is one to say (P14).
+    const people = pool.people.length < 2 ? [] : pool.people;
+    return {
+      ok: true,
+      data: { people, mine: reader.id, withoutTarget: pool.withoutTarget, mineEarnsNothing },
+    };
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
     return { ok: false, error: t("somethingWrong") };
