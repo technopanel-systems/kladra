@@ -39,9 +39,11 @@ test("a quote is doubled, a comma and a newline stay inside the cell, nothing is
 test("a difference is written out in words with its units; a matching load says none, a direct one nothing", () => {
   const names: Record<string, string> = { "3": "CNC cutting", "4": "Fabrication" };
   const serviceName = (id: string) => names[id] ?? id;
+  const stores: Record<string, string> = { "3": "Riyadh", "7": "Malham" };
+  const storeName = (id: string) => stores[id] ?? id;
 
-  expect(differenceInEnglish(null, serviceName)).toBe("");
-  expect(differenceInEnglish([], serviceName)).toBe("none");
+  expect(differenceInEnglish(null, serviceName, storeName)).toBe("");
+  expect(differenceInEnglish([], serviceName, storeName)).toBe("none");
 
   const difference: Difference[] = [
     { kind: "line", position: 1, change: "changed", field: "supplier", from: "N", to: "K" },
@@ -52,8 +54,10 @@ test("a difference is written out in words with its units; a matching load says 
     { kind: "service", position: 1, change: "changed", field: "service", from: "3", to: "4" },
     { kind: "service", position: 1, change: "changed", field: "sqm", from: "60.00", to: "45.00" },
     { kind: "service", position: 3, change: "added" },
+    // The load itself: the stores it left from, named rather than numbered (P14).
+    { kind: "load", change: "changed", field: "warehouses", from: "3", to: "3,7" },
   ];
-  expect(differenceInEnglish(difference, serviceName)).toBe(
+  expect(differenceInEnglish(difference, serviceName, storeName)).toBe(
     [
       "Item 1 supplier changed from N to K",
       "Item 1 thickness changed from 4.0 mm to 3.0 mm",
@@ -63,6 +67,7 @@ test("a difference is written out in words with its units; a matching load says 
       "Service 1 changed from CNC cutting to Fabrication",
       "Service 1 area changed from 60.00 m² to 45.00 m²",
       "Service 3 added, not on the quotation",
+      "Load stores changed from Riyadh to Riyadh and Malham",
     ].join("; "),
   );
 });
@@ -252,6 +257,13 @@ test("the dispatches file: a direct load and a load that left its paper, line by
       (row) => [row.id, row.name],
     ),
   );
+  const storeNames = new Map(
+    (
+      await query<{ id: string; name: string }>(
+        "select id::text as id, name_en as name from warehouses",
+      )
+    ).map((row) => [row.id, row.name]),
+  );
 
   await login(page, locale, "jerom");
   const response = await page.request.get("/api/export/dispatches");
@@ -266,7 +278,11 @@ test("the dispatches file: a direct load and a load that left its paper, line by
 
   await test.step("a load that differs says how, in words, once", async () => {
     const rows = await loadRows(differing.id);
-    const difference = differenceInEnglish(differing.difference, (id) => names.get(id) ?? id);
+    const difference = differenceInEnglish(
+      differing.difference,
+      (id) => names.get(id) ?? id,
+      (id) => storeNames.get(id) ?? id,
+    );
     expect(difference).not.toBe("none");
     expectLoad(file, differing.number, {
       rows,

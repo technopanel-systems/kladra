@@ -91,7 +91,7 @@ async function DispatchDrawerBody({ dispatchId, param }: { dispatchId: string; p
         quotationId: dispatch.quotationId,
         quotationLabel: dispatch.quotationLabel,
         shipmentMethodId: String(dispatch.shipmentMethodId),
-        warehouseId: String(dispatch.warehouseId),
+        warehouseIds: dispatch.warehouses.map((store) => String(store.id)),
         destination: dispatch.destination,
         paymentTerms: dispatch.paymentTerms,
         paymentDetail: dispatch.paymentDetail,
@@ -128,6 +128,7 @@ async function DispatchDrawerBody({ dispatchId, param }: { dispatchId: string; p
           items={dispatch.items}
           services={dispatch.services}
           serviceNames={dispatch.serviceNames}
+          warehouseNames={dispatch.warehouseNames}
         />
       }
       scope={scope}

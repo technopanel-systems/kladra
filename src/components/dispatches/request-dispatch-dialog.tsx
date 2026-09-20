@@ -37,6 +37,7 @@ import { FormBody, FormFooter, FormSection, FormSplit } from "@/components/ui-ex
 import { RaisedForField, useOnBehalf } from "@/components/ui-ext/raised-for-field";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
 import { SearchableSelect, type SelectOption } from "@/components/ui-ext/searchable-select";
+import { WarehouseField } from "@/components/ui-ext/warehouse-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -106,8 +107,8 @@ export type DispatchDraft = {
   quotationId: string | null;
   quotationLabel: string | null;
   shipmentMethodId: string;
-  /** Which store it leaves from (SPEC §3, P12-9). */
-  warehouseId: string;
+  /** Which stores it leaves from (SPEC §3, P12-9, P14). */
+  warehouseIds: string[];
   destination: string;
   paymentTerms: PaymentTerms;
   paymentDetail: PaymentDetail | null;
@@ -603,6 +604,22 @@ function LoadForm({
     return withdrawn.length > 0 ? [...serviceChoices, ...withdrawn] : serviceChoices;
   };
 
+  // The stores open on the paper's, which the price was worked out of — a child
+  // reading its own parent (D159) — and a rep changes them when the panels come
+  // out of another. Null until he touches the field, so a load prefilled from
+  // one paper and then pointed at another follows the new paper (P14).
+  const [storePick, setStorePick] = useState<string[] | null>(existing?.warehouseIds ?? null);
+  // Held steady between renders, because the difference below is worked out
+  // from it and a new array every render would work it out again every render.
+  const stores = useMemo(
+    () =>
+      storePick ??
+      (paper?.warehouseIds.length ? paper.warehouseIds : null) ?? [
+        dispatchLists.defaultWarehouse ?? "",
+      ],
+    [storePick, paper, dispatchLists.defaultWarehouse],
+  );
+
   /*
    * Whether this load is still what its paper says, asked of the same function
    * the action records the difference with — on ids and typed figures here,
@@ -627,6 +644,8 @@ function LoadForm({
             sqm: service.draft.sqm,
             pricePerSqm: service.draft.pricePerSqm,
           })),
+          // And where each side says the panels come out of (P14).
+          warehouses: paper.warehouseIds.map(Number),
         },
         {
           lines: lines.map((line, index) => ({
@@ -641,10 +660,11 @@ function LoadForm({
             sqm: service.sqm,
             pricePerSqm: service.pricePerSqm,
           })),
+          warehouses: stores.filter(Boolean).map(Number),
         },
       ).length > 0
     );
-  }, [paper, lines, services, carried, base]);
+  }, [paper, lines, services, carried, base, stores]);
 
   // The paper's lines with nothing left on them, which the load does not open
   // on — named, so a rep who counts the lines is not left wondering where one went.
@@ -656,11 +676,6 @@ function LoadForm({
   /* ---- how, where and on what terms ------------------------------------- */
 
   const [method, setMethod] = useState(existing?.shipmentMethodId ?? dispatchLists.defaultMethod ?? "");
-  // The store opens on the paper's, which the price was worked out of — a child
-  // reading its own parent (D159) — and a rep changes it when the panels come out
-  // of another.
-  const [warehousePick, setWarehousePick] = useState<string | null>(existing?.warehouseId ?? null);
-  const warehouse = warehousePick ?? paper?.warehouseId ?? dispatchLists.defaultWarehouse ?? "";
   const [destination, setDestination] = useState(existing?.destination ?? "");
   /*
    * How it is being paid for (SPEC §3, P13): three answers, the second question
@@ -796,7 +811,6 @@ function LoadForm({
       <input type="hidden" name="items" value={linesPayload(lines)} />
       <input type="hidden" name="services" value={servicesPayload(services)} />
       <input type="hidden" name="shipmentMethodId" value={method} />
-      <input type="hidden" name="warehouseId" value={warehouse} />
       <input type="hidden" name="credit" value={countsFor} />
       {onBehalf ? <input type="hidden" name="repId" value={raisedFor} /> : null}
 
@@ -892,26 +906,14 @@ function LoadForm({
 
           {/* Where it leaves from, before how it travels: the store is decided
               before the truck is (SPEC §3, P12-9). */}
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <Label id="dispatch-warehouse-label">{t("common.warehouse")}</Label>
-            <SearchableSelect
-              aria-labelledby="dispatch-warehouse-label"
-              options={dispatchLists.warehouses}
-              value={warehouse}
-              onChange={setWarehousePick}
-              disabled={pending}
-              invalid={fieldErrors.warehouseId ? true : undefined}
-              aria-describedby={fieldErrors.warehouseId ? "dispatch-warehouse-error" : undefined}
-              placeholder={t("forms.choose")}
-              searchPlaceholder={t("forms.searchList")}
-              emptyText={t("forms.noMatch")}
-            />
-            {fieldErrors.warehouseId ? (
-              <p id="dispatch-warehouse-error" role="alert" className="text-xs text-destructive">
-                {fieldErrors.warehouseId}
-              </p>
-            ) : null}
-          </div>
+          <WarehouseField
+            id="dispatch"
+            options={dispatchLists.warehouses}
+            value={stores}
+            onChange={setStorePick}
+            disabled={pending}
+            error={fieldErrors.warehouseIds}
+          />
 
           <div className="flex min-w-0 flex-col gap-1.5">
             <Label id="shipment-label">{t("common.shipment")}</Label>

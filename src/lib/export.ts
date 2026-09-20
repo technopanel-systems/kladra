@@ -217,7 +217,7 @@ async function quotationsCsv(): Promise<string> {
  * it finds each differing load once and a count of it counts loads, not lines.
  */
 async function dispatchesCsv(): Promise<string> {
-  const [result, serviceRows] = await Promise.all([
+  const [result, serviceRows, warehouseRows] = await Promise.all([
     db.execute<Record<string, unknown>>(sql`
       select d.id as d_id,
              d.number as d_number,
@@ -230,7 +230,17 @@ async function dispatchesCsv(): Promise<string> {
              c.name as company,
              coalesce(p.name, '') as project,
              u.name as rep,
-             w.name_en as warehouse,
+             -- Where it left from: the load's own store, and the rare second
+             -- and third after it, in the order the rep named them (P14). The
+             -- one place that reads dispatch_warehouses in SQL rather than
+             -- through src/lib/warehouses.ts, because this is one statement
+             -- over every load ever raised and the file is English whatever
+             -- language the person who asked for it reads in.
+             w.name_en || coalesce(' | ' || (
+               select string_agg(w2.name_en, ' | ' order by dw.position)
+                 from dispatch_warehouses dw
+                 join warehouses w2 on w2.id = dw.warehouse_id
+                where dw.dispatch_id = d.id), '') as warehouse,
              sm.name_en as shipment,
              d.destination as destination,
              d.payment_terms as payment_terms,
@@ -308,10 +318,15 @@ async function dispatchesCsv(): Promise<string> {
     // Every service, switched off or not: a load may carry one the admin has
     // since retired, and the difference names it by id.
     db.execute<{ id: string; name: string }>(sql`select id::text as id, name_en as name from services`),
+    // And every store, for the same reason: the difference names the ones the
+    // load moved away from (P14).
+    db.execute<{ id: string; name: string }>(sql`select id::text as id, name_en as name from warehouses`),
   ]);
 
   const serviceNames = new Map(serviceRows.rows.map((row) => [row.id, row.name]));
   const serviceName = (id: string) => serviceNames.get(id) ?? id;
+  const storeNames = new Map(warehouseRows.rows.map((row) => [row.id, row.name]));
+  const warehouseNameOf = (id: string) => storeNames.get(id) ?? id;
 
   // The labels from the functions the screens use (src/lib/labels.ts).
   let previous: unknown = null;
@@ -326,7 +341,11 @@ async function dispatchesCsv(): Promise<string> {
           ? "direct"
           : quotationLabel(Number(row.q_number), Number(row.q_revision)),
       difference: first
-        ? differenceInEnglish(row.difference_json as Difference[] | null, serviceName)
+        ? differenceInEnglish(
+            row.difference_json as Difference[] | null,
+            serviceName,
+            warehouseNameOf,
+          )
         : "",
     };
   });

@@ -121,6 +121,7 @@ const {
   dispatchCredits,
   dispatchItems,
   dispatchServices,
+  dispatchWarehouses,
   dispatches,
   fireRatings,
   leadSources,
@@ -132,6 +133,7 @@ const {
   quotationCredits,
   quotationItems,
   quotationServices,
+  quotationWarehouses,
   quotations,
   shipmentMethods,
   warehouses,
@@ -1059,7 +1061,7 @@ async function seedQuotations(
             q.contact === undefined
               ? null
               : (contactIds.get(q.company) ?? [])[q.contact] ?? null,
-          warehouseId: must(lk.warehouseByName, q.warehouse ?? "Riyadh", "warehouse"),
+          warehouseId: storesOfQuotation(q.key, lk)[0],
           repId: him,
           raisedById: raiser,
           status: q.status,
@@ -1075,6 +1077,8 @@ async function seedQuotations(
         })
         .returning({ id: quotations.id });
       quotationIds.set(q.key, row.id);
+      // The rare second and third (P14): the first is the column above.
+      await seedExtraStores(tx, "quotation", row.id, storesOfQuotation(q.key, lk));
       await tx.insert(quotationCredits).values(
         creditedTo(userIds, q.rep, q.creditTo).map((userId) => ({ quotationId: row.id, userId })),
       );
@@ -1139,10 +1143,53 @@ async function seedQuotations(
  * written in the same run and this keeps the demo's answer in the same file as
  * the question, so a dispatch whose quotation moves store moves with it.
  */
-function warehouseOfQuotation(quotationKey: string, lk: Lookups): number {
+function storesOfQuotation(quotationKey: string, lk: Lookups): number[] {
   const parent = QUOTATIONS.find((q) => q.key === quotationKey);
   if (!parent) throw new Error(`dispatch names quotation "${quotationKey}", which is not seeded`);
-  return must(lk.warehouseByName, parent.warehouse ?? "Riyadh", "warehouse");
+  return [parent.warehouse ?? "Riyadh", ...(parent.alsoFrom ?? [])].map((name) =>
+    must(lk.warehouseByName, name, "warehouse"),
+  );
+}
+
+/**
+ * The stores a seeded load leaves from, first one first (P14).
+ *
+ * Neither field given means the paper's own list, which is what the dialog opens
+ * on — a child reading its own parent (D159). A direct load has no parent and
+ * leaves from the founder's first store.
+ */
+function storesOfDispatch(d: DispatchSeed, lk: Lookups): number[] {
+  if (!d.warehouse && !d.alsoFrom) {
+    return d.quotation
+      ? storesOfQuotation(d.quotation, lk)
+      : [must(lk.warehouseByName, "Riyadh", "warehouse")];
+  }
+  const first =
+    d.warehouse ??
+    (d.quotation ? (QUOTATIONS.find((q) => q.key === d.quotation)?.warehouse ?? "Riyadh") : "Riyadh");
+  return [first, ...(d.alsoFrom ?? [])].map((name) =>
+    must(lk.warehouseByName, name, "warehouse"),
+  );
+}
+
+/** The rare second and third, written the way `setWarehouses` writes them. */
+async function seedExtraStores(
+  tx: Pick<typeof db, "insert">,
+  kind: "quotation" | "dispatch",
+  paperId: string,
+  stores: number[],
+): Promise<void> {
+  const others = stores.slice(1);
+  if (others.length === 0) return;
+  if (kind === "quotation") {
+    await tx.insert(quotationWarehouses).values(
+      others.map((warehouseId, index) => ({ quotationId: paperId, warehouseId, position: index + 1 })),
+    );
+    return;
+  }
+  await tx.insert(dispatchWarehouses).values(
+    others.map((warehouseId, index) => ({ dispatchId: paperId, warehouseId, position: index + 1 })),
+  );
 }
 
 /**
@@ -1243,6 +1290,8 @@ function seededDifference(d: DispatchSeed, lk: Lookups): Difference[] | null {
         sqm: service.sqm,
         pricePerSqm: service.pricePerSqm,
       })),
+      // And where each side says the panels come out of (P14).
+      warehouses: storesOfQuotation(d.quotation, lk),
     },
     {
       lines: (d.items ?? []).map((it) => ({
@@ -1261,6 +1310,7 @@ function seededDifference(d: DispatchSeed, lk: Lookups): Difference[] | null {
           pricePerSqm: change?.pricePerSqm ?? service.pricePerSqm,
         };
       }),
+      warehouses: storesOfDispatch(d, lk),
     },
   );
 }
@@ -1365,11 +1415,7 @@ async function seedDispatches(
           // The store the load leaves from. Absent means the quotation's own,
           // which is what the dialog opens on (P12-9) — or the first store for a
           // direct load, which has no paper to read one off.
-          warehouseId: d.warehouse
-            ? must(lk.warehouseByName, d.warehouse, "warehouse")
-            : d.quotation
-              ? warehouseOfQuotation(d.quotation, lk)
-              : must(lk.warehouseByName, "Riyadh", "warehouse"),
+          warehouseId: storesOfDispatch(d, lk)[0],
           destination: d.destination,
           paymentTerms: d.paymentTerms,
           paymentDetail: d.paymentDetail ?? null,
@@ -1382,6 +1428,7 @@ async function seedDispatches(
         })
         .returning({ id: dispatches.id });
       dispatchIds.set(d.key, row.id);
+      await seedExtraStores(tx, "dispatch", row.id, storesOfDispatch(d, lk));
 
       await tx.insert(dispatchCredits).values(
         creditedTo(userIds, d.rep, d.creditTo).map((userId) => ({ dispatchId: row.id, userId })),

@@ -22,7 +22,9 @@ import {
  * them — and one case checks that "1.5" and "1.50" are one width.
  */
 
-const PAPER: { lines: QuotedLine[]; services: QuotedService[] } = {
+const PAPER: { lines: QuotedLine[]; services: QuotedService[]; warehouses: number[] } = {
+  // Priced out of one store, which is what almost every paper says (P14).
+  warehouses: [3],
   lines: [
     {
       id: "q-line-1",
@@ -67,11 +69,12 @@ function carriedService(index: number): LoadService {
   return { ...rest, quotationServiceId: id };
 }
 
-/** The whole paper as a load: every line and every service, nothing touched. */
-function wholeLoad(): { lines: LoadLine[]; services: LoadService[] } {
+/** The whole paper as a load: every line, every service, the same store, nothing touched. */
+function wholeLoad(): { lines: LoadLine[]; services: LoadService[]; warehouses: number[] } {
   return {
     lines: PAPER.lines.map((_, index) => carried(index)),
     services: PAPER.services.map((_, index) => carriedService(index)),
+    warehouses: [...PAPER.warehouses],
   };
 }
 
@@ -139,7 +142,11 @@ test("a partial quantity is nothing: the quantity is not one of the things compa
 
 test("an omitted line is nothing, and an omitted service is nothing", () => {
   expect(
-    differenceFrom(PAPER, { lines: [carried(1)], services: [carriedService(1)] }),
+    differenceFrom(PAPER, {
+      lines: [carried(1)],
+      services: [carriedService(1)],
+      warehouses: PAPER.warehouses,
+    }),
   ).toEqual([]);
 });
 
@@ -156,6 +163,7 @@ test("everything at once comes back lines first, each in the load's own order", 
       { ...carried(0), quotationItemId: null, position: 3 },
     ],
     services: [{ ...carriedService(0), service: "2" }],
+    warehouses: [3, 7],
   };
   expect(differenceFrom(PAPER, load)).toEqual([
     { kind: "line", position: 2, change: "changed", field: "class", from: "A", to: "B" },
@@ -169,5 +177,35 @@ test("everything at once comes back lines first, each in the load's own order", 
     },
     { kind: "line", position: 3, change: "added" },
     { kind: "service", position: 1, change: "changed", field: "service", from: "1", to: "2" },
+    // And the load itself, last, with no line number on it.
+    { kind: "load", change: "changed", field: "warehouses", from: "3", to: "3,7" },
   ]);
+});
+
+/**
+ * P14 — "the dispatch difference flag compares the warehouses as it compares
+ * the panels and the services" (SPEC §3, P14).
+ *
+ * One fact about the whole load, because the stores are named on the whole load
+ * and never per line; and a SET, because two names typed in the other order are
+ * the same two stores and a flag on the typing order is one nobody could act on.
+ */
+test("a load out of a second store differs from the paper that named one", () => {
+  const load = { ...wholeLoad(), warehouses: [3, 7] };
+  expect(differenceFrom(PAPER, load)).toEqual([
+    { kind: "load", change: "changed", field: "warehouses", from: "3", to: "3,7" },
+  ]);
+});
+
+test("a load out of another store altogether says both, the paper's and its own", () => {
+  const load = { ...wholeLoad(), warehouses: [7] };
+  expect(differenceFrom(PAPER, load)).toEqual([
+    { kind: "load", change: "changed", field: "warehouses", from: "3", to: "7" },
+  ]);
+});
+
+test("the same two stores in the other order are the same two stores", () => {
+  const paper = { ...PAPER, warehouses: [3, 7] };
+  const load = { ...wholeLoad(), warehouses: [7, 3] };
+  expect(differenceFrom(paper, load)).toEqual([]);
 });

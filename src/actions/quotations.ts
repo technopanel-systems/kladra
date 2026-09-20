@@ -34,6 +34,8 @@ import {
 } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditQuotation, resolveCredit } from "@/lib/credit-rows";
+import { knownWarehouseIds, setWarehouses } from "@/lib/warehouses";
+import { warehouseIdsField } from "@/lib/warehouse-list";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { firstRefusedBox, lineFieldKey } from "@/lib/line-refusal";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
@@ -477,19 +479,35 @@ export async function quotationOnBehalfAction(): Promise<ActionResult<QuotationO
  */
 const addressingSchema = z.object({
   contactId: z.uuid().optional(),
-  warehouseId: z.coerce.number().int().positive(),
+  /**
+   * The stores, first one first (P14). One is the ordinary answer; the field
+   * allows a second and a third, and the form sends them as one comma-separated
+   * value rather than as a repeated field, so a browser that sends nothing at
+   * all is told off by the same "required" as before.
+   */
+  warehouseIds: warehouseIdsField,
 });
 
 type Addressing =
-  | { ok: true; contactId: string | null; warehouseId: number }
-  | { ok: false; key: "invalid" | "contactNotAtCompany" };
+  | { ok: true; contactId: string | null; warehouseIds: number[] }
+  | { ok: false; key: "invalid" | "contactNotAtCompany" | "warehouseGone" };
 
 async function readAddressing(formData: FormData, companyId: string): Promise<Addressing> {
   const parsed = addressingSchema.safeParse({
     contactId: field(formData, "contactId"),
-    warehouseId: field(formData, "warehouseId"),
+    warehouseIds: field(formData, "warehouseIds") ?? "",
   });
   if (!parsed.success) return { ok: false, key: "invalid" };
+
+  /*
+   * Every store named is a store, asked of the database rather than trusted
+   * from the picker: the founder's rare second store is exactly the field
+   * somebody will send by hand, and an id that is not a store reaches the
+   * database as a foreign-key violation, which is a 500 and not an answer.
+   */
+  const warehouseIds = parsed.data.warehouseIds;
+  const known = await knownWarehouseIds();
+  if (warehouseIds.some((id) => !known.has(id))) return { ok: false, key: "warehouseGone" };
 
   if (parsed.data.contactId) {
     const [contact] = await db
@@ -502,11 +520,7 @@ async function readAddressing(formData: FormData, companyId: string): Promise<Ad
     }
   }
 
-  return {
-    ok: true,
-    contactId: parsed.data.contactId ?? null,
-    warehouseId: parsed.data.warehouseId,
-  };
+  return { ok: true, contactId: parsed.data.contactId ?? null, warehouseIds };
 }
 
 export async function requestQuotationAction(
@@ -612,8 +626,15 @@ export async function requestQuotationAction(
     if (!addressing.ok) {
       return {
         ok: false,
-        error: addressing.key === "invalid" ? tc("invalid") : t("contactNotAtCompany"),
-        ...(addressing.key === "invalid" ? { fieldErrors: { warehouseId: tc("required") } } : {}),
+        error:
+          addressing.key === "contactNotAtCompany"
+            ? t("contactNotAtCompany")
+            : addressing.key === "warehouseGone"
+              ? t("warehouseGone")
+              : tc("invalid"),
+        ...(addressing.key === "contactNotAtCompany"
+          ? {}
+          : { fieldErrors: { warehouseIds: tc(addressing.key === "invalid" ? "required" : "invalid") } }),
       };
     }
 
@@ -641,7 +662,7 @@ export async function requestQuotationAction(
           companyId: input.companyId,
           projectId,
           contactId: addressing.contactId,
-          warehouseId: addressing.warehouseId,
+          warehouseId: addressing.warehouseIds[0],
           // Whom it counts for, and who pressed the button (SPEC §3 P13): the
           // same person on everything a rep raises himself.
           repId: person.id,
@@ -658,6 +679,8 @@ export async function requestQuotationAction(
       // (D148). One name on a job one rep works — a project nobody shares has
       // only ever had one answer to this question, and is asked nothing.
       await creditQuotation(tx, row.id, credit);
+      // The rare second and third stores (P14); the first is the column above.
+      await setWarehouses(tx, "quotation", row.id, addressing.warehouseIds);
 
       await tx.insert(auditLog).values({
         userId: actor.id,
@@ -790,7 +813,12 @@ export async function updateQuotationAction(
       const te = await getTranslations("errors");
       return {
         ok: false,
-        error: addressing.key === "invalid" ? tc("invalid") : te("contactNotAtCompany"),
+        error:
+          addressing.key === "contactNotAtCompany"
+            ? te("contactNotAtCompany")
+            : addressing.key === "warehouseGone"
+              ? te("warehouseGone")
+              : tc("invalid"),
       };
     }
 
@@ -806,6 +834,7 @@ export async function updateQuotationAction(
       await tx.delete(quotationServices).where(eq(quotationServices.quotationId, quotation.id));
       await insertServices(tx, quotation.id, servicesIn);
       await creditQuotation(tx, quotation.id, credit);
+      await setWarehouses(tx, "quotation", quotation.id, addressing.warehouseIds);
       // The reason dies with the state it explained. It was left on the row, so
       // a quotation he had already fixed still carried "the sizes are missing"
       // in the database, and every later reader had to remember that the words
@@ -817,7 +846,7 @@ export async function updateQuotationAction(
           notes,
           returnReason: null,
           contactId: addressing.contactId,
-          warehouseId: addressing.warehouseId,
+          warehouseId: addressing.warehouseIds[0],
         })
         .where(eq(quotations.id, quotation.id));
 
@@ -1265,7 +1294,12 @@ export async function reviseQuotationAction(
       const te = await getTranslations("errors");
       return {
         ok: false,
-        error: addressing.key === "invalid" ? tc("invalid") : te("contactNotAtCompany"),
+        error:
+          addressing.key === "contactNotAtCompany"
+            ? te("contactNotAtCompany")
+            : addressing.key === "warehouseGone"
+              ? te("warehouseGone")
+              : tc("invalid"),
       };
     }
 
@@ -1299,7 +1333,7 @@ export async function reviseQuotationAction(
           companyId: quotation.companyId,
           projectId: quotation.projectId,
           contactId: addressing.contactId,
-          warehouseId: addressing.warehouseId,
+          warehouseId: addressing.warehouseIds[0],
           repId: actor.id,
           raisedById: actor.id,
           notes: field(formData, "notes") ?? null,
@@ -1314,6 +1348,7 @@ export async function reviseQuotationAction(
       // copied off the one it replaces: §3 says nothing is ever carried forward
       // from a previous record, and credit least of all (D148).
       await creditQuotation(tx, row.id, revisionCredit);
+      await setWarehouses(tx, "quotation", row.id, addressing.warehouseIds);
 
       await tx.insert(auditLog).values({
         userId: actor.id,

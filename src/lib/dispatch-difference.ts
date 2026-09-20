@@ -9,6 +9,13 @@
  * What is a difference, and what is not, is a business rule rather than a diff:
  *
  * - A line or a service the quotation does not have is `added`.
+ * - The stores the load leaves from, where they are not the stores the
+ *   quotation was priced out of (P14: "the dispatch difference flag compares the
+ *   warehouses as it compares the panels and the services"). One entry for the
+ *   whole load, because the stores are named on the whole load and never per
+ *   line, and compared as a SET: naming Riyadh and Malham where the paper named
+ *   Malham and Riyadh is the same load, and a flag on the order somebody typed
+ *   two names in is a flag nobody could act on.
  * - A sheet field, a price, a service or its m² changed on a line or a service
  *   that was carried from the quotation is `changed`, with the value it had and
  *   the value it has now.
@@ -38,8 +45,14 @@
  */
 import { round2, toNumber } from "./money";
 
-/** A panel line or a service. */
-export type DifferenceKind = "line" | "service";
+/**
+ * A panel line, a service, or the load itself.
+ *
+ * The third is the whole load and has no line number, so the shapes below are
+ * three and not one: a reader that handles a line handles a service, and has to
+ * be told about the load on purpose.
+ */
+export type DifferenceKind = Difference["kind"];
 
 /** The inputs of a carried line that can differ, in the order the form asks for them (SPEC §3, S32). */
 export const SHEET_FIELDS = [
@@ -60,27 +73,43 @@ export const SERVICE_FIELDS = ["service", "sqm", "pricePerSqm"] as const;
 
 export type ServiceField = (typeof SERVICE_FIELDS)[number];
 
-export type DifferenceField = SheetField | ServiceField;
+/** What can differ about the load itself rather than about a line on it. */
+export type LoadField = "warehouses";
+
+export type DifferenceField = SheetField | ServiceField | LoadField;
 
 /** Figures, compared and recorded to the halala rather than as typed. */
 const FIGURES: readonly DifferenceField[] = ["width", "length", "pricePerSqm", "sqm"];
 
 export type Difference =
   | {
-      kind: DifferenceKind;
+      kind: "line" | "service";
       /** The line's or the service's number on the dispatch — a carried one keeps its quotation number. */
       position: number;
       change: "added";
     }
   | {
-      kind: DifferenceKind;
+      kind: "line" | "service";
       position: number;
       change: "changed";
-      field: DifferenceField;
+      field: SheetField | ServiceField;
       /**
        * What the quotation said and what the dispatch says. Figures to two
        * decimals with no grouping, Western digits; a line's lookups as their
        * words; a service as its id (see above).
+       */
+      from: string;
+      to: string;
+    }
+  | {
+      /** The load itself, which has no line number (P14). */
+      kind: "load";
+      change: "changed";
+      field: LoadField;
+      /**
+       * The stores each side names, by id, lowest first and joined by commas
+       * — ids for the reason a service is an id, and in one fixed order, so
+       * that "the same stores" is one string and not two.
        */
       from: string;
       to: string;
@@ -109,8 +138,8 @@ function canonical(field: DifferenceField, value: string): string {
   return FIGURES.includes(field) ? round2(toNumber(value)).toFixed(2) : value.trim();
 }
 
-function changesBetween<F extends DifferenceField>(
-  kind: DifferenceKind,
+function changesBetween<F extends SheetField | ServiceField>(
+  kind: "line" | "service",
   position: number,
   fields: readonly F[],
   was: Record<F, string>,
@@ -129,8 +158,16 @@ function changesBetween<F extends DifferenceField>(
  * matches its paper — a real answer, and the one most loads give.
  */
 export function differenceFrom(
-  quotation: { lines: readonly QuotedLine[]; services: readonly QuotedService[] },
-  dispatch: { lines: readonly LoadLine[]; services: readonly LoadService[] },
+  quotation: {
+    lines: readonly QuotedLine[];
+    services: readonly QuotedService[];
+    warehouses: readonly number[];
+  },
+  dispatch: {
+    lines: readonly LoadLine[];
+    services: readonly LoadService[];
+    warehouses: readonly number[];
+  },
 ): Difference[] {
   const quotedLines = new Map(quotation.lines.map((line) => [line.id, line]));
   const quotedServices = new Map(quotation.services.map((service) => [service.id, service]));
@@ -153,7 +190,20 @@ export function differenceFrom(
       return changesBetween("service", service.position, SERVICE_FIELDS, was, service);
     });
 
-  return [...lines, ...services];
+  // The load's own fact, after the lines and the services: the drawer reads
+  // them in the order this list gives them, and where the panels changed too,
+  // the store they came out of is the smaller half of the news.
+  const from = storeList(quotation.warehouses);
+  const to = storeList(dispatch.warehouses);
+  const stores: Difference[] =
+    from === to ? [] : [{ kind: "load", change: "changed", field: "warehouses", from, to }];
+
+  return [...lines, ...services, ...stores];
+}
+
+/** The stores as one comparable, recordable string: each id once, lowest first. */
+function storeList(ids: readonly number[]): string {
+  return [...new Set(ids)].sort((a, b) => a - b).join(",");
 }
 
 /** A field as the admin's file names it, and the unit its figures are recorded in. */
@@ -169,6 +219,8 @@ const IN_ENGLISH: Record<DifferenceField, { word: string | null; unit: string | 
   // The service itself: "Service 2 changed from CNC cutting to Fabrication".
   service: { word: null, unit: null },
   sqm: { word: "area", unit: "m²" },
+  // The load's own: "Load stores changed from Riyadh to Riyadh and Malham".
+  warehouses: { word: "stores", unit: null },
 };
 
 /**
@@ -189,16 +241,29 @@ const IN_ENGLISH: Record<DifferenceField, { word: string | null; unit: string | 
 export function differenceInEnglish(
   difference: readonly Difference[] | null,
   serviceName: (id: string) => string,
+  warehouseName: (id: string) => string,
 ): string {
   if (difference === null) return "";
   if (difference.length === 0) return "none";
   return difference
     .map((entry) => {
-      const what = `${entry.kind === "line" ? "Item" : "Service"} ${entry.position}`;
+      const what =
+        entry.kind === "load"
+          ? "Load"
+          : `${entry.kind === "line" ? "Item" : "Service"} ${entry.position}`;
       if (entry.change === "added") return `${what} added, not on the quotation`;
       const { word, unit } = IN_ENGLISH[entry.field];
-      const value = (raw: string) =>
-        (entry.field === "service" ? serviceName(raw) : raw) + (unit ? ` ${unit}` : "");
+      const value = (raw: string) => {
+        if (entry.field === "service") return serviceName(raw);
+        // A list of stores reads as a list: "Riyadh and Malham", not "3,7".
+        if (entry.field === "warehouses") {
+          const names = raw.split(",").filter(Boolean).map(warehouseName);
+          return names.length > 1
+            ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`
+            : (names[0] ?? "");
+        }
+        return raw + (unit ? ` ${unit}` : "");
+      };
       return `${what}${word ? ` ${word}` : ""} changed from ${value(entry.from)} to ${value(entry.to)}`;
     })
     .join("; ");

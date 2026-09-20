@@ -39,6 +39,7 @@ import { useQuotationLookups } from "@/components/ui-ext/form-lookups";
 import { CreditField } from "@/components/ui-ext/credit-field";
 import { FormBody, FormFooter, FormSection, FormSplit } from "@/components/ui-ext/form-shell";
 import { RaisedForField, useOnBehalf } from "@/components/ui-ext/raised-for-field";
+import { WarehouseField } from "@/components/ui-ext/warehouse-field";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { DialogFormSkeleton, ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
@@ -78,8 +79,8 @@ export type QuotationDraft = {
   creditTo?: string;
   quotationId: string;
   notes: string;
-  /** Which store it was priced out of, and who at the customer it is for (P12-9). */
-  warehouseId: string;
+  /** Which stores it was priced out of, and who at the customer it is for (P12-9, P14). */
+  warehouseIds: string[];
   contactId: string;
   lines: Omit<LineDraft, "key">[];
   /** Its services, which Edit and Revise open on the way they open on its lines (SPEC §3, P13). */
@@ -491,11 +492,13 @@ function RequestForm({
     ...(contacts?.people ?? []),
   ];
 
-  // Which store this is priced out of (SPEC §3). Opens on the paper's own when
-  // there is one, and otherwise on the first store — never on nothing, because
-  // there is no such thing as a price out of nowhere.
-  const [warehouse, setWarehouse] = useState(
-    existing?.warehouseId || lookups.defaultWarehouse || "",
+  // Which stores this is priced out of (SPEC §3, P14). Opens on the paper's own
+  // where there is one, and otherwise on the first store — never on nothing,
+  // because there is no such thing as a price out of nowhere.
+  const [stores, setStores] = useState<string[]>(
+    existing?.warehouseIds?.length
+      ? existing.warehouseIds
+      : [lookups.defaultWarehouse || ""],
   );
 
   /*
@@ -529,7 +532,6 @@ function RequestForm({
       <input type="hidden" name="services" value={servicesPayload(services)} />
       <input type="hidden" name="credit" value={countsFor} />
       <input type="hidden" name="contactId" value={addressedTo === NOBODY ? "" : addressedTo} />
-      <input type="hidden" name="warehouseId" value={warehouse} />
       {onBehalf ? <input type="hidden" name="repId" value={raisedFor} /> : null}
 
       <FormBody>
@@ -640,19 +642,14 @@ function RequestForm({
             />
           </div>
 
-          <div className="flex min-w-0 flex-col gap-2">
-            <Label id="quotation-warehouse-label">{t("common.warehouse")}</Label>
-            <SearchableSelect
-              aria-labelledby="quotation-warehouse-label"
-              options={lookups.warehouses}
-              value={warehouse}
-              onChange={setWarehouse}
-              disabled={pending}
-              placeholder={t("forms.choose")}
-              searchPlaceholder={t("forms.searchList")}
-              emptyText={t("forms.noMatch")}
-            />
-          </div>
+          <WarehouseField
+            id="quotation"
+            options={lookups.warehouses}
+            value={stores}
+            onChange={setStores}
+            disabled={pending}
+            error={fieldErrors.warehouseIds}
+          />
         </div>
 
         {/* The paper's parts in one column — the panels, the services, the

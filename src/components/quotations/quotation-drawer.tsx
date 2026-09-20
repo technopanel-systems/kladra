@@ -162,10 +162,10 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         // record (SPEC §3).
         creditTo:
           quotation.credit.length > 1 ? CREDIT_SPLIT : (quotation.credit[0]?.userId ?? undefined),
-        // The store and the name it goes to, as this paper says them (P12-9).
+        // The stores and the name it goes to, as this paper says them (P12-9, P14).
         // A revision opens on them the same way it opens on the lines: it is
         // this paper again at a new price, not the next one after it (D10).
-        warehouseId: String(quotation.warehouseId),
+        warehouseIds: quotation.warehouses.map((store) => String(store.id)),
         contactId: quotation.contactId ?? "",
       }}
       scope={{

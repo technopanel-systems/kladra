@@ -261,8 +261,17 @@ below by number.
             the effect behind Radix's mounting would use it. Radix's select viewport is the one
             scroller in a Select now (the popup around it clipped instead), every popup list
             contains its overscroll, and each wears the same rail as a board.
-      - [ ] 14.5 A paper may name more than one warehouse — the quotation, the dispatch, and the
+      - [x] 14.5 A paper may name more than one warehouse — the quotation, the dispatch, and the
             difference flag that compares them.
+            **Done.** Migration 0028 gives each paper a table of the stores after its first; the
+            first stays on the paper's own column, required, so "every paper names at least one"
+            is still the database's promise, and one file reads and writes both halves. The field
+            is the field it was — one picker — with a quiet "Add another warehouse" under it that
+            stops offering at the third; a store already named is not offered twice. A load opens
+            on its paper's whole list, and the difference flag compares the two lists as sets, as
+            one entry about the load with no line number on it. The seed prices q11 out of two
+            stores, sends d7 out of one of them so the flag has somewhere to be read, and takes a
+            direct load out of two. The CSV writes them in one cell.
       - [ ] 14.6 SMAC registration is a tick: the rep's belief, the coordinator's authoritative answer
             while she quotes, who ticked it and when, and her list of what is not registered yet.
       - [x] 14.7 A zero target earns no share of any paper unless the admin ticks it beside the target,

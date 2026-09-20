@@ -31,6 +31,7 @@ export async function DispatchDifferences({
   items,
   services,
   serviceNames,
+  warehouseNames,
 }: {
   /** Q-12 — the paper it differs from. */
   label: string | null;
@@ -39,6 +40,8 @@ export async function DispatchDifferences({
   services: readonly DispatchServiceRow[];
   /** Every service a recorded change names by id, in the reader's language. */
   serviceNames: Readonly<Record<string, string>>;
+  /** And every store it names, the same way and for the same reason (P14). */
+  warehouseNames: Readonly<Record<string, string>>;
 }) {
   const t = await getTranslations();
   if (!label || !difference || difference.length === 0) return null;
@@ -66,9 +69,16 @@ export async function DispatchDifferences({
     }
   }
 
-  /** Figures as the screen writes them everywhere else, with their unit; a lookup as its word; a service by name. */
+  /** Figures as the screen writes them everywhere else, with their unit; a lookup as its word; a service and a store by name. */
   function shown(field: DifferenceField, value: string): { text: string; unit: string | null } {
     if (field === "service") return { text: serviceNames[value] ?? "", unit: null };
+    // A list of stores reads as the names, in the one order the flag recorded
+    // them, inside one run: the mark between them is neutral and belongs to the
+    // list rather than to the sentence around it (rules/words.md).
+    if (field === "warehouses") {
+      const names = value.split(",").flatMap((store) => warehouseNames[store] ?? []);
+      return { text: names.join(" · "), unit: null };
+    }
     const unit = unitOf(field);
     if (field === "width" || field === "length" || field === "pricePerSqm" || field === "sqm") {
       return { text: formatNumber(value), unit };
@@ -85,6 +95,8 @@ export async function DispatchDifferences({
     switch (field) {
       case "service":
         return t("quotations.service");
+      case "warehouses":
+        return t("common.warehouse");
       case "sqm":
         return t("dispatches.field.area");
       case "width":
@@ -102,11 +114,14 @@ export async function DispatchDifferences({
   // order the recorded list gives them — lines first, each in the load's order.
   const entries: { kind: Difference["kind"]; position: number; changes: Difference[] }[] = [];
   for (const change of difference) {
+    // The load's own entry has no line number: it is one fact about the whole
+    // thing, and it groups with nothing (P14).
+    const position = change.kind === "load" ? 0 : change.position;
     const last = entries.at(-1);
-    if (last && last.kind === change.kind && last.position === change.position) {
+    if (last && last.kind === change.kind && last.position === position) {
       last.changes.push(change);
     } else {
-      entries.push({ kind: change.kind, position: change.position, changes: [change] });
+      entries.push({ kind: change.kind, position, changes: [change] });
     }
   }
 
@@ -151,13 +166,18 @@ export async function DispatchDifferences({
                 </span>
               ) : (
                 <>
-                  <span className="font-medium">
-                    {entry.kind === "line" ? (
-                      t("quotations.itemNumber", { number: entry.position })
-                    ) : (
-                      <bdi>{service?.name ?? ""}</bdi>
-                    )}
-                  </span>
+                  {/* The load's own change is not a line and wears no heading:
+                      the field beneath it says "Store", which is the whole of
+                      what there is to say (P14). */}
+                  {entry.kind === "load" ? null : (
+                    <span className="font-medium">
+                      {entry.kind === "line" ? (
+                        t("quotations.itemNumber", { number: entry.position })
+                      ) : (
+                        <bdi>{service?.name ?? ""}</bdi>
+                      )}
+                    </span>
+                  )}
                   <ul className="flex flex-col gap-1 text-xs">
                     {entry.changes.flatMap((change) => {
                       if (change.change !== "changed") return [];

@@ -58,6 +58,8 @@ import {
 } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditDispatch, resolveCredit } from "@/lib/credit-rows";
+import { warehouseIdsField } from "@/lib/warehouse-list";
+import { knownWarehouseIds, setWarehouses, warehouseIdsOf } from "@/lib/warehouses";
 import {
   differenceFrom,
   type Difference,
@@ -329,12 +331,14 @@ function readServices(formData: FormData): Service[] | Refused {
 const detailsSchema = z.object({
   shipmentMethodId: z.coerce.number().int().positive(),
   /**
-   * Which store this load leaves from (SPEC §3, P12-9). One per whole dispatch,
-   * never per line: the coordinator rings one store before she approves it.
-   * The dialog opens on the quotation's own, and a rep changes it when the
-   * panels are coming out of somewhere else.
+   * Which stores this load leaves from (SPEC §3, P12-9, widened by P14). Never
+   * per line — that would confuse the reps — but the load as a whole takes one
+   * store normally and allows a second or a third in the rare case, and the
+   * coordinator rings each of them before she approves it. The dialog opens on
+   * the quotation's own, and a rep changes them when the panels are coming out
+   * of somewhere else.
    */
-  warehouseId: z.coerce.number().int().positive(),
+  warehouseIds: warehouseIdsField,
   destination: z.string().trim().min(1).max(500),
   /**
    * How it is being paid for (SPEC §3, P12-10, P13): the choice, the second
@@ -350,7 +354,7 @@ const detailsSchema = z.object({
 function readDetails(formData: FormData) {
   return {
     shipmentMethodId: field(formData, "shipmentMethodId"),
-    warehouseId: field(formData, "warehouseId"),
+    warehouseIds: field(formData, "warehouseIds") ?? "",
     destination: field(formData, "destination"),
     paymentTerms: field(formData, "paymentTerms"),
     paymentDetail: field(formData, "paymentDetail"),
@@ -397,6 +401,18 @@ function readPayment(
   };
 }
 
+/**
+ * Every store named is a store (P14). Not "is it still offered": the picker
+ * offers only live ones, and a load that already names a store the admin has
+ * since switched off has to stay correctable (D183). What this refuses is an id
+ * that is not a store at all, which the database would answer with a
+ * foreign-key violation — a 500, and not something a rep can act on.
+ */
+async function storesExist(ids: readonly number[]): Promise<boolean> {
+  const known = await knownWarehouseIds();
+  return ids.every((id) => known.has(id));
+}
+
 /** A shipment method the admin still offers — the foreign key only says it exists. */
 async function methodOffered(id: number): Promise<boolean> {
   const [method] = await db
@@ -420,7 +436,7 @@ function money(value: number): string {
 type PaperLine = QuotedLine & { left: number };
 
 /** The quotation a load is checked against, read inside the transaction, after its hold. */
-type Paper = { lines: PaperLine[]; services: QuotedService[] };
+type Paper = { lines: PaperLine[]; services: QuotedService[]; warehouses: number[] };
 
 /**
  * The paper, as the rows say it NOW (D85): every line with the words a reader
@@ -430,6 +446,15 @@ type Paper = { lines: PaperLine[]; services: QuotedService[] };
  * figure is a correlated subquery (rules/data.md).
  */
 async function paperOf(tx: Tx, quotationId: string, exclude: string | null): Promise<Paper> {
+  // Where the paper was priced out of, for the difference flag to compare the
+  // stores as it compares the panels (P14). Read through the one file that
+  // knows a paper's stores live in two places, and inside this transaction, so
+  // it is the paper as the hold above froze it.
+  const [own] = await tx
+    .select({ warehouseId: quotations.warehouseId })
+    .from(quotations)
+    .where(eq(quotations.id, quotationId))
+    .limit(1);
   const lines = await tx.execute<{
     id: string;
     position: number;
@@ -476,6 +501,7 @@ async function paperOf(tx: Tx, quotationId: string, exclude: string | null): Pro
      order by qs.position
   `);
   return {
+    warehouses: own ? await warehouseIdsOf("quotation", quotationId, own.warehouseId, tx) : [],
     lines: lines.rows.map((row) => ({
       id: row.id,
       position: Number(row.position),
@@ -528,6 +554,7 @@ async function prepareLoad(
   paper: Paper | null,
   lines: Line[],
   loadServices: Service[],
+  warehouseIds: readonly number[],
 ): Promise<{ failure: LoadFailure } | Prepared> {
   const quotedLines = new Map((paper?.lines ?? []).map((line) => [line.id, line]));
   const quotedServices = new Map((paper?.services ?? []).map((service) => [service.id, service]));
@@ -664,7 +691,11 @@ async function prepareLoad(
     items,
     services: serviceRows,
     difference: paper
-      ? differenceFrom(paper, { lines: loadLines, services: loadServiceRows })
+      ? differenceFrom(paper, {
+          lines: loadLines,
+          services: loadServiceRows,
+          warehouses: warehouseIds,
+        })
       : null,
   };
 }
@@ -740,6 +771,13 @@ export async function requestDispatchAction(
     const loadServices = readServices(formData);
     if (isRefused(loadServices)) return listRefusal(tq("needsServices"), loadServices);
     if (!(await methodOffered(parsed.data.shipmentMethodId))) return { ok: false, error: tc("invalid") };
+    if (!(await storesExist(parsed.data.warehouseIds))) {
+      return {
+        ok: false,
+        error: te("warehouseGone"),
+        fieldErrors: { warehouseIds: tc("invalid") },
+      };
+    }
 
     /*
      * Who this load is raised AS (SPEC §3 P13) — the question the quotation's
@@ -841,7 +879,7 @@ export async function requestDispatchAction(
 
       // Checked before anything is written, so a refusal is a sentence rather
       // than a rolled-back transaction wearing "something went wrong".
-      const load = await prepareLoad(tx, read, lines, loadServices);
+      const load = await prepareLoad(tx, read, lines, loadServices, parsed.data.warehouseIds);
       if ("failure" in load) return load;
 
       const [row] = await tx
@@ -858,7 +896,7 @@ export async function requestDispatchAction(
           // later (SPEC §3, P13); null exactly when there is no paper.
           quotationDifference: load.difference,
           shipmentMethodId: parsed.data.shipmentMethodId,
-          warehouseId: parsed.data.warehouseId,
+          warehouseId: parsed.data.warehouseIds[0],
           destination: parsed.data.destination,
           ...payment,
         })
@@ -870,6 +908,8 @@ export async function requestDispatchAction(
       // (D148): one name on a job one rep works, and on a shared one whatever
       // he answered above.
       await creditDispatch(tx, row.id, credit);
+      // The rare second and third stores (P14); the first is the column above.
+      await setWarehouses(tx, "dispatch", row.id, parsed.data.warehouseIds);
 
       /*
        * "A dispatch implies the customer accepted that quotation" (SPEC §3).
@@ -1035,6 +1075,14 @@ export async function updateDispatchAction(
     const loadServices = readServices(formData);
     if (isRefused(loadServices)) return listRefusal(tq("needsServices"), loadServices);
     if (!(await methodOffered(parsed.data.shipmentMethodId))) return { ok: false, error: tc("invalid") };
+    if (!(await storesExist(parsed.data.warehouseIds))) {
+      const te = await getTranslations("errors");
+      return {
+        ok: false,
+        error: te("warehouseGone"),
+        fieldErrors: { warehouseIds: tc("invalid") },
+      };
+    }
 
     const dispatch = await load(actor, parsed.data.dispatchId);
     if (!dispatch) return { ok: false, error: td("notFound") };
@@ -1072,10 +1120,17 @@ export async function updateDispatchAction(
         read = await paperOf(tx, dispatch.quotationId, dispatch.id);
       }
 
-      const prepared = await prepareLoad(tx, read, lines, loadServices);
+      const prepared = await prepareLoad(
+        tx,
+        read,
+        lines,
+        loadServices,
+        parsed.data.warehouseIds,
+      );
       if ("failure" in prepared) return prepared.failure;
       await writeLoad(tx, dispatch.id, prepared, true);
       await creditDispatch(tx, dispatch.id, credit);
+      await setWarehouses(tx, "dispatch", dispatch.id, parsed.data.warehouseIds);
 
       await tx
         .update(dispatches)
@@ -1083,7 +1138,7 @@ export async function updateDispatchAction(
           shipmentMethodId: parsed.data.shipmentMethodId,
           // Correctable for exactly as long as the quantities beside it are: a
           // request waiting on the desk has moved nothing yet (SPEC §3, P12-9).
-          warehouseId: parsed.data.warehouseId,
+          warehouseId: parsed.data.warehouseIds[0],
           destination: parsed.data.destination,
           ...payment,
           // Worked out again: what he changed now is what the desk reads now.
@@ -1189,7 +1244,8 @@ export type DispatchPrefill = {
   companyName: string;
   projectId: string;
   projectName: string;
-  warehouseId: string;
+  /** The stores it was priced out of, first one first (P14). */
+  warehouseIds: string[];
   lines: PrefillLine[];
   services: PrefillService[];
 };
@@ -1231,7 +1287,7 @@ export async function dispatchPrefillAction(input: unknown): Promise<ActionResul
         companyName: quotation.companyName,
         projectId: quotation.projectId,
         projectName: quotation.projectName,
-        warehouseId: String(quotation.warehouseId),
+        warehouseIds: quotation.warehouses.map((store) => String(store.id)),
         lines: quotation.items.map((item, index) => ({
           quotationItemId: item.id,
           position: item.position,

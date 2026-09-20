@@ -475,7 +475,15 @@ export const SPEC3: Spec3Entry[] = [
    */
   {
     says: "the document as a whole takes one warehouse normally and allows a second or a third",
-    owed: "14.5",
+    tests: [
+      "a paper may be priced out of a second store, and it comes back saying both",
+      "a load out of a store its paper did not name is flagged like a changed price",
+      // The rule itself, on hand-built papers: one entry for the whole load,
+      // and the same two stores in the other order are the same two stores.
+      "a load out of a second store differs from the paper that named one",
+      "a load out of another store altogether says both, the paper's and its own",
+      "the same two stores in the other order are the same two stores",
+    ],
   },
   {
     says: "whoever asks writes a mandatory reason, the request goes to the manager",

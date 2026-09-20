@@ -84,6 +84,7 @@ export function SearchableSelect({
   emptyText,
   disabled,
   id,
+  "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
   "aria-describedby": ariaDescribedBy,
   invalid,
@@ -98,6 +99,12 @@ export function SearchableSelect({
   emptyText: string;
   disabled?: boolean;
   id?: string;
+  /**
+   * For a picker with no visible label of its own — a row in a list of them,
+   * where one label stands over the lot (`warehouse-field.tsx`). Every other
+   * picker in the app points at a `<Label>` and uses the one below.
+   */
+  "aria-label"?: string;
   "aria-labelledby"?: string;
   "aria-describedby"?: string;
   invalid?: boolean;
@@ -168,6 +175,7 @@ export function SearchableSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-label={ariaLabel}
           aria-labelledby={ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           aria-invalid={invalid || undefined}

@@ -78,6 +78,75 @@ test("there is no price out of nowhere and no load from nowhere (0021, P12-9)", 
   expect(stranger).toContain("violates foreign key constraint");
 });
 
+/**
+ * P14 — the rare second and third store, and the three things the database
+ * says about them so that nothing else has to (SPEC §3, P14).
+ *
+ * The paper's own column is still the FIRST store and still NOT NULL, which is
+ * what keeps "every paper names at least one" a promise the database makes.
+ * These rows are the others: numbered from one, each number once on a paper,
+ * each store once on a paper.
+ */
+test("a paper's other stores are numbered, once each, and each store is named once (0028, P14)", async () => {
+  for (const [table, column, paper] of [
+    [
+      "quotation_warehouses",
+      "quotation_id",
+      `select q.id from quotations q
+        where not exists (select 1 from quotation_warehouses w where w.quotation_id = q.id)
+        limit 1`,
+    ],
+    [
+      "dispatch_warehouses",
+      "dispatch_id",
+      `select d.id from dispatches d
+        where not exists (select 1 from dispatch_warehouses w where w.dispatch_id = d.id)
+        limit 1`,
+    ],
+  ] as const) {
+    const row = await one<{ id: string }>(paper);
+    const store = await one<{ id: number }>("select id from warehouses order by id limit 1");
+    const other = await one<{ id: number }>("select id from warehouses order by id desc limit 1");
+    const put = (warehouse: number, position: number) =>
+      refused(
+        `insert into ${table} (${column}, warehouse_id, position) values ($1::uuid, $2::int, $3::int)`,
+        [row.id, warehouse, position],
+      );
+
+    // A store at no position, or at a position before the first.
+    expect(await put(store.id, 0), `${table} took a nought position`).toContain(
+      `${table}_position_check`,
+    );
+    expect(await put(store.id, -1), `${table} took a minus position`).toContain(
+      `${table}_position_check`,
+    );
+    // A store that is not a store, for the same reason as the column above.
+    expect(await put(987654321, 1), `${table} took a stranger`).toContain(
+      "violates foreign key constraint",
+    );
+
+    // And the two ways one paper says one thing twice, which are the two ways
+    // the list a screen reads it back as would be wrong.
+    await query(
+      `insert into ${table} (${column}, warehouse_id, position) values ($1::uuid, $2::int, 1)`,
+      [row.id, store.id],
+    );
+    try {
+      expect(await put(store.id, 2), `${table} named one store twice`).toContain(
+        "duplicate key value",
+      );
+      expect(await put(other.id, 1), `${table} put two stores at one position`).toContain(
+        "duplicate key value",
+      );
+    } finally {
+      await query(`delete from ${table} where ${column} = $1::uuid and warehouse_id = $2::int`, [
+        row.id,
+        store.id,
+      ]);
+    }
+  }
+});
+
 test("every quotation names a job, and the column is what says so (0023, P12-10)", async () => {
   const quotation = await one<{ id: string }>("select id from quotations limit 1");
 

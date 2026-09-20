@@ -992,6 +992,58 @@ export const quotationServices = pgTable(
   ],
 );
 
+/**
+ * The other warehouses a paper names (P14, founder: "a quotation or a dispatch
+ * may name more than one warehouse — not per line, that would confuse the reps;
+ * the field takes one warehouse normally and allows a second or a third in the
+ * rare case, on the document as a whole").
+ *
+ * The paper's own `warehouse_id` stays, required, and is the first one: that is
+ * what keeps "every paper names at least one warehouse" a thing the DATABASE
+ * guarantees rather than a thing an action remembers (rules/data.md: what a row
+ * may contain belongs in the database). These rows are the rare second and
+ * third. Nothing reads either half on its own — `src/lib/warehouses.ts` is the
+ * one place that says what warehouses a paper names, and every screen, the
+ * difference flag and the CSV ask it.
+ */
+export const quotationWarehouses = pgTable(
+  "quotation_warehouses",
+  {
+    quotationId: uuid("quotation_id")
+      .notNull()
+      .references(() => quotations.id, { onDelete: "cascade" }),
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => warehouses.id),
+    /** Where it sits in the list the rep typed, so two papers read the same way. */
+    position: integer("position").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.quotationId, t.warehouseId] }),
+    uniqueIndex("quotation_warehouses_position_idx").on(t.quotationId, t.position),
+    check("quotation_warehouses_position_check", sql`${t.position} > 0`),
+  ],
+);
+
+/** The same for a load, and for the same sentence of the founder's. */
+export const dispatchWarehouses = pgTable(
+  "dispatch_warehouses",
+  {
+    dispatchId: uuid("dispatch_id")
+      .notNull()
+      .references(() => dispatches.id, { onDelete: "cascade" }),
+    warehouseId: integer("warehouse_id")
+      .notNull()
+      .references(() => warehouses.id),
+    position: integer("position").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.dispatchId, t.warehouseId] }),
+    uniqueIndex("dispatch_warehouses_position_idx").on(t.dispatchId, t.position),
+    check("dispatch_warehouses_position_check", sql`${t.position} > 0`),
+  ],
+);
+
 // ---- dispatches -------------------------------------------------------------
 
 export const dispatches = pgTable(
@@ -1530,6 +1582,28 @@ export const quotationsRelations = relations(quotations, ({ one, many }) => ({
   items: many(quotationItems),
   services: many(quotationServices),
   dispatches: many(dispatches),
+}));
+
+export const quotationWarehousesRelations = relations(quotationWarehouses, ({ one }) => ({
+  quotation: one(quotations, {
+    fields: [quotationWarehouses.quotationId],
+    references: [quotations.id],
+  }),
+  warehouse: one(warehouses, {
+    fields: [quotationWarehouses.warehouseId],
+    references: [warehouses.id],
+  }),
+}));
+
+export const dispatchWarehousesRelations = relations(dispatchWarehouses, ({ one }) => ({
+  dispatch: one(dispatches, {
+    fields: [dispatchWarehouses.dispatchId],
+    references: [dispatches.id],
+  }),
+  warehouse: one(warehouses, {
+    fields: [dispatchWarehouses.warehouseId],
+    references: [warehouses.id],
+  }),
 }));
 
 export const quotationServicesRelations = relations(quotationServices, ({ one }) => ({

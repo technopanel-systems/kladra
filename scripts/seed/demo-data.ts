@@ -1278,6 +1278,12 @@ export type QuotationSeed = {
    */
   warehouse?: string;
   /**
+   * The rare second and third store, where the panels for one paper come out of
+   * more than one (SPEC §3, P14). One paper on this floor says so, because a
+   * field the demo never shows filled is a field nobody has seen work.
+   */
+  alsoFrom?: string[];
+  /**
    * Who at the customer it is addressed to — an index into the company's own
    * `contacts` (P12-9). Absent means nobody, which is a real state: a price for
    * stock is sometimes for the company rather than for a person.
@@ -1590,6 +1596,9 @@ export const QUOTATIONS: QuotationSeed[] = [
     project: "p7",
     rep: "faisal",
     status: "accepted",
+    // The one paper on this floor whose panels come out of two stores: the
+    // grey is in Riyadh and the white in Malham (SPEC §3, P14).
+    alsoFrom: ["Malham"],
     contact: 0,
     createdBack: 8,
     issuedBack: 7,
@@ -1802,9 +1811,12 @@ export type DispatchSeed = {
   shipmentMethod: string;
   /**
    * Which store the load leaves from, by its English name (SPEC §3, P12-9).
-   * Absent means the quotation's own, which is what the dialog opens on.
+   * Absent means the quotation's own — every store on it, where it names more
+   * than one — which is what the dialog opens on (P14).
    */
   warehouse?: string;
+  /** And the rare second and third it leaves from as well (SPEC §3, P14). */
+  alsoFrom?: string[];
   destination: string;
   /**
    * How it is being paid for (SPEC §3, P12-10): the choice, the second answer
@@ -1950,8 +1962,9 @@ export const DISPATCHES: DispatchSeed[] = [
   },
   /*
    * The load that is not what its paper said (SPEC §3, P13), waiting on the desk:
-   * the first line at 112 where q11 says 118, and the CNC cutting over 60 m²
-   * where it says 120. Two differences, recorded; the second line and the
+   * the first line at 112 where q11 says 118, the CNC cutting over 60 m² where
+   * it says 120, and the whole load out of Malham where the paper named Riyadh
+   * and Malham (P14). Three differences, recorded; the second line and the
    * fabrication are simply not in this load, which is a partial load and not a
    * difference at all.
    */
@@ -1960,6 +1973,10 @@ export const DISPATCHES: DispatchSeed[] = [
     quotation: "q11",
     rep: "faisal",
     status: "submitted",
+    // Out of Malham alone, where the paper named Riyadh and Malham: the third
+    // thing this load differs from its paper by, and the one the founder asked
+    // the flag to start saying (SPEC §3, P14).
+    warehouse: "Malham",
     shipmentMethod: "tt",
     destination: "الرياض — طريق الملك عبدالله، موقع المعرض",
     paymentTerms: "bankTransfer",
@@ -1979,6 +1996,11 @@ export const DISPATCHES: DispatchSeed[] = [
     company: "f4",
     rep: "faisal",
     status: "approved",
+    // Ten sheets, and the last two came off the rack in Malham: the load out of
+    // two stores, on the one kind of load where that says nothing about a paper
+    // (SPEC §3, P14). A field the demo never shows filled is a field nobody has
+    // seen work (rules/data.md).
+    alsoFrom: ["Malham"],
     shipmentMethod: "cargo",
     destination: "الرياض — حي السلي، ورشة المؤسسة",
     paymentTerms: "cash",

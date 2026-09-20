@@ -55,7 +55,6 @@ import {
   shipmentMethods,
   suppliers,
   thicknesses,
-  warehouses,
   users,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
@@ -63,7 +62,11 @@ import type { Difference } from "@/lib/dispatch-difference";
 import { holdsFloor, sells } from "@/lib/floor";
 import { dispatchLabel, numberInTerm, quotationLabel } from "@/lib/labels";
 import type { PaymentDetail, PaymentTerms } from "@/lib/payment";
-import { warehouseName } from "@/lib/lookups";
+import {
+  warehouseIdsOf,
+  warehouseNamesOf,
+  type NamedWarehouse,
+} from "@/lib/warehouses";
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { creditOnDispatch, type CreditLine } from "@/lib/credit-rows";
@@ -526,21 +529,23 @@ export type DispatchDetail = DispatchRow & {
   /**
    * What the load changed from its quotation, as recorded when it was raised or
    * last corrected (SPEC §3, P13) — null on a direct dispatch, empty on one that
-   * matched. `serviceNames` names, in the reader's language, every service a
-   * recorded change mentions by id, including one no longer on the load.
+   * matched. `serviceNames` and `warehouseNames` name, in the reader's language,
+   * every service and every store a recorded change mentions by id, including
+   * ones no longer on the load — which is the usual case for a store the load
+   * moved away from.
    */
   difference: Difference[] | null;
   serviceNames: Record<string, string>;
+  warehouseNames: Record<string, string>;
   /**
-   * Which store the load leaves from (SPEC §3, P12-9), and the row behind that
-   * word for the edit dialog to open its list on.
+   * Which stores the load leaves from (SPEC §3, P12-9, P14), first one first,
+   * each with the row behind the word for the edit dialog to open its list on.
    *
-   * On the DETAIL and not on the row, the same way the quotation carries it: the
-   * dispatch list is a queue somebody scans for what is waiting, and a store's
-   * name is not one of the things scanned for.
+   * On the DETAIL and not on the row, the same way the quotation carries them:
+   * the dispatch list is a queue somebody scans for what is waiting, and a
+   * store's name is not one of the things scanned for.
    */
-  warehouseId: number;
-  warehouseName: string;
+  warehouses: NamedWarehouse[];
   /**
    * The customer is archived, or the job is (S16). The load still opens, but
    * nothing new is filed against it, and the drawer asks these two before it
@@ -574,7 +579,6 @@ export async function getDispatch(
       ...selection(reader),
       shipmentMethod: shipmentName(reader),
       warehouseId: dispatches.warehouseId,
-      warehouseName: warehouseName(reader),
       difference: dispatches.quotationDifference,
       // Whether this reader is on the company's share list, asked in the same
       // statement as its owner (D147).
@@ -587,7 +591,6 @@ export async function getDispatch(
     .innerJoin(companies, eq(companies.id, dispatches.companyId))
     .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .innerJoin(users, eq(users.id, dispatches.repId))
-    .innerJoin(warehouses, eq(warehouses.id, dispatches.warehouseId))
     .innerJoin(shipmentMethods, eq(shipmentMethods.id, dispatches.shipmentMethodId))
     .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
@@ -674,6 +677,27 @@ export async function getDispatch(
           .from(services)
           .where(inArray(services.id, mentioned));
 
+  // The stores it leaves from, and the names for those AND for any the
+  // difference mentions — which is normally one the load moved away from, so it
+  // is on no row of this load either (P14, and the same reason as the services
+  // above).
+  const stores = await warehouseIdsOf("dispatch", id, row.warehouseId);
+  const storeNames = await warehouseNamesOf(
+    [
+      ...new Set([
+        ...stores,
+        ...(difference ?? []).flatMap((change) =>
+          change.kind === "load" && change.field === "warehouses"
+            ? [...change.from.split(","), ...change.to.split(",")]
+                .map(Number)
+                .filter((store) => Number.isSafeInteger(store) && store > 0)
+            : [],
+        ),
+      ]),
+    ],
+    reader,
+  );
+
   // This dispatch holds its own share only while it is waiting or approved; a
   // refused or cancelled one gave its quantities back (D12).
   const holds = row.status === "submitted" || row.status === "approved";
@@ -681,8 +705,8 @@ export async function getDispatch(
   return {
     shared: row.shared,
     ...detail,
-    warehouseId: row.warehouseId,
-    warehouseName: row.warehouseName,
+    warehouses: stores.map((id) => ({ id, name: storeNames.get(id) ?? "" })),
+    warehouseNames: Object.fromEntries([...storeNames].map(([id, name]) => [String(id), name])),
     companyArchived: Boolean(row.companyArchived),
     projectArchived: Boolean(row.projectArchived),
     difference,

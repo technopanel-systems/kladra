@@ -50,14 +50,13 @@ import {
   suppliers,
   thicknesses,
   users,
-  warehouses,
 } from "@/db/schema";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { riyadhDay } from "@/lib/dates";
 import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { numberInTerm, quotationLabel } from "@/lib/labels";
-import { warehouseName } from "@/lib/lookups";
+import { namedWarehouses, type NamedWarehouse } from "@/lib/warehouses";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
 import {
   compareLines,
@@ -609,18 +608,18 @@ export type QuotationDetail = QuotationRow & {
    */
   selfIssued: boolean;
   /**
-   * Which store it was priced out of, and who at the customer it is addressed
-   * to (SPEC §3, P12-9).
+   * Which stores it was priced out of, and who at the customer it is addressed
+   * to (SPEC §3, P12-9, P14).
    *
-   * On the DETAIL and not on the row, so the two joins are paid for by the one
-   * screen that reads them. The customer list is the app's longest query and a
+   * On the DETAIL and not on the row, so the reads are paid for by the one
+   * screen that wants them. The customer list is the app's longest query and a
    * warehouse's name is not one of the things a reader scans it for.
    *
-   * The contact is a name and an id: the drawer prints the name, and Edit and
-   * Revise open their picker on the id.
+   * One store on almost every paper, first one first; the id as well as the
+   * name, because Edit and Revise open their pickers on ids. The contact is the
+   * same pair for the same reason.
    */
-  warehouseId: number;
-  warehouseName: string;
+  warehouses: NamedWarehouse[];
   contactId: string | null;
   contactName: string | null;
   /**
@@ -658,7 +657,6 @@ export async function getQuotation(
       revisionOf: quotations.revisionOf,
       selfIssued: quotations.selfIssued,
       warehouseId: quotations.warehouseId,
-      warehouseName: warehouseName(await getLocale()),
       contactId: quotations.contactId,
       contactName: contacts.name,
       companyArchived: sql<boolean>`companies.archived_at is not null`.mapWith(Boolean),
@@ -667,7 +665,6 @@ export async function getQuotation(
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(users, eq(users.id, quotations.repId))
-    .innerJoin(warehouses, eq(warehouses.id, quotations.warehouseId))
     .leftJoin(contacts, eq(contacts.id, quotations.contactId))
     .innerJoin(projects, eq(projects.id, quotations.projectId))
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
@@ -748,8 +745,7 @@ export async function getQuotation(
     credit: await creditOnQuotation(id),
     projectRepId: row.projectRepId,
     onProject: Boolean(row.onProject),
-    warehouseId: row.warehouseId,
-    warehouseName: row.warehouseName,
+    warehouses: await namedWarehouses("quotation", id, row.warehouseId, locale),
     contactId: row.contactId ?? null,
     contactName: row.contactName ?? null,
     companyArchived: Boolean(row.companyArchived),

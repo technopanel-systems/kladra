@@ -197,6 +197,13 @@
       "when": 1789916396681,
       "tag": "0027_a_target_says_who_earns",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1789917766790,
+      "tag": "0028_a_paper_may_name_more_than_one_store",
+      "breakpoints": true
     }
   ]
 }

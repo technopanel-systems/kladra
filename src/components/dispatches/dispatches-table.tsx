@@ -683,8 +683,8 @@ export function useCloseDrawer(param: string): () => void {
 
 export type DispatchSheetProps = {
   dispatch: DispatchRow & {
-    /** Which store the load leaves from (SPEC §3, P12-9). */
-    warehouseName: string;
+    /** Which stores the load leaves from (SPEC §3, P12-9, P14). */
+    warehouses: { id: number; name: string }[];
     /** Its services, in their own section as on the quotation (SPEC §3, P13). */
     services: DispatchServiceRow[];
   };
@@ -1132,8 +1132,15 @@ export function DispatchSheet({
               data-slot="terms"
               className="flex flex-col gap-2 rounded-xl border border-line bg-surface-2 p-3 text-sm"
             >
+              {/* One store on almost every load, and the rare second beside
+                  it, each its own run (rules/words.md). */}
               <Term label={t("common.warehouse")}>
-                <bdi>{dispatch.warehouseName}</bdi>
+                {dispatch.warehouses.map((store, index) => (
+                  <Fragment key={store.id}>
+                    {index > 0 ? <span aria-hidden="true"> · </span> : null}
+                    <bdi>{store.name}</bdi>
+                  </Fragment>
+                ))}
               </Term>
               <Term label={t("common.shipment")}>{dispatch.shipmentMethod}</Term>
               <Term label={t("common.destination")}>

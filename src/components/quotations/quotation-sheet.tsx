@@ -78,8 +78,8 @@ export type QuotationSheetProps = {
     notes: string | null;
     isLatest: boolean;
     selfIssued: boolean;
-    /** Where it was priced out of, and who it is for (SPEC §3, P12-9). */
-    warehouseName: string;
+    /** Where it was priced out of, and who it is for (SPEC §3, P12-9, P14). */
+    warehouses: { id: number; name: string }[];
     contactName: string | null;
   };
   /**
@@ -282,8 +282,18 @@ export function QuotationSheet({
                   <bdi>{quotation.contactName}</bdi>
                 </Fact>
               ) : null}
+              {/* One store on almost every paper; the rare second and third
+                  beside it, each its own run, separated by a mark rather than
+                  by a comma that would settle the wrong way (rules/words.md). */}
               <Fact label={t("common.warehouse")}>
-                <bdi>{quotation.warehouseName}</bdi>
+                <span data-slot="stores">
+                  {quotation.warehouses.map((store, index) => (
+                    <Fragment key={store.id}>
+                      {index > 0 ? <span aria-hidden="true"> · </span> : null}
+                      <bdi>{store.name}</bdi>
+                    </Fragment>
+                  ))}
+                </span>
               </Fact>
               {credit.length > 0 && (credit.length > 1 || credit[0].userId !== quotation.repId) ? (
                 <Fact label={t("common.credit.label")}>
