@@ -109,6 +109,14 @@ const CLEARED_BY: Record<NotificationKind, "work" | "reading"> = {
   // nothing for either of them to do with it but find out (P12-8).
   companyFolded: "reading",
   companyAbsorbed: "reading",
+  // The manager's own desk: a request to archive is answered, not read, and it
+  // stays on his bell until he has answered it (P14 14.8).
+  archiveRequested: "work",
+  // The record has gone off the floor; there is nothing left to do with it.
+  archiveApproved: "reading",
+  // Work, like a refused load: the reason came back with it, and the rep's
+  // answer is a better reason or none at all. Reading it is not doing it.
+  archiveRefused: "work",
 };
 
 /** The kinds that die when they are read. Derived, never listed twice. */

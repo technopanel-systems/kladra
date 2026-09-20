@@ -22,5 +22,8 @@
   "raisedFor": {
     "quotationIssued": "أُصدِر عرض السعر {label} لدى {company} لصالحك بواسطة {rep}، برقم سماك {smacNumber}.",
     "dispatchRequested": "طُلب التوريد {label} لدى {company} لصالحك بواسطة {rep}."
-  }
+  },
+  "archiveRequested": "طلب {rep} أرشفة {label}.",
+  "archiveApproved": "وافق {rep} على أرشفة {label}.",
+  "archiveRefused": "رفض {rep} أرشفة {label}."
 }

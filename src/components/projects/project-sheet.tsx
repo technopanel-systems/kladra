@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { setProjectFollowUpAction } from "@/actions/projects";
+import { ArchiveRequestNotice } from "@/components/archive/archive-request-notice";
 import { ArchiveProjectDialog } from "@/components/projects/archive-project-dialog";
 import { EditProjectDialog } from "@/components/projects/edit-project-dialog";
 import { MarkLostDialog } from "@/components/projects/mark-lost-dialog";
@@ -31,6 +32,7 @@ import { Sheet, SheetDescription, SheetHeader, SheetTitle } from "@/components/u
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import type { ArchiveRequestState } from "@/lib/archive-requests";
 import { formatDay } from "@/lib/dates";
 import type { FollowUpState } from "@/lib/followups";
 import { lossReasonLabel } from "@/lib/loss-reason";
@@ -46,7 +48,10 @@ import { projectStageTone } from "@/lib/state-tone";
  *
  * **A drawer has a hierarchy** (DESIGN §6, P13-G6). At the top, who this is: the
  * job, its company with the company's own face beside it, and where the job
- * stands. Then how it is going — the four figures — and the one date a rep
+ * stands — and directly under it, where anybody has asked for the job to be
+ * taken off the floor, the asking (P14 14.8), because whether this is still a
+ * record is read before what the record says. Then how it is going — the four
+ * figures — and the one date a rep
  * changes on nearly every visit. Then the actions, and the actions have a
  * hierarchy too: Add report is the one brand button and the only one in sight,
  * because it is what a rep does to a job every day. Edit and Sharing sit in the
@@ -95,6 +100,19 @@ export type ProjectSheetProps = {
    * than work on the job, and an item belongs to whoever created it (SPEC §3).
    */
   owns: boolean;
+  /**
+   * Whether this reader ANSWERS requests to archive — the sales manager and the
+   * admin (`answersArchiveRequests`, P14 14.8). One boolean, two sentences that
+   * are the same fact from either end: his own archiving happens at once, and
+   * he is the one an asking would have gone to. Everybody else asks, so the
+   * menu item and the dialog behind it say "Request archive" instead.
+   */
+  answers: boolean;
+  /**
+   * Where archiving this job stands, or null while nobody has ever asked. The
+   * newest asking, so an approved one is a job that has already gone.
+   */
+  archiveRequest: ArchiveRequestState | null;
   /** Who else is on it, in the reader's language, without its own rep (D147). */
   sharers: Sharer[];
   /** Who can still be put on it, or null for a reader who may not grant a share. */
@@ -139,6 +157,8 @@ export function ProjectSheet({
   mine,
   reports,
   owns,
+  answers,
+  archiveRequest,
   sharers,
   shareWith,
   me,
@@ -219,8 +239,21 @@ export function ProjectSheet({
   if (shareProjectOffered(sharers, shareWith, me)) {
     items.push({ label: t("drawer.share.action"), icon: UsersRound, onSelect: choose("share") });
   }
+  // Nothing to press while an asking is with the manager (P14 14.8): the action
+  // refuses a second one, and a control whose only possible answer is a refusal
+  // is the dead control DESIGN §5 keeps off the screen. What is left to do
+  // about it is in the notice above, where the state is.
+  const waiting = archiveRequest?.status === "waiting";
   if (owns) {
-    end.push({ label: t("drawer.archive"), icon: Archive, destructive: true, onSelect: choose("archive") });
+    if (!waiting) {
+      end.push({
+        // The same item and two acts: he archives, everybody else asks.
+        label: t(answers ? "drawer.archive" : "drawer.requestArchive"),
+        icon: Archive,
+        destructive: true,
+        onSelect: choose("archive"),
+      });
+    }
     if (!lost) {
       end.push({ label: t("common.markLost"), icon: CircleOff, destructive: true, onSelect: choose("lost") });
     }
@@ -274,6 +307,16 @@ export function ProjectSheet({
               </p>
             </div>
           </div>
+
+          {/* Whether this is still a record, before what the record says (P14
+              14.8). The rep who asked reads that it is with the sales manager
+              and that nothing has moved; the manager reads the same sentence
+              with Approve and Refuse under it; anybody else on the customer
+              reads why somebody wants the job gone before putting another day
+              into it. An approved asking draws nothing: the job went with it. */}
+          {archiveRequest ? (
+            <ArchiveRequestNotice request={archiveRequest} canAnswer={answers} name={name} />
+          ) : null}
 
           {/* How the job is going, before what it is (DESIGN §6): the rep's own
               estimate, what has actually been quoted on it, what has been
@@ -423,12 +466,15 @@ export function ProjectSheet({
             {lost ? null : (
               <MarkLostDialog projectId={projectId} projectName={name} {...hosted("lost")} />
             )}
-            <ArchiveProjectDialog
-              projectId={projectId}
-              projectName={name}
-              onArchived={close}
-              {...hosted("archive")}
-            />
+            {waiting ? null : (
+              <ArchiveProjectDialog
+                projectId={projectId}
+                projectName={name}
+                asks={!answers}
+                onArchived={close}
+                {...hosted("archive")}
+              />
+            )}
           </>
         ) : null}
         <ShareProjectDialog

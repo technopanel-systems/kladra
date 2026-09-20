@@ -57,6 +57,7 @@ import {
 import { buildCountries } from "./seed/countries-iso";
 import {
   ACTIVITIES,
+  ARCHIVE_ASKS,
   COMPANIES,
   COMPANY_TARGET_LAST_MONTH,
   COMPANY_TARGET_THIS_MONTH,
@@ -112,6 +113,7 @@ const { db, pool } = await import("../src/db/index");
 const { flagDuplicates, foldCompany } = await import("../src/lib/duplicates");
 const {
   activities,
+  archiveRequests,
   auditLog,
   cities,
   classes,
@@ -2081,6 +2083,96 @@ function positionAsTyped(position: string | undefined, contactName: string): str
   return POSITIONS.find((row) => row.en === position)?.ar ?? position;
 }
 
+/**
+ * Every archive carries a request now (P14 14.8), and two of them are still
+ * open on the manager's desk.
+ *
+ * The settled rows are written for the contacts and the jobs already archived
+ * above, because their reason has nowhere else to live — a company keeps its
+ * own on a column and these two never had one, so without this the archive
+ * screen can say nothing about two kinds out of three. The company archived six
+ * weeks ago is left alone: its reason is on its column, and a request invented
+ * for it would claim somebody asked and somebody answered on a day when nobody
+ * did.
+ *
+ * Then the three from `ARCHIVE_ASKS`: two waiting, one refused and back with
+ * the rep. All three records stay on the floor, which is what a waiting request
+ * is — a question, not a change.
+ */
+async function seedArchiveRequests(
+  companyIds: Map<string, string>,
+  contactIds: Map<string, string[]>,
+  projectIds: Map<string, string>,
+  userIds: Map<string, string>,
+): Promise<number> {
+  type Row = typeof archiveRequests.$inferInsert;
+  const rows: Row[] = [];
+
+  for (const c of COMPANIES) {
+    c.contacts.forEach((person, index) => {
+      if (!person.archived) return;
+      const when = instant(addDays(TODAY, -person.archived.daysAgo), 15, 10);
+      rows.push({
+        kind: "contact",
+        recordId: contactIds.get(c.key)![index],
+        reason: person.archived.reason,
+        requestedBy: must(userIds, c.rep, "user"),
+        status: "approved",
+        decidedBy: must(userIds, c.rep, "user"),
+        decidedAt: when,
+        createdAt: when,
+        updatedAt: when,
+      });
+    });
+  }
+
+  for (const p of PROJECTS) {
+    if (!p.archivedMonthsBack || !p.archivedReason) continue;
+    const when = instant(monthDay(p.archivedMonthsBack, 27), 16, 0);
+    const rep = must(userIds, companyRep(p.company), "user");
+    rows.push({
+      kind: "project",
+      recordId: must(projectIds, p.key, "project"),
+      reason: p.archivedReason,
+      requestedBy: rep,
+      status: "approved",
+      decidedBy: rep,
+      decidedAt: when,
+      createdAt: when,
+      updatedAt: when,
+    });
+  }
+
+  for (const ask of ARCHIVE_ASKS) {
+    const asked = instant(addDays(TODAY, -ask.daysAgo), 9, 40);
+    const recordId =
+      ask.kind === "company"
+        ? must(companyIds, ask.key, "company")
+        : ask.kind === "project"
+          ? must(projectIds, ask.key, "project")
+          : contactIds.get(ask.key)![ask.contactAt ?? 0];
+    rows.push({
+      kind: ask.kind,
+      recordId,
+      reason: ask.reason,
+      requestedBy: must(userIds, ask.by, "user"),
+      ...(ask.refusedBy
+        ? {
+            status: "refused" as const,
+            decidedBy: must(userIds, ask.refusedBy, "user"),
+            decidedAt: instant(addDays(TODAY, -(ask.refusedDaysAgo ?? 0)), 11, 15),
+            refuseReason: ask.refuseReason,
+          }
+        : {}),
+      createdAt: asked,
+      updatedAt: asked,
+    });
+  }
+
+  await db.insert(archiveRequests).values(rows);
+  return rows.length;
+}
+
 async function seedNonWorkingDays(userIds: Map<string, string>): Promise<void> {
   const nextMonth = addMonths(TODAY, 1);
   const holiday = nextMonth.slice(0, 8) + String(HOLIDAY_DAY_OF_MONTH).padStart(2, "0");
@@ -2253,6 +2345,9 @@ try {
   await seedTargets(userIds);
   await seedNotifications(userIds, quotationIds, companyIds);
   await seedNonWorkingDays(userIds);
+
+  const asks = await seedArchiveRequests(companyIds, contactIds, projectIds, userIds);
+  console.log(`  archive requests ${asks} (3 waiting on the manager, 1 refused)`);
 
   await printCounts();
   await printFaisalFollowUps();

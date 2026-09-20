@@ -36,6 +36,7 @@ import {
   users,
 } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
+import { archiveOrAsk } from "@/lib/archive-requests";
 import { moveContacts } from "@/lib/contacts";
 import { flagDuplicates } from "@/lib/duplicates";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
@@ -925,7 +926,14 @@ export async function setCompanyFollowUpAction(
  * a company, and two copies of these statements would be two ideas of what
  * travels with a customer.
  */
-async function moveCustomer(tx: Tx, companyId: string, from: string, to: string): Promise<void> {
+async function moveCustomer(
+  tx: Tx,
+  companyId: string,
+  from: string,
+  to: string,
+  /** Whoever is handing it over — the one who answers a request this move settles. */
+  actorId: string,
+): Promise<void> {
   await tx.update(companies).set({ repId: to }).where(eq(companies.id, companyId));
 
   // What was his under this customer goes with it. D51 said the whole floor
@@ -952,7 +960,7 @@ async function moveCustomer(tx: Tx, companyId: string, from: string, to: string)
   // The rule is D153's and it is written once, in `moveContacts`: a fold
   // (P12-8) lands rows on somebody's list the same way and would otherwise
   // have needed the same forty lines a second time.
-  await moveContacts(tx, { companyId, repId: from }, { companyId, repId: to });
+  await moveContacts(tx, { companyId, repId: from }, { companyId, repId: to }, actorId);
 
   // And he is not left sharing what he now owns — the company, and every
   // job under it that has just become his.
@@ -1047,7 +1055,7 @@ async function handCompanyTo(
     const from = company.repId;
     const arriving = company.fromId !== null && company.acknowledgedAt === null;
     const hers = arriving && target.id === company.fromId;
-    await moveCustomer(tx, companyId, from, target.id);
+    await moveCustomer(tx, companyId, from, target.id, actor.id);
     if (hers) {
       await tx
         .update(companies)
@@ -1156,8 +1164,16 @@ export async function handOverCompanyAction(
 /**
  * Archive, never delete (SPEC §3, S16). The row leaves every list and stays in
  * history, so a company that resurfaces in two years still shows what happened.
+ *
+ * Since P14 14.8 it is not always the rep's to do: he ASKS, with the same
+ * mandatory reason, and the sales manager answers. One door for both, because
+ * the person pressing it should not have to know which of the two he is doing
+ * — the returned `asked` is what the dialog needs to say afterwards.
  */
-export async function archiveCompanyAction(companyId: unknown, reason: unknown): Promise<ActionResult> {
+export async function archiveCompanyAction(
+  companyId: unknown,
+  reason: unknown,
+): Promise<ActionResult<{ asked: boolean }>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
     const t = await getTranslations("errors");
@@ -1174,31 +1190,17 @@ export async function archiveCompanyAction(companyId: unknown, reason: unknown):
 
     await assertCompanyMine(actor, id.data);
 
-    const archived = await db.transaction(async (tx) => {
-      const rows = await tx
-        .update(companies)
-        .set({ archivedAt: new Date(), archiveReason: why.data })
-        .where(and(eq(companies.id, id.data), isNull(companies.archivedAt)))
-        .returning({ id: companies.id });
-      if (rows.length === 0) return false;
-
-      await tx.insert(auditLog).values({
-        userId: actor.id,
-        action: "company.archive",
-        recordType: "company",
-        recordId: id.data,
-        details: { reason: why.data },
-      });
-      await notifyLive(tx, await liveAudienceForCompany(id.data, actor.id), {
-        type: "company",
-        id: id.data,
-      });
-      return true;
+    const outcome = await archiveOrAsk({
+      kind: "company",
+      recordId: id.data,
+      reason: why.data,
+      actor,
     });
+    if (outcome === "gone") return { ok: false, error: t("companyNotFound") };
+    if (outcome === "waiting") return { ok: false, error: t("archiveAlreadyAsked") };
 
-    if (!archived) return { ok: false, error: t("companyNotFound") };
     revalidateFloor();
-    return { ok: true };
+    return { ok: true, data: { asked: outcome === "asked" } };
   });
 }
 

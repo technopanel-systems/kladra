@@ -22,17 +22,30 @@ import { useRouter } from "@/i18n/navigation";
  * cannot own a trigger. The confirm button is in the destructive tint, never
  * the brand, and Cancel is beside it.
  *
- * Afterwards the drawer has nothing left to show, so this navigates back to the
- * plain list rather than refreshing into a company that is no longer in it.
+ * And the same button is two different acts depending on who presses it (P14
+ * 14.8). A rep ASKS: the title, the warning, the button and the toast all say
+ * so, and the customer stays exactly where he is until the sales manager
+ * answers — so that press refreshes the list he is already on and the notice at
+ * the top of the drawer is what he sees appear. Navigating him back to
+ * `/companies` would have closed the drawer on a company still in it and told
+ * him the opposite of what happened. The sales manager and the admin archive at
+ * once, and for them nothing about the wording changes and the drawer has
+ * nothing left to show, so that press goes back to the plain list rather than
+ * refreshing into a company that is no longer in it. Which of the two it is
+ * belongs to `answersArchiveRequests`, read on the server and handed down as
+ * `asks`, so the button never promises what the action refuses.
  */
 export function ArchiveCompanyDialog({
   companyId,
   companyName,
+  asks,
   open,
   onOpenChange,
 }: {
   companyId: string;
   companyName: string;
+  /** Whether pressing it files a request rather than archiving the customer. */
+  asks: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -53,13 +66,17 @@ export function ArchiveCompanyDialog({
       open={open}
       destructive
       onOpenChange={onOpenChange}
-      title={t("drawer.archiveTitle", { name: companyName })}
-      description={t("drawer.archiveWarning")}
-      confirmLabel={t("drawer.archive")}
-      successMessage={t("drawer.archived", { name: companyName })}
+      title={t(asks ? "drawer.requestArchiveTitle" : "drawer.archiveTitle", {
+        name: companyName,
+      })}
+      description={t(asks ? "drawer.requestArchiveWarning" : "drawer.archiveWarning")}
+      confirmLabel={t(asks ? "drawer.requestArchive" : "drawer.archive")}
+      successMessage={t(asks ? "drawer.archiveAsked" : "drawer.archived", { name: companyName })}
       onConfirm={() => archiveCompanyAction(companyId, reason)}
       onDone={() => {
-        router.push("/companies");
+        // An asking leaves the customer on the list, so the drawer stays open
+        // on him and the notice he has just raised is what arrives.
+        if (!asks) router.push("/companies");
         router.refresh();
       }}
     >

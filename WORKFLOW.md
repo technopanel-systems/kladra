@@ -292,8 +292,19 @@ below by number.
             because a name quietly missing from a list is the wondering the founder asked to stop.
             The admin's tick sits beside the box it depends on; the seed leaves Turki support this
             month so the state is on the floor.
-      - [ ] 14.8 Archiving is a request with a mandatory reason that the sales manager approves or
+      - [x] 14.8 Archiving is a request with a mandatory reason that the sales manager approves or
             refuses, one path for everything archivable, pending in his awaiting section.
+            **Done.** Migration 0030 gives the office one table for the question — a kind and a
+            record id, a reason that cannot be blank, and the answer beside it, with the three
+            checks that keep waiting and answered one fact rather than three that can disagree,
+            and a partial unique index so one record has one request waiting and any number of
+            settled ones behind it. Every archive goes through it, which is what makes the reason
+            universal: a contact and a job were archived with nothing written until now, and the
+            admin's screen could say nothing about them. The record stays workable while a request
+            waits; a refusal comes back on the record itself carrying his words, and asking again
+            is a new row. His band sits in the awaiting section, its own group beside the
+            coordinator's desk, each row a door to the record. Three notices, cleared by the
+            answer. D212.
       - [x] 14.9 Holidays and leave as periods, a month read at a glance, and both that tab and Users
             open to the sales manager with what he may not do written in SPEC §4 (14E).
             **Done.** No migration: a day off is still a row a day, because that is what pace,

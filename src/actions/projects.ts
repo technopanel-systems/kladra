@@ -19,6 +19,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, projects } from "@/db/schema";
 import { assertCompanyMine, assertProjectMine, assertProjectOwn } from "@/lib/activities";
+import { archiveOrAsk } from "@/lib/archive-requests";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
 import { parseDay } from "@/lib/dates";
@@ -330,38 +331,35 @@ export async function markProjectLostAction(
  * (S20), while archiving is tidying — a duplicate, a typo, a job that was never
  * real. A lost project stays visible; an archived one does not.
  */
-export async function archiveProjectAction(projectId: unknown): Promise<ActionResult> {
+export async function archiveProjectAction(
+  projectId: unknown,
+  reason: unknown,
+): Promise<ActionResult<{ asked: boolean }>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
     const t = await getTranslations("errors");
     const id = z.uuid().safeParse(projectId);
     if (!id.success) return { ok: false, error: tc("invalid") };
+    // Mandatory since P14 14.8: a job coming off the floor is a decision about
+    // a customer's work, and until now it was taken without a word written.
+    const why = z.string().trim().min(1).max(500).safeParse(reason);
+    if (!why.success) {
+      const sentence = t("archiveReasonRequired");
+      return { ok: false, error: sentence, fieldErrors: { reason: sentence } };
+    }
 
-    const owner = await assertProjectOwn(actor, id.data);
+    await assertProjectOwn(actor, id.data);
 
-    const archived = await db.transaction(async (tx) => {
-      const rows = await tx
-        .update(projects)
-        .set({ archivedAt: new Date() })
-        .where(and(eq(projects.id, id.data), isNull(projects.archivedAt)))
-        .returning({ id: projects.id });
-      if (rows.length === 0) return false;
-
-      await tx.insert(auditLog).values({
-        userId: actor.id,
-        action: "project.archive",
-        recordType: "project",
-        recordId: id.data,
-        details: { companyId: owner.companyId },
-      });
-      const audience = await liveAudienceForCompany(owner.companyId, actor.id);
-      await notifyLive(tx, audience, { type: "project", id: id.data });
-      await notifyLive(tx, audience, { type: "company", id: owner.companyId });
-      return true;
+    const outcome = await archiveOrAsk({
+      kind: "project",
+      recordId: id.data,
+      reason: why.data,
+      actor,
     });
+    if (outcome === "gone") return { ok: false, error: t("projectNotFound") };
+    if (outcome === "waiting") return { ok: false, error: t("archiveAlreadyAsked") };
 
-    if (!archived) return { ok: false, error: t("projectNotFound") };
     revalidateFloor();
-    return { ok: true };
+    return { ok: true, data: { asked: outcome === "asked" } };
   });
 }

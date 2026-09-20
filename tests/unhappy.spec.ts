@@ -147,18 +147,23 @@ test("a confirmation the wire refused says so and keeps its question open", asyn
   const drawer = page.getByRole("dialog", { name: company.name });
   await expect(drawer).toBeVisible(COLD);
 
-  // Archive is a prompt with a reason; the wire is cut before the press.
+  // Archiving is a request with a reason since P14 14.8 — the rep asks and the
+  // sales manager answers — so the menu item, the dialog and the button all say
+  // so. The wire is cut before the press, and what is being tested is the
+  // confirmation's own behaviour when no answer comes back at all.
   await drawer
     .getByRole("group", { name: t("drawer.companyActions") })
     .getByRole("button", { name: t("common.moreFor", { name: company.name }) })
     .click();
-  await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
-  const ask = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name: company.name }) });
+  await page.getByRole("menuitem", { name: t("drawer.requestArchive"), exact: true }).click();
+  const ask = page.getByRole("dialog", {
+    name: t("drawer.requestArchiveTitle", { name: company.name }),
+  });
   await expect(ask).toBeVisible(COLD);
   await ask.getByLabel(t("drawer.archiveReason")).fill("A wire test, not a real reason");
 
   await cutTheWire(page);
-  await ask.getByRole("button", { name: t("drawer.archive") }).click();
+  await ask.getByRole("button", { name: t("drawer.requestArchive") }).click();
   // A confirmation says every whole-form refusal in the toast (confirm-dialog.tsx);
   // the question stays open with the reason still in it.
   await expect(page.getByText(t("common.unreachable"))).toBeVisible(COLD);

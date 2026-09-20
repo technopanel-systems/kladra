@@ -36,6 +36,7 @@ import {
 } from "@/db/schema";
 import { moveContacts } from "@/lib/contacts";
 import type { Day } from "@/lib/dates";
+import { settleWaitingFor } from "@/lib/archive-requests";
 import { clearNotifications, createNotification } from "@/lib/notify";
 import { personNameOf } from "@/lib/people";
 import { formatPhone, storedE164 } from "@/lib/phone";
@@ -333,6 +334,7 @@ export async function foldCompany(
       tx,
       { companyId: foldedId, repId: owner.repId },
       { companyId: survivorId, repId: owner.repId },
+      what.actorId,
     );
   }
 
@@ -399,6 +401,11 @@ export async function foldCompany(
    * is on a record nobody should press anything on.
    */
   await clearNotifications(tx, { type: "company", id: foldedId }, NOTIFICATION_KINDS);
+
+  // And a request to archive it, if somebody had one in with the manager: the
+  // record has gone, which is what the request asked for, so it is answered
+  // rather than left waiting on a customer who is now history (P14 14.8).
+  await settleWaitingFor(tx, "company", foldedId, what.actorId);
 
   // Both sides are told, and they are told two different things, because two
   // different things happened to them (S53).

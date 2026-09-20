@@ -368,7 +368,12 @@ test("the project drawer shows Add report, keeps the rest in its menu, and puts 
     await expect(report).toHaveAttribute("data-variant", "brand");
     await expect(more).toBeVisible();
     await expect(actions.getByRole("button")).toHaveCount(2);
-    for (const label of ["common.edit", "common.markLost", "drawer.archive", "drawer.share.action"]) {
+    for (const label of [
+      "common.edit",
+      "common.markLost",
+      "drawer.requestArchive",
+      "drawer.share.action",
+    ]) {
       await expect(
         drawer.getByRole("button", { name: t(label), exact: true }),
         `${t(label)} still stands in the drawer as a button`,
@@ -383,10 +388,12 @@ test("the project drawer shows Add report, keeps the rest in its menu, and puts 
     await more.click();
     const menu = page.getByRole("menu");
     await expect(menu).toBeVisible();
+    // Archiving reads as the ask it is for everybody but the sales manager and
+    // the admin, who answer the asking rather than raise it (P14 14.8, D212).
     await expect(menu.getByRole("menuitem")).toHaveText([
       t("common.edit"),
       t("drawer.share.action"),
-      t("drawer.archive"),
+      t("drawer.requestArchive"),
       t("common.markLost"),
     ]);
     const items = menu.getByRole("menuitem");

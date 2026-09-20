@@ -18,6 +18,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { auditLog, contacts } from "@/db/schema";
 import { assertContactMine, assertMayKeepContacts } from "@/lib/activities";
+import { archiveOrAsk } from "@/lib/archive-requests";
 import { flagDuplicates } from "@/lib/duplicates";
 import { sharersOfCompany } from "@/lib/visibility";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
@@ -319,42 +320,36 @@ export async function setMainContactAction(contactId: unknown): Promise<ActionRe
  * safeguard. The flag is cleared in the same transaction so no archived row is
  * left holding it.
  */
-export async function archiveContactAction(contactId: unknown): Promise<ActionResult> {
+export async function archiveContactAction(
+  contactId: unknown,
+  reason: unknown,
+): Promise<ActionResult<{ asked: boolean }>> {
   return guard(async (actor) => {
     const tc = await getTranslations("common");
     const t = await getTranslations("errors");
     const id = z.uuid().safeParse(contactId);
     if (!id.success) return { ok: false, error: tc("invalid") };
+    // Mandatory here too since P14 14.8: a person leaving a customer is the
+    // same kind of fact as a customer going cold, and it was the one archive of
+    // the three that asked for nothing at all.
+    const why = z.string().trim().min(1).max(500).safeParse(reason);
+    if (!why.success) {
+      const sentence = t("archiveReasonRequired");
+      return { ok: false, error: sentence, fieldErrors: { reason: sentence } };
+    }
 
-    const [row] = await db
-      .select({ companyId: contacts.companyId, archivedAt: contacts.archivedAt })
-      .from(contacts)
-      .where(eq(contacts.id, id.data))
-      .limit(1);
-    if (!row || row.archivedAt) return { ok: false, error: t("contactNotFound") };
+    await assertContactMine(actor, id.data);
 
-    const { companyRepId: repId, sharers } = await assertContactMine(actor, id.data);
-
-    await db.transaction(async (tx) => {
-      await tx
-        .update(contacts)
-        .set({ archivedAt: new Date(), isMain: false })
-        .where(and(eq(contacts.id, id.data), isNull(contacts.archivedAt)));
-
-      await tx.insert(auditLog).values({
-        userId: actor.id,
-        action: "contact.archive",
-        recordType: "contact",
-        recordId: id.data,
-        details: { companyId: row.companyId },
-      });
-      await notifyLive(tx, await liveAudienceFor(repId, actor.id, [], sharers), {
-        type: "company",
-        id: row.companyId,
-      });
+    const outcome = await archiveOrAsk({
+      kind: "contact",
+      recordId: id.data,
+      reason: why.data,
+      actor,
     });
+    if (outcome === "gone") return { ok: false, error: t("contactNotFound") };
+    if (outcome === "waiting") return { ok: false, error: t("archiveAlreadyAsked") };
 
     revalidateFloor();
-    return { ok: true };
+    return { ok: true, data: { asked: outcome === "asked" } };
   });
 }

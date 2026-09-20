@@ -13,10 +13,12 @@ import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personName, personNameOf } from "@/lib/people";
 import {
+  ARCHIVE_KINDS,
   companyTargets,
   nonWorkingDays,
   targets,
   users,
+  type ArchiveKind,
 } from "@/db/schema";
 import {
   addDays,
@@ -565,9 +567,14 @@ export function monthMarks(month: Day, rows: NonWorkingRow[]): Record<Day, DayMa
 
 // ---- the archive (D24) -------------------------------------------------------
 
-/** What the archive screen lists, and the family `admin.kind.*` names (D96). */
-export const ARCHIVE_KINDS = ["company", "contact", "project"] as const;
-export type ArchiveKind = (typeof ARCHIVE_KINDS)[number];
+/**
+ * What the archive screen lists, and the family `admin.kind.*` names (D96).
+ *
+ * Declared in the schema, where the `archive_requests` CHECK reads it, and
+ * re-exported here because this is the file every screen already asks (P14).
+ */
+export { ARCHIVE_KINDS };
+export type { ArchiveKind };
 
 /**
  * How many rows one group of the archive draws (D80): a share of what a list
@@ -718,7 +725,13 @@ export async function listArchived(input: {
                  where a.record_type = 'contact' and a.record_id = ct.id::text
                    and a.action = 'contact.archive'
                  order by a.at desc limit 1),
-               null::text,
+               -- Why, from the request it was archived on (P14 14.8). A company
+               -- keeps its reason in a column of its own and these two never
+               -- had one, so the screen said "archived" and nothing else about
+               -- two kinds out of three.
+               (select r.reason from archive_requests r
+                 where r.kind = 'contact' and r.record_id = ct.id and r.status = 'approved'
+                 order by r.decided_at desc limit 1),
                (cc.archived_at is not null),
                null::text
           from contacts ct
@@ -735,7 +748,9 @@ export async function listArchived(input: {
                  where a.record_type = 'project' and a.record_id = pj.id::text
                    and a.action = 'project.archive'
                  order by a.at desc limit 1),
-               null::text,
+               (select r.reason from archive_requests r
+                 where r.kind = 'project' and r.record_id = pj.id and r.status = 'approved'
+                 order by r.decided_at desc limit 1),
                (pc.archived_at is not null),
                null::text
           from projects pj

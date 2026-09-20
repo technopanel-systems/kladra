@@ -19,7 +19,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { z } from "zod";
 import { Link } from "@/i18n/navigation";
 import { listActivitiesForCompany, mayReportOn } from "@/lib/activities";
-import { issuesOwnQuotations, mayHandOver, mayQuote, mayShare, mayWrite } from "@/lib/floor";
+import {
+  answersArchiveRequests,
+  issuesOwnQuotations,
+  mayHandOver,
+  mayQuote,
+  mayShare,
+  mayWrite,
+} from "@/lib/floor";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { getCompany, type CompanyDetail } from "@/lib/companies";
 import { floorHolderOptions } from "@/lib/pickers";
@@ -123,6 +130,16 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   // drawer offers exactly the work the server would allow — including none of
   // it while an admin is viewing as somebody (D42, P8.8).
   const mine = mayWrite(user, company.repId);
+
+  /**
+   * Whether he ANSWERS a request to archive rather than filing one (P14 14.8).
+   * The sales manager and the admin, and neither of them while an admin is
+   * looking through somebody's eyes — `answersArchiveRequests` is the same
+   * sentence `archiveOrAsk` decides by, so the button a screen draws and the
+   * act the server performs are one decision read twice. It reaches the header
+   * and the contact cards, because both hold a door to the same question.
+   */
+  const answers = answersArchiveRequests(user);
 
   /*
    * The two questions about belonging, and who may answer each (D50, D147).
@@ -261,6 +278,8 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
         standing={company.standing}
         mine={mine}
         reports={reports}
+        answers={answers}
+        archiveRequest={company.archiveRequest}
         handOverTo={handOverTo}
         sharers={sharers}
         shareWith={shareWith}
@@ -397,6 +416,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             country={company.countryCode}
             mayAdd={keepsContacts}
             manyKeepers={manyKeepers}
+            answers={answers}
             rows={contacts.map((row) => ({
               id: row.id,
               name: row.name,
@@ -408,6 +428,10 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
               position: row.position,
               email: row.email,
               notes: row.notes,
+              // Read with the people themselves, one statement for the whole
+              // customer (P14 14.8) — a card says whether somebody has asked
+              // for it to go the same way the drawer above says it.
+              archiveRequest: row.archiveRequest,
             }))}
           />
         </TabsContent>

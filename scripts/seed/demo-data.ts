@@ -168,7 +168,7 @@ export type ContactSeed = {
    * had seeded, so the group and its Restore button were a branch nobody had
    * seen (rules/data.md).
    */
-  archived?: { daysAgo: number };
+  archived?: { daysAgo: number; reason: string };
 };
 
 export type CompanySeed = {
@@ -327,7 +327,12 @@ export const COMPANIES: CompanySeed[] = [
       { name: "تركي الدوسري", phone: "0501187740", position: "Accountant" },
       // Moved to another contractor; Faisal archived him last week. On a live
       // company, so the archive offers him back in one press (D92).
-      { name: "خالد المالكي", phone: "0540073316", position: "Site engineer", archived: { daysAgo: 6 } },
+      {
+        name: "خالد المالكي",
+        phone: "0540073316",
+        position: "Site engineer",
+        archived: { daysAgo: 6, reason: "انتقل إلى مقاول آخر" },
+      },
     ],
   },
   {
@@ -845,6 +850,12 @@ export type ProjectSeed = {
    */
   archivedMonthsBack?: number;
   /**
+   * Why it went, in the words the rep wrote on the request (P14 14.8). Every
+   * archive now carries one, and a job archived with nothing said is a row the
+   * archive screen can only call "archived".
+   */
+  archivedReason?: string;
+  /**
    * Opened this many calendar days ago, instead of taking the spread (P13). The
    * jobs on a lead are younger than the lead, and the spread starts a fortnight
    * back and runs for months, which would open a job before its customer.
@@ -869,6 +880,78 @@ export type ProjectSeed = {
  * `tests/project-board.spec.ts` reads every one of these back off the screen
  * against the stage it works out for itself.
  */
+/**
+ * Requests to archive that are still waiting, and one that came back refused
+ * (SPEC §3, P14 14.8).
+ *
+ * Without these the sales manager's newest band is empty on the demo floor and
+ * the refused state — his reason sitting on a record, waiting to be answered
+ * with a better one — is a branch nobody has seen (rules/data.md: every band
+ * gets a row, and a colour the demo never shows is a colour nobody has seen
+ * work). Three rows, one of each kind, so the band's row reads differently for
+ * a customer, a person and a job.
+ *
+ * All three records stay ON the floor, which is the point of the rule: a
+ * request changes nothing until it is answered.
+ */
+export const ARCHIVE_ASKS: {
+  kind: "company" | "contact" | "project";
+  /** The seed key of the record — a company, a project, or the contact's company. */
+  key: string;
+  /** Which of that company's contacts, where the kind is a contact. */
+  contactAt?: number;
+  /** Who asked — the rep who holds the record. */
+  by: string;
+  daysAgo: number;
+  reason: string;
+  /** Answered, where it has been: the manager, his day, and his words. */
+  refusedBy?: string;
+  refusedDaysAgo?: number;
+  refuseReason?: string;
+}[] = [
+  // The oldest, and therefore the top of his band: a customer Faisal has given
+  // up on while the office has not.
+  {
+    kind: "company",
+    key: "f10",
+    by: "faisal",
+    daysAgo: 5,
+    reason: "لم يعد لديهم مشاريع كلادينج، والملف مغلق من طرفهم",
+  },
+  // A job whose tender went elsewhere, asked for by the rep who opened it.
+  {
+    kind: "project",
+    key: "p12",
+    by: "turki",
+    daysAgo: 2,
+    reason: "المناقصة رست على مورّد آخر",
+  },
+  // A person at one of Saad's customers, still waiting: the contact card's own
+  // waiting notice, and the archive item it takes off that card's menu, had no
+  // row on the demo floor without it.
+  {
+    kind: "contact",
+    key: "s2",
+    contactAt: 1,
+    by: "saad",
+    daysAgo: 1,
+    reason: "ترك الشركة ولم يعد رقمه يعمل",
+  },
+  // And the one he answered: the reason is on the contact's card, and Faisal
+  // may ask again with an answer to it.
+  {
+    kind: "contact",
+    key: "f9",
+    contactAt: 1,
+    by: "faisal",
+    daysAgo: 8,
+    reason: "لم يعد يرد على الاتصال",
+    refusedBy: "abdulrahman",
+    refusedDaysAgo: 6,
+    refuseReason: "رقمه هو الوحيد على أوامر الشراء، يُسأل عنه أولًا عند المدير",
+  },
+];
+
 export const PROJECTS: ProjectSeed[] = [
   { key: "p1", company: "f1", name: "واجهة مبنى الإدارة", expectedSqm: "480.00" },
   {
@@ -988,6 +1071,7 @@ export const PROJECTS: ProjectSeed[] = [
     expectedSqm: "1500.00",
     fromMonthsBack: 2,
     archivedMonthsBack: 1,
+    archivedReason: "سُلِّم المشروع بالكامل",
   },
   {
     key: "h2",
@@ -996,6 +1080,7 @@ export const PROJECTS: ProjectSeed[] = [
     expectedSqm: "700.00",
     fromMonthsBack: 2,
     archivedMonthsBack: 1,
+    archivedReason: "سُلِّم المشروع بالكامل",
   },
   {
     key: "h3",
@@ -1004,6 +1089,7 @@ export const PROJECTS: ProjectSeed[] = [
     expectedSqm: "450.00",
     fromMonthsBack: 4,
     archivedMonthsBack: 3,
+    archivedReason: "العميل أجّل التنفيذ إلى أجل غير مسمى",
   },
   { key: "h4", company: "t5", name: "مبنى النيل السكني", expectedSqm: "800.00", fromMonthsBack: 3 },
   {
@@ -1020,6 +1106,7 @@ export const PROJECTS: ProjectSeed[] = [
     expectedSqm: "340.00",
     fromMonthsBack: 2,
     archivedMonthsBack: 1,
+    archivedReason: "رست المناقصة على مورّد آخر",
   },
   // Turki's job on the record that turns out to be Faisal's customer (P12-8).
   // It moves onto the record that continues and stays TURKI's, which is the

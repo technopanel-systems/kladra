@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { setMainContactAction } from "@/actions/contacts";
+import { ArchiveRequestNotice } from "@/components/archive/archive-request-notice";
 import { useFailureToast } from "@/components/companies/failure-toast";
 import { AddContactDialog } from "@/components/contacts/add-contact-dialog";
 import { ArchiveContactDialog } from "@/components/contacts/archive-contact-dialog";
@@ -20,6 +21,7 @@ import { useRowFlash } from "@/components/ui-ext/use-row-flash";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
+import type { ArchiveRequestState } from "@/lib/archive-requests";
 import type { E164 } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +59,12 @@ export type ContactRow = {
   position: string | null;
   email: string | null;
   notes: string | null;
+  /**
+   * Where taking this person off the customer stands, or null while nobody has
+   * ever asked (P14 14.8). A contact is archived down the same path a company
+   * is, so the card carries the same notice the drawer above it does.
+   */
+  archiveRequest: ArchiveRequestState | null;
 };
 
 type Act = "edit" | "archive";
@@ -68,6 +76,7 @@ export function ContactList({
   rows,
   mayAdd,
   manyKeepers,
+  answers,
 }: {
   companyId: string;
   companyName: string;
@@ -82,6 +91,14 @@ export function ContactList({
    * fold (D147, D158), and a caption that never varies is a word to read past.
    */
   manyKeepers: boolean;
+  /**
+   * Whether this reader ANSWERS requests to archive — the sales manager and the
+   * admin (`answersArchiveRequests`, P14 14.8). The same boolean the drawer
+   * above reads, handed down rather than asked again: it decides both what the
+   * card's last menu item says and whether the notice on a card carries the two
+   * buttons.
+   */
+  answers: boolean;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -154,6 +171,12 @@ export function ContactList({
         <ul className="flex flex-col gap-2">
           {rows.map((row) => {
             const marked = flashOf(row.id);
+            // Nothing to press while an asking is with the sales manager (P14
+            // 14.8): the action refuses a second one, and a control whose only
+            // possible answer is a refusal is the dead control DESIGN §5 keeps
+            // off the screen. What is left to do about it is in the notice
+            // under his details, where the state is.
+            const waiting = row.archiveRequest?.status === "waiting";
             return (
               <li
                 key={row.id}
@@ -196,12 +219,18 @@ export function ContactList({
                                 },
                               ]),
                         ]}
-                        end={{
-                          label: t("drawer.archive"),
-                          icon: Archive,
-                          destructive: true,
-                          onSelect: choose(row, "archive"),
-                        }}
+                        end={
+                          waiting
+                            ? undefined
+                            : {
+                                // The same item and two acts: he archives,
+                                // everybody else asks.
+                                label: t(answers ? "drawer.archive" : "drawer.requestArchive"),
+                                icon: Archive,
+                                destructive: true,
+                                onSelect: choose(row, "archive"),
+                              }
+                        }
                       />
                     ) : null}
                   </div>
@@ -243,6 +272,26 @@ export function ContactList({
                       </a>
                     ) : null}
                   </div>
+
+                  {/* Whether this person is still on the customer, under the
+                      details that say who he is (P14 14.8). Below them and not
+                      above: the rep reads the name and the number first — that
+                      is what he opened the tab for — and then reads that
+                      somebody has asked for the card to go. The manager reads
+                      the same sentence with Approve and Refuse under it. An
+                      approved asking draws nothing: the person went with it,
+                      and so did the card. */}
+                  {row.archiveRequest ? (
+                    // A hair of air under the number: the card's own rows sit a
+                    // gap apart, and a bordered box wants more than a line does.
+                    <div className="mt-1">
+                      <ArchiveRequestNotice
+                        request={row.archiveRequest}
+                        canAnswer={answers}
+                        name={row.name}
+                      />
+                    </div>
+                  ) : null}
                 </div>
               </li>
             );
@@ -266,12 +315,15 @@ export function ContactList({
             onOpenChange={closeTo}
             onSaved={(id) => flash([id])}
           />
-          <ArchiveContactDialog
-            contactId={subject.id}
-            contactName={subject.name}
-            open={act === "archive"}
-            onOpenChange={closeTo}
-          />
+          {subject.archiveRequest?.status === "waiting" ? null : (
+            <ArchiveContactDialog
+              contactId={subject.id}
+              contactName={subject.name}
+              asks={!answers}
+              open={act === "archive"}
+              onOpenChange={closeTo}
+            />
+          )}
         </>
       ) : null}
     </div>

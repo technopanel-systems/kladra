@@ -84,17 +84,56 @@ async function fromMenu(page: Page, t: Translate, within: Locator, name: string,
 }
 
 /** Every archive asks first; the question names the thing (SPEC §3, D24). */
-async function confirmArchive(page: Page, t: Translate, name: string): Promise<void> {
-  const confirm = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name }) }).or(
-    page.getByRole("dialog", { name: t("drawer.archiveContactTitle", { name }) }),
-  );
+/**
+ * Fill in the asking and send it (P14 14.8).
+ *
+ * A rep does not archive anything any more: he asks, with a reason he cannot
+ * leave out, and the sales manager answers. All three kinds ask the same
+ * question now — a contact and a job used to ask for nothing at all — so there
+ * is one dialog to fill in and one button to press.
+ */
+async function askToArchive(page: Page, t: Translate, name: string): Promise<void> {
+  const confirm = page.getByRole("dialog", { name: t("drawer.requestArchiveTitle", { name }) });
   // Asked once it is up: from a menu, the question opens as the menu finishes
   // closing, and a count taken before then finds no reason box to fill.
   await expect(confirm).toBeVisible();
-  // A company asks why (S16, D87); a contact does not.
-  const why = confirm.getByLabel(t("drawer.archiveReason"));
-  if ((await why.count()) > 0) await why.fill("Closed down — rep.spec");
-  await confirm.getByRole("button", { name: t("drawer.archive") }).click();
+  await confirm.getByLabel(t("drawer.archiveReason")).fill("Closed down — rep.spec");
+  await confirm.getByRole("button", { name: t("drawer.requestArchive") }).click();
+  await expect(page.getByText(t("drawer.archiveAsked", { name }))).toBeVisible();
+}
+
+/**
+ * And the sales manager answering it, from the record itself — which is where
+ * the founder put the answer: a row on his band is a door to the drawer, and
+ * the drawer carries Approve and Refuse (D212).
+ *
+ * The walk signs in as him and back, because the claims the steps below make
+ * are about a record that HAS gone, and a rep can no longer produce that state
+ * on his own.
+ */
+async function approveArchive(
+  page: Page,
+  t: Translate,
+  locale: Locale,
+  url: string,
+  name: string,
+  /** The tab the record lives behind, for a contact: he is a card inside his customer's drawer. */
+  tab?: string,
+): Promise<void> {
+  await login(page, locale, "abdulrahman");
+  await page.goto(url);
+  if (tab) await page.getByRole("tab", { name: tab }).click();
+  // Scoped to the card when there is one, so the answer is given to the person
+  // this step is about and not to whatever else is waiting on the customer.
+  const scope = tab ? page.getByRole("listitem").filter({ hasText: name }) : page;
+  const notice = scope.locator('[data-slot="archive-request"][data-state="waiting"]').first();
+  await expect(notice).toBeVisible({ timeout: 30_000 });
+  await notice.getByRole("button", { name: t("dispatches.approve") }).click();
+  const confirm = page.getByRole("dialog", { name: t("drawer.approveArchiveTitle", { name }) });
+  await expect(confirm).toBeVisible();
+  await confirm.getByRole("button", { name: t("dispatches.approve") }).click();
+  await expect(confirm).toBeHidden();
+  await login(page, locale, "faisal");
 }
 
 test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a project, and archiving", async ({
@@ -378,14 +417,33 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
     ).toBeVisible();
     await expect(second.getByText(t("drawer.mainContact"))).toBeVisible();
 
-    // Archiving the main contact hands the badge back to the oldest remaining
-    // one (D18) rather than refusing — the person who left is exactly the one a
-    // rep wants gone.
-    await fromMenu(page, t, second, fixture.secondContact, t("drawer.archive"));
-    await confirmArchive(page, t, fixture.secondContact);
-    await expect(page.getByText(t("drawer.archived", { name: fixture.secondContact }))).toBeVisible();
+    // He ASKS for the main contact to go (P14 14.8), and until somebody answers
+    // nothing about the person changes: he is still on the card, still carrying
+    // the badge, and the card now says a request is out on him.
+    await fromMenu(page, t, second, fixture.secondContact, t("drawer.requestArchive"));
+    await askToArchive(page, t, fixture.secondContact);
 
+    const asked = dialogNamed(page, fixture.renamed);
+    await asked.getByRole("tab", { name: t("common.contacts") }).click();
+    const waiting = asked.getByRole("listitem").filter({ hasText: fixture.secondContact });
+    await expect(waiting.locator('[data-slot="archive-request"][data-state="waiting"]')).toBeVisible();
+    await expect(waiting.getByText(t("drawer.mainContact"))).toBeVisible();
+
+    // And when the sales manager says yes, archiving the main contact hands the
+    // badge back to the oldest remaining one (D18) rather than refusing — the
+    // person who left is exactly the one a rep wants gone.
+    await approveArchive(
+      page,
+      t,
+      locale,
+      `/${locale}/companies?open=${companyId}`,
+      fixture.secondContact,
+      t("common.contacts"),
+    );
+
+    await page.goto(`/${locale}/companies?open=${companyId}`);
     const reopened = dialogNamed(page, fixture.renamed);
+    await reopened.getByRole("tab", { name: t("common.contacts") }).click();
     await expect(reopened.getByText(fixture.secondContact)).toHaveCount(0);
     await expect(
       reopened.getByRole("listitem").filter({ hasText: fixture.contact }).getByText(t("drawer.mainContact")),
@@ -398,13 +456,27 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
       .getByRole("link", { name: t("projects.openProject", { name: fixture.project }) })
       .click();
     const sheet = dialogNamed(page, fixture.project);
+    // Where to come back to when the sales manager answers: the sheet puts the
+    // job's own id in the address, which is the only place this walk has it.
+    // Read after it is open — the click that opens it is what writes the id,
+    // and a URL taken before then is the plain list.
+    await expect(sheet).toBeVisible();
+    const projectUrl = page.url();
 
     // Both are offered, in the drawer's menu, and they say different things.
     await sheet.getByRole("button", { name: t("common.moreFor", { name: fixture.project }) }).click();
     await expect(page.getByRole("menuitem", { name: t("common.markLost"), exact: true })).toBeVisible();
-    await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
-    await confirmArchive(page, t, fixture.project);
-    await expect(page.getByText(t("drawer.archived", { name: fixture.project }))).toBeVisible();
+    await page.getByRole("menuitem", { name: t("drawer.requestArchive"), exact: true }).click();
+    await askToArchive(page, t, fixture.project);
+
+    // A job asks why now too, and it stays on his list while the question is
+    // out — the founder's whole point: a request changes nothing (D212).
+    await page.goto(`/${locale}/projects`);
+    await expect(
+      page.getByRole("link", { name: t("projects.openProject", { name: fixture.project }) }),
+    ).toBeVisible();
+
+    await approveArchive(page, t, locale, projectUrl, fixture.project);
 
     await page.goto(`/${locale}/projects`);
     await expect(
@@ -421,10 +493,10 @@ test("Faisal's floor: a company, its contact, a visit, a follow-up coming due, a
       t,
       drawer.getByRole("group", { name: t("drawer.companyActions") }),
       fixture.renamed,
-      t("drawer.archive"),
+      t("drawer.requestArchive"),
     );
-    await confirmArchive(page, t, fixture.renamed);
-    await expect(page.getByText(t("drawer.archived", { name: fixture.renamed }))).toBeVisible();
+    await askToArchive(page, t, fixture.renamed);
+    await approveArchive(page, t, locale, `/${locale}/companies?open=${companyId}`, fixture.renamed);
 
     await page.goto(`/${locale}/companies`);
     await expect(

@@ -30,5 +30,8 @@
   "noMarketingSource": "Marketing’s own lead source is missing from the lists, so the lead cannot be filed. An admin can put it back under Lookups.",
   "leadNeedsAFloor": "Choose someone a company can sit with.",
   "duplicateWhichOne": "Say which record continues.",
-  "duplicateAnswered": "Somebody has already answered this one."
+  "duplicateAnswered": "Somebody has already answered this one.",
+  "archiveAlreadyAsked": "Somebody has already asked for this to be archived. The sales manager has it.",
+  "archiveRecordGone": "That record has already left the lists.",
+  "archiveAnswered": "That request has been answered already."
 }

@@ -79,5 +79,22 @@
   "unfileTitle": "إلغاء إدراج هذا التقرير؟",
   "unfileWarning": "سيخرج من سجل هذه الشركة ومن كل عدد كان يدخل فيه. لا يُحذف شيء، ولا يمكن إرجاعه — والتقرير الصحيح يُكتب من جديد في مكانه.",
   "unfiled": "تم إلغاء إدراج التقرير.",
-  "correct": "تصحيح"
+  "correct": "تصحيح",
+  "requestArchive": "طلب أرشفة",
+  "requestArchiveTitle": "طلب أرشفة {name}؟",
+  "requestArchiveWarning": "مدير المبيعات هو من يجيب عن الطلب، ولا يخرج شيء من قوائمك قبل جوابه.",
+  "archiveAsked": "تم إرسال طلب أرشفة {name}، ولا يتغير شيء حتى يجيب مدير المبيعات.",
+  "archiveRequestedBy": "مَن طلب الأرشفة",
+  "archiveRefusedBy": "مَن رفض الأرشفة",
+  "archiveWaitingMeans": "الطلب لدى مدير المبيعات، ولم يتغير شيء بعد.",
+  "archiveRefusedMeans": "السجل ما زال في قوائمك، ويُعاد الطلب بعد معالجة سبب الرفض.",
+  "approveArchiveTitle": "أرشفة {name}؟",
+  "approveArchiveWarning": "يخرج من كل القوائم ويبقى سجله كما هو. وبإمكان مدير النظام استرجاعه.",
+  "refuseArchiveTitle": "رفض أرشفة {name}؟",
+  "refuseArchiveHint": "سبب بقائه في القوائم. يقرأه صاحب الطلب ويردّ عليه.",
+  "refuseArchiveLabel": "سبب بقائه",
+  "refuseArchivePlaceholder": "لا يزال عليه عرض سعر مفتوح",
+  "archiveRefused": "تم رفض أرشفة {name}",
+  "archiveReasonContactPlaceholder": "ترك الشركة؛ الرقم خطأ؛ مسجّلة أصلًا باسم آخر",
+  "archiveReasonProjectPlaceholder": "سُلِّم المشروع؛ رست المناقصة على غيرنا؛ لم يكن مشروعًا حقيقيًا"
 }

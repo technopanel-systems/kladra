@@ -93,5 +93,7 @@
       "occasional": "Occasional",
       "habit": "A habit"
     }
-  }
+  },
+  "archiveAsks": "Archive requests",
+  "archiveAsksMeans": "Records somebody wants taken off the lists. Each one waits for your answer."
 }

@@ -21,6 +21,7 @@ import { db } from "@/db";
 import { personName } from "@/lib/people";
 import { cities, companies, projects, users } from "@/db/schema";
 import { type ActivityRow, listActivitiesForProject } from "@/lib/activities";
+import { archiveStandsAt, type ArchiveRequestState } from "@/lib/archive-requests";
 import { NotAllowed } from "@/lib/authz";
 import { riyadhDay, type Day } from "@/lib/dates";
 import {
@@ -326,6 +327,13 @@ export type ProjectDetail = ProjectRow & {
     nextFollowUp: Day | null;
   };
   activities: ActivityRow[];
+  /**
+   * Where taking this job off the floor stands, or null while nobody has ever
+   * asked (P14 14.8). The newest asking, so an approved one means the job has
+   * already gone — which is why the drawer reads the status and not merely the
+   * presence of a row.
+   */
+  archiveRequest: ArchiveRequestState | null;
 };
 
 /**
@@ -378,6 +386,13 @@ export async function getProject(
   if (!row) return null;
   if (!maySeeCompany(user, row.companyRepId, row.shared)) throw new NotAllowed();
 
+  // The log and the asking together: neither is waiting on the other, and both
+  // are about a job this reader has just been allowed to open.
+  const [activities, archiveRequest] = await Promise.all([
+    listActivitiesForProject(user, id),
+    archiveStandsAt("project", id, label),
+  ]);
+
   return {
     id: row.id,
     name: row.name,
@@ -403,6 +418,7 @@ export async function getProject(
       repName: row.companyRepName,
       nextFollowUp: row.companyNextFollowUp ?? null,
     },
-    activities: await listActivitiesForProject(user, id),
+    activities,
+    archiveRequest,
   };
 }

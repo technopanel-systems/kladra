@@ -12,6 +12,7 @@ import { formatDay } from "@/lib/dates";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { LEAD_LATE_WORKING_DAYS } from "@/lib/leads";
 import type { StateTone } from "@/lib/state-tone";
+import type { ArchiveKind } from "@/db/schema";
 import { STUCK_REQUEST_WORKING_DAYS, type Stuck } from "@/lib/team";
 
 /**
@@ -98,6 +99,16 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   const hrefOf = (row: { kind: "company" | "project"; id: string }) =>
     row.kind === "company" ? `/companies?open=${row.id}` : `/projects?open=${row.id}`;
 
+  /**
+   * And a request to archive points at the record it is about, which is where
+   * he answers it. A contact has no drawer of its own: it is a card inside its
+   * customer's, so that is where the row goes (P14 14.8).
+   */
+  const hrefOfArchive = (row: { kind: ArchiveKind; recordId: string; companyId: string }) =>
+    row.kind === "project"
+      ? `/projects?open=${row.recordId}`
+      : `/companies?open=${row.companyId}`;
+
   /*
    * The customer as the arriving record spells him, and the two people holding
    * a record each. Both names go through one message with two placeholders
@@ -181,6 +192,32 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     noteTone: row.late ? "bad" : "wait",
   }));
 
+  /*
+   * His own desk, and the only band on this screen that is (P14 14.8). Every
+   * other group here is somebody else's work that he is watching; these are
+   * requests waiting on him to say yes or no, and the row is a door to the
+   * record where he answers.
+   *
+   * The face is the customer's, as it is on every row of this screen, and the
+   * first line names the record itself — the person or the job where it is not
+   * the customer, so "archive Prime Facade" and "archive Ahmed at Prime Facade"
+   * do not read alike. Who asked, not whose floor it is: this is the one row
+   * here where those can differ and the asker is the one he answers.
+   */
+  const archives: StuckRowData[] = stuck.archives.rows.map((row) => ({
+    key: row.id,
+    href: hrefOfArchive(row),
+    name: row.name,
+    companyName: row.kind === "company" ? undefined : row.companyName,
+    face: face(row.companyId, row.companyName, "wait"),
+    who: row.askedBy,
+    people: people(row.id, [row.askedBy]),
+    // The same words the waiting requests two cards up wear: one clock, one
+    // phrasing, so a manager reading both is not reading two (D59).
+    note: t("team.waitingDays", { count: row.workingDaysWaiting }),
+    noteTone: "wait",
+  }));
+
   const followUps: StuckRowData[] = stuck.followUps.rows.map((row) => ({
     key: `${row.kind}-${row.id}`,
     href: hrefOf(row),
@@ -258,6 +295,14 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
       means: t("team.stuckRequestsGroupMeans", { days: STUCK_REQUEST_WORKING_DAYS }),
       rows: requests,
       more: stuck.requests.total - requests.length,
+    },
+    stuck.archives.total > 0 && {
+      key: "archives",
+      title: t("team.archiveAsks"),
+      tone: "wait" as const,
+      means: t("team.archiveAsksMeans"),
+      rows: archives,
+      more: stuck.archives.total - archives.length,
     },
     stuck.followUps.total > 0 && {
       key: "followUps",

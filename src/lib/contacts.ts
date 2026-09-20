@@ -29,11 +29,18 @@
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { Tx } from "@/db";
 import { contacts } from "@/db/schema";
+import { settleWaitingFor } from "@/lib/archive-requests";
 
 /** A rep's list of people on one company — the thing being moved, and the thing moved onto. */
 export type ContactList = { companyId: string; repId: string };
 
-export async function moveContacts(tx: Tx, from: ContactList, to: ContactList): Promise<void> {
+export async function moveContacts(
+  tx: Tx,
+  from: ContactList,
+  to: ContactList,
+  /** Who is doing the moving — a fold is the manager, a hand-over is whoever ran it. */
+  actorId: string,
+): Promise<void> {
   const already = await tx
     .select({
       phoneNormalized: contacts.phoneNormalized,
@@ -57,10 +64,16 @@ export async function moveContacts(tx: Tx, from: ContactList, to: ContactList): 
   );
 
   if (taken.length > 0) {
-    await tx
+    const gone = await tx
       .update(contacts)
       .set({ archivedAt: new Date() })
-      .where(and(mine, inArray(contacts.phoneNormalized, taken)));
+      .where(and(mine, inArray(contacts.phoneNormalized, taken)))
+      .returning({ id: contacts.id });
+
+    // A person archived here is one the survivor already had under another row,
+    // and somebody may have been waiting to be told he could go. That question
+    // has just been answered by the fold (P14 14.8).
+    for (const row of gone) await settleWaitingFor(tx, "contact", row.id, actorId);
   }
 
   await tx

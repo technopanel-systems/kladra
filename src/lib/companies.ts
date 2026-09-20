@@ -21,11 +21,12 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
-import { and, asc, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import {
+  archiveRequests,
   cities,
   companies,
   companyCategories,
@@ -36,6 +37,7 @@ import {
   users,
 } from "@/db/schema";
 import { assertCompanyVisible, mayOpen } from "@/lib/activities";
+import { archiveStandsAt, type ArchiveRequestState } from "@/lib/archive-requests";
 import { NotAllowed } from "@/lib/authz";
 import { smacState, type SmacState } from "@/lib/smac";
 import { mayWrite, seesSmacBacklog } from "@/lib/floor";
@@ -78,6 +80,9 @@ const contactRep = alias(users, "contact_rep");
 /** Whoever answered the SMAC question about this customer — either of the two (P14). */
 const smacBeliever = alias(users, "smac_believer");
 const smacRegistrar = alias(users, "smac_registrar");
+/** Whoever asked for one of this customer's people to go, and whoever answered (P14 14.8). */
+const archiveAsker = alias(users, "archive_asker");
+const archiveDecider = alias(users, "archive_decider");
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
 export { listActivitiesForCompany as listCompanyActivities } from "@/lib/activities";
@@ -385,6 +390,13 @@ export type CompanyContact = {
    * drawer has to say it: a company more than one person keeps people on.
    */
   repName: string;
+  /**
+   * Whether anybody has asked for this person to be taken off the customer, and
+   * where that asking stands (P14 14.8). Null on all but a handful of cards: a
+   * contact is archived down the same path a company is, so the card carries
+   * the same notice the drawer does.
+   */
+  archiveRequest: ArchiveRequestState | null;
 };
 
 export type CompanyProject = {
@@ -462,6 +474,13 @@ export type CompanyDetail = {
    * handful.
    */
   folded: CompanyFolded | null;
+  /**
+   * Where taking this customer off the floor stands, if anybody has ever asked
+   * (P14 14.8). The NEWEST request, which is what `archiveStandsAt` answers and
+   * why an approved one means the record has already gone — the notice that
+   * draws this draws nothing for that case.
+   */
+  archiveRequest: ArchiveRequestState | null;
 };
 
 /**
@@ -496,7 +515,74 @@ export type CompanyLead = {
 };
 
 /**
- * Everything the company drawer shows, in four round trips. Throws NotAllowed
+ * Where each of this customer's people stands on being archived (P14 14.8),
+ * asked once for the whole company.
+ *
+ * `archiveStandsAt` answers this for ONE record, and the Contacts tab needs the
+ * answer for every card on it. A loop over the single-record reader would be an
+ * N+1 on a drawer that opens from every row of the rep's home list, and its
+ * cost would fall hardest on the customers with the most people on file, which
+ * are the customers that matter (rules/data.md).
+ *
+ * So it is one statement, and it gives the same answer for the same reason:
+ * `distinct on (record_id)` with the newest first is that reader's `order by
+ * created_at desc limit 1` asked of a set. A refusal is a state the card has to
+ * show, and an approved request means the person has already gone.
+ */
+async function contactArchiveRequests(
+  companyId: string,
+  locale: string,
+): Promise<Map<string, ArchiveRequestState>> {
+  const rows = await db
+    .selectDistinctOn([archiveRequests.recordId], {
+      contactId: archiveRequests.recordId,
+      id: archiveRequests.id,
+      status: archiveRequests.status,
+      reason: archiveRequests.reason,
+      askedById: archiveRequests.requestedBy,
+      askedBy: personNameOf("archive_asker", locale),
+      askedOn: sql<Day>`to_char((${archiveRequests.createdAt} at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+      refuseReason: archiveRequests.refuseReason,
+      decidedBy: personNameOf("archive_decider", locale),
+      decidedById: archiveRequests.decidedBy,
+      decidedOn: sql<
+        Day | null
+      >`to_char((${archiveRequests.decidedAt} at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+    })
+    .from(archiveRequests)
+    // Whose people these are, asked of the people themselves: `record_id`
+    // points into one of three tables and carries no foreign key of its own
+    // (schema, P14), so the join to `contacts` is the only thing that makes a
+    // request this company's — and `kind` is what makes the join honest.
+    .innerJoin(contacts, eq(contacts.id, archiveRequests.recordId))
+    .innerJoin(archiveAsker, eq(archiveAsker.id, archiveRequests.requestedBy))
+    .leftJoin(archiveDecider, eq(archiveDecider.id, archiveRequests.decidedBy))
+    .where(and(eq(archiveRequests.kind, "contact"), eq(contacts.companyId, companyId)))
+    .orderBy(archiveRequests.recordId, desc(archiveRequests.createdAt));
+
+  return new Map(
+    rows.map((row) => [
+      row.contactId,
+      {
+        id: row.id,
+        status: row.status,
+        reason: row.reason,
+        askedBy: row.askedBy,
+        askedById: row.askedById,
+        askedOn: row.askedOn,
+        refuseReason: row.refuseReason,
+        // The name only where there is an id behind it: a left join hands back
+        // the fallback half of `personNameOf` rather than null (D68).
+        decidedBy: row.decidedById ? row.decidedBy : null,
+        decidedOn: row.decidedOn,
+      },
+    ]),
+  );
+}
+
+/**
+ * Everything the company drawer shows: one read of the company, then the rest
+ * fired together — never one statement per row of anything. Throws NotAllowed
  * when a rep asks for a company that is not his; returns null when there is no
  * such company at all.
  *
@@ -572,62 +658,69 @@ export async function getCompany(
   if (!row) return null;
   if (!maySeeCompany(user, row.repId, row.shared)) throw new NotAllowed();
 
-  const [contactRows, projectRows, countRow, standing] = await Promise.all([
-    db
-      .select({
-        id: contacts.id,
-        name: contacts.name,
-        phone: contacts.phone,
-        phoneNormalized: contacts.phoneNormalized,
-        position: contacts.position,
-        email: contacts.email,
-        notes: contacts.notes,
-        repId: contacts.repId,
-        repName: personNameOf("contact_rep", label),
-        // Derived, never the raw column: the flag alone says nobody is main
-        // once the marked contact has been archived (D18). Per rep rather than
-        // per company, because on a shared one each of them has his own person
-        // to call and the company-wide answer marked only the owner's (D147).
-        isMain: sql<boolean>`contacts.id = ${mainContactForRepSql(sql`${id}::uuid`)}`,
-      })
-      .from(contacts)
-      .innerJoin(contactRep, eq(contactRep.id, contacts.repId))
-      .where(and(eq(contacts.companyId, id), isNull(contacts.archivedAt)))
-      .orderBy(sql`contacts.is_main desc`, asc(contacts.createdAt)),
+  const [contactRows, projectRows, countRow, standing, archiveRequest, contactArchives] =
+    await Promise.all([
+      db
+        .select({
+          id: contacts.id,
+          name: contacts.name,
+          phone: contacts.phone,
+          phoneNormalized: contacts.phoneNormalized,
+          position: contacts.position,
+          email: contacts.email,
+          notes: contacts.notes,
+          repId: contacts.repId,
+          repName: personNameOf("contact_rep", label),
+          // Derived, never the raw column: the flag alone says nobody is main
+          // once the marked contact has been archived (D18). Per rep rather than
+          // per company, because on a shared one each of them has his own person
+          // to call and the company-wide answer marked only the owner's (D147).
+          isMain: sql<boolean>`contacts.id = ${mainContactForRepSql(sql`${id}::uuid`)}`,
+        })
+        .from(contacts)
+        .innerJoin(contactRep, eq(contactRep.id, contacts.repId))
+        .where(and(eq(contacts.companyId, id), isNull(contacts.archivedAt)))
+        .orderBy(sql`contacts.is_main desc`, asc(contacts.createdAt)),
 
-    db
-      .select({
-        id: projects.id,
-        name: projects.name,
-        expectedSqm: projects.expectedSqm,
-        nextFollowUp: projects.nextFollowUp,
-        lostAt: projects.lostAt,
-        lostReason: projects.lostReason,
-        followUpState: followUpStateSql(sql`projects.next_follow_up`),
-        // Whose job it is, and whether this reader is on it (D147): the drawer
-        // offers Request quotation on a job somebody put him on, and the action
-        // behind it asks the same two columns.
-        repId: projects.repId,
-        onProject: onProjectSql(user, sql`projects.id`).mapWith(Boolean),
-      })
-      .from(projects)
-      .where(and(eq(projects.companyId, id), isNull(projects.archivedAt)))
-      .orderBy(sql`projects.lost_at is null desc`, asc(projects.createdAt)),
+      db
+        .select({
+          id: projects.id,
+          name: projects.name,
+          expectedSqm: projects.expectedSqm,
+          nextFollowUp: projects.nextFollowUp,
+          lostAt: projects.lostAt,
+          lostReason: projects.lostReason,
+          followUpState: followUpStateSql(sql`projects.next_follow_up`),
+          // Whose job it is, and whether this reader is on it (D147): the drawer
+          // offers Request quotation on a job somebody put him on, and the action
+          // behind it asks the same two columns.
+          repId: projects.repId,
+          onProject: onProjectSql(user, sql`projects.id`).mapWith(Boolean),
+        })
+        .from(projects)
+        .where(and(eq(projects.companyId, id), isNull(projects.archivedAt)))
+        .orderBy(sql`projects.lost_at is null desc`, asc(projects.createdAt)),
 
-    db
-      .select({
-        activities: sql<number>`(
-          select count(*) from activities
-           where activities.company_id = companies.id and activities.archived_at is null
-        )::int`,
-        quotations: sql<number>`(select count(*) from quotations where quotations.company_id = companies.id)::int`,
-      })
-      .from(companies)
-      .where(eq(companies.id, id))
-      .limit(1),
+      db
+        .select({
+          activities: sql<number>`(
+            select count(*) from activities
+             where activities.company_id = companies.id and activities.archived_at is null
+          )::int`,
+          quotations: sql<number>`(select count(*) from quotations where quotations.company_id = companies.id)::int`,
+        })
+        .from(companies)
+        .where(eq(companies.id, id))
+        .limit(1),
 
-    companyStanding(id),
-  ]);
+      companyStanding(id),
+
+      // Whether this customer is on his way off the floor, and whether each of
+      // his people is (P14 14.8). Two statements, not one per card: the second
+      // is the whole company's people at once.
+      archiveStandsAt("company", id, label),
+      contactArchiveRequests(id, label),
+    ]);
 
   const smacWas = smacState(row);
   return {
@@ -673,6 +766,7 @@ export async function getCompany(
             mine: maySeeCompany(user, row.mergedIntoRepId, row.mergedIntoShared),
           }
         : null,
+    archiveRequest,
     cityName: row.cityId === null ? null : row.cityName,
     followUpState: row.followUpState ?? null,
     contacts: contactRows.map((c) => ({
@@ -681,6 +775,7 @@ export async function getCompany(
       position: c.position ?? null,
       email: c.email ?? null,
       notes: c.notes ?? null,
+      archiveRequest: contactArchives.get(c.id) ?? null,
     })),
     projects: projectRows.map((p) => ({ ...p, followUpState: p.followUpState ?? null })),
     projectFollowUp:

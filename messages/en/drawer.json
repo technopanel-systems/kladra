@@ -79,5 +79,22 @@
   "unfileTitle": "Unfile this report?",
   "unfileWarning": "It leaves this company’s history and every count that included it. Nothing is deleted, and there is no putting it back — write the report where it belongs.",
   "unfiled": "Report unfiled.",
-  "correct": "Correct"
+  "correct": "Correct",
+  "requestArchive": "Request archive",
+  "requestArchiveTitle": "Ask to archive {name}?",
+  "requestArchiveWarning": "The sales manager answers it. Nothing leaves your lists until the answer comes.",
+  "archiveAsked": "Asked. {name} stays until the sales manager answers.",
+  "archiveRequestedBy": "Archive asked for by",
+  "archiveRefusedBy": "Archive refused by",
+  "archiveWaitingMeans": "It is with the sales manager. Nothing has changed yet.",
+  "archiveRefusedMeans": "It is still on your lists. Ask again once the reason above is settled.",
+  "approveArchiveTitle": "Archive {name}?",
+  "approveArchiveWarning": "It leaves every list and keeps its history. An admin can restore it.",
+  "refuseArchiveTitle": "Refuse archiving {name}?",
+  "refuseArchiveHint": "Whoever asked reads this, and answers it.",
+  "refuseArchiveLabel": "Why it stays",
+  "refuseArchivePlaceholder": "There is still an open quotation on it",
+  "archiveRefused": "Archiving {name} refused",
+  "archiveReasonContactPlaceholder": "Left the company; wrong number; already here under another name",
+  "archiveReasonProjectPlaceholder": "Delivered; the tender went elsewhere; it was never a real job"
 }

@@ -9,7 +9,7 @@ import { z } from "zod";
 import { mayReportOn } from "@/lib/activities";
 import { NotAllowed, requireUser } from "@/lib/authz";
 import { dayOf } from "@/lib/dates";
-import { issuesOwnQuotations, mayShare, mayWrite } from "@/lib/floor";
+import { answersArchiveRequests, issuesOwnQuotations, mayShare, mayWrite } from "@/lib/floor";
 import { floorHolderOptions } from "@/lib/pickers";
 import { getProject } from "@/lib/projects";
 import { projectSharers } from "@/lib/shares";
@@ -142,6 +142,12 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
     <ProjectSheet
       projectId={project.id}
       name={project.name}
+      // Whether this reader answers requests to archive, or raises them
+      // (P14 14.8). The sheet is a client component and the sentence it prints
+      // differs by which of the two he is, so it crosses as a fact rather than
+      // as a role for it to read (DESIGN §5).
+      answers={answersArchiveRequests(user)}
+      archiveRequest={project.archiveRequest}
       companyId={project.companyId}
       companyName={project.companyName}
       cityName={project.company.cityName}

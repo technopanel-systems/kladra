@@ -498,15 +498,35 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
       .getByRole("group", { name: t("drawer.companyActions") })
       .getByRole("button", { name: t("common.moreFor", { name: target.name }) })
       .click();
-    await page.getByRole("menuitem", { name: t("drawer.archive"), exact: true }).click();
-    const ask = page.getByRole("dialog", { name: t("drawer.archiveTitle", { name: target.name }) });
+    // He asks; the sales manager answers (P14 14.8). The admin's screen is the
+    // other end of the same path, so this walk has to travel all of it.
+    await page.getByRole("menuitem", { name: t("drawer.requestArchive"), exact: true }).click();
+    const ask = page.getByRole("dialog", {
+      name: t("drawer.requestArchiveTitle", { name: target.name }),
+    });
     // Without a reason it is refused, in the app's words (S16, D87) …
-    await ask.getByRole("button", { name: t("drawer.archive") }).click();
+    await ask.getByRole("button", { name: t("drawer.requestArchive") }).click();
     await expect(ask.getByRole("alert")).toHaveText(t("errors.archiveReasonRequired"));
-    // … and with one it goes, and the archive screen shows the reason.
+    // … and with one the request goes to the manager.
     await ask.getByLabel(t("drawer.archiveReason")).fill("Merged into another account — admin.spec");
-    await ask.getByRole("button", { name: t("drawer.archive") }).click();
-    await expect(page.getByText(t("drawer.archived", { name: target.name }))).toBeVisible(COLD);
+    await ask.getByRole("button", { name: t("drawer.requestArchive") }).click();
+    await expect(page.getByText(t("drawer.archiveAsked", { name: target.name }))).toBeVisible(COLD);
+
+    // Jerom answers it himself: the admin is an answerer beside the sales
+    // manager, because he is the one who puts a record back (D212).
+    await login(page, locale, "jerom");
+    await page.goto(`/${locale}/companies?open=${target.id}`);
+    const answering = page.getByRole("dialog", { name: target.name });
+    await expect(answering).toBeVisible(COLD);
+    const notice = answering.locator('[data-slot="archive-request"][data-state="waiting"]');
+    await expect(notice).toBeVisible(COLD);
+    await notice.getByRole("button", { name: t("dispatches.approve") }).click();
+    const yes = page.getByRole("dialog", {
+      name: t("drawer.approveArchiveTitle", { name: target.name }),
+    });
+    await expect(yes).toBeVisible(COLD);
+    await yes.getByRole("button", { name: t("dispatches.approve") }).click();
+    await expect(yes).toBeHidden(COLD);
 
     const gone = await one<{ archived_at: string | null }>(
       "select archived_at from companies where id = $1::uuid",
@@ -514,7 +534,6 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
     );
     expect(gone.archived_at).not.toBeNull();
 
-    await login(page, locale, "jerom");
     await openAdmin(page, locale, "archive", t("admin.archive"));
     await expect(card(page, target.name)).toBeVisible(COLD);
     await expect(card(page, target.name)).toContainText("Merged into another account");

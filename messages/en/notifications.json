@@ -22,5 +22,8 @@
   "raisedFor": {
     "quotationIssued": "{rep} issued {label} for {company} on your behalf — SMAC {smacNumber}.",
     "dispatchRequested": "{rep} requested {label} for {company} on your behalf."
-  }
+  },
+  "archiveRequested": "{rep} asked to archive {label}.",
+  "archiveApproved": "{rep} approved archiving {label}.",
+  "archiveRefused": "{rep} refused to archive {label}."
 }

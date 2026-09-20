@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import { setCompanyFollowUpAction } from "@/actions/companies";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
+import { ArchiveRequestNotice } from "@/components/archive/archive-request-notice";
 import { ReportButton } from "@/components/reports/report-dialog";
 import { ArchiveCompanyDialog } from "@/components/companies/archive-company-dialog";
 import { useFailureToast } from "@/components/companies/failure-toast";
@@ -39,6 +40,7 @@ import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { RecordPanel } from "@/components/ui-ext/record-panel";
 import { useOpener } from "@/components/ui-ext/use-opener";
+import type { ArchiveRequestState } from "@/lib/archive-requests";
 import { formatDay, todayRiyadh } from "@/lib/dates";
 import type { PickerOption } from "@/lib/picker-option";
 import type { Sharer } from "@/lib/shares";
@@ -207,6 +209,8 @@ export function CompanyHeader({
   standing,
   mine,
   reports,
+  answers,
+  archiveRequest,
   handOverTo,
   sharers,
   shareWith,
@@ -228,6 +232,20 @@ export function CompanyHeader({
    * customer reports what he did there — and narrower than reading it.
    */
   reports: boolean;
+  /**
+   * Whether this reader ANSWERS requests to archive — the sales manager and the
+   * admin (`answersArchiveRequests`, P14 14.8). One boolean, two sentences that
+   * are the same fact from either end: his own archiving happens at once, and
+   * he is the one an asking would have gone to. Everybody else asks, so the
+   * menu item and the dialog behind it say "Request archive" instead.
+   */
+  answers: boolean;
+  /**
+   * Where taking this customer off the floor stands, or null while nobody has
+   * ever asked. The newest asking, so an approved one is a company that has
+   * already gone — which the notice renders nothing for.
+   */
+  archiveRequest: ArchiveRequestState | null;
   /**
    * The people this company can be handed to, or null for a reader who may not
    * move it. Whose customer this is and what happened with him are two
@@ -334,17 +352,28 @@ export function CompanyHeader({
   if (handOverTo) {
     items.push({ label: t("drawer.handOver"), icon: UserRoundPlus, onSelect: choose("handOver") });
   }
-  const end: RowMenuEnd | undefined =
-    mine && !company.archived
-      ? { label: t("drawer.archive"), icon: Archive, destructive: true, onSelect: choose("archive") }
-      : shareWith === null && onIt
-        ? {
-            label: t("drawer.share.leave"),
-            icon: UserRoundMinus,
-            destructive: true,
-            onSelect: choose("share"),
-          }
-        : undefined;
+  // Nothing to press while an asking is with the sales manager (P14 14.8): the
+  // action refuses a second one, and a control whose only possible answer is a
+  // refusal is the dead control DESIGN §5 keeps off the screen. What is left to
+  // do about it is in the notice above, where the state is.
+  const waiting = archiveRequest?.status === "waiting";
+  const archivable = mine && !company.archived && !waiting;
+  const end: RowMenuEnd | undefined = archivable
+    ? {
+        // The same item and two acts: he archives, everybody else asks.
+        label: t(answers ? "drawer.archive" : "drawer.requestArchive"),
+        icon: Archive,
+        destructive: true,
+        onSelect: choose("archive"),
+      }
+    : shareWith === null && onIt
+      ? {
+          label: t("drawer.share.leave"),
+          icon: UserRoundMinus,
+          destructive: true,
+          onSelect: choose("share"),
+        }
+      : undefined;
   const menu = items.length > 0 || end !== undefined;
 
   // Context, not news. It stays a quiet line under the name — and the rep's
@@ -413,6 +442,18 @@ export function CompanyHeader({
           ) : null}
         </div>
       </div>
+
+      {/* Whether this is still a record, before anything the record says (P14
+          14.8). The rep who asked reads that it is with the sales manager and
+          that nothing has moved — which is why it is here and not only in his
+          bell: a notice is read once and a customer is read every day. The
+          manager reads the same sentence with Approve and Refuse under it, and
+          anybody else on the customer reads why somebody wants him gone before
+          putting another visit into him. An approved asking draws nothing: the
+          company went with it. */}
+      {archiveRequest ? (
+        <ArchiveRequestNotice request={archiveRequest} canAnswer={answers} name={company.name} />
+      ) : null}
 
       {/* How this customer is GOING, before anything about what he is
           (DESIGN §6): what is still open, what has been won, and how long it
@@ -572,10 +613,11 @@ export function CompanyHeader({
           onOpenChange={closeTo}
         />
       ) : null}
-      {mine && !company.archived ? (
+      {archivable ? (
         <ArchiveCompanyDialog
           companyId={company.id}
           companyName={company.name}
+          asks={!answers}
           open={act === "archive"}
           onOpenChange={closeTo}
         />

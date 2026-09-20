@@ -63,7 +63,16 @@ export function chipClass({
         "before:size-1.5 before:shrink-0 before:rounded-full before:content-['']",
         tone === "bad" ? "before:bg-state-bad-fg" : "before:bg-state-wait-fg",
       ),
-    disabled && "cursor-default opacity-50",
+    /*
+     * Quieter, not fainter than the eye can read. `opacity-50` over the whole
+     * chip took the muted text from #ada8a3 to #63605c on the dark canvas —
+     * 2.86:1, where 4.5 is the line — and axe found it on the coordinator's day
+     * the first morning one of her four counts was nought (P14 review). The
+     * three text tokens are each drawn to pass on canvas and surface-2
+     * (globals.css); a chip with nothing behind it takes the quietest of them
+     * rather than a percentage of one, and only the border keeps the fade.
+     */
+    disabled && "cursor-default border-line/60 text-faint",
   );
 }
 

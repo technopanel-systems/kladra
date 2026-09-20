@@ -1420,15 +1420,119 @@ export const companyTargets = pgTable(
   ],
 );
 
+// ---- archiving ---------------------------------------------------------------
+
+/**
+ * The three kinds of record that can be taken off the floor (S16, D80).
+ *
+ * Here rather than in `src/lib/admin.ts`, which is where it used to live,
+ * because two columns now read it — the CHECK below and the archive screen —
+ * and the schema cannot import from lib without a cycle. admin.ts re-exports
+ * it, the way notify.ts re-exports the notification kinds.
+ */
+export const ARCHIVE_KINDS = ["company", "contact", "project"] as const;
+export type ArchiveKind = (typeof ARCHIVE_KINDS)[number];
+
+export const ARCHIVE_REQUEST_STATUSES = ["waiting", "approved", "refused"] as const;
+export type ArchiveRequestStatus = (typeof ARCHIVE_REQUEST_STATUSES)[number];
+
+/**
+ * Asking to archive something, and the sales manager's answer (SPEC §3, P14).
+ *
+ * The founder, after a third round of use: whoever asks writes a mandatory
+ * reason, the request goes to the manager, and he approves or refuses it; a
+ * refusal comes back carrying his reason exactly as a refused load does, and it
+ * can be corrected and asked again. One approval path for everything
+ * archivable, not one per kind of record — which is why `kind` and `record_id`
+ * are a pair rather than three nullable foreign keys.
+ *
+ * `record_id` has no reference for that reason: it points into one of three
+ * tables, the way `audit_log.record_id` does. Nothing cascades from it, and a
+ * record cannot be deleted anyway — archiving is what this app does instead of
+ * deleting.
+ *
+ * Every archive writes a row here, including the manager's own and the admin's,
+ * which go in already approved in the same transaction as the archive. That is
+ * what makes the reason universal: a company had `archive_reason` and a contact
+ * and a project had nowhere at all to put one, so "whoever asks writes a
+ * mandatory reason" would otherwise be true of one kind out of three.
+ */
+export const archiveRequests = pgTable(
+  "archive_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").$type<ArchiveKind>().notNull(),
+    /** The company, contact or project this is about. */
+    recordId: uuid("record_id").notNull(),
+    /** Why it should go. Never blank — the whole point of the request (D87). */
+    reason: text("reason").notNull(),
+    requestedBy: uuid("requested_by")
+      .notNull()
+      .references(() => users.id),
+    status: text("status").$type<ArchiveRequestStatus>().notNull().default("waiting"),
+    decidedBy: uuid("decided_by").references(() => users.id),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** His reason for refusing, and only a refusal has one (S53). */
+    refuseReason: text("refuse_reason"),
+    ...stamps,
+  },
+  (t) => [
+    /**
+     * One WAITING request per record, and any number of settled ones behind it.
+     *
+     * Asking again after a refusal is a new row, so the refusal and its reason
+     * stay in the history rather than being written over; what this index
+     * refuses is two people asking for the same record at once, which would
+     * give the manager the same decision twice.
+     */
+    uniqueIndex("archive_requests_waiting_idx")
+      .on(t.kind, t.recordId)
+      .where(sql`${t.status} = 'waiting'`),
+    // His desk: what is waiting, oldest first.
+    index("archive_requests_status_idx").on(t.status, t.createdAt),
+    check(
+      "archive_requests_kind_check",
+      sql`${t.kind} in (${sql.raw(ARCHIVE_KINDS.map((v) => `'${v}'`).join(", "))})`,
+    ),
+    check(
+      "archive_requests_status_check",
+      sql`${t.status} in (${sql.raw(ARCHIVE_REQUEST_STATUSES.map((v) => `'${v}'`).join(", "))})`,
+    ),
+    // A reason of spaces is no reason. The action trims and refuses empty, and
+    // this is the same sentence said where nothing can go round it.
+    check("archive_requests_reason_check", sql`${t.reason} ~ '[^[:space:]]'`),
+    // Answered and waiting are one fact told three ways, so they cannot
+    // disagree (the duplicate_flags arrangement, D100).
+    check(
+      "archive_requests_decided_check",
+      sql`(${t.status} = 'waiting') = (${t.decidedAt} is null and ${t.decidedBy} is null)`,
+    ),
+    check(
+      "archive_requests_refusal_check",
+      sql`(${t.refuseReason} is not null and ${t.refuseReason} ~ '[^[:space:]]') = (${t.status} = 'refused')`,
+    ),
+  ],
+);
+
 // ---- notifications and audit -------------------------------------------------
 // `kind` + `params` render in the reader's language ("Q-12 issued" / "تم إصدار Q-12").
 
 /**
- * The three kinds of record a notice can be about. Here rather than in
- * `src/lib/notify.ts` because the column is what enforces it: a fourth one
+ * The kinds of record a notice can be about. Here rather than in
+ * `src/lib/notify.ts` because the column is what enforces it: another one
  * would need a column value, and this is where a reader looks for the list.
  */
-export const NOTIFICATION_SUBJECT_TYPES = ["quotation", "dispatch", "company", "project"] as const;
+export const NOTIFICATION_SUBJECT_TYPES = [
+  "quotation",
+  "dispatch",
+  "company",
+  "project",
+  // A person at a customer. Added with archive requests (P14 14.8), which are
+  // the first notices about a contact: two of one company's people waiting to
+  // be archived would otherwise share a subject, and settling one would clear
+  // the notice about the other (D100).
+  "contact",
+] as const;
 export type NotificationSubjectType = (typeof NOTIFICATION_SUBJECT_TYPES)[number];
 
 /**
@@ -1465,6 +1569,13 @@ export const NOTIFICATION_KINDS = [
   // therefore say neither thing.
   "companyFolded",
   "companyAbsorbed",
+  // Archiving, asked for and answered (P14 14.8). Three and not two: an
+  // approval says the record has gone, a refusal carries the manager's reason
+  // and the work of writing a better one, and the reader of the first is not
+  // the reader of the second — the same argument as the pair above.
+  "archiveRequested",
+  "archiveApproved",
+  "archiveRefused",
 ] as const;
 export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 

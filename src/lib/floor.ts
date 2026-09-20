@@ -305,3 +305,27 @@ export function mayHandOver(user: SessionUser): boolean {
   return user.role === "manager" || user.role === "admin";
 }
 
+/**
+ * Who answers a request to archive something — and therefore who archives
+ * without asking anybody (SPEC §3, P14 14.8).
+ *
+ * The founder named the sales manager. The admin is here beside him because he
+ * is the one who puts a record BACK (D80), and because he covers the desk the
+ * fortnight the manager is on leave (14.9): a queue with one keyholder in an
+ * office of fourteen is a queue that stops when that one person does.
+ *
+ * One rule and not two, read at both call sites, because they are the same
+ * sentence from either end: "his own archives happen at once" IS "he is the one
+ * who would have answered".
+ *
+ * Not while viewing as somebody else, like every other decision that ends
+ * another person's work (`mayHandOver`): looking through Faisal's eyes is
+ * reading, and answering a request is not reading.
+ */
+export const ARCHIVE_ANSWER_ROLES: Role[] = ["manager", "admin"];
+
+export function answersArchiveRequests(user: SessionUser): boolean {
+  if (user.viewedBy) return false;
+  return ARCHIVE_ANSWER_ROLES.includes(user.role);
+}
+

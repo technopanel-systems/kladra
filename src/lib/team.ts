@@ -49,6 +49,7 @@ import { personName, personNameOf } from "@/lib/people";
 import { ROLES } from "@/lib/types";
 import { openQuotationsForRep, pipelineByRep, pipelineSqm } from "@/lib/standing";
 import { STUCK_SHOWN, topOf, type Group } from "@/lib/list-size";
+import { waitingArchives, type ArchiveAsk } from "@/lib/archive-requests";
 import { LATE_AFTER_WORKING_DAYS, waitedSince, type Waited } from "@/lib/waiting";
 import { monthPace, workingDaysBetween, type NonWorking } from "@/lib/workdays";
 import type { Role } from "@/lib/types";
@@ -463,6 +464,14 @@ type RawFollowUp = {
   backOn?: Day;
 };
 
+/**
+ * A request to archive, aged the way every other wait on this screen is: in
+ * WORKING days, against the office's weekend and its holidays (D141). Aged
+ * here rather than in SQL, because that arithmetic may live in one module and
+ * it is not the database's (rules/data.md).
+ */
+export type ArchiveWait = ArchiveAsk & { workingDaysWaiting: number };
+
 /** One group of the stuck list: what is drawn, and how many there are. */
 export type StuckGroup<Row> = Group<Row>;
 
@@ -481,6 +490,16 @@ export type Stuck = {
    * it that is late, and the only part that colours anything.
    */
   lateRequests: number;
+  /**
+   * Requests to archive something, waiting on HIM (P14 14.8).
+   *
+   * Its own group beside the quotations and the loads rather than inside them.
+   * Those are the coordinator's desk — he reads them to see whether she is
+   * keeping up — and these are his own, waiting on nobody but him. One heading
+   * over two desks would be a figure that is nobody's in particular
+   * (rules/words.md, two figures with almost the same name).
+   */
+  archives: StuckGroup<ArchiveWait>;
   followUps: StuckGroup<StuckFollowUp>;
   /**
    * Due today or already past, and the rep is on leave. First on the screen
@@ -769,7 +788,7 @@ function ageLate(raw: RawLate, day: Day, nonWorking: NonWorking[]): LateWork {
 
 export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   const locale = await getLocale();
-  const [raw, never, quiet, away, pairs] = await Promise.all([
+  const [raw, never, quiet, away, pairs, archives] = await Promise.all([
     readLate(locale),
 
     db.execute<{ id: string; name: string; rep_name: string; days: number }>(sql`
@@ -822,6 +841,11 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
     // (P12-8). Capped at the size the band draws, because this read exists to
     // fill that band and the whole list is one click away on `/duplicates`.
     listOpenDuplicates(STUCK_SHOWN),
+
+    // What is waiting on him to say yes or no (P14 14.8). Capped like the rest
+    // of this screen: the band is what he reads, and every row on it is a door
+    // to the record it is about.
+    waitingArchives(locale, STUCK_SHOWN),
   ]);
 
   /*
@@ -849,7 +873,14 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
    * promised in March is aged by this too, which is the whole of D141.
    */
   const nonWorking = await listNonWorkingDays(
-    earliestOf(day, [...lateFrom(raw), pairs[0]?.raisedOn, ...uncovered.map((row) => row.day)]),
+    earliestOf(day, [
+      ...lateFrom(raw),
+      pairs[0]?.raisedOn,
+      ...uncovered.map((row) => row.day),
+      // The oldest request to archive, so a holiday it has sat through is
+      // still in the window this asks the table for.
+      archives.rows.at(0)?.askedOn,
+    ]),
     day,
   );
   const late = ageLate(raw, day, nonWorking);
@@ -857,6 +888,17 @@ export async function stuckList(day: Day = todayRiyadh()): Promise<Stuck> {
   return {
     requests: top(late.requests),
     lateRequests: late.requests.filter((row) => row.late).length,
+    // Capped and counted in its own statement, oldest first: the rows it hands
+    // back are the band, and the total beside them is the whole desk (D144).
+    archives: {
+      total: archives.total,
+      rows: archives.rows.map((row) => ({
+        ...row,
+        // Against the office's own calendar and nobody's leave: the person it
+        // waits on is the manager, and this is his desk (D141).
+        workingDaysWaiting: workingDaysBetween(row.askedOn, day, nonWorking),
+      })),
+    },
     // Due TODAY counts here, which is the difference between this band and the
     // stuck one, so nothing is filtered — only aged, against the person whose
     // call it is: his own leave is not lateness (S48, D141).

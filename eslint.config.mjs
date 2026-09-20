@@ -48,6 +48,11 @@ const eslintConfig = defineConfig([
     // The test server's build directory — same artefacts, different name
     // (next.config.ts, NEXT_DIST_DIR).
     ".next-test/**",
+    // And the one a build takes while the dev server holds the lock on `.next`:
+    // `NEXT_DIST_DIR=.next-build-check npm run build`. It is gitignored, it was
+    // not ignored here, and the first build that used it turned `npm run lint`
+    // into a page of errors about Turbopack's own generated modules.
+    ".next-build-check/**",
     // Agent worktrees inside the repo: each is a whole copy of it, linted in its own tree.
     ".claude/worktrees/**",
     "out/**",

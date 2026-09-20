@@ -633,16 +633,18 @@ test("a notice's subject is one of a closed list (D100)", async () => {
   const subjectId =
     seeded?.subject_id ?? (await one<{ id: string }>("select gen_random_uuid() as id")).id;
 
-  // 'project' used to be the value this test wrote to prove refusal. Migration
-  // 0014 (D147) widened the list to four: a company SHARE and a project SHARE
-  // both need a notice about the record itself, and `projectShared` points at
-  // one — so 'project' is a real subject_type now and asserting it is refused
-  // would be asserting a rule the app no longer has. 'contact' is still
-  // outside the list (a notice is never about a contact on its own — it is
-  // read through the company, D147) and proves the same refusal.
+  // This test has had to move its own goalposts twice, and both moves are the
+  // rule working rather than the rule bending. 'project' was the refused value
+  // until migration 0014 (D147), when a project SHARE needed a notice about the
+  // record itself. 'contact' was the refused value after that — a notice was
+  // never about a person on their own, it was read through the company — until
+  // migration 0030 (P14 14.8), when two of one customer's people could each
+  // have a request to archive waiting on them, and a notice about one had to be
+  // clearable without clearing the other. So the list is five now, and the
+  // value below is outside it: nothing in this app ever notifies about a user.
   const message = await refused(
     `insert into notifications (user_id, kind, params, link, subject_type, subject_id)
-     values ($1::uuid, $2, $3::jsonb, $4, 'contact', $5::uuid)`,
+     values ($1::uuid, $2, $3::jsonb, $4, 'user', $5::uuid)`,
     [userId, kind, params, link, subjectId],
   );
   expect(message).toContain("violates check constraint");
@@ -1132,6 +1134,69 @@ test("a person has one answer per question, and the question is one of three (00
       screen,
     ]);
   }
+});
+
+test("a request to archive is waiting or answered, and never half of either (0030, D212)", async () => {
+  const waiting = await one<{ id: string; kind: string; record_id: string }>(
+    "select id, kind, record_id from archive_requests where status = 'waiting' limit 1",
+  );
+  const manager = await userId("abdulrahman@technopanel.com.sa");
+  const faisal = await userId("faisal@technopanel.com.sa");
+
+  // A reason of spaces is no reason. The action trims and refuses empty; this
+  // is the same sentence said where nothing can go round it.
+  const blank = await refused(
+    `insert into archive_requests (kind, record_id, reason, requested_by)
+     values ('company', $1::uuid, ' 
+	 ', $2::uuid)`,
+    [waiting.record_id, faisal],
+  );
+  expect(blank).toContain("archive_requests_reason_check");
+
+  // Answered by somebody, on no day at all, and still called waiting: three
+  // ways of saying one thing, so they cannot be made to disagree.
+  const halfAnswered = await refused(
+    `insert into archive_requests (kind, record_id, reason, requested_by, decided_by)
+     values ('project', $1::uuid, 'no', $2::uuid, $3::uuid)`,
+    [waiting.record_id, faisal, manager],
+  );
+  expect(halfAnswered).toContain("archive_requests_decided_check");
+
+  // Only a refusal carries a refusal's reason — and a refusal without one is
+  // the state S53 exists to prevent: a decision that ends somebody's work
+  // reaching him with nothing to answer.
+  const approvedWithReason = await refused(
+    `insert into archive_requests
+       (kind, record_id, reason, requested_by, status, decided_by, decided_at, refuse_reason)
+     values ('company', $1::uuid, 'no', $2::uuid, 'approved', $3::uuid, now(), 'because')`,
+    [waiting.record_id, faisal, manager],
+  );
+  expect(approvedWithReason).toContain("archive_requests_refusal_check");
+
+  const refusedSilently = await refused(
+    `insert into archive_requests
+       (kind, record_id, reason, requested_by, status, decided_by, decided_at)
+     values ('company', $1::uuid, 'no', $2::uuid, 'refused', $3::uuid, now())`,
+    [waiting.record_id, faisal, manager],
+  );
+  expect(refusedSilently).toContain("archive_requests_refusal_check");
+
+  // A kind that is not one of the three archivable things.
+  const strangeKind = await refused(
+    `insert into archive_requests (kind, record_id, reason, requested_by)
+     values ('quotation', $1::uuid, 'no', $2::uuid)`,
+    [waiting.record_id, faisal],
+  );
+  expect(strangeKind).toContain("archive_requests_kind_check");
+
+  // And two people asking for the same record at once, which would hand the
+  // manager the same decision twice.
+  const twice = await refused(
+    `insert into archive_requests (kind, record_id, reason, requested_by)
+     values ($1::text, $2::uuid, 'again', $3::uuid)`,
+    [waiting.kind, waiting.record_id, manager],
+  );
+  expect(twice).toContain("archive_requests_waiting_idx");
 });
 
 test("the schema file and the catalogue agree, both ways (D106)", async () => {
