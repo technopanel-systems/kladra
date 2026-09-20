@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
+import type { SmacState } from "@/lib/smac";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QuotationActions, type ActionScope } from "@/components/quotations/quotation-actions";
@@ -80,6 +81,8 @@ export type QuotationSheetProps = {
     selfIssued: boolean;
     /** Where it was priced out of, and who it is for (SPEC §3, P12-9, P14). */
     warehouses: { id: number; name: string }[];
+    /** Whether the customer is in SMAC, which Issue asks about (P14). */
+    companySmac: SmacState;
     contactName: string | null;
   };
   /**
@@ -336,6 +339,7 @@ export function QuotationSheet({
               projectId: quotation.projectId,
               isLatest: quotation.isLatest,
               smacNumber: quotation.smacNumber,
+              companySmac: quotation.companySmac,
               draft,
             }}
             scope={scope}

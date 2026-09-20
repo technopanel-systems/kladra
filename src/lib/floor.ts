@@ -30,6 +30,18 @@ export function seesAllRoles(role: Role): boolean {
   return role === "manager" || role === "admin";
 }
 
+/**
+ * Who is shown the customers who are not in SMAC yet (SPEC §3, P14)?
+ *
+ * The coordinator, because she is the one who creates them there and the
+ * founder gave her the list; and the manager and the admin, who read every
+ * rep's floor anyway. Not a rep: the list is every rep's customers, and his own
+ * screens have never named another rep's company.
+ */
+export function seesSmacBacklog(role: Role): boolean {
+  return role === "coordinator" || seesAllRoles(role);
+}
+
 /** May this person OPEN a record whose rep is `repId`? */
 export function mayOpen(user: SessionUser, repId: string): boolean {
   return seesAllRoles(user.role) || repId === user.id;

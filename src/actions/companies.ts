@@ -101,7 +101,37 @@ const companyFields = {
   cityId: z.coerce.number().int().positive().optional(),
   cityText: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(4000).optional(),
+  /**
+   * Whether the rep believes this customer is in SMAC (SPEC §3, P14). A string
+   * because a form sends one, and sent whichever way he answered: an unticked
+   * box sends nothing at all, so the field carries its own "false" rather than
+   * letting absence mean it (the hidden input beside the tick).
+   *
+   * Optional, because there is one form that does not ASK it — once the
+   * coordinator has registered the customer, the rep's form states her answer
+   * instead — and a form that does not ask a question must not answer it.
+   */
+  inSmac: z.enum(["true", "false"]).optional(),
 };
+
+/**
+ * The rep's belief, as the two columns hold it (P14).
+ *
+ * Ticked, it is his name and the instant he said it; unticked, it is nothing at
+ * all — both halves, because a name left behind after the tick came off is a
+ * state that stopped being true (rules/data.md, and the CHECK that refuses it).
+ *
+ * `already` is what the row says now, and it is why this is a function and not
+ * two lines at each call: the whole form is re-answered on every save, so
+ * stamping the instant unconditionally would mean "he thinks it is in SMAC,
+ * said this afternoon" about a belief he recorded in March and has not touched
+ * since. A tick that was already ticked is left exactly as it stands.
+ */
+function believedNow(believed: boolean, actorId: string, already?: Date | null) {
+  if (!believed) return { smacBelievedAt: null, smacBelievedBy: null };
+  if (already) return {};
+  return { smacBelievedAt: new Date(), smacBelievedBy: actorId };
+}
 
 const createSchema = z.object({
   ...companyFields,
@@ -202,6 +232,7 @@ export async function createCompanyAction(
       cityId: field(formData, "cityId"),
       cityText: field(formData, "cityText"),
       notes: field(formData, "notes"),
+      inSmac: field(formData, "inSmac") ?? "false",
       contactName: field(formData, "contactName"),
       contactPhone: field(formData, "contactPhone"),
       contactPosition: field(formData, "contactPosition"),
@@ -316,6 +347,10 @@ export async function createCompanyAction(
           cityText: place.cityText,
           notes: input.notes ?? null,
           repId: actor.id,
+          // His belief, with his name and the moment on it: the answer is worth
+          // what the person behind it is worth (P14), and the check refuses one
+          // half without the other.
+          ...believedNow(input.inSmac === "true", actor.id),
         })
         .returning({ id: companies.id });
 
@@ -762,6 +797,9 @@ export async function updateCompanyAction(
       cityId: field(formData, "cityId"),
       cityText: field(formData, "cityText"),
       notes: field(formData, "notes"),
+      // No default here, unlike adding one: absence is "the form did not ask",
+      // which is a different answer from "he says no".
+      inSmac: field(formData, "inSmac"),
     });
     if (!parsed.success) {
       return {
@@ -774,7 +812,10 @@ export async function updateCompanyAction(
 
     await assertCompanyMine(actor, input.companyId);
     const [held] = await db
-      .select({ leadSourceId: companies.leadSourceId })
+      .select({
+        leadSourceId: companies.leadSourceId,
+        smacBelievedAt: companies.smacBelievedAt,
+      })
       .from(companies)
       .where(eq(companies.id, input.companyId))
       .limit(1);
@@ -799,6 +840,15 @@ export async function updateCompanyAction(
           cityId: place.cityId,
           cityText: place.cityText,
           notes: input.notes ?? null,
+          // Re-answered on every save, as the rest of the form is — unless the
+          // form never asked. The coordinator's own answer is a different pair
+          // of columns and is not touched here: he cannot un-register a
+          // customer she registered, and the form does not offer him the tick
+          // once she has, so a save from that form would otherwise read as him
+          // taking his belief back (P14).
+          ...(input.inSmac === undefined
+            ? {}
+            : believedNow(input.inSmac === "true", actor.id, held?.smacBelievedAt)),
         })
         .where(eq(companies.id, input.companyId));
 

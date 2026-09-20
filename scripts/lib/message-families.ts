@@ -78,6 +78,8 @@ export const families: [string, string[]][] = [
   ["dispatches.payment", union("src/lib/payment.ts", "PAYMENT_DETAILS")],
   ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
   ["admin.kind", union("src/lib/admin.ts", "ARCHIVE_KINDS")],
+  // Whether the customer is in SMAC, in a word, on the company drawer (P14).
+  ["companies.smac", union("src/lib/smac.ts", "SMAC_STATES")],
   ["admin.lookup", union("src/lib/lookup-kinds.ts", "LOOKUP_KINDS")],
   ["projects.lossReason", union("src/lib/loss-reason.ts", "LOSS_REASON_CODES")],
   ["notifications", union("src/db/schema.ts", "NOTIFICATION_KINDS")],

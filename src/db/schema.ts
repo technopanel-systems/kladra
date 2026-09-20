@@ -426,6 +426,27 @@ export const companies = pgTable(
      * it, and the drawer is where it says what it became.
      */
     mergedIntoId: uuid("merged_into_id").references((): AnyPgColumn => companies.id),
+    /**
+     * Is this customer in SMAC? — asked twice, of two people (SPEC §3, P14).
+     *
+     * SMAC is the ERP that holds the money, and it has no API and no readable
+     * database: every link between it and this app is a person retyping
+     * something (FACET's own reference library, §7.2). So "is he registered"
+     * cannot be looked up — it is somebody's word, and WHOSE word it is decides
+     * what it is worth.
+     *
+     * The rep's word is a belief: he has no SMAC account and no number, and
+     * ticking it means "as far as I know". The coordinator's is the answer,
+     * because she is the one who creates the customer in SMAC, and she ticks it
+     * while she is doing exactly that. Each is a pair of columns rather than a
+     * flag with a name beside it: the instant IS the state, so an answer cannot
+     * outlive the person who gave it (rules/data.md), and the checks below hold
+     * the two halves together.
+     */
+    smacBelievedAt: timestamp("smac_believed_at", { withTimezone: true }),
+    smacBelievedBy: uuid("smac_believed_by").references(() => users.id),
+    smacRegisteredAt: timestamp("smac_registered_at", { withTimezone: true }),
+    smacRegisteredBy: uuid("smac_registered_by").references(() => users.id),
     ...stamps,
   },
   (t) => [
@@ -467,6 +488,21 @@ export const companies = pgTable(
       "companies_merged_check",
       sql`${t.mergedIntoId} is null or (${t.archivedAt} is not null and ${t.mergedIntoId} <> ${t.id})`,
     ),
+    // Each answer about SMAC is a name and an instant or it is nothing: a tick
+    // with nobody behind it is worth nothing on a fact that is somebody's word,
+    // and a name left behind after the tick came off is a state that stopped
+    // being true (P14, rules/data.md).
+    check(
+      "companies_smac_believed_check",
+      sql`(${t.smacBelievedAt} is null) = (${t.smacBelievedBy} is null)`,
+    ),
+    check(
+      "companies_smac_registered_check",
+      sql`(${t.smacRegisteredAt} is null) = (${t.smacRegisteredBy} is null)`,
+    ),
+    // How the coordinator asks "which customers are not in SMAC yet" (P14):
+    // the unregistered ones, which is the shrinking half of the list.
+    index("companies_smac_idx").on(t.smacRegisteredAt),
   ],
 );
 

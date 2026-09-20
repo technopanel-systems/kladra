@@ -235,6 +235,15 @@ export type CompanySeed = {
    * ever seen (rules/data.md).
    */
   addedDaysAgo?: number;
+  /**
+   * Whether this customer is in SMAC, and whose word it is (SPEC §3, P14).
+   *
+   * `registered` is the coordinator's answer and `believed` is the rep's; absent
+   * is nobody having said, which is where every company starts and is what the
+   * coordinator's backlog is made of. All three are on this floor, because a
+   * state the demo never shows is a state nobody has seen work (rules/data.md).
+   */
+  smac?: "registered" | "believed";
 };
 
 export const COMPANIES: CompanySeed[] = [
@@ -296,6 +305,10 @@ export const COMPANIES: CompanySeed[] = [
     source: "Exhibition",
     city: "Riyadh",
     notes: "Met at the exhibition; the HQ job is the live one",
+    // In SMAC already, with a request still waiting on the desk: the one
+    // arrangement that shows the coordinator NOT being asked to register a
+    // customer she has already registered (P14, rules/data.md).
+    smac: "registered",
     contacts: [
       { name: "Ziad Nassar", phone: "0566712093", position: "General manager", email: "ziad@example.com" },
       { name: "Hassan Odeh", phone: "0561120934", position: "Procurement", notes: "Asks for the datasheet every time; send it before the visit" },
@@ -324,6 +337,8 @@ export const COMPANIES: CompanySeed[] = [
     category: "Factory",
     source: "Direct contact",
     city: "Riyadh",
+    // The coordinator created this one in SMAC when she issued 4541 (P14).
+    smac: "registered",
     contacts: [{ name: "بندر الرشيد", phone: "+966 50 551 2908", position: "General manager" }],
   },
   {
@@ -334,6 +349,8 @@ export const COMPANIES: CompanySeed[] = [
     source: "Online",
     city: "Riyadh",
     notes: "كميات صغيرة ومتكررة",
+    // Faisal thinks this one is in SMAC; nobody has checked (P14).
+    smac: "believed",
     contacts: [{ name: "سلطان القرني", phone: "0567719923", position: "Owner" }],
   },
   {

@@ -56,6 +56,7 @@ import { riyadhDay } from "@/lib/dates";
 import type { Day } from "@/lib/dates";
 import { VAT_RATE } from "@/lib/money";
 import { numberInTerm, quotationLabel } from "@/lib/labels";
+import { smacState, type SmacState } from "@/lib/smac";
 import { namedWarehouses, type NamedWarehouse } from "@/lib/warehouses";
 import { isQuotationEvent, type QuotationEventName } from "@/lib/quotation-events";
 import {
@@ -620,6 +621,12 @@ export type QuotationDetail = QuotationRow & {
    * same pair for the same reason.
    */
   warehouses: NamedWarehouse[];
+  /**
+   * Whether this paper's customer is in SMAC (SPEC §3, P14) — on the quotation
+   * because the one moment the coordinator is inside SMAC with this company in
+   * front of her is the moment she issues it.
+   */
+  companySmac: SmacState;
   contactId: string | null;
   contactName: string | null;
   /**
@@ -661,6 +668,11 @@ export async function getQuotation(
       contactName: contacts.name,
       companyArchived: sql<boolean>`companies.archived_at is not null`.mapWith(Boolean),
       projectArchived: sql<boolean>`projects.archived_at is not null`.mapWith(Boolean),
+      // Whether the customer is in SMAC (P14): the drawer asks it because the
+      // moment she issues this paper is the moment she puts him there. Both
+      // columns, because `smacState` is the one place that reads them.
+      smacRegisteredAt: companies.smacRegisteredAt,
+      smacBelievedAt: companies.smacBelievedAt,
     })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
@@ -746,6 +758,7 @@ export async function getQuotation(
     projectRepId: row.projectRepId,
     onProject: Boolean(row.onProject),
     warehouses: await namedWarehouses("quotation", id, row.warehouseId, locale),
+    companySmac: smacState(row),
     contactId: row.contactId ?? null,
     contactName: row.contactName ?? null,
     companyArchived: Boolean(row.companyArchived),

@@ -37,7 +37,8 @@ import {
 } from "@/db/schema";
 import { assertCompanyVisible, mayOpen } from "@/lib/activities";
 import { NotAllowed } from "@/lib/authz";
-import { mayWrite } from "@/lib/floor";
+import { smacState, type SmacState } from "@/lib/smac";
+import { mayWrite, seesSmacBacklog } from "@/lib/floor";
 import type { Day } from "@/lib/dates";
 import {
   type FollowUpFilter,
@@ -74,6 +75,9 @@ const mergedInto = alias(companies, "merged_into");
 const mergedIntoRep = alias(users, "merged_into_rep");
 /** Whoever keeps a contact, for a company more than one person keeps people on. */
 const contactRep = alias(users, "contact_rep");
+/** Whoever answered the SMAC question about this customer — either of the two (P14). */
+const smacBeliever = alias(users, "smac_believer");
+const smacRegistrar = alias(users, "smac_registrar");
 
 /** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
 export { listActivitiesForCompany as listCompanyActivities } from "@/lib/activities";
@@ -444,6 +448,15 @@ export type CompanyDetail = {
    */
   lead: CompanyLead | null;
   /**
+   * Whether this customer is in SMAC, and whose word that is (SPEC §3, P14).
+   *
+   * One object rather than four loose columns, for the reason the lead above is
+   * one: the state and the person who put the record in it are one fact, and
+   * `smacState` is the only place that decides which of the three answers a
+   * company has. `who` and `when` are null only on `unknown`.
+   */
+  smac: { state: SmacState; who: string | null; when: Date | null };
+  /**
    * What this record turned out to be, when the manager ruled it a duplicate
    * (P12-8). Null on every record that is still a record, which is all but a
    * handful.
@@ -530,6 +543,13 @@ export async function getCompany(
       mergedIntoRepId: mergedInto.repId,
       mergedIntoRepName: personNameOf("merged_into_rep", label),
       mergedIntoShared: onCompanySql(user, sql`merged_into.id`).mapWith(Boolean),
+      // Whether this customer is in SMAC, and whose word that is (P14). Two
+      // more left joins on the same table, for the same reason as the lead's
+      // finder: most companies have neither.
+      smacBelievedAt: companies.smacBelievedAt,
+      smacBelievedName: personNameOf("smac_believer", label),
+      smacRegisteredAt: companies.smacRegisteredAt,
+      smacRegisteredName: personNameOf("smac_registrar", label),
       nextFollowUp: companies.nextFollowUp,
       followUpState: followUpStateSql(sql`companies.next_follow_up`),
       archivedAt: companies.archivedAt,
@@ -543,6 +563,8 @@ export async function getCompany(
     .leftJoin(leadFinder, eq(leadFinder.id, companies.leadFromId))
     .leftJoin(mergedInto, eq(mergedInto.id, companies.mergedIntoId))
     .leftJoin(mergedIntoRep, eq(mergedIntoRep.id, mergedInto.repId))
+    .leftJoin(smacBeliever, eq(smacBeliever.id, companies.smacBelievedBy))
+    .leftJoin(smacRegistrar, eq(smacRegistrar.id, companies.smacRegisteredBy))
     .leftJoin(cities, eq(cities.id, companies.cityId))
     .where(eq(companies.id, id))
     .limit(1);
@@ -607,8 +629,27 @@ export async function getCompany(
     companyStanding(id),
   ]);
 
+  const smacWas = smacState(row);
   return {
     ...row,
+    smac: {
+      state: smacWas,
+      // Hers where she has answered, his where only he has, nobody's where
+      // neither: the same order `smacState` decides in, so the sentence and the
+      // state cannot say two different things.
+      who:
+        smacWas === "registered"
+          ? row.smacRegisteredName
+          : smacWas === "believed"
+            ? row.smacBelievedName
+            : null,
+      when:
+        smacWas === "registered"
+          ? row.smacRegisteredAt
+          : smacWas === "believed"
+            ? row.smacBelievedAt
+            : null,
+    },
     lead: row.leadFromId
       ? {
           fromName: row.leadFromName,
@@ -808,3 +849,88 @@ export async function findPossibleDuplicates(input: {
 
 /** Re-exported so an action never re-invents the gate (src/lib/activities.ts). */
 export { assertCompanyVisible, mayOpen };
+
+/* -------------------------------------------------------------------------- */
+/* Which customers are not in SMAC yet (SPEC §3, P14)                          */
+/* -------------------------------------------------------------------------- */
+
+/** One customer the coordinator still has to create in the ERP. */
+export type NotInSmac = {
+  id: string;
+  name: string;
+  /** Whose customer it is, in the reader's script — the person to ring. */
+  repName: string;
+  /** When the first price was asked for, which is when he started needing to exist there. */
+  since: Day;
+};
+
+/**
+ * The customers nobody has registered in SMAC, oldest paper first.
+ *
+ * The founder asked for this outright: "she is given a way to see which
+ * companies are not registered yet, or the tick is a dead field nobody acts
+ * on." It is her backlog and it is on her own screen, under the desk.
+ *
+ * Only companies a price has been asked for, because SMAC is where the money
+ * is: a customer nobody has quoted does not need to exist there yet, and a list
+ * of every name a rep has ever typed would be a list she stops reading. The
+ * date is the FIRST paper's, so the oldest neglect is a real number and not the
+ * date of the last thing that happened.
+ *
+ * No door on a row: a rep's company is his to open (D42), and what this list
+ * leads to is work in another system. The rep's name is the door — it says whom
+ * to ring.
+ */
+export async function companiesNotInSmac(
+  user: SessionUser,
+  limit: number,
+  locale: string,
+): Promise<{ rows: NotInSmac[]; total: number }> {
+  // The gate is here and not on the page (rules/data.md): this list is every
+  // rep's customers, and a rep's screens have never named another rep's
+  // company. `/queue` is reachable by anybody signed in.
+  if (!seesSmacBacklog(user.role)) throw new NotAllowed();
+
+  const result = await db.execute<{
+    id: string;
+    name: string;
+    rep_name: string;
+    since: string;
+    total: number;
+  }>(sql`
+    with waiting as (
+      select companies.id,
+             companies.name,
+             ${personNameOf("users", locale)} as rep_name,
+             min(quotations.created_at) as first_paper
+        from companies
+        join users on users.id = companies.rep_id
+        join quotations on quotations.company_id = companies.id
+       where companies.smac_registered_at is null
+         and companies.archived_at is null
+       -- By the person's ID and not by either spelling of his name: Postgres
+       -- lets the select name any column of a table grouped by its primary
+       -- key, and the reader's own spelling is what the select asks for.
+       group by companies.id, companies.name, users.id
+    )
+    select id, name, rep_name,
+           to_char((first_paper at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as since,
+           (count(*) over ())::int as total
+      from waiting
+     -- Oldest first: it is a backlog, worked down from the customer who has
+     -- been waiting to exist in SMAC the longest, the way the desk above it is
+     -- worked down oldest first.
+     order by first_paper asc, name
+     limit ${limit}
+  `);
+
+  return {
+    rows: result.rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      repName: row.rep_name,
+      since: row.since as Day,
+    })),
+    total: Number(result.rows[0]?.total ?? 0),
+  };
+}

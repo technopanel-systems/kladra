@@ -161,5 +161,6 @@
   },
   "paymentNote": "Payment note",
   "pickCompany": "Choose a company",
-  "pickCompanyFirst": "Choose a company first"
+  "pickCompanyFirst": "Choose a company first",
+  "smac": "SMAC"
 }

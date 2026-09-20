@@ -12,6 +12,8 @@ import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { requireUser } from "@/lib/authz";
+import { companiesNotInSmac } from "@/lib/companies";
+import { seesSmacBacklog } from "@/lib/floor";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { formatDay, todayRiyadh, type Day } from "@/lib/dates";
 import { dispatchWaitDays, listDispatches } from "@/lib/dispatches";
@@ -60,6 +62,13 @@ import {
  * against four arrived is a day going well, and five against twelve is not.
  */
 
+/**
+ * How many customers-not-in-SMAC the section draws before it says how many more
+ * there are. A short list: it is a backlog to work through, not a screen of its
+ * own, and the figure beside the heading is the whole of it (D80).
+ */
+const SMAC_SHOWN = 8;
+
 type Search = { q?: string; open?: string; dispatch?: string };
 
 export default async function QueuePage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -71,7 +80,8 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
 
   const today = todayRiyadh();
 
-  const [t, quotationRows, dispatchRows, standing, quotationDays, dispatchDays] = await Promise.all([
+  const [t, quotationRows, dispatchRows, standing, quotationDays, dispatchDays, notInSmac] =
+    await Promise.all([
     getTranslations(),
     // Oldest first: this is a desk she works DOWN, and her own screen has said
     // "oldest first" since P8 while both lists came back newest first (D137).
@@ -81,6 +91,16 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
     // Her figures, uncapped and through the list's own predicate (D144).
     quotationWaitDays({ user, q: q || undefined, status: "requested", locale }),
     dispatchWaitDays({ user, q: q || undefined, status: "submitted", locale }),
+    // Her other backlog, which is not a queue of requests at all (P14): the
+    // customers a price has been asked for who are not in SMAC yet. Unsearched
+    // on purpose — the box above the desk narrows the desk, and a third list
+    // silently answering a different question to the same words is the defect
+    // D137 already caught once.
+    // Hers, and the two who read every floor (`seesSmacBacklog`): the read
+     // itself refuses anybody else, so the page asks only where it may.
+    seesSmacBacklog(user.role)
+      ? companiesNotInSmac(user, SMAC_SHOWN, locale)
+      : { rows: [], total: 0 },
   ]);
 
   // The counts come from the same question the lists ask, not from the rows
@@ -259,6 +279,54 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
           </div>
         </>
       )}
+
+      {/*
+        Who is not in SMAC yet (SPEC §3, P14).
+        
+        Under the desk rather than in it: it is not a request and nobody is
+        waiting on it this morning, but it is hers, and without it the tick a
+        rep gives and the tick she gives are a field nobody ever looks at. Drawn
+        only when there is something in it — an empty section here would be a
+        heading she reads past every day (DESIGN §5).
+      */}
+      {notInSmac.total > 0 ? (
+        <QueueHalf slot="not-in-smac" heading={t("queue.notInSmac")} count={notInSmac.total}>
+          <p className="text-xs text-muted-foreground">{t("queue.notInSmacMeans")}</p>
+          <ul className="flex flex-col gap-2">
+            {notInSmac.rows.map((row) => (
+              // No door: another rep's company is his to open (D42), and what
+              // this row leads to is work in SMAC. His name is what it gives
+              // her — the person to ring.
+              <li
+                key={row.id}
+                data-slot="not-in-smac-row"
+                className="card-face flex flex-col gap-1 p-3"
+              >
+                {/* The customer on his own line and the rest under him, rather
+                    than three things across one row: at 375 the row's name got
+                    a column of its own a word wide, and an Arabic name came
+                    down it one word per line (P14 review). */}
+                <span className="text-sm font-medium">
+                  <bdi>{row.name}</bdi>
+                </span>
+                <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  <bdi>{row.repName}</bdi>
+                  {/* A mark and not a gap: two values with only space between
+                      them are read in the page's order by an eye running the
+                      other way (rules/words.md). */}
+                  <span aria-hidden="true" className="text-faint">
+                    ·
+                  </span>
+                  <span className="text-faint">
+                    {t("queue.notInSmacSince", { date: formatDay(row.since, locale) })}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <ListTail shown={notInSmac.rows.length} total={notInSmac.total} />
+        </QueueHalf>
+      ) : null}
 
       <Suspense key={open ?? "closed"} fallback={open ? <QuotationSheetSkeleton /> : null}>
         <QuotationDrawer quotationId={open} />

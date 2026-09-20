@@ -41,3 +41,33 @@ export async function smacHolder(kind: SmacKind, number: string): Promise<string
   const row = result.rows[0];
   return row ? dispatchLabel(Number(row.number)) : null;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Whether the customer is in SMAC at all (SPEC §3, P14)                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Three answers, and which one a company has.
+ *
+ * `registered` is the coordinator's: she creates the customer in SMAC, so hers
+ * is the fact. `believed` is a rep's, and it is exactly that — he has no SMAC
+ * account and no number, and what he ticked is "as far as I know". `unknown` is
+ * nobody having said, which is where every company starts and is a real answer:
+ * it is what the coordinator's list of work is made of.
+ *
+ * Hers wins where both have answered, and nothing anywhere asks the two columns
+ * separately — that is what stops one screen saying registered and the next one
+ * saying a rep thinks so.
+ */
+export const SMAC_STATES = ["registered", "believed", "unknown"] as const;
+
+/** Derived from the list and never written beside it (rules/words.md). */
+export type SmacState = (typeof SMAC_STATES)[number];
+
+export function smacState(row: {
+  smacRegisteredAt: Date | null;
+  smacBelievedAt: Date | null;
+}): SmacState {
+  if (row.smacRegisteredAt) return "registered";
+  return row.smacBelievedAt ? "believed" : "unknown";
+}

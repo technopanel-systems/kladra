@@ -23,6 +23,7 @@ import { RowMenu } from "@/components/ui-ext/row-menu";
 import { useOpener } from "@/components/ui-ext/use-opener";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "@/i18n/navigation";
+import type { SmacState } from "@/lib/smac";
 import type { QuotationStatus } from "@/lib/quotations";
 import type { ActionResult } from "@/lib/types";
 
@@ -90,6 +91,12 @@ export function QuotationActions({
     isLatest: boolean;
     /** SMAC's number, once it has one — the thing she may correct (D88). */
     smacNumber: string | null;
+    /**
+     * Whether the customer is in SMAC (P14). Issuing is the one moment she is
+     * in there with this company in front of her, so the dialog that asks for
+     * the number asks this too — and only while the answer is still no.
+     */
+    companySmac: SmacState;
     draft: QuotationDraft;
   };
   scope: ActionScope;
@@ -175,9 +182,21 @@ export function QuotationActions({
         description={t("quotations.issueHint")}
         label={t("common.smacNumber")}
         placeholder={t("common.asSmacIssuedIt")}
+        // Not asked about a customer who is already in there: a tick that can
+        // only say what the record says is a question with one answer (P14).
+        tick={
+          quotation.companySmac === "registered"
+            ? undefined
+            : { label: t("forms.registerInSmac"), hint: t("forms.registerInSmacHint") }
+        }
         confirmLabel={t("quotations.issue")}
         successMessage={t("quotations.issued", { label })}
-        onConfirm={(smacNumber) => withId(issueQuotationAction, { smacNumber })()}
+        onConfirm={(smacNumber, registered) =>
+          withId(issueQuotationAction, {
+            smacNumber,
+            registerInSmac: registered ? "true" : "false",
+          })()
+        }
         onDone={done}
       />,
       <PromptDialog

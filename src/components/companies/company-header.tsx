@@ -183,6 +183,8 @@ export type DrawerCompany = {
   city: string | null;
   category: string;
   leadSource: string;
+  /** Whether the customer is in SMAC, in a word (SPEC §3, P14). */
+  smac: string;
   repName: string;
   /** What the rep wrote about this customer, shown back to him (D136). */
   notes: string | null;
@@ -351,6 +353,10 @@ export function CompanyHeader({
     { label: t("common.city"), value: company.city },
     { label: t("common.category"), value: company.category },
     { label: t("common.leadSource"), value: company.leadSource },
+    // The office's other system, on the quiet line rather than as a badge: it
+    // is true of most companies for a while, and a badge on all of them is a
+    // badge on none (P14, DESIGN §1 Stone).
+    { label: t("common.smac"), value: company.smac },
     { label: t("common.rep"), value: mine ? null : company.repName },
   ];
 

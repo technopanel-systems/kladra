@@ -272,8 +272,16 @@ below by number.
             one entry about the load with no line number on it. The seed prices q11 out of two
             stores, sends d7 out of one of them so the flag has somewhere to be read, and takes a
             direct load out of two. The CSV writes them in one cell.
-      - [ ] 14.6 SMAC registration is a tick: the rep's belief, the coordinator's authoritative answer
+      - [x] 14.6 SMAC registration is a tick: the rep's belief, the coordinator's authoritative answer
             while she quotes, who ticked it and when, and her list of what is not registered yet.
+            **Done.** Migration 0029 gives a company two pairs of columns, an instant and a name
+            each, held together by a check so an answer cannot outlive whoever gave it. The rep's
+            tick is on the company form and says it is a belief; hers is in the Issue dialog beside
+            SMAC's own number, the one moment she is in there with the customer in front of her,
+            and is not asked at all about a customer already registered. Where she has answered,
+            his form states her answer instead of asking him. Under her queue is the backlog: the
+            customers a price has been asked for who are not in SMAC, oldest paper first, with the
+            rep's name because the row is not a door. D211.
       - [x] 14.7 A zero target earns no share of any paper unless the admin ticks it beside the target,
             and that is said wherever credit is chosen.
             **Done.** Migration 0027 puts `shares` on the target row. The credit pool is filtered

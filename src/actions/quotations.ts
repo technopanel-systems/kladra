@@ -16,7 +16,7 @@
  * where the two disagree, SMAC is right (S31).
  */
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
@@ -908,10 +908,21 @@ export async function issueQuotationAction(
     const tc = await getTranslations("common");
 
     const parsed = z
-      .object({ quotationId: z.uuid(), smacNumber: z.string().trim().min(1).max(60) })
+      .object({
+        quotationId: z.uuid(),
+        smacNumber: z.string().trim().min(1).max(60),
+        /**
+         * She has just created this customer in SMAC (SPEC §3, P14). Sent with
+         * the number because it is the same act: she is inside SMAC with this
+         * company in front of her, and asking her to go and find it afterwards
+         * is how a field ends up meaning nothing.
+         */
+        registerInSmac: z.enum(["true", "false"]),
+      })
       .safeParse({
         quotationId: field(formData, "quotationId"),
         smacNumber: field(formData, "smacNumber"),
+        registerInSmac: field(formData, "registerInSmac") ?? "false",
       });
     if (!parsed.success) {
       return {
@@ -942,6 +953,21 @@ export async function issueQuotationAction(
         recordId: quotation.id,
         details: { smacNumber: parsed.data.smacNumber },
       });
+
+      /*
+       * And the customer is in SMAC, because she has just put him there (P14).
+       *
+       * Her answer, and never taken away here: an unticked box means she did
+       * not say so this time, not that she unsaid it — it is empty on a company
+       * she registered last March too. Written only where nobody has answered
+       * yet, so the name and the date on it stay the ones that were true.
+       */
+      if (parsed.data.registerInSmac === "true") {
+        await tx
+          .update(companies)
+          .set({ smacRegisteredAt: new Date(), smacRegisteredBy: actor.id })
+          .where(and(eq(companies.id, quotation.companyId), isNull(companies.smacRegisteredAt)));
+      }
 
       // She has answered it, so the request on her own bell is done (D79).
       await clearNotifications(tx, { type: "quotation", id: quotation.id }, [

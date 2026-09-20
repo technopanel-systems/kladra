@@ -204,6 +204,13 @@
       "when": 1789917766790,
       "tag": "0028_a_paper_may_name_more_than_one_store",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1789925910333,
+      "tag": "0029_a_customer_is_in_smac_or_is_not",
+      "breakpoints": true
     }
   ]
 }

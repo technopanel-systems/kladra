@@ -19,6 +19,7 @@ import {
   raisesForOthers,
   REPORTING_ROLES,
   seesAllRoles,
+  seesSmacBacklog,
   SELLING_ROLES,
   sells,
   writesReports,
@@ -69,6 +70,23 @@ test("a manager and an admin see every floor; a rep and the coordinator see one"
   expect(mayOpen(who("admin", "admin-id"), FAISAL)).toBe(true);
   expect(mayOpen(who("rep", SAAD), FAISAL)).toBe(false);
   expect(mayOpen(who("coordinator", "rawan-id"), FAISAL)).toBe(false);
+});
+
+/**
+ * P14 — who is shown the customers not yet in SMAC (SPEC §3, P14).
+ *
+ * The list is every rep's customers, and `/queue` is a screen anybody signed in
+ * can type the address of, so this is a read gate and not a matter of what the
+ * page happens to draw.
+ */
+test("the SMAC backlog is the coordinator's and the two who read every floor", () => {
+  expect(seesSmacBacklog("coordinator")).toBe(true);
+  expect(seesSmacBacklog("manager")).toBe(true);
+  expect(seesSmacBacklog("admin")).toBe(true);
+  // Not a rep, and not marketing: neither has ever been shown another rep's
+  // company on any screen of his own.
+  expect(seesSmacBacklog("rep")).toBe(false);
+  expect(seesSmacBacklog("marketing")).toBe(false);
 });
 
 test("nobody writes on a floor that is not theirs, whatever their role", () => {

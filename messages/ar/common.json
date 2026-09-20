@@ -58,7 +58,7 @@
   "warehouse": "المستودع",
   "addWarehouse": "إضافة مستودع آخر",
   "anotherWarehouse": "مستودع آخر",
-  "removeWarehouse": "إزالة هذا المستودع",
+  "removeWarehouse": "حذف هذا المستودع",
   "destination": "الوجهة",
   "paymentTerms": "شروط الدفع",
   "leadSource": "مصدر العميل",
@@ -161,5 +161,6 @@
   },
   "paymentNote": "ملاحظة الدفع",
   "pickCompany": "اختيار الشركة",
-  "pickCompanyFirst": "اختيار الشركة أولًا"
+  "pickCompanyFirst": "اختيار الشركة أولًا",
+  "smac": "سماك"
 }

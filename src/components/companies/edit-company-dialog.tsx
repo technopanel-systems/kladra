@@ -44,6 +44,13 @@ export type CompanyEditable = {
   cityId: number | null;
   cityText: string | null;
   notes: string | null;
+  /**
+   * What is known about the customer being in SMAC (P14): whether this rep has
+   * said he believes it, and the coordinator's own answer where she has given
+   * one, already written as the sentence the form states in her place.
+   */
+  inSmac: boolean;
+  smacAnswer: string | null;
 };
 
 function draftOf(company: CompanyEditable): CompanyDraft {
@@ -55,6 +62,7 @@ function draftOf(company: CompanyEditable): CompanyDraft {
     cityId: company.cityId === null ? "" : String(company.cityId),
     cityText: company.cityText ?? "",
     notes: company.notes ?? "",
+    inSmac: company.inSmac,
   };
 }
 
@@ -182,6 +190,7 @@ function EditForm({
           onChange={(patch) => setDraft((current) => ({ ...current, ...patch }))}
           errors={errors}
           disabled={pending}
+          smacAnswer={company.smacAnswer ?? undefined}
         />
       </FormBody>
 

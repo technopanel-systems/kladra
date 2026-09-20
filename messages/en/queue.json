@@ -11,5 +11,8 @@
   "clear": "Nothing is waiting on you. The desk is clear.",
   "noQuotations": "No quotation is waiting to be issued.",
   "noDispatches": "No dispatch is waiting to be approved.",
-  "late": "late"
+  "late": "late",
+  "notInSmac": "Customers not in SMAC yet",
+  "notInSmacMeans": "Customers a quotation has been asked for who are not in SMAC. One leaves this list when you issue its quotation there.",
+  "notInSmacSince": "quotation asked for since {date}"
 }

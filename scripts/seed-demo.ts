@@ -548,6 +548,21 @@ async function seedCompanies(
                   ? null
                   : instant(addDays(TODAY, -c.lead.acknowledgedDaysAgo), 11, 5)
               : null,
+            // Whether this customer is in SMAC, and whose word it is (P14).
+            // Said a week after the company was opened, which is when somebody
+            // would first have needed him to exist there.
+            ...(c.smac === "registered"
+              ? {
+                  smacRegisteredAt: instant(addDays(TODAY, -7), 12, 30),
+                  smacRegisteredBy: must(userIds, "rawan", "user"),
+                }
+              : {}),
+            ...(c.smac === "believed"
+              ? {
+                  smacBelievedAt: instant(addDays(TODAY, -7), 9, 40),
+                  smacBelievedBy: must(userIds, c.rep, "user"),
+                }
+              : {}),
             createdAt: created,
             updatedAt: created,
           };

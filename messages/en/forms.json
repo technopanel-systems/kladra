@@ -27,5 +27,9 @@
   "editCompanyHint": "The company’s own details. Contacts have their own list.",
   "editContact": "Edit contact",
   "editContactHint": "A person who moves to another company is a new contact there.",
-  "saved": "{name} saved"
+  "saved": "{name} saved",
+  "inSmac": "The customer is in SMAC",
+  "inSmacHint": "As far as you know. The coordinator gives the real answer when she issues the quotation there.",
+  "registerInSmac": "I have created this customer in SMAC",
+  "registerInSmacHint": "Ticked, this customer is recorded against your name; nobody is asked again."
 }

@@ -491,7 +491,16 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "A rep ticks whether he believes the company is registered in SMAC",
-    owed: "14.6",
+    tests: [
+      "a rep says he believes the customer is in SMAC, and the record says whose word it is",
+      "the coordinator registers the customer in the same act as issuing the price",
+      "a customer already in SMAC is not asked about twice",
+      "her own screen says which customers are not in SMAC yet",
+      "the rep is told the answer rather than asked for a belief about it",
+      // The list names every rep's customers, so who may READ it is a gate
+      // rather than a matter of what a page draws.
+      "the SMAC backlog is the coordinator's and the two who read every floor",
+    ],
   },
   {
     says: "Beside the target is a tick that lets a zero-target person share anyway",

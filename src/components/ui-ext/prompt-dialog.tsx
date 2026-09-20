@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useWireGuard } from "@/components/ui-ext/action-outcome";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
 import { ResponsiveDialog } from "@/components/ui-ext/responsive-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -51,6 +52,7 @@ export function PromptDialog({
   onDone,
   initialValue,
   context,
+  tick,
   destructive = false,
 }: {
   trigger: ReactNode;
@@ -69,7 +71,15 @@ export function PromptDialog({
   context?: string;
   confirmLabel: string;
   successMessage: string;
-  onConfirm: (value: string) => Promise<ActionResult<unknown>>;
+  /**
+   * One more thing, ticked or not, for the one answer that settles two facts
+   * at once: issuing a quotation is also the moment the coordinator creates the
+   * customer in SMAC, so she says both here rather than going to look for the
+   * company afterwards (SPEC §3, P14). Absent everywhere else, which is three
+   * of the four uses.
+   */
+  tick?: { label: string; hint?: string };
+  onConfirm: (value: string, ticked: boolean) => Promise<ActionResult<unknown>>;
   /** Runs after the action succeeds — refresh, or navigate away. */
   onDone?: () => void;
   /** The answer ends somebody's request: the confirm button is in the tint. */
@@ -78,6 +88,9 @@ export function PromptDialog({
   const guarded = useWireGuard();
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
+  // Off every time it opens, like the box above it: a tick that remembered the
+  // last customer would answer a question about this one.
+  const [ticked, setTicked] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [formRefusal, setFormRefusal] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -86,6 +99,7 @@ export function PromptDialog({
     if (pending) return;
     setOpen(next);
     setValue(next ? (initialValue ?? "") : "");
+    setTicked(false);
     if (!next) {
       setRefusal(null);
       setFormRefusal(null);
@@ -95,7 +109,7 @@ export function PromptDialog({
   function confirm() {
     startTransition(async () => {
       // Guarded: no answer at all is a refusal too, not the error card (D132).
-      const result = await guarded(onConfirm)(value.trim());
+      const result = await guarded(onConfirm)(value.trim(), ticked);
       if (!result.ok) {
         // At the field when the field is what was refused — that is where the
         // eye is and where the fix has to happen — and in the footer when the
@@ -115,6 +129,7 @@ export function PromptDialog({
   const ids = useId();
   const fieldId = `${ids}-field`;
   const errorId = `${ids}-error`;
+  const tickId = `${ids}-tick`;
 
   return (
     <ResponsiveDialog
@@ -183,6 +198,30 @@ export function PromptDialog({
             ) : null}
           </div>
 
+          {tick ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={tickId}
+                  checked={ticked}
+                  disabled={pending}
+                  // The hint says what ticking costs her — her name against it,
+                  // and nobody asked again — which is the part a reader who
+                  // never sees the grey line under the box would lose.
+                  aria-describedby={tick.hint ? `${tickId}-hint` : undefined}
+                  onCheckedChange={(checked) => setTicked(checked === true)}
+                />
+                <Label htmlFor={tickId} className="font-normal text-foreground">
+                  {tick.label}
+                </Label>
+              </div>
+              {tick.hint ? (
+                <p id={`${tickId}-hint`} className="text-xs text-muted-foreground">
+                  {tick.hint}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
         </FormBody>
         <FormFooter
           error={formRefusal}

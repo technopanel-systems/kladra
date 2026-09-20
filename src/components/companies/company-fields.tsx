@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { FormLookups } from "@/actions/forms";
 import { SearchableSelect } from "@/components/ui-ext/searchable-select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +26,10 @@ import { Textarea } from "@/components/ui/textarea";
  * switch, so it never has to carry a country code of its own.
  */
 
+/** A label that names a value the form states rather than asks for (P14, 14D). */
+const LABEL_AS_FACT =
+  "flex items-center gap-2 text-sm leading-none font-medium text-muted-foreground";
+
 export type CompanyDraft = {
   name: string;
   categoryId: string;
@@ -33,6 +38,14 @@ export type CompanyDraft = {
   cityId: string;
   cityText: string;
   notes: string;
+  /**
+   * Whether the rep believes this customer is in SMAC (SPEC §3, P14).
+   *
+   * His belief and not the fact: he has no SMAC account and no number. The
+   * coordinator answers it properly while she creates the customer there, and
+   * where she has, this field is not asked at all — `smacAnswer` below.
+   */
+  inSmac: boolean;
 };
 
 /** What Add company opens on: Saudi Arabia and Riyadh, the answer nine times in ten. */
@@ -45,6 +58,7 @@ export function blankCompany(lookups: FormLookups): CompanyDraft {
     cityId: lookups.defaultCity ?? "",
     cityText: "",
     notes: "",
+    inSmac: false,
   };
 }
 
@@ -56,6 +70,7 @@ export function CompanyFields({
   errors,
   disabled,
   belowName,
+  smacAnswer,
 }: {
   idPrefix: string;
   lookups: FormLookups;
@@ -65,6 +80,13 @@ export function CompanyFields({
   disabled?: boolean;
   /** The duplicate warning, when the parent has one to show. */
   belowName?: ReactNode;
+  /**
+   * What the coordinator has already said about SMAC, where she has said it
+   * (P14). Her answer is the fact, so the rep is shown it instead of a tick of
+   * his own: a control that changes nothing is worse than a sentence
+   * (DESIGN §5).
+   */
+  smacAnswer?: string;
 }) {
   const t = useTranslations();
   const id = (field: string) => `${idPrefix}-${field}`;
@@ -225,6 +247,45 @@ export function CompanyFields({
           placeholder={t("forms.notesPlaceholder")}
         />
       </div>
+
+      {/* Last, because it is the one field that is not about the customer but
+          about the office's other system (SPEC §3, P14). A tick, never a
+          number: reps have no SMAC numbers. */}
+      {smacAnswer ? (
+        <div className="flex flex-col gap-2">
+          <span id={id("smac")} className={LABEL_AS_FACT}>
+            {t("common.smac")}
+          </span>
+          <p
+            data-slot="smac-answer"
+            aria-labelledby={id("smac")}
+            className="flex items-center text-sm font-medium"
+          >
+            {smacAnswer}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={id("in-smac")}
+              checked={value.inSmac}
+              disabled={disabled}
+              // The hint is the half of the question that says whose answer
+              // this is; read aloud, the box without it is a bare "in SMAC?".
+              aria-describedby={id("in-smac-hint")}
+              onCheckedChange={(checked) => onChange({ inSmac: checked === true })}
+            />
+            <Label htmlFor={id("in-smac")} className="font-normal text-foreground">
+              {t("forms.inSmac")}
+            </Label>
+          </div>
+          <p id={id("in-smac-hint")} className="text-xs text-muted-foreground">
+            {t("forms.inSmacHint")}
+          </p>
+          <input type="hidden" name="inSmac" value={value.inSmac ? "true" : "false"} />
+        </div>
+      )}
     </>
   );
 }

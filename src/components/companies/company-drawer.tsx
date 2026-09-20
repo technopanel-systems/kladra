@@ -225,6 +225,7 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
           city: company.cityName ?? company.cityText,
           category: company.categoryName,
           leadSource: company.leadSourceName,
+          smac: t(`companies.smac.${company.smac.state}`),
           repName: company.repName,
           nextFollowUp: company.nextFollowUp,
           projectFollowUp: company.projectFollowUp,
@@ -242,6 +243,17 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             cityId: company.cityId,
             cityText: company.cityText,
             notes: company.notes,
+            // What he has said about SMAC, and what she has (P14). Where she
+            // has answered, the form states her answer instead of asking him
+            // for a belief that would change nothing.
+            inSmac: company.smac.state === "believed",
+            smacAnswer:
+              company.smac.state === "registered"
+                ? t("companies.smacRegisteredBy", {
+                    who: company.smac.who ?? "",
+                    date: formatDay(dayOf(company.smac.when ?? new Date()), locale),
+                  })
+                : null,
           },
           leadWaiting: company.lead !== null && !company.lead.acknowledged,
           archived: Boolean(company.archivedAt),

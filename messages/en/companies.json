@@ -20,5 +20,11 @@
   "emptyLeads": "No companies yet — a lead you keep for yourself arrives here.",
   "quietCount": "{count, plural, one {# company gone quiet} other {# companies gone quiet}}",
   "copyNumber": "Copy number",
-  "numberCopied": "Number copied"
+  "numberCopied": "Number copied",
+  "smac": {
+    "registered": "In SMAC",
+    "believed": "In SMAC, the rep says",
+    "unknown": "Not in SMAC"
+  },
+  "smacRegisteredBy": "Registered — {who}, {date}"
 }
