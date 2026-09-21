@@ -327,7 +327,7 @@ below by number.
                   and a button on the other eight; the three that are nobody's floor are gated in the
                   registry (`mayExport`) and the other seven by their own screen's narrowing
 
-- [ ] **P14.5 The tooling sweep** — the founder, 2026-09-21: after Phase 14 and before the stranger
+- [x] **P14.5 The tooling sweep** — the founder, 2026-09-21: after Phase 14 and before the stranger
       reads it, go aspect by aspect across the whole product with tools rather than by eye. The
       catalogue is aitmpl.com (`npx claude-code-templates@latest`) and best-of-breed outside it where
       the catalogue has nothing; nothing that has to be paid for. Everything about HOW Kladra is built
@@ -336,8 +336,10 @@ below by number.
       with `/skill-doctor`, every skill, agent, command, MCP server and dependency that did not earn
       its place uninstalled, the survivors listed in §1, and every artefact these tools generate
       gitignored and removed.
-      - [ ] the aspect I am on: **the clean-up** — every aspect is swept; what is left is `/skill-doctor`,
-            uninstalling what did not earn its place, §1, and the artefacts
+      - [x] **the clean-up** — uninstalled what nothing in the project's history used, survivors and
+            removals in §1 with the reasons; no tool left an artefact in the repo (each ran from a scratch
+            install). `/skill-doctor` is a CLI command, the founder's to run. Full suite green (commit
+            722d21f), pushed. Next: Stage 3 — switch to Fable and `/audit`
             - [x] dependencies — `npm audit`: production clean; four moderate advisories, all dev-only
                   (`drizzle-kit` → `@esbuild-kit` → `esbuild`'s dev server), no fix published upstream
             - [x] static analysis — semgrep `p/typescript` + `p/react` + `p/owasp-top-ten` over 419
