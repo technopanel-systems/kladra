@@ -113,8 +113,8 @@ test("the sales manager reaches the office tabs from his rail, and nothing else 
     await expect(page.getByRole("heading", { name: t("common.holidays") })).toBeVisible(COLD);
   });
 
-  await test.step("the five that are not his put him back on his own screen", async () => {
-    for (const path of ["/admin/targets", "/admin/lookups", "/admin/use", "/admin/archive", "/admin/export"]) {
+  await test.step("the four that are not his put him back on his own screen", async () => {
+    for (const path of ["/admin/targets", "/admin/lookups", "/admin/use", "/admin/archive"]) {
       await page.goto(`/${locale}${path}`);
       await expect(page, `${path} let the manager in`).toHaveURL(/\/team/, COLD);
     }

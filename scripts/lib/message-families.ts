@@ -76,7 +76,10 @@ export const families: [string, string[]][] = [
   // both locales are held to every member of them.
   ["dispatches.payment", union("src/lib/payment.ts", "PAYMENT_TERMS")],
   ["dispatches.payment", union("src/lib/payment.ts", "PAYMENT_DETAILS")],
-  ["admin.exportFile", union("src/lib/export.ts", "EXPORTS")],
+  // The word at the top of every column of every file (P14 14.10): the files
+  // come in the reader's language now, so a column with no Arabic word is a
+  // header that would print its own key.
+  ["export", union("src/lib/export/columns.ts", "EXPORT_COLUMNS")],
   ["admin.kind", union("src/db/schema.ts", "ARCHIVE_KINDS")],
   // Whether the customer is in SMAC, in a word, on the company drawer (P14).
   ["companies.smac", union("src/lib/smac.ts", "SMAC_STATES")],

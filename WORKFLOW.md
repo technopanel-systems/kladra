@@ -319,6 +319,11 @@ below by number.
             may not do.
       - [ ] 14.10 Export everything, each from the screen it belongs to and carrying that screen's
             filters, both languages, 04/Aug/2026 dates, numbers Excel reads as numbers, Arabic intact (14H).
+            - [x] a · the three papers that already existed — customers, quotations, dispatches — rebuilt
+                  on the screens' own narrowing, an Export beside each screen's own action, and the admin's
+                  panel of files gone with D19's admin-only rule (D213)
+            - [ ] b · the seven that do not exist yet: contacts, projects, reports, leads, targets and
+                  achievement, users, holidays and leave
 
 **Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions

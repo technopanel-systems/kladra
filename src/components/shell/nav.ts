@@ -5,7 +5,6 @@ import {
   CalendarCheck,
   CalendarDays,
   Copy,
-  Download,
   FileText,
   FolderKanban,
   Inbox,
@@ -157,7 +156,6 @@ const adminItems: NavItem[] = [
   holidays,
   { href: "/admin/use", labelKey: "admin.use", icon: Activity },
   { href: "/admin/archive", labelKey: "admin.archive", icon: Archive },
-  { href: "/admin/export", labelKey: "common.export", icon: Download },
 ];
 
 /**

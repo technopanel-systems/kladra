@@ -49,7 +49,6 @@ const SCREENS: Screen[] = [
   { who: "jerom", path: "/admin/holidays" },
   { who: "jerom", path: "/admin/use" },
   { who: "jerom", path: "/admin/archive" },
-  { who: "jerom", path: "/admin/export" },
 ];
 
 const THEMES = ["dark", "light"] as const;

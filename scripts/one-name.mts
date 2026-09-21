@@ -16,7 +16,6 @@ import { join, resolve } from "node:path";
 /** Files that name the Latin one on purpose, each with the reason it may. */
 const ALLOWED = new Map<string, string>([
   ["src/lib/people.ts", "the one place that resolves a name"],
-  ["src/lib/export.ts", "a CSV is a machine's file and takes the English column throughout"],
   ["src/lib/authz.ts", "the session carries both names; the screen picks"],
   ["src/lib/admin.ts", "the admin's own list edits the pair, so it reads both raw"],
   ["src/auth.config.ts", "the adapter maps the row Auth.js hands back"],

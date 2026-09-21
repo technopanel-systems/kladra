@@ -106,12 +106,6 @@
   "restoreCompanyFirstContact": "The contact’s company is archived. Restore the company first.",
   "restoreCompanyFirstProject": "The project’s company is archived. Restore the company first.",
   "restored": "{name} is back.",
-  "exportHint": "Three files. Excel opens them with the Arabic names intact.",
-  "download": "Download",
-  "preparing": "Preparing…",
-  "exportReady": "{file} is in your downloads.",
-  "exportFailed": "The {file} file could not be prepared.",
-  "exportUnreachable": "Could not reach the server, so nothing was downloaded.",
   "lookup": {
     "categories": "Company categories",
     "leadSources": "Lead sources",
@@ -131,11 +125,6 @@
     "company": "Company",
     "contact": "Contact",
     "project": "Project"
-  },
-  "exportFile": {
-    "companies": "One row per company, with its city, category, lead source, rep and main contact.",
-    "quotations": "One row per item and per service, with the quotation, company, project and rep on each.",
-    "dispatches": "One row per item and per service, with the dispatch, company, warehouse and payment terms on each."
   },
   "nameAr": "Name in Arabic",
   "restoreMerged": "Nothing to bring back — everything is on the record that continues."

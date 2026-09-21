@@ -18,9 +18,10 @@
  * difference flag ask this file, and every write goes through `setWarehouses`,
  * so the two halves cannot come apart — which is the whole reason this is a
  * file and not four queries. The one exception is named here so that it is not
- * a surprise: the dispatches CSV (`src/lib/export.ts`) joins the extra table in
- * its own SQL, because it is one statement over every load ever raised, and it
- * prints English names whatever language the person who asked for it reads in.
+ * a surprise: the dispatches file (`src/lib/export/dispatches.ts`) joins the
+ * extra table in its own SQL, because it is one statement over every load the
+ * screen's filter admits, where this file answers one paper at a time. It names
+ * the stores in the reader's language, as this one does.
  * `tests/csv.spec.ts` holds that copy to this one.
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.

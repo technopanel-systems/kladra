@@ -1,5 +1,10 @@
 import { getTranslations } from "next-intl/server";
-import type { Difference, DifferenceField } from "@/lib/dispatch-difference";
+import {
+  differenceFieldLabel,
+  differenceUnit,
+  type Difference,
+  type DifferenceField,
+} from "@/lib/dispatch-difference";
 import type { DispatchItemRow, DispatchServiceRow } from "@/lib/dispatches";
 import { ToneNote } from "@/components/dispatches/tone-note";
 import { formatNumber } from "@/lib/money";
@@ -49,25 +54,14 @@ export async function DispatchDifferences({
   /**
    * The unit a figure is in, beside the figure itself (P13 review): "1.50 (was
    * 1.24)" asked the desk to remember whether that was metres, millimetres or a
-   * price. Metres for a width and a length, millimetres for a thickness, SAR per
-   * m² for a price, m² for a service's area. Each key written out, so the parity
-   * check sees every one (rules/words.md).
+   * price.
+   *
+   * It and the field's name live beside the rule they describe now
+   * (src/lib/dispatch-difference.ts), because the dispatches file says the same
+   * thing in one string and the two of them had drifted into two copies, one of
+   * which was English (P14 14.10).
    */
-  function unitOf(field: DifferenceField): string | null {
-    switch (field) {
-      case "width":
-      case "length":
-        return t("dispatches.unit.metres");
-      case "thickness":
-        return t("common.mm");
-      case "pricePerSqm":
-        return t("dispatches.unit.sarPerSqm");
-      case "sqm":
-        return t("common.sqm");
-      default:
-        return null;
-    }
-  }
+  const unitOf = (field: DifferenceField) => differenceUnit(field, t);
 
   /** Figures as the screen writes them everywhere else, with their unit; a lookup as its word; a service and a store by name. */
   function shown(field: DifferenceField, value: string): { text: string; unit: string | null } {
@@ -86,29 +80,8 @@ export async function DispatchDifferences({
     return { text: value, unit };
   }
 
-  /**
-   * The field's name without the unit its column heading carries — "Width", not
-   * "Width (m)" — because the unit is on the figure now, and saying it twice on
-   * one line is noise.
-   */
-  function fieldLabel(field: DifferenceField): string {
-    switch (field) {
-      case "service":
-        return t("quotations.service");
-      case "warehouses":
-        return t("common.warehouse");
-      case "sqm":
-        return t("dispatches.field.area");
-      case "width":
-        return t("dispatches.field.width");
-      case "length":
-        return t("dispatches.field.length");
-      case "pricePerSqm":
-        return t("dispatches.field.price");
-      default:
-        return t(`common.${field}`);
-    }
-  }
+  /** The field's name, from the same place the file takes it (see above). */
+  const fieldLabel = (field: DifferenceField) => differenceFieldLabel(field, t);
 
   // One entry per line or service, its changed fields together under it, in the
   // order the recorded list gives them — lines first, each in the load's order.

@@ -4,6 +4,7 @@ import { DispatchDrawer } from "@/components/dispatches/dispatch-drawer";
 import { DispatchSheetSkeleton, DispatchesTable } from "@/components/dispatches/dispatches-table";
 import { RequestDispatchDialog } from "@/components/dispatches/request-dispatch-dialog";
 import { Button } from "@/components/ui/button";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { NarrowingNote } from "@/components/metrics/narrowing-note";
 import { parseNarrowing } from "@/lib/narrowing";
@@ -12,7 +13,7 @@ import {
   countDispatches,
   directDispatchCompanies,
   listDispatches,
-  type DispatchStatus,
+  parseDispatchStatus,
 } from "@/lib/dispatches";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { dispatchTargets } from "@/lib/pickers";
@@ -40,10 +41,6 @@ type Search = { q?: string; status?: string; open?: string; view?: string } & Re
   string | string[] | undefined
 >;
 
-function parseStatus(value: string | undefined): DispatchStatus | null {
-  return value === "submitted" || value === "approved" || value === "refused" ? value : null;
-}
-
 export default async function DispatchesPage({
   searchParams,
 }: {
@@ -52,7 +49,7 @@ export default async function DispatchesPage({
   const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
 
   const q = (typeof params.q === "string" ? params.q : "").trim();
-  const status = parseStatus(params.status);
+  const status = parseDispatchStatus(params.status) ?? null;
   const open = params.open?.trim() || null;
   // His own choice, not this browser's, and remembered apart from the
   // quotations list: the two screens are read for different questions.
@@ -93,22 +90,31 @@ export default async function DispatchesPage({
       : 0;
   const forOthers = raisesOnBehalf(user);
 
+  // Nothing here at all — no search, no chip, no figure drilled into — is
+  // nothing to export (P14 14.10).
+  const firstUse = rows.length === 0 && !q && !status && !moved;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.dispatches")}</h1>
-        {/* Hers whenever there is anybody to raise one for (SPEC §3 P13). */}
-        {targets.quotations.length > 0 || direct.length > 0 || forOthers ? (
-          <RequestDispatchDialog
-            targets={targets}
-            raisesForOthers={forOthers}
-            trigger={
-              <Button variant="brand">
-                {t("dispatches.request")}
-              </Button>
-            }
-          />
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* The file IS this list, narrowed the way it is narrowed at the
+              moment it is asked for (P14 14.10). */}
+          {firstUse ? null : <ExportButton name="dispatches" title={t("common.dispatches")} />}
+          {/* Hers whenever there is anybody to raise one for (SPEC §3 P13). */}
+          {targets.quotations.length > 0 || direct.length > 0 || forOthers ? (
+            <RequestDispatchDialog
+              targets={targets}
+              raisesForOthers={forOthers}
+              trigger={
+                <Button variant="brand">
+                  {t("dispatches.request")}
+                </Button>
+              }
+            />
+          ) : null}
+        </div>
       </div>
 
       {moved ? <NarrowingNote narrowing={moved} list="dispatches" /> : null}

@@ -45,6 +45,7 @@ import {
   projects,
   quotationItems,
   quotationServices,
+  quotationStatusEnum,
   quotations,
   services,
   suppliers,
@@ -76,13 +77,26 @@ import { companyWhere, dispatchedQuotation } from "@/lib/counted";
 import type { Narrowing } from "@/lib/narrowing";
 import { maySeeCompany, onCompanySql, onProjectSql, seesCompany } from "@/lib/visibility";
 
-export type QuotationStatus =
-  | "requested"
-  | "returned"
-  | "issued"
-  | "accepted"
-  | "rejected"
-  | "cancelled";
+/**
+ * The six states a quotation passes through, read off the database's own enum.
+ *
+ * The list was typed three times — here as a union, in the schema as the enum,
+ * and again on the quotations page as the array its address parser searched —
+ * which is the shape rules/words.md warns about: a seventh state added to the
+ * union would compile everywhere and simply not parse out of a URL, and the
+ * screen would open WHOLE under a chip that said it was narrowed. The column is
+ * the truth about which states exist, so the type and the parser both read it.
+ */
+export type QuotationStatus = (typeof quotationStatusEnum.enumValues)[number];
+
+/**
+ * The status chip in the address, as every reader of it reads it: the screen,
+ * and the file the screen exports (src/lib/export/quotations.ts). Anything else
+ * — a word nobody uses, an empty string — is no chip at all.
+ */
+export function parseQuotationStatus(value: string | null | undefined): QuotationStatus | undefined {
+  return quotationStatusEnum.enumValues.find((status) => status === value);
+}
 
 /** What every quotation screen shows about a quotation. */
 export type QuotationRow = {
@@ -392,6 +406,17 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
     .limit(input.limit ?? LIST_LIMIT);
 
   return rows.map(toRow);
+}
+
+/**
+ * Exported since P14 14.10: the file the quotations screen exports carries the
+ * screen's own filters, and it does that by asking this rather than by writing
+ * the same WHERE a second time. Two copies of a narrowing is the drift trap
+ * rules/data.md names for figures, one step out — a file that quietly holds
+ * more rows than the list it came from is worse than one that holds none.
+ */
+export function narrowQuotations(input: ListQuotationsInput): (SQL | undefined)[] {
+  return narrowTo(input);
 }
 
 /** The one place this list's narrowing is written — rows and count alike. */

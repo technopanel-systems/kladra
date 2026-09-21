@@ -304,7 +304,17 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
  * Which companies this reader is asking about — the one place the narrowing is
  * written, so the count below and the rows above can never be about two
  * different sets (rules/data.md).
+ *
+ * Exported since P14 14.10, because the file the screen exports carries the
+ * screen's own filters and does it by asking this rather than by writing the
+ * same WHERE a second time. Two copies of a narrowing is the drift trap
+ * rules/data.md names for figures, one step out — a file that quietly holds
+ * more rows than the list it came from is worse than one that holds none.
  */
+export function narrowCompanies(input: ListCompaniesInput): (SQL | undefined)[] {
+  return narrowTo(input);
+}
+
 function narrowTo(input: ListCompaniesInput): (SQL | undefined)[] {
   const { user, filter } = input;
   const term = (input.q ?? "").trim();

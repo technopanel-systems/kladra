@@ -1,10 +1,12 @@
-import { csvCell } from "@/lib/csv";
-import { differenceInEnglish, type Difference } from "@/lib/dispatch-difference";
+import { csv, csvCell } from "@/lib/csv";
+import { EXPORT_COLUMNS } from "@/lib/export/columns";
+import { differenceInWords, type Difference } from "@/lib/dispatch-difference";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
 import { lineTotal, serviceTotal } from "@/lib/money";
 import { login } from "./helpers/auth";
 import { one, query } from "./helpers/db";
-import { test, expect } from "./helpers/i18n";
+import { keyed, readCsv } from "./helpers/file";
+import { test, expect, type Translate } from "./helpers/i18n";
 
 /**
  * A CSV cell is text (SPEC D96). Pure: the export is a file the admin opens in
@@ -32,18 +34,83 @@ test("a quote is doubled, a comma and a newline stay inside the cell, nothing is
 });
 
 /**
- * What differed, in the words the file prints (SPEC §3 P13: "recorded for later
- * analysis"). Pure: every kind of entry once, with its unit, and the two answers
- * that are not a list — a load with no paper and a load that matches its paper.
+ * The file itself (SPEC §3, P14 14.10). The founder: it "opens in Excel with
+ * its numbers as numbers". A column declared numeric is written bare — and only
+ * where the cell IS a figure, so an empty price and a dash still cannot arm a
+ * spreadsheet. The head carries words, not keys, because the file comes in the
+ * reader's language.
  */
-test("a difference is written out in words with its units; a matching load says none, a direct one nothing", () => {
+test("a column of figures is written bare, a name is quoted, and the head is words", () => {
+  const file = csv(
+    [
+      { key: "company", label: "الشركة" },
+      { key: "sqm", label: "م²", numeric: true },
+      { key: "price_per_sqm", label: "Price per m²", numeric: true },
+    ],
+    [
+      { company: "Al-Rajhi, Tower", sqm: "215.76", price_per_sqm: 127 },
+      { company: "=SUM(A1)", sqm: null, price_per_sqm: "—" },
+    ],
+  );
+  expect(file).toBe(
+    "\ufeff" +
+      [
+        '"الشركة","م²","Price per m²"',
+        '"Al-Rajhi, Tower",215.76,127',
+        '"\'=SUM(A1)","","—"',
+      ].join("\r\n") +
+      "\r\n",
+  );
+});
+
+/**
+ * One word per thing, at the top of a column too (SPEC §5).
+ *
+ * Every file shares one vocabulary (src/lib/export/columns.ts), so two columns
+ * that carried the same word would be two columns a reader cannot tell apart —
+ * and the specs below, which read a file back by its headings, could not tell
+ * them apart either.
+ */
+test("no two columns carry the same word", ({ t }) => {
+  const seen = new Map<string, string>();
+  const clashes: string[] = [];
+  for (const column of EXPORT_COLUMNS) {
+    const word = t(`export.${column}`);
+    const first = seen.get(word);
+    if (first) clashes.push(`${first} and ${column} are both "${word}"`);
+    else seen.set(word, column);
+  }
+  expect(clashes, "two columns with one word").toEqual([]);
+});
+
+/**
+ * What differed, in the words the file prints (SPEC §3 P13: "recorded for later
+ * analysis"; P14 14.10: in both languages). Pure: every kind of entry once, with
+ * its unit, and the two answers that are not a list — a load with no paper and a
+ * load that matches its paper.
+ *
+ * The expected lines are composed from the same words the drawer says it with,
+ * because that is the claim: which field name, which unit, which number and
+ * which name is picked for each kind of entry. The English shape is pinned
+ * literally underneath, so the composition cannot quietly become nonsense.
+ */
+test("a difference is written out in words with its units; a matching load says none, a direct one nothing", ({
+  locale,
+  t,
+}) => {
   const names: Record<string, string> = { "3": "CNC cutting", "4": "Fabrication" };
   const serviceName = (id: string) => names[id] ?? id;
   const stores: Record<string, string> = { "3": "Riyadh", "7": "Malham" };
   const storeName = (id: string) => stores[id] ?? id;
 
-  expect(differenceInEnglish(null, serviceName, storeName)).toBe("");
-  expect(differenceInEnglish([], serviceName, storeName)).toBe("none");
+  const item = (number: number) => t("quotations.itemNumber", { number });
+  const service = (number: number) => t("quotations.serviceNumber", { number });
+  const added = (what: string) => t("dispatches.differenceAdded", { what });
+  const changed = (what: string, to: string, from: string) =>
+    t("dispatches.differenceChanged", { what, to, from });
+
+  expect(differenceInWords(null, t, serviceName, storeName)).toBe("");
+  expect(differenceInWords([], t, serviceName, storeName)).toBe(t("dispatches.differenceNone"));
 
   const difference: Difference[] = [
     { kind: "line", position: 1, change: "changed", field: "supplier", from: "N", to: "K" },
@@ -57,51 +124,52 @@ test("a difference is written out in words with its units; a matching load says 
     // The load itself: the stores it left from, named rather than numbered (P14).
     { kind: "load", change: "changed", field: "warehouses", from: "3", to: "3,7" },
   ];
-  expect(differenceInEnglish(difference, serviceName, storeName)).toBe(
-    [
-      "Item 1 supplier changed from N to K",
-      "Item 1 thickness changed from 4.0 mm to 3.0 mm",
-      "Item 1 width changed from 1.24 m to 1.50 m",
-      "Item 2 price changed from 120.00 SAR per m² to 127.00 SAR per m²",
-      "Item 5 added, not on the quotation",
-      "Service 1 changed from CNC cutting to Fabrication",
-      "Service 1 area changed from 60.00 m² to 45.00 m²",
-      "Service 3 added, not on the quotation",
-      "Load stores changed from Riyadh to Riyadh and Malham",
-    ].join("; "),
-  );
-});
+  const mm = t("common.mm");
+  const metres = t("dispatches.unit.metres");
+  const perSqm = t("dispatches.unit.sarPerSqm");
+  const sqm = t("common.sqm");
 
-/** The file read back the way Excel reads it: quoted cells, "" for a quote, CRLF between rows. */
-function parseCsv(text: string): Record<string, string>[] {
-  const body = text.replace(/^\uFEFF/, "");
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let i = 0; i < body.length; i++) {
-    const ch = body[i];
-    if (quoted) {
-      if (ch !== '"') cell += ch;
-      else if (body[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else quoted = false;
-    } else if (ch === '"') quoted = true;
-    else if (ch === ",") {
-      row.push(cell);
-      cell = "";
-    } else if (ch === "\r" && body[i + 1] === "\n") {
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-      i++;
-    } else cell += ch;
+  const written = differenceInWords(difference, t, serviceName, storeName);
+  expect(written).toBe(
+    [
+      changed(`${item(1)} ${t("common.supplier")}`, "K", "N"),
+      changed(`${item(1)} ${t("common.thickness")}`, `3.0 ${mm}`, `4.0 ${mm}`),
+      changed(`${item(1)} ${t("dispatches.field.width")}`, `1.50 ${metres}`, `1.24 ${metres}`),
+      changed(
+        `${item(2)} ${t("dispatches.field.price")}`,
+        `127.00 ${perSqm}`,
+        `120.00 ${perSqm}`,
+      ),
+      added(item(5)),
+      // The field IS the thing here, so the number stands alone.
+      changed(service(1), "Fabrication", "CNC cutting"),
+      changed(`${service(1)} ${t("dispatches.field.area")}`, `45.00 ${sqm}`, `60.00 ${sqm}`),
+      added(service(3)),
+      // And the load's own change wears no number at all.
+      changed(t("common.warehouse"), "Riyadh · Malham", "Riyadh"),
+    ].join("\n"),
+  );
+
+  // One line per entry, whichever language it is read in.
+  expect(written.split("\n")).toHaveLength(9);
+
+  if (locale === "en") {
+    // Without the isolates the loader puts around every value (src/i18n/isolate.ts).
+    // They are invisible, they belong in the cell — an Arabic sentence with
+    // "1.50 m" in it needs them — and they are not what this line is about.
+    expect(written.replace(/[\u2068\u2069]/g, "").split("\n")).toEqual([
+      "Item 1 Supplier: K (was N)",
+      "Item 1 Thickness: 3.0 mm (was 4.0 mm)",
+      "Item 1 Width: 1.50 m (was 1.24 m)",
+      "Item 2 Price: 127.00 SAR per m² (was 120.00 SAR per m²)",
+      "Item 5 added, not on the quotation",
+      "Service 1: Fabrication (was CNC cutting)",
+      "Service 1 Area: 45.00 m² (was 60.00 m²)",
+      "Service 3 added, not on the quotation",
+      "Warehouse: Riyadh · Malham (was Riyadh)",
+    ]);
   }
-  const [header, ...data] = rows;
-  return data.map((cells) => Object.fromEntries(header.map((name, index) => [name, cells[index]])));
-}
+});
 
 type LoadRow = {
   line: "panel" | "service";
@@ -121,8 +189,12 @@ type LoadRow = {
   price_per_sqm: string;
 };
 
-/** A load's lines then its services, as the database holds them — the spec's own read, not the export's. */
-async function loadRows(dispatchId: string): Promise<LoadRow[]> {
+/**
+ * A load's lines then its services, as the database holds them — the spec's own
+ * read, not the export's. The service is named in the language this project
+ * reads in, because the file names it in the reader's (P14 14.10).
+ */
+async function loadRows(dispatchId: string, locale: string): Promise<LoadRow[]> {
   return query<LoadRow>(
     `select 'panel' as line, di.position as item, null as service, di.colour_code,
             s.code as supplier, fr.name as fire_rating, cl.name as class, th.mm::text as thickness_mm,
@@ -138,7 +210,7 @@ async function loadRows(dispatchId: string): Promise<LoadRow[]> {
        left join quotation_items qi on qi.id = di.quotation_item_id
       where di.dispatch_id = $1::uuid
      union all
-     select 'service', ds.position, sv.name_en, null, null, null, null, null, null, null, null, null,
+     select 'service', ds.position, ${locale === "ar" ? "sv.name_ar" : "sv.name_en"}, null, null, null, null, null, null, null, null, null,
             null, ds.sqm::text, ds.price_per_sqm::text, 2
        from dispatch_services ds
        join services sv on sv.id = ds.service_id
@@ -158,13 +230,19 @@ function expectLoad(
   file: Record<string, string>[],
   number: number,
   expected: { rows: LoadRow[]; source: string; difference: string },
+  t: Translate,
 ) {
   const label = dispatchLabel(number);
+  // Which kind of row it is is a word in the reader's language, like every
+  // other cell on the row (P14 14.10), so the database's own `panel` and
+  // `service` are turned into words before they are compared.
+  const word = (kind: LoadRow["line"]) =>
+    t(kind === "panel" ? "quotations.panel" : "quotations.service");
   const rows = file.filter((row) => row.dispatch === label);
   expect(
     rows.map((row) => [row.line, Number(row.item)]),
     `${label}: one row per line and one per service, panels first`,
-  ).toEqual(expected.rows.map((row) => [row.line, row.item]));
+  ).toEqual(expected.rows.map((row) => [word(row.line), row.item]));
 
   rows.forEach((row, index) => {
     const want = expected.rows[index];
@@ -225,6 +303,7 @@ function expectLoad(
 test("the dispatches file: a direct load and a load that left its paper, line by line and service by service", async ({
   page,
   locale,
+  t,
 }) => {
   test.slow(); // A sign-in and the whole file.
 
@@ -252,42 +331,55 @@ test("the dispatches file: a direct load and a load that left its paper, line by
       order by d.number
       limit 1`,
   );
+  // In the language this project reads in: the difference names a service and a
+  // store, and the sentence around them is the reader's (P14 14.10).
+  const named = locale === "ar" ? "name_ar" : "name_en";
   const names = new Map(
-    (await query<{ id: string; name: string }>("select id::text as id, name_en as name from services")).map(
-      (row) => [row.id, row.name],
-    ),
+    (
+      await query<{ id: string; name: string }>(
+        `select id::text as id, ${named} as name from services`,
+      )
+    ).map((row) => [row.id, row.name]),
   );
   const storeNames = new Map(
     (
       await query<{ id: string; name: string }>(
-        "select id::text as id, name_en as name from warehouses",
+        `select id::text as id, ${named} as name from warehouses`,
       )
     ).map((row) => [row.id, row.name]),
   );
 
   await login(page, locale, "jerom");
-  const response = await page.request.get("/api/export/dispatches");
+  // In the language this project reads in: the file comes in both (P14 14.10),
+  // and a screen asks for its own.
+  const response = await page.request.get(`/api/export/dispatches?locale=${locale}`);
   expect(response.status()).toBe(200);
-  const file = parseCsv((await response.body()).toString("utf8"));
+  const file = keyed(readCsv((await response.body()).toString("utf8")).rows, t);
 
   await test.step("a direct load names its source and carries its own prices", async () => {
-    const rows = await loadRows(direct.id);
+    const rows = await loadRows(direct.id, locale);
     expect(rows.length).toBeGreaterThan(0);
-    expectLoad(file, direct.number, { rows, source: "direct", difference: "" });
+    expectLoad(file, direct.number, { rows, source: t("dispatches.direct"), difference: "" }, t);
   });
 
   await test.step("a load that differs says how, in words, once", async () => {
-    const rows = await loadRows(differing.id);
-    const difference = differenceInEnglish(
+    const rows = await loadRows(differing.id, locale);
+    const difference = differenceInWords(
       differing.difference,
+      t,
       (id) => names.get(id) ?? id,
       (id) => storeNames.get(id) ?? id,
     );
-    expect(difference).not.toBe("none");
-    expectLoad(file, differing.number, {
-      rows,
-      source: quotationLabel(differing.q_number, differing.q_revision),
-      difference,
-    });
+    expect(difference).not.toBe(t("dispatches.differenceNone"));
+    expectLoad(
+      file,
+      differing.number,
+      {
+        rows,
+        source: quotationLabel(differing.q_number, differing.q_revision),
+        difference,
+      },
+      t,
+    );
   });
 });

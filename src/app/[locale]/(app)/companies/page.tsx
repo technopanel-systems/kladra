@@ -6,6 +6,7 @@ import { CompanyDrawer } from "@/components/companies/company-drawer";
 import { FollowUpStrip } from "@/components/companies/follow-up-strip";
 import { LeadsBand } from "@/components/leads/leads-band";
 import { Empty } from "@/components/ui-ext/empty";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { ListSearch } from "@/components/ui-ext/list-search";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
@@ -157,14 +158,21 @@ export default async function CompaniesPage({
         <h1 className="text-xl font-semibold">
           {viewedName ? t("team.companiesOf", { name: viewedName }) : t("common.companies")}
         </h1>
-        {mayAdd ? <AddCompanyDialog /> : null}
-        {/* The way back sits where the title's action would: a manager reading
-            one rep's floor adds nothing here, and came from the team. */}
-        {viewedName ? (
-          <Button asChild variant="outline" size="sm">
-            <Link href="/team">{t("team.backToTeam")}</Link>
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* The file IS this list, narrowed the way it is narrowed at the
+              moment it is asked for (P14 14.10) — so it stands with the
+              screen's own actions, and a floor with nothing on it has nothing
+              to export, exactly as it has nothing to search. */}
+          {firstUse ? null : <ExportButton name="companies" title={t("common.companies")} />}
+          {mayAdd ? <AddCompanyDialog /> : null}
+          {/* The way back sits where the title's action would: a manager reading
+              one rep's floor adds nothing here, and came from the team. */}
+          {viewedName ? (
+            <Button asChild variant="outline" size="sm">
+              <Link href="/team">{t("team.backToTeam")}</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {/* The leads given to him and not yet acknowledged, apart from his own

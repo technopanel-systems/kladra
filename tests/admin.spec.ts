@@ -100,7 +100,8 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
       t("common.holidays"),
       t("admin.use"),
       t("admin.archive"),
-      t("common.export"),
+      // Export is not among them since P14 14.10: a file is the screen it came
+      // from, so the way to one is on that screen and not on a panel of its own.
     ]) {
       await expect(
         page.getByRole("link", { name: label, exact: true }).first(),
@@ -458,26 +459,9 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
       arabicName.name,
     );
 
-    // And the screen says what a press did (P13-G6). A file that could not be
-    // prepared is a toast that names it and carries its next step; the step is
-    // the same press, and that press saves the file under the server's name.
-    await openAdmin(page, locale, "export", t("common.export"));
-    const companies = page.locator('[data-file="companies"]');
-    await expect(companies).toContainText(t("admin.exportFile.companies"));
-    await page.route("**/api/export/companies", (route) => route.fulfill({ status: 500, body: "" }));
-    await companies.getByRole("button", { name: t("admin.download") }).click();
-    const failed = page
-      .locator("[data-sonner-toast]")
-      .filter({ hasText: t("admin.exportFailed", { file: t("common.companies") }) });
-    await expect(failed).toBeVisible(COLD);
-    await expect(failed.getByRole("button", { name: t("common.close") })).toBeVisible();
-    await page.unroute("**/api/export/companies");
-
-    const saved = page.waitForEvent("download");
-    await failed.getByRole("button", { name: t("shell.tryAgain") }).click();
-    const file = (await saved).suggestedFilename();
-    expect(file).toBe(`kladra-companies-${todayRiyadh()}.csv`);
-    await expect(page.getByText(t("admin.exportReady", { file }))).toBeVisible(COLD);
+    // What a press does about it is the list screens' own, and tests/export.spec.ts
+    // walks it there: the files left the admin panel with P14 14.10, because a
+    // file is the screen it came from and this panel had no screen behind it.
   });
 
   await test.step("10 · an archived company comes back with everything on it", async () => {
@@ -554,7 +538,7 @@ test("Jerom's morning: an account, a target, a list, a holiday, an export and a 
  * The admin screens are the admin's, and a rep who guesses a URL is not shown
  * an error page — he is put back on his own floor (DESIGN §5).
  */
-test("a rep who types an admin URL lands on his own home, and cannot download the data", async ({
+test("a rep who types an admin URL lands on his own home", async ({
   page,
   locale,
   t,
@@ -569,12 +553,9 @@ test("a rep who types an admin URL lands on his own home, and cannot download th
   }
   await expect(page.getByRole("heading", { name: t("day.title") })).toBeVisible();
 
-  // The export is a URL, not a menu item, so the refusal has to live on the
-  // route and not only in the rail.
-  for (const name of ["companies", "quotations", "dispatches"]) {
-    const response = await page.request.get(`/api/export/${name}`);
-    expect(response.status(), `a rep downloaded ${name}`).toBe(404);
-  }
+  // The files are no longer among them. A file is the screen it came from
+  // (P14 14.10), so a rep asking for the customers file gets his own floor and
+  // nothing else — tests/export.spec.ts is where that is walked.
 
   await test.step("and what the admin adds to a list is offered to him at once", async () => {
     const categories = await query<{ name: string }>(

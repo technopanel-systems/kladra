@@ -206,65 +206,134 @@ function storeList(ids: readonly number[]): string {
   return [...new Set(ids)].sort((a, b) => a - b).join(",");
 }
 
-/** A field as the admin's file names it, and the unit its figures are recorded in. */
-const IN_ENGLISH: Record<DifferenceField, { word: string | null; unit: string | null }> = {
-  colourCode: { word: "colour code", unit: null },
-  supplier: { word: "supplier", unit: null },
-  fireRating: { word: "fire rating", unit: null },
-  class: { word: "class", unit: null },
-  thickness: { word: "thickness", unit: "mm" },
-  width: { word: "width", unit: "m" },
-  length: { word: "length", unit: "m" },
-  pricePerSqm: { word: "price", unit: "SAR per m²" },
-  // The service itself: "Service 2 changed from CNC cutting to Fabrication".
-  service: { word: null, unit: null },
-  sqm: { word: "area", unit: "m²" },
-  // The load's own: "Load stores changed from Riyadh to Riyadh and Malham".
-  warehouses: { word: "stores", unit: null },
-};
+/**
+ * A translator, as every other module that names a thing in the reader's
+ * language takes one (`paymentTermsLabel`, `lossReasonLabel`).
+ *
+ * Taking it rather than calling a hook is what lets the one mapping serve the
+ * drawer, which renders each part in its own element, and the file, which needs
+ * the whole thing as one string.
+ */
+type Translate = (key: string, values?: Record<string, string | number>) => string;
 
 /**
- * What differed, as one English sentence per entry, for the dispatches CSV
- * (SPEC §3 P13: "recorded for later analysis").
+ * What a field is called, and the unit its figures are recorded in.
+ *
+ * Both were written twice — a map of English words here for the admin's file,
+ * and a pair of switch statements in `dispatch-differences.tsx` for the drawer —
+ * until the files began coming in both languages (P14 14.10). Two copies of
+ * "what this field is called" is the shape that drifts, and one of them being
+ * English-only was the drift.
+ *
+ * The field's name carries no unit — "Width", not "Width (m)" — because the
+ * unit goes on the figure; saying it twice on one line is noise.
+ */
+export function differenceFieldLabel(field: DifferenceField, t: Translate): string {
+  switch (field) {
+    case "service":
+      return t("quotations.service");
+    case "warehouses":
+      return t("common.warehouse");
+    case "sqm":
+      return t("dispatches.field.area");
+    case "width":
+      return t("dispatches.field.width");
+    case "length":
+      return t("dispatches.field.length");
+    case "pricePerSqm":
+      return t("dispatches.field.price");
+    default:
+      return t(`common.${field}`);
+  }
+}
+
+/** Metres for a width and a length, millimetres for a thickness, SAR per m² for a price. */
+export function differenceUnit(field: DifferenceField, t: Translate): string | null {
+  switch (field) {
+    case "width":
+    case "length":
+      return t("dispatches.unit.metres");
+    case "thickness":
+      return t("common.mm");
+    case "pricePerSqm":
+      return t("dispatches.unit.sarPerSqm");
+    case "sqm":
+      return t("common.sqm");
+    default:
+      return null;
+  }
+}
+
+/**
+ * What differed, in words, one entry to a line, for the dispatches file (SPEC
+ * §3 P13: "recorded for later analysis"; P14 14.10: "comes in both languages").
  *
  * The file is read in Excel by somebody asking which loads left the paper and
  * how, so it says it in words and with units rather than as the JSON the column
- * holds: "Item 2 price changed from 120.00 SAR per m² to 127.00 SAR per m²;
- * Service 3 added, not on the quotation". Items and services are numbered as
- * the file's own `item` column numbers them. A load with no paper has nothing to
- * differ from and says nothing (its `source` already says `direct`); a load that
- * matches its paper says `none`, which is an answer and not a blank.
+ * holds. It was English whoever read it, which was defensible while the file was
+ * the admin's alone and is not now that the file is a screen exported by
+ * whoever is reading that screen.
  *
- * A service is recorded by its id (see above), so the caller hands over the
- * name to print for one.
+ * The shape is the drawer's, not a sentence: the thing, then what it is now,
+ * then what the paper said as an aside — "Item 1 supplier: K (was N)". A
+ * sentence with a verb in it would have to agree with the gender of the noun in
+ * front of it in Arabic, and «تغيّر» against «الخدمة» is the kind of wrong that
+ * reads as machine-written; the three-part shape needs no verb at all. The
+ * entries are separated by a newline rather than by a mark, because a semicolon
+ * is «؛» in one language and ";" in the other, and because a cell of four
+ * changes is read in Excel as four lines.
+ *
+ * Items and services are numbered as the file's own `item` column numbers them.
+ * A load with no paper has nothing to differ from and says nothing (its `source`
+ * already says `direct`); a load that matches its paper says «none», which is
+ * an answer and not a blank.
+ *
+ * A service and a store are recorded by id (see above), so the caller hands over
+ * the names — in the reader's language, as the drawer hands over its own.
  */
-export function differenceInEnglish(
+export function differenceInWords(
   difference: readonly Difference[] | null,
+  t: Translate,
   serviceName: (id: string) => string,
   warehouseName: (id: string) => string,
 ): string {
   if (difference === null) return "";
-  if (difference.length === 0) return "none";
+  if (difference.length === 0) return t("dispatches.differenceNone");
   return difference
     .map((entry) => {
-      const what =
+      // The load's own change is not a line and wears no number: the field
+      // beneath it says "Warehouse", which is the whole of what there is to say.
+      const number =
         entry.kind === "load"
-          ? "Load"
-          : `${entry.kind === "line" ? "Item" : "Service"} ${entry.position}`;
-      if (entry.change === "added") return `${what} added, not on the quotation`;
-      const { word, unit } = IN_ENGLISH[entry.field];
+          ? null
+          : t(entry.kind === "line" ? "quotations.itemNumber" : "quotations.serviceNumber", {
+              number: entry.position,
+            });
+      if (entry.change === "added") {
+        return t("dispatches.differenceAdded", { what: number ?? "" });
+      }
+      // "Service 2: Fabrication" — the field's name would be the word "Service"
+      // a second time, so the number stands alone where the field IS the thing.
+      const label = entry.field === "service" ? null : differenceFieldLabel(entry.field, t);
+      const unit = differenceUnit(entry.field, t);
       const value = (raw: string) => {
         if (entry.field === "service") return serviceName(raw);
-        // A list of stores reads as a list: "Riyadh and Malham", not "3,7".
+        // A list of stores reads as the names, in the order the flag recorded
+        // them, with the mark between them the drawer uses (rules/words.md).
         if (entry.field === "warehouses") {
-          const names = raw.split(",").filter(Boolean).map(warehouseName);
-          return names.length > 1
-            ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`
-            : (names[0] ?? "");
+          return raw
+            .split(",")
+            .filter(Boolean)
+            .map(warehouseName)
+            .join(" · ");
         }
-        return raw + (unit ? ` ${unit}` : "");
+        return unit ? `${raw} ${unit}` : raw;
       };
-      return `${what}${word ? ` ${word}` : ""} changed from ${value(entry.from)} to ${value(entry.to)}`;
+      return t("dispatches.differenceChanged", {
+        what: [number, label].filter(Boolean).join(" "),
+        to: value(entry.to),
+        from: value(entry.from),
+      });
     })
-    .join("; ");
+    .join("\n");
 }

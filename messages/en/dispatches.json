@@ -27,6 +27,9 @@
   "statusRefused": "Refused",
   "differsChip": "Differs from the quotation",
   "differsFrom": "Differs from {label}",
+  "differenceNone": "none",
+  "differenceAdded": "{what} added, not on the quotation",
+  "differenceChanged": "{what}: {to} (was {from})",
   "changedWasUnit": "was {from} {unit}",
   "unit": {
     "metres": "m",

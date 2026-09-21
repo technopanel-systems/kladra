@@ -1643,18 +1643,13 @@ const MANIFEST: StateDef[] = [
     path: "/admin/archive",
     waitFor: heading("admin.archive"),
   },
-  {
-    role: "admin",
-    key: "admin-export",
-    identity: "admin",
-    path: "/admin/export",
-    waitFor: heading("common.export"),
-  },
   /* The admin states S12.9 reshaped (P13-G6): a row's menu, the act apart in it,
      a refused save, an empty search, and a download on its way and failed. The
      two refusals press Save on an EMPTY form, which the action refuses before it
      reads anything; the two downloads are answered by the page itself, held or
-     failed, so no file is built and nothing is written. */
+     failed, so no file is built and nothing is written. The export states left
+     the admin panel with the files themselves (P14 14.10): the control is on
+     every list screen now, and the customers list is where it is looked at. */
   {
     role: "admin",
     key: "admin-users-menu",
@@ -1730,31 +1725,31 @@ const MANIFEST: StateDef[] = [
   },
   {
     role: "admin",
-    key: "admin-export-preparing",
+    key: "export-preparing",
     identity: "admin",
-    path: "/admin/export",
+    path: "/companies",
     steps: async (page, T) => {
-      // Held on its way, so the pressed Download is caught while it prepares.
+      // Held on its way, so the pressed Export is caught while it prepares.
       await page.route("**/api/export/**", async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 15_000));
         await route.continue().catch(() => {});
       });
-      await page.getByRole("button", { name: T("admin.download") }).first().click();
+      await page.getByRole("button", { name: T("common.export") }).first().click();
     },
-    waitFor: textVisible("admin.preparing"),
+    waitFor: textVisible("common.preparing"),
   },
   {
     role: "admin",
-    key: "admin-export-failed",
+    key: "export-failed",
     identity: "admin",
-    path: "/admin/export",
+    path: "/companies",
     steps: async (page, T) => {
       await page.route("**/api/export/**", (route) => route.fulfill({ status: 500, body: "" }));
-      await page.getByRole("button", { name: T("admin.download") }).first().click();
+      await page.getByRole("button", { name: T("common.export") }).first().click();
     },
     // The file's name is itself a message, so the sentence is built in two steps.
     waitFor: (page, T, prefix, width) =>
-      textVisible("admin.exportFailed", { file: T("common.companies") })(page, T, prefix, width),
+      textVisible("common.exportFailed", { file: T("common.companies") })(page, T, prefix, width),
   },
 
   /* ------------------------------ marketing ------------------------------ */

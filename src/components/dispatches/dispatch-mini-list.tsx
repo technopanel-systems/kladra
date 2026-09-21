@@ -1,3 +1,4 @@
+import { STATUS_KEYS } from "@/components/dispatches/status-words";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
@@ -22,11 +23,6 @@ import { dispatchTone } from "@/lib/state-tone";
  * dispatch does (P12-11), with Kladra's quietly beside it.
  */
 
-const STATUS_KEYS: Record<DispatchStatus, string> = {
-  submitted: "dispatches.statusSubmitted",
-  approved: "dispatches.statusApproved",
-  refused: "dispatches.statusRefused",
-};
 
 export async function DispatchMiniList({ rows }: { rows: DispatchRow[] }) {
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);

@@ -1,5 +1,6 @@
 "use client";
 
+import { STATUS_KEYS } from "@/components/dispatches/status-words";
 import { Fragment, useTransition, type ReactNode } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -68,11 +69,6 @@ import { useArrivedIds } from "@/hooks/use-arrived";
  * owns (S31).
  */
 
-const STATUS_KEYS: Record<DispatchStatus, string> = {
-  submitted: "dispatches.statusSubmitted",
-  approved: "dispatches.statusApproved",
-  refused: "dispatches.statusRefused",
-};
 
 /** What a status chip that finds nothing says: a sentence each, in lower case. */
 const EMPTY_KEYS: Record<DispatchStatus, string> = {

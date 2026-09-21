@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { NarrowingNote } from "@/components/metrics/narrowing-note";
 import { parseNarrowing } from "@/lib/narrowing";
@@ -15,7 +16,7 @@ import { raisesOnBehalf } from "@/lib/on-behalf";
 import { quotationTargets } from "@/lib/pickers";
 import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { viewFor } from "@/lib/view";
-import { countQuotations, listQuotations, type QuotationStatus } from "@/lib/quotations";
+import { countQuotations, listQuotations, parseQuotationStatus } from "@/lib/quotations";
 import { LIST_LIMIT } from "@/lib/list-size";
 
 /**
@@ -34,20 +35,6 @@ import { LIST_LIMIT } from "@/lib/list-size";
  * not 6,000 (S35).
  */
 
-const STATUSES: QuotationStatus[] = [
-  "requested",
-  "returned",
-  "issued",
-  "accepted",
-  "rejected",
-  "cancelled",
-];
-
-function parseStatus(value: string | undefined): QuotationStatus | null {
-  const wanted = STATUSES.find((status) => status === value);
-  return wanted ?? null;
-}
-
 /** The list's own four, and a door's narrowing (src/lib/narrowing.ts), which may repeat a key. */
 type Search = { q?: string; status?: string; open?: string; view?: string } & Record<
   string,
@@ -62,7 +49,7 @@ export default async function QuotationsPage({
   const [user, locale, params] = await Promise.all([requireUser(), getLocale(), searchParams]);
 
   const q = (typeof params.q === "string" ? params.q : "").trim();
-  const status = parseStatus(params.status);
+  const status = parseQuotationStatus(params.status) ?? null;
   const open = params.open?.trim() || null;
   // The URL wins, the person remembers, the list is the default (src/lib/view.ts).
   // `stored` goes back down to the switch so it writes only when he changes it.
@@ -111,6 +98,10 @@ export default async function QuotationsPage({
   // own: the dialog's "For" field says whose (SPEC §3 P13).
   const canRequest = targets.projects.length > 0 || raisesOnBehalf(user);
 
+  // Nothing here at all — no search, no chip, no cohort — is nothing to export
+  // (P14 14.10), the same sentence the search box and the chips are hidden by.
+  const firstUse = rows.length === 0 && !q && !status && !cohort;
+
   return (
     // The row the reader's own act changed flashes, across the drawer and the
     // list behind it (QuotationFlash, DESIGN §8).
@@ -118,17 +109,22 @@ export default async function QuotationsPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("common.quotations")}</h1>
-        {canRequest ? (
-          <RequestQuotationDialog
-            targets={targets}
-            issuesDirectly={direct}
-            trigger={
-              <Button variant="brand">
-                {t(direct ? "quotations.issueOwn" : "quotations.request")}
-              </Button>
-            }
-          />
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* The file IS this list, narrowed the way it is narrowed at the
+              moment it is asked for (P14 14.10). */}
+          {firstUse ? null : <ExportButton name="quotations" title={t("common.quotations")} />}
+          {canRequest ? (
+            <RequestQuotationDialog
+              targets={targets}
+              issuesDirectly={direct}
+              trigger={
+                <Button variant="brand">
+                  {t(direct ? "quotations.issueOwn" : "quotations.request")}
+                </Button>
+              }
+            />
+          ) : null}
+        </div>
       </div>
 
       {cohort ? <NarrowingNote narrowing={cohort} list="quotations" /> : null}

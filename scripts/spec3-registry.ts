@@ -108,7 +108,7 @@ export const SPEC3: Spec3Entry[] = [
     says: "manages users, resets any password, edits lookups and holidays",
     tests: [
       "Jerom's morning: an account, a target, a list, a holiday, an export and a restore",
-      "a rep who types an admin URL lands on his own home, and cannot download the data",
+      "a rep who types an admin URL lands on his own home",
     ],
   },
   {

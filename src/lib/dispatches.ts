@@ -46,6 +46,7 @@ import {
   companies,
   dispatchItems,
   dispatchServices,
+  dispatchStatusEnum,
   dispatches,
   fireRatings,
   projects,
@@ -75,7 +76,20 @@ import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
 import { approvedDispatches, companyWhere } from "@/lib/counted";
 import type { Narrowing } from "@/lib/narrowing";
 
-export type DispatchStatus = "submitted" | "approved" | "refused";
+/**
+ * The three states a load passes through, read off the database's own enum, for
+ * the reason `QuotationStatus` is (src/lib/quotations.ts): the list was typed
+ * here, in the schema, and a third time in the page's address parser.
+ */
+export type DispatchStatus = (typeof dispatchStatusEnum.enumValues)[number];
+
+/**
+ * The status chip in the address, as every reader of it reads it: the screen,
+ * and the file the screen exports (src/lib/export/dispatches.ts).
+ */
+export function parseDispatchStatus(value: string | null | undefined): DispatchStatus | undefined {
+  return dispatchStatusEnum.enumValues.find((status) => status === value);
+}
 
 /** The statuses that have spent quotation quantity (D12). */
 export const COMMITTING_STATUSES: DispatchStatus[] = ["submitted", "approved"];
@@ -396,6 +410,17 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
     .limit(input.limit ?? LIST_LIMIT);
 
   return rows.map((row) => toRow(row, row.shipmentMethod));
+}
+
+/**
+ * Exported since P14 14.10: the file the dispatches screen exports carries the
+ * screen's own filters, and it does that by asking this rather than by writing
+ * the same WHERE a second time. Two copies of a narrowing is the drift trap
+ * rules/data.md names for figures, one step out — a file that quietly holds
+ * more rows than the list it came from is worse than one that holds none.
+ */
+export function narrowDispatches(input: ListDispatchesInput): (SQL | undefined)[] {
+  return narrowTo(input);
 }
 
 /** The one place this list's narrowing is written — rows and count alike. */
