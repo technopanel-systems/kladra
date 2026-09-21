@@ -29,13 +29,28 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { dispatchWarehouses, quotationWarehouses, warehouses } from "@/db/schema";
+import { z } from "zod";
 import { warehouseName } from "@/lib/lookups";
+import { MOST_WAREHOUSES, warehouseIdsFrom } from "@/lib/warehouse-list";
 
 /** One store, named in the reader's language. */
 export type NamedWarehouse = { id: number; name: string };
 
 /** Which paper: the two tables are the same shape and this is the difference. */
 export type PaperKind = "quotation" | "dispatch";
+
+/**
+ * The field as both actions read it, the one way (SPEC §3, P14): at least one
+ * store and at most three, in the order they were typed, with the rubbish and
+ * the repeats taken out by the same `warehouseIdsFrom` the dialog uses.
+ *
+ * Here and not in `src/lib/warehouse-list.ts`, which the dialog imports — see
+ * the note there for what it cost when it was.
+ */
+export const warehouseIdsField = z
+  .string()
+  .transform(warehouseIdsFrom)
+  .refine((ids) => ids.length >= 1 && ids.length <= MOST_WAREHOUSES);
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 

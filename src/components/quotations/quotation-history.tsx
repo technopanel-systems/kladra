@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Prose } from "@/components/ui-ext/prose";
-import type { QuotationEvent } from "@/lib/quotations";
+import { sentBackCount, type QuotationEvent } from "@/lib/quotations";
 import { TONE_DOT } from "@/lib/state-tone";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,9 @@ export async function QuotationHistory({ history }: { history: readonly Quotatio
   const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
   if (history.length === 0) return null;
 
-  const returns = history.filter((event) => event.what === "sendBack").length;
+  // The figure is `sentBackCount`'s, not a second count written here: the
+  // trail had its own copy beside the named one, which nothing called (P14.5).
+  const returns = sentBackCount(history);
 
   return (
     <div className="flex flex-col gap-2">

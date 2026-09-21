@@ -336,7 +336,8 @@ below by number.
       with `/skill-doctor`, every skill, agent, command, MCP server and dependency that did not earn
       its place uninstalled, the survivors listed in §1, and every artefact these tools generate
       gitignored and removed.
-      - [ ] the aspect I am on: **security** (triage in the session scratchpad's `plan_part25.md`)
+      - [ ] the aspect I am on: **the clean-up** — every aspect is swept; what is left is `/skill-doctor`,
+            uninstalling what did not earn its place, §1, and the artefacts
             - [x] dependencies — `npm audit`: production clean; four moderate advisories, all dev-only
                   (`drizzle-kit` → `@esbuild-kit` → `esbuild`'s dev server), no fix published upstream
             - [x] static analysis — semgrep `p/typescript` + `p/react` + `p/owasp-top-ten` over 419
@@ -375,9 +376,77 @@ below by number.
                   constant, a table alias written at the call site, or a value from a closed map.
                   Rate limiting is D215 — one Cloudflare rule, not code, because the origin only
                   ever sees 127.0.0.1 and there are two login doors, not one.
-            - [ ] next: the data layer (scratchpad `data_aspect.md`: no query plans worth taking at
-                  demo size, eight FK columns to check against their readers, and a warehouse twin
-                  that wants a decision), then the front end, the tests, performance and dead code
+            - [x] **the data layer**, measured rather than guessed. `scripts/seed-volume.ts` already
+                  made the founder's pilot scale (838 companies, 450 projects, 361 quotations); run
+                  into `kladra_test` behind a name guard, then `EXPLAIN (ANALYZE, BUFFERS)` before and
+                  after. **One index earned its place**: `quotations.project_id` — the projects list
+                  asks what paper is on a job up to six times per row, and each was a sequential scan
+                  of every quotation (6.28 ms → 0.67 ms, 3,568 → 1,211 buffers; the shape went from
+                  projects × quotations to a probe per row). `dispatches.project_id` had always had
+                  its index, which is why the gap hid. **Seven refused, with the reason**: the lookup
+                  filters return 22% and 4% of the floor and Postgres rightly seq-scans them in
+                  0.2 ms; the rest are tables of tens of rows, or — `revision_of`, `contact_id` —
+                  columns read as values and fetched by primary key, which nothing filters on. The
+                  customers list was already all index scans (0.66 ms). A warehouse "twin" I reported
+                  was my misreading and is withdrawn: the scalar is the paper's FIRST store and the
+                  join table holds only the others, deliberately
+            - [x] **the front end**: static accessibility was already covered (`eslint-config-next`
+                  bundles jsx-a11y) and axe read every screen × role × locale × theme at AA. **But
+                  no drawer had ever been read** — `AxeBuilder` appeared in one file, and that file's
+                  own header said the drawers were covered elsewhere. `tests/axe.spec.ts` now opens
+                  the four drawers the work happens in, by `?open=`, and reads each at rest. Three
+                  real defects, fixed: a totals `<dl>` that was not one, the list's row doors each
+                  carrying a live region that the modal left exposed behind it (one announcer under
+                  `<body>` now), and a tab label a shade too pale. The first reading also reported
+                  seventeen contrast failures that were the drawer's fade-in, not the palette — the
+                  spec now waits for the animation to finish. And **zod went to every browser for the number three**: the
+                  multi-store field imported one integer from a module that built a zod schema at its
+                  top level, so the bundler could not drop it — the largest client chunk (392 KB),
+                  now 0 zod references in the client bundle. Recharts (110 KB gzipped) is measured
+                  loading on a rep's home tab, which draws no chart — owed to the speed aspect
+            - [x] **the tests**, asked the only question worth asking of a suite this size: when the
+                  code is wrong, does anything say so? Mutation testing (Stryker, run from a scratch
+                  install so `package.json` never saw it, over a server-less Playwright config) on
+                  the three libraries the business's figures rest on. Every raw score had to be
+                  taken apart before it meant anything, and each was worse than the truth:
+                  `dispatch-difference.ts` read 36%, but ninety of its survivors were the functions
+                  that put a difference into WORDS, which are tested through the drawers and cannot
+                  be seen from a pure run — the computation itself was 88%. Most of the other
+                  survivors were **equivalent mutants**, changes no test could catch because they
+                  change nothing (a default `[]`, an early return the loop already implies), each
+                  checked by hand. What was left was four real gaps, now closed: **the order the
+                  coordinator reads a load's differences in** was never tested (deleting the sort
+                  passed), nor **a stray space in a text field**; **`monthPace` had no test at all**
+                  — the rep's own pace line, the figure that says on track or behind, which
+                  `tests/workdays.spec.ts` now asks on days it picks rather than whatever today is;
+                  and nothing pinned the **three-week cap** that stops a bad holiday row hanging a
+                  page, nor that **"divide between everybody" can never be a blank field**. After:
+                  the computation 100%, and in all three files every mutation a pure test can see is
+                  caught — what survives is equivalent, or the SQL twin that `credit.spec` proves
+                  against the database
+            - [x] **dead code** — knip's unused exports were a warning, so they piled up; now an
+                  error, and a dead server action fails the lint. Two of the dead exports were
+                  telling: **the activity cap** (`ACTIVITY_SHOWN`, fifty) had never been applied, so
+                  every drawer read a customer's whole log on every open — the drawers take the
+                  latest fifty now and say how many there are (`tests/activity-cap.spec.ts`), and
+                  **the statuses that spend a quotation's quantity** had a constant nobody read and
+                  five hand-written copies of it in the queries that answer "how much of this paper
+                  is left" — one definition in `src/lib/sqm.ts` now, and `one-figure` refuses a
+                  sixth. Also gone: a stale second list of report channels in the seed (four where
+                  the schema has six), an unused role check, a per-rep figure nobody called, and
+                  re-exports that led nowhere
+            - [x] **speed** — the project's own two meters (`scripts/speed.ts`, `scripts/reads.ts`) were
+                  the right tools and had not been run since P11I; run now, both failed. Four screens
+                  were over the byte ceiling. Three causes, all fixed: the Arabic face was Google's
+                  whole file (162 kB on every screen, English ones included — they are full of Arabic
+                  names) and is our own cut of the same face now, 37 kB, identical at the weights
+                  Kladra draws; recharts (110 kB gzipped) went to a rep's home tab, which draws no
+                  chart; and the report popup's form went to every screen. A mid phone now has every
+                  measured screen live in 2.4–2.8 s, against 3.1–3.4 s before and 2.9–3.5 s in P11I.
+                  The database counts had grown on twenty-five screens with nobody saying why; each was
+                  read statement by statement (a `--show` flag, added for it) and each is a feature, so
+                  §3 says so and the baseline is rewritten. My own measuring had also left a remembered
+                  tab in the dev database, which made the first speed run measure the wrong tab
 
 **Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions
@@ -417,17 +486,27 @@ it puts the volume back. A dev server that has served a session's edits is resta
 
 | Skill · tool (source) | For |
 |---|---|
-| find-skills (vercel-labs/skills) | Searching the registry when a capability is missing. |
 | frontend-design (anthropics/skills) | Aesthetic direction, so screens do not read as shadcn defaults. |
-| vercel-react-best-practices (vercel-labs) | React 19 and Server Component patterns. |
 | web-design-guidelines (vercel-labs) | The review at the end of every slice: accessibility, focus, contrast, motion. |
-| next-best-practices (vercel-labs/openreview) | Next 16: caching, server actions, proxy, route handlers. |
-| shadcn MCP (`.mcp.json`, `npx shadcn mcp`) | The registry itself — search, read and add items (the chart kit in S1) — replacing the shadcn skill, which only described it. |
-| knip (`npm run check:dead`, in `lint`) | Dead files, unused exports and wrong dependency lines. Its first run found seven files nothing imported, a dependency only a comment named, and three packages used directly but never listed. |
-| @axe-core/playwright (`tests/axe.spec.ts`, S1) | One spec walks every screen for every role in both locales and fails on a WCAG 2 A/AA violation; scoped to the screen, Radix's known false positives disabled by name with the issue beside each. |
+| knip (`npm run check:dead`, in `lint`) | Dead files, unused exports and wrong dependency lines. Its first run found seven files nothing imported, a dependency only a comment named, and three packages used directly but never listed. Unused exports fail the lint since P14.5 (they were a warning, and piled up — two of them were an unapplied cap and a rule written five times). |
+| @axe-core/playwright (`tests/axe.spec.ts`, S1) | One spec walks every screen for every role in both locales — and since P14.5 the four drawers the work happens in, read at rest — and fails on a WCAG 2 A/AA violation; scoped to the screen, Radix's known false positives disabled by name with the issue beside each. |
 | Playwright `edge` project (S11) | `channel: "msedge"` against the installed Edge, running only `tests/edge.spec.ts`, so the matrix gains Edge without tripling the suite. |
-| shadcn chart + recharts (S1) | Bars, pies and rings drawn in the language (DESIGN §1b). |
+| shadcn chart + recharts (S1) | Bars, pies and rings drawn in the language (DESIGN §1b). Imported only through `src/components/metrics/charts.tsx`, which downloads recharts where a chart is drawn and nowhere else. |
+| `scripts/speed.ts`, `scripts/reads.ts` (P11I) | The two meters: a cold load on a mid phone, and the statements each screen asks. Run at the end of every phase from P14.5 on — unrun from P11I to P14.5, both had drifted past their ceilings. `reads.ts --show=<part of a path>` lists a screen's statements. |
 | ux-patterns (project skill, `.claude/skills/ux-patterns/`, P13 before G6) | The lens G6 reads and builds with: designmotionhq's 76 free pattern breakdowns and their videos, its Blueprint PDF, the public framework of its paid plugin, its shorts, and the standards behind them (WCAG 2.2, NN/g, Material 3, Apple HIG), each held against DESIGN — what confirms a rule, what adds a number, what is refused and why (DESIGN §8). `lens.md` is the walk every state gets; `notes/` keeps every reading so nothing is read twice. |
+
+Removed in P14.5, because in the whole history of the project (every transcript since 3 Sep)
+nothing used them: **find-skills**, **next-best-practices** and **vercel-react-best-practices** (never
+invoked and never read) · the **shadcn MCP server** (not one call; the chart kit came in without
+it) · the **api-security-audit** agent from aitmpl.com (installed for the security
+aspect, never loaded; the audit ran as a general agent with its brief). Tried in P14.5 and not kept,
+each run from a scratch install so `package.json` never saw it: **semgrep** (`p/typescript`,
+`p/react`, `p/owasp-top-ten`: nothing) and **gitleaks** (every commit: nothing) — neither found
+anything, and neither is worth a place in `lint`; **Stryker** mutation testing, which did find four
+real gaps (§0) — rerun it when a figure's library changes: a scratch folder with
+`@stryker-mutator/core` and `typescript@5`, the command runner, and a Playwright config with no
+`webServer` running only the pure specs; and **fontTools**, used once to cut the Arabic face
+(`src/app/layout.tsx` has the command).
 
 Removed in P13, with the reason: **playwright-testing** (24 KB of generic page-object advice that
 contradicts `tests/helpers`' fixture style; the house style is the helpers and §3) · **shadcn skill**
@@ -980,27 +1059,47 @@ time. `scripts/reads.baseline.json` holds the count per screen; `npm run measure
 refuses a screen that asks more than its baseline (the bare `--check` is eaten by npm itself). A screen may not grow past these numbers
 without a sentence here saying why, and then `--write`.
 
+Re-measured 21 Sep 2026 (P14.5), because nobody had: P12 to P14 grew twenty-five screens past
+this baseline and not one sentence was written, which is a guard that was never run rather than
+one that was obeyed. 53 screens now, 575 statements. Each growth was read statement by statement
+(`--show=<part of a path>` lists them, added for exactly this) and each is a feature, not a
+repeat: the quotation drawer 13 → 22 is its history trail, its services, its stores and — on a
+revision — the parent it is compared against for "what changed" (a second quotation, not the
+same one twice); the dispatch drawer 6 → 13 is its trail, services, stores and credit; the team
+screen 27 → 39 is the lead, duplicate and archive-request bands P12 to P14 added, with the
+calendar read once per window as D131 set it (three windows, three reads). In those three,
+nothing is read twice. Measured on the demo floor (38 companies), so the counts compare with the
+figures above and the milliseconds do not: worst statement 1.8 ms, most database time 4.5 ms
+(the team screen).
+
 **Speed on a mid phone** (D133) — `npm run measure:speed` (`scripts/speed.ts`) against the
 production build on 3102: Chromium with the CPU four times slower and a slow 4G (1.6 Mb/s
 down, 150 ms each way — Lighthouse's "mobile"), 375 by 812, signed in through the real form in
 a throwaway context and only the cookie carried into a fresh one, so nothing is cached; then
-the same screen warm. Medians of three, measured 7 Sep 2026 after the fourth font weight went
-(#131), in milliseconds and kilobytes over the wire:
+the same screen warm. Medians of three, re-measured 21 Sep 2026 (P14.5), in milliseconds and
+kilobytes over the wire:
 
 | screen | paint | largest | live | cold kB | script | warm live | warm kB |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| rep, day | 1460 | 1552 | 3156 | 530 | 286 | 365 | 61 |
-| rep, companies | 1580 | 2148 | 3498 | 582 | 308 | 401 | 86 |
-| rep, quotations | 1300 | 1512 | 3185 | 523 | 265 | 373 | 76 |
-| coordinator, queue | 1316 | 1316 | 3183 | 524 | 269 | 429 | 68 |
-| coordinator, quotations | 1164 | 1680 | 3320 | 541 | 265 | 358 | 86 |
-| manager, team | 1216 | 1216 | 2873 | 467 | 237 | 378 | 44 |
-| manager, companies | 1564 | 2120 | 3353 | 576 | 308 | 388 | 82 |
+| rep, day | 1236 | 1236 | 2412 | 446 | 304 | 467 | 46 |
+| rep, companies | 1280 | 1280 | 2845 | 489 | 329 | 413 | 55 |
+| rep, quotations | 1244 | 1244 | 2697 | 484 | 331 | 399 | 48 |
+| coordinator, queue | 1216 | 1216 | 2701 | 489 | 337 | 444 | 48 |
+| coordinator, quotations | 1236 | 1236 | 2778 | 489 | 331 | 401 | 55 |
+| manager, team | 1244 | 1244 | 2420 | 396 | 255 | 460 | 50 |
+| manager, companies | 1268 | 1268 | 2819 | 489 | 329 | 526 | 58 |
 
-"Live" is the `html[data-hydrated]` mark the suite waits for. The document itself is 37–78 kB
-compressed and 500 kB decoded on the volume floor; the rest of a cold load is script (237–308
-kB) and fonts with styles (about 160 kB, five font files preloaded). Before the font weight
-went the same screens were 500–611 kB and live in 3.2–3.8 s. `scripts/speed.baseline.json`
+Every screen is live half a second to a second sooner than on 7 Sep, after three phases of
+features. Before P14.5 the same screens were 570–616 kB and live in 3.1–3.4 s, four of them
+over the byte ceiling: the Arabic face was Google's whole file (162 kB, every weight and every
+language written in Arabic script) and is our own cut of it now (37 kB, layout.tsx says how);
+recharts went to a rep's home tab, which draws no chart; and the report popup's form went to
+every screen with a report button, which is every screen. The form is fetched once the page is
+idle, so the bytes it costs still count here — the gain is in "live".
+
+"Live" is the `html[data-hydrated]` mark the suite waits for. The document is 37–46 kB on the
+demo floor (37–78 kB on the volume floor in P11I); the rest of a cold load is script (255–337
+kB) and fonts with styles (about 100 kB: two faces, 40 kB Latin and 37 kB Arabic). `scripts/speed.baseline.json`
 holds the cold "live" and bytes per screen; `--check` refuses a fifth slower or a tenth heavier.
 Two traps the script documents in its header: tsx wraps every named function in `__name`, which
 the browser lacks, so browser-side code has no named inner functions; and `request.sizes()`

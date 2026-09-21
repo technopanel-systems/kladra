@@ -4,6 +4,7 @@ import { ProjectGone, ProjectSheet } from "@/components/projects/project-sheet";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Empty } from "@/components/ui-ext/empty";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { mayReportOn } from "@/lib/activities";
@@ -192,13 +193,25 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
       // Add report is in the drawer's action row above and never moves, so the
       // empty panel carries the sentence alone (D31, D35).
       activity={
-        <ActivityList
-          activities={project.activities}
-          // The same corrections as the company drawer, on the same entries
-          // (D70). The project is preselected because that is where he is.
-          correct
-          empty={<Empty size="panel">{t("projects.emptyActivity")}</Empty>}
-        />
+        <>
+          <ActivityList
+            activities={project.activities}
+            // The same corrections as the company drawer, on the same entries
+            // (D70). The project is preselected because that is where he is.
+            correct
+            empty={<Empty size="panel">{t("projects.emptyActivity")}</Empty>}
+          />
+          {/* The latest fifty and a line when there are more — the company
+              drawer's note says why it is not the list screens' sentence. */}
+          <ListTail
+            shown={project.activities.length}
+            total={project.activityTotal}
+            hint={t("drawer.activityLatest", {
+              shown: project.activities.length,
+              total: project.activityTotal,
+            })}
+          />
+        </>
       }
     />
   );

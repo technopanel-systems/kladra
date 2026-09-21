@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, Noto_Sans_Arabic } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { DirectionProvider } from "@/components/direction-provider";
 import { Hydrated } from "@/components/shell/hydrated";
 import { ServiceWorker } from "@/components/shell/service-worker";
 import { Toasts } from "@/components/shell/toasts";
+import { LinkPendingAnnouncer } from "@/components/ui-ext/link-pending";
 import { dirOf } from "@/i18n/routing";
 import { CANVAS, getTheme } from "@/lib/theme";
 import "./globals.css";
@@ -23,10 +25,32 @@ const plexLatin = IBM_Plex_Sans({
   variable: "--font-latin",
   display: "swap",
 });
-const notoArabic = Noto_Sans_Arabic({
-  subsets: ["arabic"],
+/*
+ * Noto Sans Arabic from our own file rather than Google's, and a quarter of the
+ * size: 37 kB where Google's was 162 kB, on every cold load of every screen in
+ * both locales, because an English screen is full of Arabic names (P14.5,
+ * measured). Google serves one file whatever weights are asked for — all of
+ * 100 to 900, and the letters of every language written in Arabic script — and
+ * next/font can ask for nothing narrower. This one is the same face cut to the
+ * weights Kladra draws (400 to 600, D133) and to the Arabic block, with its
+ * joining and ligature rules whole, plus the presentation forms an old PDF
+ * pastes in. Rendering at those weights is unchanged. Made with fontTools from
+ * Google's file:
+ *   fonttools varLib.instancer full.woff2 wght=400:600 -o clipped.ttf
+ *   fonttools subset clipped.ttf --flavor=woff2 --layout-features='*'
+ *     --unicodes=U+0020,U+00A0,U+0600-06FF,U+200C-200F,U+2010-2011,U+25CC,U+FE70-FEFF
+ * The name is declared so the stack in globals.css finds it by name, as it did.
+ * SIL Open Font License, beside the file.
+ */
+const notoArabic = localFont({
+  src: "./fonts/noto-sans-arabic.woff2",
+  weight: "400 600",
   variable: "--font-arabic",
   display: "swap",
+  declarations: [
+    { prop: "font-family", value: "Noto Sans Arabic" },
+    { prop: "unicode-range", value: "U+0600-06FF, U+200C-200F, U+2010-2011, U+25CC, U+FE70-FEFF" },
+  ],
 });
 
 export const metadata: Metadata = {
@@ -89,6 +113,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <Hydrated />
             <ServiceWorker />
             {children}
+            {/* Outside the app's own tree on purpose: a live region inside it
+                keeps its ancestors in reach of a screen reader behind an open
+                drawer (link-pending.tsx says how). */}
+            <LinkPendingAnnouncer />
             <Toasts dir={dir} />
           </DirectionProvider>
         </NextIntlClientProvider>

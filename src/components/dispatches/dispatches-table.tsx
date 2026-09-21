@@ -1086,14 +1086,21 @@ export function DispatchSheet({
                 </dd>
               </div>
             ) : null}
-            <div className="border-t border-line" />
             {/* What the load comes to, the five figures a quotation's totals
                 are, from the same function (money.ts): the panels and the
                 services apart where there are services, then before VAT, VAT
-                and the total (SPEC §3, P13, D169). */}
+                and the total (SPEC §3, P13, D169). The rule over the money is
+                the border of its first pair, and the rule over the total is
+                the total's own: a `<dl>` holds pairs and nothing else, so a
+                line drawn as an empty element, or a wrapper round a pair, is a
+                list a screen reader cannot walk (axe, P14.5). */}
             {dispatch.services.length > 0 ? (
               <>
-                <Row label={t("quotations.panelsSubtotal")} slot="figure-panels">
+                <Row
+                  label={t("quotations.panelsSubtotal")}
+                  slot="figure-panels"
+                  className="border-t border-line pt-2"
+                >
                   <Amount value={totals.panels} sar={t("common.sar")} />
                 </Row>
                 <Row label={t("quotations.servicesSubtotal")} slot="figure-services">
@@ -1101,17 +1108,24 @@ export function DispatchSheet({
                 </Row>
               </>
             ) : null}
-            <Row label={t("common.totalExclVat")} slot="figure-subtotal">
+            <Row
+              label={t("common.totalExclVat")}
+              slot="figure-subtotal"
+              className={dispatch.services.length > 0 ? undefined : "border-t border-line pt-2"}
+            >
               <Amount value={totals.subtotal} sar={t("common.sar")} />
             </Row>
             <Row label={t("common.vatRate")} slot="figure-vat">
               <Amount value={totals.vat} sar={t("common.sar")} />
             </Row>
-            <div className="border-t border-line pt-2">
-              <Row label={t("common.grandTotal")} slot="figure-total" strong>
-                <Amount value={totals.total} sar={t("common.sar")} />
-              </Row>
-            </div>
+            <Row
+              label={t("common.grandTotal")}
+              slot="figure-total"
+              strong
+              className="border-t border-line pt-2"
+            >
+              <Amount value={totals.total} sar={t("common.sar")} />
+            </Row>
           </dl>
 
           {/* How it leaves and how it is paid for: the labelled group (DESIGN
@@ -1203,16 +1217,19 @@ function Row({
   label,
   slot,
   strong = false,
+  className,
   children,
 }: {
   label: string;
   /** Names the figure for a spec, the way the quotation's totals block does. */
   slot?: string;
   strong?: boolean;
+  /** A rule over the pair — on the pair itself, never a wrapper round it. */
+  className?: string;
   children: ReactNode;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className={cn("flex items-baseline justify-between gap-4", className)}>
       <dt className={cn("shrink-0", strong ? "font-medium" : "text-muted-foreground")}>{label}</dt>
       <dd data-slot={slot} className={cn("min-w-0 text-end", strong && "font-semibold")}>
         {children}

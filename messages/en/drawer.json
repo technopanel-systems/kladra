@@ -12,6 +12,7 @@
   "newProject": "Add project",
   "addContact": "Add contact",
   "emptyActivity": "No report yet — add the first visit or call.",
+  "activityLatest": "The latest {shown} of {total} are here.",
   "emptyContacts": "No contacts yet — add the person you deal with.",
   "emptyProjects": "No projects yet — add the first project at this company.",
   "mainContact": "Main contact",

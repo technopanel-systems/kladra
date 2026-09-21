@@ -3,14 +3,9 @@
   "entry": [
     "src/app/**/{page,layout,route,error,not-found,loading,default}.tsx",
     "src/app/**/route.ts",
-    "src/middleware.ts",
-    "src/proxy.ts",
     "src/auth.ts",
-    "src/i18n/request.ts",
     "scripts/*.{ts,mts}",
     "tests/**/*.ts",
-    "playwright.config.ts",
-    "drizzle.config.ts",
     ".claude/hooks/*.mjs",
     "public/sw.js"
   ],
@@ -26,12 +21,11 @@
     "@playwright/cli",
     "shadcn",
     "tw-animate-css",
-    "tailwindcss",
-    "playwright-core"
+    "tailwindcss"
   ],
   "ignoreExportsUsedInFile": true,
   "rules": {
     "types": "off",
-    "exports": "warn"
+    "exports": "error"
   }
 }

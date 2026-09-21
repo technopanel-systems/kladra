@@ -30,12 +30,17 @@ export function assertSecureCookies(): void {
   if (process.env.NODE_ENV !== "production") return;
 
   const raw = process.env.AUTH_URL?.trim();
-  if (!raw) {
-    throw new Error(
-      "AUTH_URL is not set. In production it must be the https address this app is reached at — " +
-        "set PUBLIC_URL in .env (see README.md). Without it the session cookie is not Secure.",
-    );
-  }
+  /*
+   * Unset is not refused here, on purpose. Inside the container it cannot
+   * happen — compose will not start the app without PUBLIC_URL, which is where
+   * the omission is caught. So an unset AUTH_URL means a production server run
+   * OUTSIDE compose: `npm run start` on the developer's own PC, which serves
+   * 127.0.0.1, and which `scripts/reads.ts` and `scripts/speed.ts` both need.
+   * Auth.js then takes the request's own host, which is loopback. Refusing
+   * that would break the performance tooling on any machine whose `.env` does
+   * not happen to set the variable, and protect nothing.
+   */
+  if (!raw) return;
 
   let url: URL;
   try {

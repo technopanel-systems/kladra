@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { LineFigure } from "@/components/ui-ext/line-item";
 import { formatMoney, formatSqm } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 /**
  * What a quotation comes to: m² first, then the money — the panels and the
@@ -53,9 +54,16 @@ export function QuotationTotals({
 }) {
   const t = useTranslations();
 
+  // Every child of the list is one label and its figure, and nothing else: a
+  // rule between figures is a border on one of the two pairs it separates (the
+  // m²'s own bottom edge; the top edge of a sum's pair), never an element of
+  // its own. A wrapper round a pair, or an empty element drawn as a line, is a
+  // `<dl>` a screen reader cannot walk — axe's `definition-list` and `dlitem`,
+  // found when the drawers were first read (P14.5). Each rule sits exactly
+  // where its own element used to draw it.
   return (
     <dl data-slot="totals" className="card-face flex flex-col gap-2 p-3 text-sm">
-      <div className="flex items-baseline justify-between gap-4 pb-1">
+      <div className="mb-2 flex items-baseline justify-between gap-4 border-b border-line pb-3">
         {/* A word in a sentence's case, not an eyebrow (DESIGN §8): it was set
             in capitals and letter-spaced, the identity §8 refuses — and m² has
             no capital M. The `StandingStrip` label's shape since S12.K. */}
@@ -66,8 +74,6 @@ export function QuotationTotals({
           </span>
         </dd>
       </div>
-
-      <div className="border-t border-line pt-2" />
 
       {split ? (
         <>
@@ -87,28 +93,28 @@ export function QuotationTotals({
       ) : null}
 
       {/* Under the two it adds up, a rule between them says so. */}
-      <div className={split ? "border-t border-line pt-2" : undefined}>
-        <Row name="subtotal" label={t("common.totalExclVat")}>
-          <span dir="ltr" className="num">
-            {formatMoney(subtotal)}
-          </span>{" "}
-          {t("common.sar")}
-        </Row>
-      </div>
+      <Row
+        name="subtotal"
+        label={t("common.totalExclVat")}
+        className={split ? "border-t border-line pt-2" : undefined}
+      >
+        <span dir="ltr" className="num">
+          {formatMoney(subtotal)}
+        </span>{" "}
+        {t("common.sar")}
+      </Row>
       <Row name="vat" label={t("common.vatRate")}>
         <span dir="ltr" className="num">
           {formatMoney(vat)}
         </span>{" "}
         {t("common.sar")}
       </Row>
-      <div className="border-t border-line pt-2">
-        <Row name="total" label={t("common.grandTotal")} strong>
-          <span dir="ltr" className="num">
-            {formatMoney(total)}
-          </span>{" "}
-          {t("common.sar")}
-        </Row>
-      </div>
+      <Row name="total" label={t("common.grandTotal")} strong className="border-t border-line pt-2">
+        <span dir="ltr" className="num">
+          {formatMoney(total)}
+        </span>{" "}
+        {t("common.sar")}
+      </Row>
     </dl>
   );
 }
@@ -123,14 +129,17 @@ function Row({
   label,
   children,
   strong,
+  className,
 }: {
   name: "panels" | "services" | "subtotal" | "vat" | "total";
   label: string;
   children: React.ReactNode;
   strong?: boolean;
+  /** The rule over a pair that closes a sum — on the pair itself, never round it. */
+  className?: string;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className={cn("flex items-baseline justify-between gap-4", className)}>
       <dt className={strong ? "font-medium" : "text-muted-foreground"}>{label}</dt>
       <dd data-slot={`figure-${name}`} className={strong ? "font-semibold" : undefined}>
         {children}

@@ -58,8 +58,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditDispatch, resolveCredit } from "@/lib/credit-rows";
-import { warehouseIdsField } from "@/lib/warehouse-list";
-import { knownWarehouseIds, setWarehouses, warehouseIdsOf } from "@/lib/warehouses";
+import { knownWarehouseIds, setWarehouses, warehouseIdsField, warehouseIdsOf } from "@/lib/warehouses";
 import {
   differenceFrom,
   type Difference,
@@ -89,6 +88,7 @@ import { dispatchTargets } from "@/lib/pickers";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { firstRefusedBox, type LineList } from "@/lib/line-refusal";
 import { round2 } from "@/lib/money";
+import { COMMITTING_IN } from "@/lib/sqm";
 import {
   detailsFor,
   needsNote,
@@ -488,7 +488,7 @@ async function paperOf(tx: Tx, quotationId: string, exclude: string | null): Pro
               from dispatch_items di
               join dispatches d on d.id = di.dispatch_id
              where di.quotation_item_id = qi.id
-               and d.status in ('submitted', 'approved')
+               and d.status in ${sql.raw(COMMITTING_IN)}
                and (${exclude}::uuid is null or d.id <> ${exclude}::uuid)) as committed
       from quotation_items qi
       join suppliers s on s.id = qi.supplier_id

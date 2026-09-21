@@ -15,8 +15,15 @@
  * Pure, and it imports nothing of the database: the dialog is a client
  * component and a value imported from `src/lib/warehouses.ts` would drag the
  * whole `@/db` graph into the browser bundle (rules/data.md).
+ *
+ * And nothing of zod, for the same reason one step along (P14.5). The field's
+ * schema lived here, built at module level, so the dialog's import of ONE
+ * integer — `MOST_WAREHOUSES` — could not be tree-shaken away from it: a
+ * bundler keeps a module whose top level calls something, and this one called
+ * `z.string()`. The whole of zod went to every browser, the largest single
+ * chunk in the build, for the number three. The schema is the actions' and it
+ * lives beside them now, in `src/lib/warehouses.ts`.
  */
-import { z } from "zod";
 
 /** One normally, and a second or a third in the rare case. */
 export const MOST_WAREHOUSES = 3;
@@ -35,8 +42,3 @@ export function warehouseIdsFrom(value: string): number[] {
     .filter((id, index, all) => all.indexOf(id) === index);
 }
 
-/** The field itself, so both actions read it the one way. */
-export const warehouseIdsField = z
-  .string()
-  .transform(warehouseIdsFrom)
-  .refine((ids) => ids.length >= 1 && ids.length <= MOST_WAREHOUSES);

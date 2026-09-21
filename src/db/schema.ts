@@ -910,6 +910,22 @@ export const quotations = pgTable(
   (t) => [
     uniqueIndex("quotations_number_revision_idx").on(t.number, t.revision),
     index("quotations_company_idx").on(t.companyId),
+    /**
+     * The projects list asks "what paper is on this job?" once per row and up
+     * to six times over (`projectStageSql`, `stageSinceSql` in
+     * src/lib/project-stage.ts, plus `metrics.ts` and `standing.ts`), and
+     * without this each of those is a sequential scan of every quotation in the
+     * company, per project. Measured at the founder's own pilot volume
+     * (`scripts/seed-volume.ts`: 838 companies, 450 projects, 361 quotations),
+     * two of those subqueries alone went 6.28 ms → 0.67 ms and 3,568 buffer
+     * hits → 1,211 (P14.5). The absolute numbers are small; the shape is the
+     * point, because it was projects × quotations and is now a probe per row.
+     *
+     * `dispatches.project_id` has had its index since the table was written,
+     * which is what made the gap easy to miss — the two halves of the same
+     * question, one indexed and one not.
+     */
+    index("quotations_project_idx").on(t.projectId),
     index("quotations_rep_status_idx").on(t.repId, t.status),
     index("quotations_status_idx").on(t.status),
     // The SMAC number is the only link to the system that holds the money (S3).

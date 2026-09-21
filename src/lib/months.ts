@@ -12,7 +12,7 @@
  * bars. Long enough to see a direction, short enough that a bad month a year ago
  * is not still on the screen.
  *
- * Every figure here is `achievedSqm`'s own definition and `targets`' own rows —
+ * Every figure here is `achievedByRep`'s own definition and `targets`' own rows —
  * this reads them per month rather than defining anything (S43, S44,
  * rules/data.md). A second arithmetic for "achieved, but historically" is how a
  * figure ends up with two answers, and it nearly did: when credit replaced the

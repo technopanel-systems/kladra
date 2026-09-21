@@ -37,9 +37,10 @@ import {
 } from "@/db/schema";
 import { NotAllowed } from "@/lib/authz";
 import { personName } from "@/lib/people";
-import { mayOpen, mayWrite } from "@/lib/floor";
+import { mayWrite } from "@/lib/floor";
 import { lastWorkingDay } from "@/lib/calendar";
 import { todayRiyadh, type Day } from "@/lib/dates";
+import { ACTIVITY_SHOWN } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import {
   mayKeepContacts,
@@ -87,8 +88,6 @@ export type ActivityRow = {
   /** …and its day is still open, so the words can still change (D58). */
   dayOpen: boolean;
 };
-
-export { mayOpen, mayWrite };
 
 /**
  * May this person write a report on a company whose rep is `repId`?
@@ -410,15 +409,44 @@ async function toRows(rows: ActivityQueryRow[], user: SessionUser): Promise<Acti
   }));
 }
 
+/**
+ * A drawer's Activity tab: the latest `ACTIVITY_SHOWN`, and how many there are.
+ *
+ * The cap was written into `src/lib/list-size.ts` as "the last conversations,
+ * not the whole history" and never applied (P14.5 — found by the dead-code
+ * pass, because the constant had no reader). So every time a drawer opened it
+ * read a customer's entire log with its joins, which is D80's "a screen asks
+ * for what it will draw" broken on the panel a rep opens most. The demo never
+ * showed it: under one report per company in the pilot-scale seed. A customer
+ * worked daily for a year is two hundred and fifty.
+ *
+ * One row past the cap answers both questions at once, as `readReports` does
+ * below: a log that fits needs no count, because the rows ARE the count.
+ */
+async function latestActivities(
+  user: SessionUser,
+  where: SQL,
+): Promise<{ rows: ActivityRow[]; total: number }> {
+  const found = await activityQuery(await getLocale(), where)
+    .orderBy(desc(activities.happenedOn), desc(activities.createdAt))
+    .limit(ACTIVITY_SHOWN + 1);
+  const rows = await toRows(found.slice(0, ACTIVITY_SHOWN), user);
+  if (found.length <= ACTIVITY_SHOWN) return { rows, total: found.length };
+
+  const counted = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(activities)
+    .where(and(isNull(activities.archivedAt), where));
+  return { rows, total: counted[0]?.n ?? rows.length };
+}
+
 /** The company drawer's Activity tab, newest first. */
 export async function listActivitiesForCompany(
   user: SessionUser,
   companyId: string,
-): Promise<ActivityRow[]> {
+): Promise<{ rows: ActivityRow[]; total: number }> {
   await assertCompanyVisible(user, companyId);
-  const rows = await activityQuery(await getLocale(), eq(activities.companyId, companyId))
-    .orderBy(desc(activities.happenedOn), desc(activities.createdAt));
-  return toRows(rows, user);
+  return latestActivities(user, eq(activities.companyId, companyId));
 }
 
 /**
@@ -428,13 +456,12 @@ export async function listActivitiesForCompany(
 export async function listActivitiesForProject(
   user: SessionUser,
   projectId: string,
-): Promise<ActivityRow[]> {
+): Promise<{ rows: ActivityRow[]; total: number }> {
   const owner = await assertProjectVisible(user, projectId);
-  const rows = await activityQuery(
-    await getLocale(),
+  return latestActivities(
+    user,
     and(eq(activities.projectId, projectId), eq(activities.companyId, owner.companyId))!,
-  ).orderBy(desc(activities.happenedOn), desc(activities.createdAt));
-  return toRows(rows, user);
+  );
 }
 
 /**

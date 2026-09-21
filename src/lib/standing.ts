@@ -18,7 +18,7 @@ import type { Day } from "@/lib/dates";
 import { waitingOnRep } from "@/lib/day";
 import { dispatchEvent } from "@/lib/dispatch-events";
 import { quotationEvent } from "@/lib/quotation-events";
-import { SUM_SQM, sqmOf } from "@/lib/sqm";
+import { COMMITTING_IN, SUM_SQM, sqmOf } from "@/lib/sqm";
 
 export type CompanyStanding = {
   /** SPEC S45: expected m² on live projects — not lost, not archived. */
@@ -292,7 +292,7 @@ const REMAINING_QTY = `greatest(qi.qty - (
                  from dispatch_items di
                  join dispatches d on d.id = di.dispatch_id
                 where di.quotation_item_id = qi.id
-                  and d.status in ('submitted', 'approved')
+                  and d.status in ${COMMITTING_IN}
              ), 0)`;
 
 export async function quotationStanding(quotationId: string): Promise<QuotationStanding> {

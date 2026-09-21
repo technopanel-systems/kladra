@@ -243,10 +243,6 @@ export async function requireRealActor(...roles: Role[]): Promise<SessionUser> {
   return user;
 }
 
-export function can(user: SessionUser, ...roles: Role[]): boolean {
-  return roles.includes(user.role);
-}
-
 /**
  * Manager and admin see every rep's records; a rep sees only his own. Seeing,
  * not working: writing on a floor is `mayWrite` in src/lib/floor.ts, and it

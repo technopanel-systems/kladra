@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { rankInk } from "@/components/metrics/colors";
-import { SharePie, type PieSlice } from "@/components/metrics/share-pie";
+import { SharePie } from "@/components/metrics/charts";
+import type { PieSlice } from "@/components/metrics/share-pie";
 import { formatDay, type Day } from "@/lib/dates";
 import type { SegmentShare } from "@/lib/metrics";
 import { formatSqmWhole, toNumber } from "@/lib/money";

@@ -31,6 +31,16 @@ const RULES: Rule[] = [
     allow: ["src/lib/credit.ts"],
     fix: "use creditShares or shareOf from src/lib/credit.ts",
   },
+  {
+    // What a paper has left to send is its quantity less what the loads that
+    // SPEND it hold (D12). Five queries ask; a status added to one copy and not
+    // the others gives the rep's form one remaining figure and the
+    // coordinator's check another.
+    name: "the statuses that spend a quotation's quantity are written once",
+    pattern: /in \('submitted', 'approved'\)|\["submitted", "approved"\]/,
+    allow: ["src/lib/sqm.ts"],
+    fix: "use COMMITTING_IN (SQL) or COMMITTING from src/lib/sqm.ts",
+  },
 ];
 
 const root = resolve(import.meta.dirname, "..");

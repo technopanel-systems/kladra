@@ -35,13 +35,6 @@ export const THICKNESSES: { mm: string; active: boolean; standard: boolean }[] =
   { mm: "8.0", active: false, standard: false },
 ];
 
-// The sheet itself is not a lookup — a width is a fact about the product, not a
-// preference an admin edits — so it lives in src/lib/sheet.ts and is re-exported
-// here for the seed rows below. It was written out a second time in this file
-// and read by nobody, which is how the two copies stayed in agreement for four
-// phases without either of them being checked (P12-9).
-export { STANDARD_WIDTHS, STANDARD_LENGTH } from "../../src/lib/sheet";
-
 // ---- company categories (FACET company-categories.ts, founder's order) --------
 export const COMPANY_CATEGORIES: Bilingual[] = [
   { en: "Factory", ar: "مصنع" },
@@ -148,10 +141,3 @@ export const CITIES: { en: string; ar: string; region: string }[] = facet.cities
 // SPEC §3 pinned order. FACET spells Khobar "Al Khobar".
 export const PINNED_CITIES = ["Riyadh", "Jeddah", "Dammam", "Al Khobar", "Makkah", "Madinah"];
 
-// ---- the log's channels (enum in schema; labels from FACET messages) ----------
-export const CHANNELS: { code: "visit" | "call" | "whatsapp" | "other"; en: string; ar: string }[] = [
-  { code: "visit", en: "Visit", ar: "زيارة" },
-  { code: "call", en: "Call", ar: "اتصال" },
-  { code: "whatsapp", en: "WhatsApp", ar: "واتساب" },
-  { code: "other", en: "Other", ar: "أخرى" },
-];

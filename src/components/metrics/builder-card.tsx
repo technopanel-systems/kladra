@@ -1,8 +1,9 @@
 import { Download } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { BarsChart, type BarRow } from "@/components/metrics/bars-chart";
+import type { BarRow } from "@/components/metrics/bars-chart";
 import { personInk, rankInk, toneInk } from "@/components/metrics/colors";
-import { SharePie, type PieSlice } from "@/components/metrics/share-pie";
+import { BarsChart, SharePie } from "@/components/metrics/charts";
+import type { PieSlice } from "@/components/metrics/share-pie";
 import { Button } from "@/components/ui/button";
 import {
   Table,

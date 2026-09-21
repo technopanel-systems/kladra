@@ -71,7 +71,7 @@ import {
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { creditOnDispatch, type CreditLine } from "@/lib/credit-rows";
-import { CREDITED_METRES, lineSqm, sumSqm } from "@/lib/sqm";
+import { COMMITTING_IN, CREDITED_METRES, lineSqm, sumSqm } from "@/lib/sqm";
 import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
 import { approvedDispatches, companyWhere } from "@/lib/counted";
 import type { Narrowing } from "@/lib/narrowing";
@@ -91,8 +91,6 @@ export function parseDispatchStatus(value: string | null | undefined): DispatchS
   return dispatchStatusEnum.enumValues.find((status) => status === value);
 }
 
-/** The statuses that have spent quotation quantity (D12). */
-export const COMMITTING_STATUSES: DispatchStatus[] = ["submitted", "approved"];
 
 export type DispatchRow = {
   id: string;
@@ -236,7 +234,7 @@ export function committedQtySql(quotationItemId: SQL): SQL<number> {
       from dispatch_items di
       join dispatches d on d.id = di.dispatch_id
      where di.quotation_item_id = ${quotationItemId}
-       and d.status in ('submitted', 'approved')
+       and d.status in ${sql.raw(COMMITTING_IN)}
   )`;
 }
 
@@ -641,7 +639,7 @@ export async function getDispatch(
           from dispatch_items di
           join dispatches d on d.id = di.dispatch_id
          where di.quotation_item_id = dispatch_items.quotation_item_id
-           and d.status in ('submitted', 'approved')
+           and d.status in ${sql.raw(COMMITTING_IN)}
            and d.id <> dispatch_items.dispatch_id
       )`,
       supplier: suppliers.code,
@@ -811,7 +809,7 @@ export async function remainingOnQuotation(
       from dispatch_items di
       join dispatches d on d.id = di.dispatch_id
      where di.quotation_item_id = quotation_items.id
-       and d.status in ('submitted', 'approved')
+       and d.status in ${sql.raw(COMMITTING_IN)}
        and (${exclude ?? null}::uuid is null or d.id <> ${exclude ?? null}::uuid)
   )`;
 
@@ -901,11 +899,6 @@ export async function achievedByRep(month: string): Promise<Map<string, string>>
   `);
 
   return new Map(rows.rows.map((row) => [row.user_id, String(row.sqm ?? "0")]));
-}
-
-/** One rep's achieved m², from the same statement (S43). */
-export async function achievedSqm(userId: string, month: string): Promise<string> {
-  return (await achievedByRep(month)).get(userId) ?? "0";
 }
 
 /**

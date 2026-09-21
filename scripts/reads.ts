@@ -6,6 +6,7 @@
  *   npx tsx scripts/reads.ts --origin http://localhost:3101
  *   npx tsx scripts/reads.ts --write         # rewrite scripts/reads.baseline.json
  *   npx tsx scripts/reads.ts --check         # exit 1 when a screen asks more than its baseline
+ *   npx tsx scripts/reads.ts --show=quotations?open   # and list every statement of the screens that match
  *
  * Method, the same one done by hand in 11C: statement logging is switched on
  * for the run (`log_min_duration_statement = 0`, a prefix that names the
@@ -54,7 +55,7 @@ const PERSONAS: { email: string; role: Role }[] = [
 ];
 
 type Screen = { role: Role; path: string };
-type Measure = Screen & { statements: number; dbMs: number; worstMs: number; worst: string };
+type Measure = Screen & { statements: number; dbMs: number; worstMs: number; worst: string; texts: string[] };
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error("DATABASE_URL is not set");
@@ -159,6 +160,7 @@ function cut(lines: LogLine[], role: Role, path: string): Measure {
   let dbMs = 0;
   let worstMs = 0;
   let worst = "";
+  const texts: string[] = [];
   for (const l of inside) {
     if (l.app === APP_NAME || l.db !== dbName) continue;
     const m = /^duration: ([\d.]+) ms\s+(execute [^:]+|statement): (.*)$/.exec(l.text);
@@ -166,12 +168,13 @@ function cut(lines: LogLine[], role: Role, path: string): Measure {
     const ms = Number(m[1]);
     statements += 1;
     dbMs += ms;
+    texts.push(m[3].replace(/\s+/g, " ").slice(0, 160));
     if (ms > worstMs) {
       worstMs = ms;
       worst = m[3].replace(/\s+/g, " ").slice(0, 90);
     }
   }
-  return { role, path, statements, dbMs: Math.round(dbMs * 10) / 10, worstMs, worst };
+  return { role, path, statements, dbMs: Math.round(dbMs * 10) / 10, worstMs, worst, texts };
 }
 
 const made: string[] = [];
@@ -238,6 +241,17 @@ for (const m of measures) {
   console.log(
     `${m.role.padEnd(12)} ${m.path.padEnd(width)}  ${String(m.statements).padStart(5)}  ${String(m.dbMs).padStart(6)}  ${String(m.worstMs).padStart(8)}  ${m.worst}`,
   );
+}
+
+// A count says a screen grew; only its statements say why. The same statement
+// twice in one screen is a read that wanted a request cache (D131).
+const show = args.get("show");
+if (show) {
+  for (const m of measures.filter((m) => m.path.includes(show))) {
+    console.log(`
+${m.role} ${m.path}`);
+    for (const text of m.texts) console.log(`  ${text}`);
+  }
 }
 
 type Baseline = Record<string, number>;

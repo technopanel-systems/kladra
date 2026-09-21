@@ -1,6 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { toneInk } from "@/components/metrics/colors";
-import { ProgressRing } from "@/components/metrics/progress-ring";
+import { ProgressRing } from "@/components/metrics/charts";
 import type { Day } from "@/lib/dates";
 import type { ChainRatios } from "@/lib/metrics";
 import { narrowingQuery } from "@/lib/narrowing";

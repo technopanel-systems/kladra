@@ -10,6 +10,7 @@ import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import { QuotationMiniList } from "@/components/quotations/quotation-mini-list";
 import { RequestQuotationDialog } from "@/components/quotations/request-quotation-dialog";
 import { Empty } from "@/components/ui-ext/empty";
+import { ListTail } from "@/components/ui-ext/list-tail";
 import { StateBadge } from "@/components/ui-ext/state-badge";
 import { Prose } from "@/components/ui-ext/prose";
 import { Button } from "@/components/ui/button";
@@ -118,7 +119,8 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
   // correction controls rendered on nothing and the failure looked like a
   // missing button rather than a missing field (D70). A mapping between two
   // nearly identical shapes is a second copy, and the second copy drifts (D64).
-  const entries: ActivityEntry[] = await listActivitiesForCompany(user, companyId);
+  const { rows: entries, total: activityTotal }: { rows: ActivityEntry[]; total: number } =
+    await listActivitiesForCompany(user, companyId);
 
   /**
    * Whose floor this is. A manager and an admin open every company and write on
@@ -399,6 +401,16 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
             empty={<EmptyPanel sentence={t("drawer.emptyActivity")} />}
             // Corrections, on the reader's own entries (D70).
             correct
+          />
+          {/* The latest fifty, and a line when there are more (D80). Not the
+              list screens' "search to find the rest": there is no search box
+              here, and these are the newest, not the first. Nor "the rest are
+              on Reports" — for a rep on a shared customer that screen shows his
+              own reports only, so the line would promise what it cannot show. */}
+          <ListTail
+            shown={entries.length}
+            total={activityTotal}
+            hint={t("drawer.activityLatest", { shown: entries.length, total: activityTotal })}
           />
         </TabsContent>
 

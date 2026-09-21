@@ -1,5 +1,6 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { BarsChart, type BarRow } from "@/components/metrics/bars-chart";
+import type { BarRow } from "@/components/metrics/bars-chart";
+import { BarsChart } from "@/components/metrics/charts";
 import { toneInk } from "@/components/metrics/colors";
 import { formatMonth, formatMonthName, lastOfMonth } from "@/lib/dates";
 import { formatSqmWhole, toNumber } from "@/lib/money";

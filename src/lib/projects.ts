@@ -345,6 +345,8 @@ export type ProjectDetail = ProjectRow & {
     nextFollowUp: Day | null;
   };
   activities: ActivityRow[];
+  /** How many reports the job has, of which `activities` is the latest (D80). */
+  activityTotal: number;
   /**
    * Where taking this job off the floor stands, or null while nobody has ever
    * asked (P14 14.8). The newest asking, so an approved one means the job has
@@ -406,7 +408,7 @@ export async function getProject(
 
   // The log and the asking together: neither is waiting on the other, and both
   // are about a job this reader has just been allowed to open.
-  const [activities, archiveRequest] = await Promise.all([
+  const [{ rows: activities, total: activityTotal }, archiveRequest] = await Promise.all([
     listActivitiesForProject(user, id),
     archiveStandsAt("project", id, label),
   ]);
@@ -437,6 +439,7 @@ export async function getProject(
       nextFollowUp: row.companyNextFollowUp ?? null,
     },
     activities,
+    activityTotal,
     archiveRequest,
   };
 }

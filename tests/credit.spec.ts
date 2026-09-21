@@ -1,7 +1,7 @@
 import { login } from "./helpers/auth";
 import { one, query, personName, userId } from "./helpers/db";
 import { test, expect } from "./helpers/i18n";
-import { creditShares, shareOf } from "@/lib/credit";
+import { CREDIT_SPLIT, creditShares, shareOf } from "@/lib/credit";
 import { formatSqm, formatSqmWhole } from "@/lib/money";
 
 /**
@@ -98,6 +98,12 @@ test("the parts add back to the whole, and the odd hundredth has an owner", () =
 
   // A name twice is one name: the unique index says so, and so does this.
   expect(creditShares("10.00", [a, a])).toEqual([{ userId: a, sqm: "10.00" }]);
+
+  // "Divide between everybody" is a word and not an empty value, because a
+  // form field left blank must never quietly mean it — "nobody named" and
+  // "everybody" are different answers (`CREDIT_SPLIT`'s own note). Mutation
+  // testing emptied the word and nothing noticed (P14.5).
+  expect(CREDIT_SPLIT.trim()).not.toBe("");
 });
 
 test("every approved dispatch is attributed whole, and no metre twice", async () => {

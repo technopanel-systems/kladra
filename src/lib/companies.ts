@@ -36,7 +36,6 @@ import {
   projects,
   users,
 } from "@/db/schema";
-import { assertCompanyVisible, mayOpen } from "@/lib/activities";
 import { archiveStandsAt, type ArchiveRequestState } from "@/lib/archive-requests";
 import { NotAllowed, seesAll } from "@/lib/authz";
 import { isId } from "@/lib/id";
@@ -85,8 +84,6 @@ const smacRegistrar = alias(users, "smac_registrar");
 const archiveAsker = alias(users, "archive_asker");
 const archiveDecider = alias(users, "archive_decider");
 
-/** The company drawer's Activity tab. One implementation, in src/lib/activities.ts. */
-export { listActivitiesForCompany as listCompanyActivities } from "@/lib/activities";
 export type { ActivityRow } from "@/lib/activities";
 
 // ---- the list ---------------------------------------------------------------
@@ -972,11 +969,6 @@ export async function findPossibleDuplicates(input: {
     archiveReason: row.archiveReason ?? null,
   }));
 }
-
-// ---- shared with the actions --------------------------------------------------
-
-/** Re-exported so an action never re-invents the gate (src/lib/activities.ts). */
-export { assertCompanyVisible, mayOpen };
 
 /* -------------------------------------------------------------------------- */
 /* Which customers are not in SMAC yet (SPEC §3, P14)                          */

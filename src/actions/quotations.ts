@@ -34,8 +34,7 @@ import {
 } from "@/db/schema";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { creditQuotation, resolveCredit } from "@/lib/credit-rows";
-import { knownWarehouseIds, setWarehouses } from "@/lib/warehouses";
-import { warehouseIdsField } from "@/lib/warehouse-list";
+import { knownWarehouseIds, setWarehouses, warehouseIdsField } from "@/lib/warehouses";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { firstRefusedBox, lineFieldKey } from "@/lib/line-refusal";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";

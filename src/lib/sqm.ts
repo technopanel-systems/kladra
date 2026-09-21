@@ -1,5 +1,5 @@
 import { sql, type SQL } from "drizzle-orm";
-import { dispatchItems } from "@/db/schema";
+import { dispatchItems, dispatchStatusEnum } from "@/db/schema";
 import { creditedParts, shareOf } from "@/lib/credit";
 
 /**
@@ -17,6 +17,26 @@ import { creditedParts, shareOf } from "@/lib/credit";
  * any copy outside this file, and the specs keep their own copy on purpose: a
  * figure computed two ways is the point of those tests.
  */
+
+/**
+ * The dispatch statuses that have spent a quotation line's quantity (D12): a
+ * load the coordinator has in front of her, and one she approved. A draft has
+ * not asked for anything yet and a rejected or withdrawn load gave it back.
+ *
+ * "How much of this paper has already gone out" is asked in five queries — the
+ * rep's own dispatch form, the coordinator's check, the quotation's standing —
+ * and was five copies of one literal until P14.5 found the constant meant for
+ * them had no reader. A sixth status that spends (a partly-collected load, say)
+ * would have been added to whichever copy the author found first, and the
+ * paper's remaining figure would then differ by screen. It lives here, with the
+ * other text written over dispatch lines, because this file imports nothing
+ * that imports it back — dispatches.ts and standing.ts both read it.
+ * `scripts/one-figure.mts` refuses the literal anywhere else.
+ */
+export const COMMITTING = ["submitted", "approved"] as const satisfies readonly (typeof dispatchStatusEnum.enumValues)[number][];
+
+/** The same, as a SQL list for text or `sql.raw`: `('submitted', 'approved')`. */
+export const COMMITTING_IN = `(${COMMITTING.map((status) => `'${status}'`).join(", ")})`;
 
 /** The sheet, times any quantity expression, rounded once — for SQL written as text with quotation_items `qi`. */
 export const sqmOf = (qty: string): string => `round(qi.width * qi.length * ${qty}, 2)`;

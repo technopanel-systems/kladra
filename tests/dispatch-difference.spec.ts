@@ -209,3 +209,48 @@ test("the same two stores in the other order are the same two stores", () => {
   const load = { ...wholeLoad(), warehouses: [7, 3] };
   expect(differenceFrom(paper, load)).toEqual([]);
 });
+
+/*
+ * The two below were written because mutation testing found them missing
+ * (P14.5). Stryker changed `differenceFrom` in 57 ways and every test above
+ * noticed 50; the seven it did not came down to two behaviours nothing pinned:
+ * deleting the sort outright, or breaking it into `a.position + b.position`,
+ * passed every case, because every case handed the lines over in order; and
+ * dropping the `trim` on a text field passed too, because no case typed a space.
+ */
+
+/**
+ * The drawer reads the differences in the order this list gives them, and that
+ * order is the load's own — line 1 before line 2, however the rows arrive.
+ * They arrive from a query, and a query that loses its ORDER BY hands rows back
+ * in whatever order the table happens to hold them; the coordinator would then
+ * read "line 2 changed" above "line 1 changed" and nothing would say why.
+ */
+test("the differences come out in the load's own order, whatever order its rows arrive in", () => {
+  const load = wholeLoad();
+  // Both lines and both services changed, then handed over back to front.
+  load.lines[0] = { ...load.lines[0], width: "1.30" };
+  load.lines[1] = { ...load.lines[1], width: "1.60" };
+  load.services[0] = { ...load.services[0], sqm: "125.00" };
+  load.services[1] = { ...load.services[1], sqm: "35.00" };
+  load.lines.reverse();
+  load.services.reverse();
+
+  const order = differenceFrom(PAPER, load)
+    .filter((d) => d.kind !== "load")
+    .map((d) => `${d.kind} ${"position" in d ? d.position : ""}`);
+
+  expect(order).toEqual(["line 1", "line 2", "service 1", "service 2"]);
+});
+
+/**
+ * A colour code or a lookup's words typed with a space before or after them is
+ * the same value, not a change. The form trims what it sends, so this is the
+ * comparison's own guard behind it — and a false "changed" is not harmless: it
+ * is a flag on the coordinator's desk for a load that matches its paper.
+ */
+test("a text field with a space around it is the value, not a difference", () => {
+  const load = wholeLoad();
+  load.lines[0] = { ...load.lines[0], colourCode: "  RAL 7016 ", supplier: "N " };
+  expect(differenceFrom(PAPER, load)).toEqual([]);
+});
