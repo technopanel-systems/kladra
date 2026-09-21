@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Ref, Sqm } from "@/components/ui-ext/figures";
 import { StateBadge } from "@/components/ui-ext/state-badge";
-import type { DispatchRow, DispatchStatus } from "@/lib/dispatches";
+import type { DispatchRow } from "@/lib/dispatches";
 import { dispatchTone } from "@/lib/state-tone";
 
 /**

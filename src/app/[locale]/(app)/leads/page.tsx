@@ -5,6 +5,7 @@ import { parseLeadQuery } from "@/components/leads/lead-view";
 import { LeadsTable, type LeadRow } from "@/components/leads/leads-table";
 import { NewLeadDialog } from "@/components/leads/new-lead-dialog";
 import { Empty } from "@/components/ui-ext/empty";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link, redirect } from "@/i18n/navigation";
@@ -108,7 +109,11 @@ export default async function LeadsPage({
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">{t("leads.title")}</h1>
-          {mayFile ? <NewLeadDialog targets={targets} /> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The file IS this list, carrying the filters above it (P14 14.10). */}
+            <ExportButton files={[{ name: "leads", title: t("leads.title") }]} />
+            {mayFile ? <NewLeadDialog targets={targets} /> : null}
+          </div>
         </div>
 
         <LeadFilters query={query} people={holders} />

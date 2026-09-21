@@ -95,6 +95,17 @@ allowlist naming the files that may use the Latin name and the reason each may:
 the CSV export, the audit log, the admin's own list, the session, the schema.
 A new query that forgets is caught by the check, not by an Arabic screen.
 
+**And a read that resolves the name itself cannot be called from a route with no
+locale in its path.** `getLocale()` answers the URL prefix, so inside
+`/api/export/[name]` — an API path, never `/ar/...` — it answers the default and
+nothing else: every Arabic file the leave export built named every person in
+Latin, silently, on a path the screen never takes. The lint cannot see it either,
+because the query it points at is right. Two rules: a `src/lib` read that a route
+handler may call takes the locale as an argument (`listNonWorking(from, script)`,
+`personNameOf(alias, locale)`), and a builder that calls one passes the locale it
+was given rather than letting the read ask. `t` is the same trap in the same
+place: `getTranslations({ locale })`, never the bare call.
+
 And a name STORED is the same defect one step further out, where the check cannot
 see it: the notification row kept `actor.name` in its params, so Rawan read
 «طلب Faisal Al-Harbi عرض السعر Q-1» on the one screen in the app whose whole design is

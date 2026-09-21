@@ -53,8 +53,9 @@ import {
   paymentTermsLabel,
 } from "@/lib/payment";
 import { personNameOf } from "@/lib/people";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { LINE_SQM } from "@/lib/sqm";
-import { parseView } from "@/lib/view";
+import { viewFor } from "@/lib/view";
 
 export const dispatchesSheet: ExportRead = async ({ user, locale, params }) => {
   const ar = locale.startsWith("ar");
@@ -67,10 +68,14 @@ export const dispatchesSheet: ExportRead = async ({ user, locale, params }) => {
   const serviceName = sql.raw(ar ? "sv.name_ar" : "sv.name_en");
 
   // A board of states shows every state, so a status chip is not in force on
-  // one and the page drops it there; the file from a board is the board. Only
-  // the address is read for it: the remembered choice behind it belongs to a
-  // person and a file is built from the address the screen sent.
-  const board = parseView(params.get("view")) === "board";
+  // one and the page drops it there; the file from a board is the board. The
+  // view is read the way the PAGE reads it — the address first, the person's
+  // remembered choice behind it (D164) — because a screen standing on a bare
+  // address is showing whichever of the two he last chose, and a file that
+  // ignored that would not be the screen it came from.
+  const board =
+    viewFor(params.get("view") ?? undefined, chosen(await rememberedChoices(user.id), "view", "dispatches")) ===
+    "board";
 
   // `and` answers undefined when every condition is, which cannot happen here —
   // a reader who sees every load is still narrowed to the customers nobody has

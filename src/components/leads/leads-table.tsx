@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import { STAGE_KEYS } from "@/components/leads/stage-words";
 import { useLeadFlash } from "@/components/leads/lead-flash";
 import { ReassignLeadDialog } from "@/components/leads/reassign-lead-dialog";
 import { Avatar } from "@/components/ui-ext/avatar";
@@ -89,19 +90,13 @@ function Stage({ row }: { row: LeadRow }) {
   const locale = useLocale();
   const tone = toneOf(row);
 
-  // Written out rather than computed, so every word is a key the message check
-  // can see (rules/words.md).
-  const word: Record<LeadStage, string> = {
-    waiting: t("leads.notAcknowledged"),
-    acknowledged: t("leads.acknowledged"),
-    contacted: t("leads.contacted"),
-    quoted: t("leads.quoted"),
-    won: t("leads.won"),
-  };
+  // The same word the leads file says in its last column, from the one map
+  // (src/components/leads/stage-words.ts).
+  const word = (stage: LeadStage) => t(STAGE_KEYS[stage]);
 
   return (
     <span data-slot="lead-stage" data-stage={row.stage} className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <StateBadge tone={tone}>{word[row.stage]}</StateBadge>
+      <StateBadge tone={tone}>{word(row.stage)}</StateBadge>
       {/* How long, and "late" in words once it is: the badge's red is never
           the only thing saying so (DESIGN §5). */}
       {row.stage === "waiting" ? (

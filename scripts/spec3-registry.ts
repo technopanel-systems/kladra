@@ -548,6 +548,10 @@ export const SPEC3: Spec3Entry[] = [
   },
   {
     says: "Each export carries the filters of the screen it came from",
-    owed: "14.10",
+    tests: [
+      "the customers file is the customers screen, narrowed the way the screen is narrowed",
+      "every file the app offers comes back, and comes back in the reader's language",
+      "a rep is handed the files of his own screens and refused the office's",
+    ],
   },
 ];

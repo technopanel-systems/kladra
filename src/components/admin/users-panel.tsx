@@ -18,6 +18,7 @@ import { useRowFlash } from "@/components/ui-ext/use-row-flash";
 import { useSubmitAction, useWireGuard } from "@/components/ui-ext/action-outcome";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { Empty } from "@/components/ui-ext/empty";
 import { useFocusFirstError } from "@/components/ui-ext/focus-first-error";
 import { FormBody, FormFooter } from "@/components/ui-ext/form-shell";
@@ -151,20 +152,26 @@ export function UsersPanel({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{title}</h1>
-        <UserDialog
-          mode="create"
-          roles={roles}
-          trigger={
-            <Button variant="brand">
-              <Plus aria-hidden="true" />
-              {t("admin.addUser")}
-            </Button>
-          }
-          onSaved={(email) => {
-            flash([email]);
-            refresh();
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* The accounts as a file (P14 14.10). One of the three files that is
+              nobody's own floor, so the registry gates it rather than the
+              narrowing (src/lib/export/index.ts). */}
+          <ExportButton files={[{ name: "users", title }]} />
+          <UserDialog
+            mode="create"
+            roles={roles}
+            trigger={
+              <Button variant="brand">
+                <Plus aria-hidden="true" />
+                {t("admin.addUser")}
+              </Button>
+            }
+            onSaved={(email) => {
+              flash([email]);
+              refresh();
+            }}
+          />
+        </div>
       </div>
 
       {/* Said once, at the top, where the absences down the list are explained

@@ -224,7 +224,7 @@ below by number.
         Pushing is no longer held for Stage 3 (founder, 2026-09-15): forty-four commits on one machine were the
         risk, not an origin that has not been audited. `main` was pushed at cfa0de2 and is pushed after each green commit.
 
-- [ ] **P14 The third round of real use** — the founder's decisions of 2026-09-20 (SPEC §3, P14). Each
+- [x] **P14 The third round of real use** — the founder's decisions of 2026-09-20 (SPEC §3, P14). Each
       a slice a person could try, each green and committed and pushed, each ending with shot-looker,
       arabic-reviewer, web-design-guidelines, the axe spec and the critic's pass. P13's Stage 3 follows
       them rather than the other way round, so the stranger reads what the third round left.
@@ -317,13 +317,27 @@ below by number.
             and the action guard share; whose account he may not touch is the same predicate
             again, asked of the held row at the moment of the write. D209 and D210 say what he
             may not do.
-      - [ ] 14.10 Export everything, each from the screen it belongs to and carrying that screen's
+      - [x] 14.10 Export everything, each from the screen it belongs to and carrying that screen's
             filters, both languages, 04/Aug/2026 dates, numbers Excel reads as numbers, Arabic intact (14H).
             - [x] a · the three papers that already existed — customers, quotations, dispatches — rebuilt
                   on the screens' own narrowing, an Export beside each screen's own action, and the admin's
                   panel of files gone with D19's admin-only rule (D213)
-            - [ ] b · the seven that do not exist yet: contacts, projects, reports, leads, targets and
-                  achievement, users, holidays and leave
+            - [x] b · the seven that did not: contacts, projects, reports, leads, targets and achievement,
+                  users, holidays and leave. The customers screen holds two, so the control is a menu there
+                  and a button on the other eight; the three that are nobody's floor are gated in the
+                  registry (`mayExport`) and the other seven by their own screen's narrowing
+
+- [ ] **P14.5 The tooling sweep** — the founder, 2026-09-21: after Phase 14 and before the stranger
+      reads it, go aspect by aspect across the whole product with tools rather than by eye. The
+      catalogue is aitmpl.com (`npx claude-code-templates@latest`) and best-of-breed outside it where
+      the catalogue has nothing; nothing that has to be paid for. Everything about HOW Kladra is built
+      may change; the business rules and founder decisions in SPEC §3 and §4 may not, and neither may
+      the data. A scanner that finds nothing twice is removed rather than run a third time. It ends
+      with `/skill-doctor`, every skill, agent, command, MCP server and dependency that did not earn
+      its place uninstalled, the survivors listed in §1, and every artefact these tools generate
+      gitignored and removed.
+      - [ ] the aspect I am on: **not started** — Phase 14 landed first (triage in the session
+            scratchpad's `plan_part25.md`)
 
 **Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions

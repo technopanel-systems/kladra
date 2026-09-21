@@ -319,6 +319,15 @@ for (const locale of LOCALES) {
       await dialog(page, page.locator('[data-slot="add-report"]'), ["picker", "select", "date"]);
 
       await open(page, t, locale, "/companies");
+      // The newest menu in the app, and the founder's report was menus that did
+      // not open in Edge: the customers screen holds two files, so Export is a
+      // menu there (P14 14.10, D213). Opened by click and by keyboard, and its
+      // first item chosen — which starts a download, so nothing is asserted
+      // about it beyond that the menu took the press.
+      const exportMenu = page.locator(`main [data-slot="export"]`);
+      await byClick(page, exportMenu, "menu", false);
+      await byKeyboard(page, exportMenu, "menu", false);
+
       await dialog(page, page.getByRole("button", { name: t("forms.addCompany"), exact: true }).first(), ["picker"]);
 
       const more = (drawer: Locator) =>

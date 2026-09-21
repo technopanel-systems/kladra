@@ -39,8 +39,9 @@ import { asSearch, exportDay, type ExportRead } from "@/lib/export/kit";
 import { quotationLabel } from "@/lib/labels";
 import { parseNarrowing } from "@/lib/narrowing";
 import { personNameOf } from "@/lib/people";
+import { chosen, rememberedChoices } from "@/lib/screen-choice";
 import { narrowQuotations, parseQuotationStatus, type QuotationStatus } from "@/lib/quotations";
-import { parseView } from "@/lib/view";
+import { viewFor } from "@/lib/view";
 
 export const quotationsSheet: ExportRead = async ({ user, locale, params }) => {
   const ar = locale.startsWith("ar");
@@ -51,10 +52,14 @@ export const quotationsSheet: ExportRead = async ({ user, locale, params }) => {
   const serviceName = sql.raw(ar ? "sv.name_ar" : "sv.name_en");
 
   // A board of states shows every state, so a status chip is not in force on
-  // one and the page drops it there; the file from a board is the board. Only
-  // the address is read for it: the remembered choice behind it belongs to a
-  // person and a file is built from the address the screen sent.
-  const board = parseView(params.get("view")) === "board";
+  // one and the page drops it there; the file from a board is the board. The
+  // view is read the way the PAGE reads it — the address first, the person's
+  // remembered choice behind it (D164) — because a screen standing on a bare
+  // address is showing whichever of the two he last chose, and a file that
+  // ignored that would not be the screen it came from.
+  const board =
+    viewFor(params.get("view") ?? undefined, chosen(await rememberedChoices(user.id), "view", "quotations")) ===
+    "board";
 
   // `and` answers undefined when every condition is, which cannot happen here —
   // the latest-revision rule is always one of them — but a WHERE with nothing

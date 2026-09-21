@@ -110,26 +110,52 @@ function whoseWhere(user: SessionUser, personId: string | null): SQL | undefined
   return eq(activities.userId, personId);
 }
 
+/** Whose reports, over which days, under which filters: what a screen is reading. */
+export type ReportWindow = {
+  personId: string | null;
+  from: Day;
+  to: Day;
+  filter: ReportFilter;
+};
+
 /**
- * The entries in a window, newest first, capped, with how many there are.
+ * Which reports this reader is asking for — the one place this screen's
+ * narrowing is written, so the list, the count beside it and the FILE it hands
+ * over can never be about three different sets (rules/data.md).
+ *
+ * Exported since P14 14.10b, because a file is the screen it came from,
+ * narrowed the way that screen is narrowed: src/lib/export/reports.ts asks this
+ * rather than writing the same WHERE a second time. Two copies of a narrowing
+ * is the drift trap rules/data.md names for figures, one step out — a file that
+ * quietly holds more rows than the list it came from is worse than one that
+ * holds none.
+ *
+ * The unfiled rule is one of the conditions rather than something the caller
+ * remembers (D70). `activityQuery` states it again for every read of a report,
+ * which is its own guard for its own callers; saying it here is what lets a
+ * builder that does not go through that query be right by asking.
  */
-export async function reportEntries(
+export function narrowReports(
   user: SessionUser,
-  {
-    personId,
-    from,
-    to,
-    filter,
-    limit = REPORT_LIST_CAP,
-  }: { personId: string | null; from: Day; to: Day; filter: ReportFilter; limit?: number },
-): Promise<{ rows: ReportEntry[]; total: number }> {
-  const where = and(
+  { personId, from, to, filter }: ReportWindow,
+): SQL {
+  return and(
+    isNull(activities.archivedAt),
     whoseWhere(user, personId),
     gte(activities.happenedOn, from),
     lte(activities.happenedOn, to),
     ...filterWhere(filter),
   )!;
-  return readReports(user, where, limit);
+}
+
+/**
+ * The entries in a window, newest first, capped, with how many there are.
+ */
+export async function reportEntries(
+  user: SessionUser,
+  { limit = REPORT_LIST_CAP, ...window }: ReportWindow & { limit?: number },
+): Promise<{ rows: ReportEntry[]; total: number }> {
+  return readReports(user, narrowReports(user, window), limit);
 }
 
 /**

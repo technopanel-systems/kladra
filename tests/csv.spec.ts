@@ -132,18 +132,18 @@ test("a difference is written out in words with its units; a matching load says 
   const written = differenceInWords(difference, t, serviceName, storeName);
   expect(written).toBe(
     [
-      changed(`${item(1)} ${t("common.supplier")}`, "K", "N"),
-      changed(`${item(1)} ${t("common.thickness")}`, `3.0 ${mm}`, `4.0 ${mm}`),
-      changed(`${item(1)} ${t("dispatches.field.width")}`, `1.50 ${metres}`, `1.24 ${metres}`),
+      changed(`${item(1)} · ${t("common.supplier")}`, "K", "N"),
+      changed(`${item(1)} · ${t("common.thickness")}`, `3.0 ${mm}`, `4.0 ${mm}`),
+      changed(`${item(1)} · ${t("dispatches.field.width")}`, `1.50 ${metres}`, `1.24 ${metres}`),
       changed(
-        `${item(2)} ${t("dispatches.field.price")}`,
+        `${item(2)} · ${t("dispatches.field.price")}`,
         `127.00 ${perSqm}`,
         `120.00 ${perSqm}`,
       ),
       added(item(5)),
       // The field IS the thing here, so the number stands alone.
       changed(service(1), "Fabrication", "CNC cutting"),
-      changed(`${service(1)} ${t("dispatches.field.area")}`, `45.00 ${sqm}`, `60.00 ${sqm}`),
+      changed(`${service(1)} · ${t("dispatches.field.area")}`, `45.00 ${sqm}`, `60.00 ${sqm}`),
       added(service(3)),
       // And the load's own change wears no number at all.
       changed(t("common.warehouse"), "Riyadh · Malham", "Riyadh"),
@@ -158,13 +158,13 @@ test("a difference is written out in words with its units; a matching load says 
     // They are invisible, they belong in the cell — an Arabic sentence with
     // "1.50 m" in it needs them — and they are not what this line is about.
     expect(written.replace(/[\u2068\u2069]/g, "").split("\n")).toEqual([
-      "Item 1 Supplier: K (was N)",
-      "Item 1 Thickness: 3.0 mm (was 4.0 mm)",
-      "Item 1 Width: 1.50 m (was 1.24 m)",
-      "Item 2 Price: 127.00 SAR per m² (was 120.00 SAR per m²)",
+      "Item 1 · Supplier: K (was N)",
+      "Item 1 · Thickness: 3.0 mm (was 4.0 mm)",
+      "Item 1 · Width: 1.50 m (was 1.24 m)",
+      "Item 2 · Price: 127.00 SAR per m² (was 120.00 SAR per m²)",
       "Item 5 added, not on the quotation",
       "Service 1: Fabrication (was CNC cutting)",
-      "Service 1 Area: 45.00 m² (was 60.00 m²)",
+      "Service 1 · Area: 45.00 m² (was 60.00 m²)",
       "Service 3 added, not on the quotation",
       "Warehouse: Riyadh · Malham (was Riyadh)",
     ]);

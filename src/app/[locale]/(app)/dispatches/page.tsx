@@ -101,7 +101,9 @@ export default async function DispatchesPage({
         <div className="flex flex-wrap items-center gap-2">
           {/* The file IS this list, narrowed the way it is narrowed at the
               moment it is asked for (P14 14.10). */}
-          {firstUse ? null : <ExportButton name="dispatches" title={t("common.dispatches")} />}
+          {firstUse ? null : (
+            <ExportButton files={[{ name: "dispatches", title: t("common.dispatches") }]} />
+          )}
           {/* Hers whenever there is anybody to raise one for (SPEC §3 P13). */}
           {targets.quotations.length > 0 || direct.length > 0 || forOthers ? (
             <RequestDispatchDialog

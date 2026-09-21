@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { addNonWorkingAction, removeNonWorkingAction } from "@/actions/admin";
 import { sendForm } from "@/components/admin/send-form";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { useOpener } from "@/components/ui-ext/use-opener";
 import { useRowFlash } from "@/components/ui-ext/use-row-flash";
 import { ConfirmDialog } from "@/components/ui-ext/confirm-dialog";
@@ -121,13 +122,18 @@ export function HolidaysPanel({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{title}</h1>
-        <AddDayDialog
-          people={people}
-          onAdded={(keys) => {
-            flash(keys);
-            refresh();
-          }}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {/* The month the strip is showing, as a file: one row per period with
+              the working days it really costs (P14 14.10, D210). */}
+          <ExportButton files={[{ name: "leave", title }]} />
+          <AddDayDialog
+            people={people}
+            onAdded={(keys) => {
+              flash(keys);
+              refresh();
+            }}
+          />
+        </div>
       </div>
       <p className="max-w-prose text-sm text-muted-foreground">{t("admin.dayHint")}</p>
 

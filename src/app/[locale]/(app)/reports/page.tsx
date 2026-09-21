@@ -3,6 +3,7 @@ import { PeriodSwitch } from "@/components/reports/period-switch";
 import { PersonReports } from "@/components/reports/person-reports";
 import { ReportFilters } from "@/components/reports/report-filters";
 import { NothingWritten, TeamDay, TeamNav, TeamWeek } from "@/components/reports/team-reports";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Empty } from "@/components/ui-ext/empty";
@@ -98,7 +99,13 @@ export default async function ReportsPage({
     return (
       <div className="flex flex-col gap-6">
         <header className="flex flex-col gap-4">
-          <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
+            {/* One person's own entries, narrowed the way this screen is
+                (P14 14.10) — his own when he is reading his, the person in the
+                address when a manager has drilled in. */}
+            <ExportButton files={[{ name: "reports", title: t("reports.title") }]} />
+          </div>
           {manager && person ? (
             <div className="flex flex-wrap items-center gap-3">
               <Avatar id={person.id} name={person.name} size="lg" />
@@ -174,12 +181,17 @@ export default async function ReportsPage({
     <header className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{t("reports.title")}</h1>
-        <PeriodSwitch
-          period={period}
-          remembered={storedPeriod}
-          dayHref={reportsHref(query, { period: "day" })}
-          weekHref={reportsHref(query, { period: "week" })}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodSwitch
+            period={period}
+            remembered={storedPeriod}
+            dayHref={reportsHref(query, { period: "day" })}
+            weekHref={reportsHref(query, { period: "week" })}
+          />
+          {/* What the floor wrote, as the screen is standing — the day or the
+              week, and whoever the filters have narrowed it to (P14 14.10). */}
+          <ExportButton files={[{ name: "reports", title: t("reports.title") }]} />
+        </div>
       </div>
       {nav}
       {filters}

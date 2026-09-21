@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { EarlierTargetsTable } from "@/components/admin/earlier-targets";
 import { TargetsPanel } from "@/components/admin/targets-panel";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { requireAdmin } from "@/lib/authz";
 import { earlierTargets, targetsThisMonth } from "@/lib/admin";
 import { formatMonth, todayRiyadh } from "@/lib/dates";
@@ -31,7 +32,11 @@ export default async function AdminTargetsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">{t("common.targets")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold">{t("common.targets")}</h1>
+        {/* Every person's month, aimed at and achieved, as one file (P14 14.10). */}
+        <ExportButton files={[{ name: "targets", title: t("common.targets") }]} />
+      </div>
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">

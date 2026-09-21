@@ -80,6 +80,11 @@ export const EXPORT_COLUMNS = [
   "day",
   "channel",
   "outcome",
+  // What somebody WROTE about the day, which is not the same thing as the note
+  // on a day the office was shut — the report dialog calls one "In your words"
+  // and the holidays form calls the other a note, and one key for both had the
+  // English of two columns crossed (P14 14.10, the Arabic review).
+  "written",
   "note",
   // A lead
   "query",

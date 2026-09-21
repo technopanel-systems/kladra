@@ -79,8 +79,13 @@ function escapeLike(value: string): string {
  * The date that still chases somebody. A lost project has none, whatever is
  * left in the column — one definition, so the row's colour, the filter and the
  * home strip's counts cannot disagree.
+ *
+ * Exported for the same reason `narrowProjects` below is (P14 14.10): the file
+ * this screen exports carries the date the screen shows, and a project the rep
+ * gave up on shows none. Spelling the case a second time in the builder is how
+ * the list and the file come to disagree about one column.
  */
-function pendingFollowUpSql(): SQL<Day | null> {
+export function pendingFollowUpSql(): SQL<Day | null> {
   return sql`(case when projects.lost_at is null then projects.next_follow_up end)`;
 }
 
@@ -135,6 +140,19 @@ export async function listProjects(input: ListProjectsInput): Promise<ProjectRow
     followUpState: row.followUpState ?? null,
     stage: row.stage,
   }));
+}
+
+/**
+ * The same narrowing, for the file this screen exports (P14 14.10, D213).
+ *
+ * Exported so `src/lib/export/projects.ts` asks THIS rather than writing the
+ * same WHERE a second time: a file is the screen it came from, narrowed the way
+ * that screen is narrowed, and two copies of a narrowing is the drift trap
+ * rules/data.md names for figures, one step out. `narrowCompanies` in
+ * companies.ts is the same one line for the same reason.
+ */
+export function narrowProjects(input: ListProjectsInput): (SQL | undefined)[] {
+  return narrowTo(input);
 }
 
 /** The one place this list's narrowing is written, for the rows and the count. */

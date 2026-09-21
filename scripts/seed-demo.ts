@@ -2175,7 +2175,12 @@ async function seedArchiveRequests(
 
 async function seedNonWorkingDays(userIds: Map<string, string>): Promise<void> {
   const nextMonth = addMonths(TODAY, 1);
-  const holiday = nextMonth.slice(0, 8) + String(HOLIDAY_DAY_OF_MONTH).padStart(2, "0");
+  // The named day, or the first working day after it: a holiday that falls on a
+  // Friday takes nothing out of the office, and the screen and the leave file
+  // would both price it at nought (see HOLIDAY_DAY_OF_MONTH).
+  const holiday = nextWorkingDay(
+    nextMonth.slice(0, 8) + String(HOLIDAY_DAY_OF_MONTH).padStart(2, "0"),
+  );
   const leave = nextWorkingDay(addDays(TODAY, LEAVE_DAYS_AHEAD));
 
   // Saad's own leave, starting today: the working days from today forward, so

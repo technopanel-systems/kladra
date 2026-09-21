@@ -25,20 +25,22 @@
  *
  * No `import "server-only"`, for the reason in src/lib/live.ts.
  */
+import { runsTheOffice } from "@/lib/authz";
 import type { BuilderTable } from "@/lib/builder-table";
 import { csv } from "@/lib/csv";
 import { companiesSheet } from "@/lib/export/companies";
+import { contactsSheet } from "@/lib/export/contacts";
 import { dispatchesSheet } from "@/lib/export/dispatches";
 import { fileOf, type ExportInput, type ExportRead } from "@/lib/export/kit";
+import { leadsSheet } from "@/lib/export/leads";
+import type { ExportName } from "@/lib/export/names";
+import { leaveSheet } from "@/lib/export/leave";
+import { projectsSheet } from "@/lib/export/projects";
 import { quotationsSheet } from "@/lib/export/quotations";
+import { reportsSheet } from "@/lib/export/reports";
+import { targetsSheet } from "@/lib/export/targets";
+import { usersSheet } from "@/lib/export/users";
 import type { SessionUser } from "@/lib/types";
-
-export const EXPORTS = ["companies", "quotations", "dispatches"] as const;
-export type ExportName = (typeof EXPORTS)[number];
-
-export function isExportName(value: unknown): value is ExportName {
-  return typeof value === "string" && (EXPORTS as readonly string[]).includes(value);
-}
 
 /**
  * One file: how to build it, and who may ask.
@@ -50,12 +52,25 @@ export function isExportName(value: unknown): value is ExportName {
  */
 type ExportFile = { read: ExportRead; mayAsk: (user: SessionUser) => boolean };
 
+/** The builder has already narrowed to the reader's own rows; his screen is the gate. */
 const anybody = () => true;
+
+/** The office's own two screens, which are nobody's floor (SPEC §3 P14 14.9, D209). */
+const office = (user: SessionUser) => runsTheOffice(user.role);
 
 const FILES: Record<ExportName, ExportFile> = {
   companies: { read: companiesSheet, mayAsk: anybody },
+  contacts: { read: contactsSheet, mayAsk: anybody },
+  projects: { read: projectsSheet, mayAsk: anybody },
   quotations: { read: quotationsSheet, mayAsk: anybody },
   dispatches: { read: dispatchesSheet, mayAsk: anybody },
+  reports: { read: reportsSheet, mayAsk: anybody },
+  leads: { read: leadsSheet, mayAsk: anybody },
+  // Everyone's target against everyone's month: the admin's screen alone, as
+  // the screen itself is (`requireAdmin`).
+  targets: { read: targetsSheet, mayAsk: (user) => user.role === "admin" },
+  users: { read: usersSheet, mayAsk: office },
+  leave: { read: leaveSheet, mayAsk: office },
 };
 
 /** May this person ask for this file at all? */

@@ -124,8 +124,13 @@ end)`;
  * moved to clear. Read from the act itself, the audit row `reassignLeadAction`
  * writes, because a figure about an event is counted from the event
  * (rules/data.md); there is no column for it and nothing to keep in step.
+ *
+ * Exported since P14 14.10b: the leads file carries this day in its `passed`
+ * column, and a second `coalesce` written beside it in the builder would be the
+ * copy rules/data.md forbids — right on the day it was typed and wrong the
+ * first time the manager moves a lead.
  */
-const GIVEN_AT = sql`coalesce((
+export const GIVEN_AT = sql`coalesce((
   select max(given_a.at) from audit_log given_a
    where given_a.record_type = 'company'
      and given_a.record_id = companies.id::text
@@ -215,6 +220,18 @@ function leadsWhere(user: SessionUser, filters: LeadQuery): SQL | undefined {
         ? isNotNull(companies.leadAcknowledgedAt)
         : undefined,
   );
+}
+
+/**
+ * The same narrowing, for the file this screen hands over (P14 14.10b).
+ *
+ * A file is the screen it came from, narrowed the way that screen is narrowed,
+ * and src/lib/export/leads.ts keeps that promise by asking this rather than
+ * writing the same WHERE a second time — the drift trap rules/data.md names for
+ * figures, one step out.
+ */
+export function narrowLeads(user: SessionUser, filters: LeadQuery): SQL | undefined {
+  return leadsWhere(user, filters);
 }
 
 /**

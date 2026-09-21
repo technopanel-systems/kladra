@@ -163,7 +163,14 @@ export default async function CompaniesPage({
               moment it is asked for (P14 14.10) — so it stands with the
               screen's own actions, and a floor with nothing on it has nothing
               to export, exactly as it has nothing to search. */}
-          {firstUse ? null : <ExportButton name="companies" title={t("common.companies")} />}
+          {firstUse ? null : (
+            <ExportButton
+              files={[
+                { name: "companies", title: t("common.companies") },
+                { name: "contacts", title: t("common.contacts") },
+              ]}
+            />
+          )}
           {mayAdd ? <AddCompanyDialog /> : null}
           {/* The way back sits where the title's action would: a manager reading
               one rep's floor adds nothing here, and came from the team. */}

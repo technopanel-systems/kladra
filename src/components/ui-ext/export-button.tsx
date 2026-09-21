@@ -6,7 +6,13 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import type { ExportName } from "@/lib/export";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { ExportName } from "@/lib/export/names";
 
 /**
  * The file this screen is holding (SPEC §3, P14 14.10; D19 before it).
@@ -20,6 +26,13 @@ import type { ExportName } from "@/lib/export";
  *
  * And the reader's language, because a file whose column headings, statuses and
  * category names are all words is in one language or the other (D6).
+ *
+ * **One control per screen, whether the screen has one file or two.** The
+ * customers screen holds both the customers and their contacts, and two buttons
+ * both saying Export would be two controls a reader has to tell apart by their
+ * quiet half. With one file it is a button; with more it is the same button
+ * opening a short menu that names them. Eight screens of the ten never see the
+ * menu.
  *
  * The press says what happens to it. A plain link with `download` is handled
  * out of sight: a file that takes a moment to build shows nothing, and one that
@@ -44,14 +57,15 @@ const SHOW_AFTER_MS = 150;
  */
 const NOT_A_FILTER = new Set(["open", "locale"]);
 
+/** One file this screen can hand over, and what to call it. */
+export type ExportFile = { name: ExportName; title: string };
+
 export function ExportButton({
-  name,
-  title,
+  files,
   className,
 }: {
-  name: ExportName;
-  /** Which file this is, for a reader moving by controls. */
-  title: string;
+  /** The screen's files, in the order a reader would look for them. */
+  files: readonly ExportFile[];
   className?: string;
 }) {
   const t = useTranslations();
@@ -67,7 +81,7 @@ export function ExportButton({
     return () => clearTimeout(timer);
   }, [busy]);
 
-  async function download() {
+  async function download(file: ExportFile) {
     if (working.current) return;
     working.current = true;
     setBusy(true);
@@ -92,11 +106,11 @@ export function ExportButton({
       const failed = (message: string) =>
         toast.error(message, {
           duration: Infinity,
-          action: { label: t("shell.tryAgain"), onClick: () => void download() },
+          action: { label: t("shell.tryAgain"), onClick: () => void download(file) },
           cancel: { label: t("common.close"), onClick: () => {} },
         });
       try {
-        response = await fetch(`/api/export/${name}?${params}`, { cache: "no-store" });
+        response = await fetch(`/api/export/${file.name}?${params}`, { cache: "no-store" });
         body = response.ok ? await response.blob() : new Blob();
       } catch {
         // Nothing came back at all: the wire, not the file.
@@ -104,26 +118,26 @@ export function ExportButton({
         return;
       }
       if (!response.ok) {
-        failed(t("common.exportFailed", { file: title }));
+        failed(t("common.exportFailed", { file: file.title }));
         return;
       }
 
       // The name the server gave it, with the day in it, so three downloads a
-      // month apart do not overwrite each other (the route's own rule).
-      const file =
+      // month apart do not overwrite each other in the Downloads folder.
+      const saved =
         /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ??
-        `kladra-${name}.csv`;
+        `kladra-${file.name}.csv`;
       const href = URL.createObjectURL(body);
       const link = document.createElement("a");
       link.href = href;
-      link.download = file;
+      link.download = saved;
       document.body.append(link);
       link.click();
       link.remove();
       // Let go once the browser has surely taken its copy; revoked at once, a
       // browser that reads the address late saves nothing.
       setTimeout(() => URL.revokeObjectURL(href), 30_000);
-      toast.success(t("common.exportReady", { file }));
+      toast.success(t("common.exportReady", { file: saved }));
     } finally {
       working.current = false;
       setBusy(false);
@@ -132,26 +146,64 @@ export function ExportButton({
   }
 
   const pending = busy && shown;
+  const one = files.length === 1 ? files[0] : null;
 
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className={className}
-      data-slot="export"
-      aria-busy={busy || undefined}
-      onClick={download}
-    >
+  const face = (
+    <>
       {pending ? (
         <Loader2 aria-hidden="true" className="animate-spin" data-slot="export-pending" />
       ) : (
         <Download aria-hidden="true" />
       )}
       <span>{pending ? t("common.preparing") : t("common.export")}</span>
-      {/* Every screen's button says Export; a reader moving by controls hears
-          which file this one is. */}
-      <span className="sr-only">{title}</span>
-    </Button>
+      {/* Every screen's button says Export; where there is one file, a reader
+          moving by controls hears which. Where there are two, the menu's own
+          items name them. */}
+      {one ? <span className="sr-only">{one.title}</span> : null}
+    </>
+  );
+
+  if (one) {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={className}
+        data-slot="export"
+        aria-busy={busy || undefined}
+        onClick={() => void download(one)}
+      >
+        {face}
+      </Button>
+    );
+  }
+
+  return (
+    /* Not modal: choosing a file starts a fetch and leaves the page alone, and
+       a modal menu holds `pointer-events: none` on the body while it closes —
+       long enough to swallow the press on the toast the failure puts up, which
+       is the one press that thing exists for (D197). */
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={className}
+          data-slot="export"
+          aria-busy={busy || undefined}
+        >
+          {face}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-auto min-w-40">
+        {files.map((file) => (
+          <DropdownMenuItem key={file.name} onSelect={() => void download(file)}>
+            {file.title}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

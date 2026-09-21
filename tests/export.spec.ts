@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { formatDay, todayRiyadh, type Day } from "@/lib/dates";
+import { EXPORT_COLUMNS } from "@/lib/export/columns";
+import { EXPORTS } from "@/lib/export/names";
 import { quotationLabel } from "@/lib/labels";
 import { login } from "./helpers/auth";
 import { one } from "./helpers/db";
@@ -21,10 +23,17 @@ import { test, expect, type Translate } from "./helpers/i18n";
 
 const COLD = { timeout: 15_000 };
 
-/** Press Export on whatever screen is open, and read what the browser saved. */
-async function exported(page: Page, t: Translate): Promise<CsvFile> {
+/**
+ * Press Export on whatever screen is open, and read what the browser saved.
+ *
+ * `file` names one of a screen's several, which is the customers screen and no
+ * other: there the control is a menu, because two buttons both saying Export
+ * would be two controls a reader has to tell apart by their quiet half.
+ */
+async function exported(page: Page, t: Translate, file?: string): Promise<CsvFile> {
   const saved = page.waitForEvent("download");
   await page.getByRole("button", { name: t("common.export") }).click();
+  if (file) await page.getByRole("menuitem", { name: file }).click();
   const download = await saved;
   return readCsv(readFileSync(await download.path(), "utf8"));
 }
@@ -58,7 +67,7 @@ test("the customers file is the customers screen, narrowed the way the screen is
   await page.goto(`/${locale}/companies`);
   await expect(page.locator("table [data-door]").first()).toBeVisible(COLD);
 
-  const whole = await exported(page, t);
+  const whole = await exported(page, t, t("common.companies"));
   const floor = await onScreen(page);
   expect(floor.length, "the seeded rep has no floor to export").toBeGreaterThan(1);
   expect(
@@ -78,7 +87,7 @@ test("the customers file is the customers screen, narrowed the way the screen is
     await page.goto(`/${locale}/companies?q=${encodeURIComponent(term.name)}`);
     await expect(page.locator("table [data-door]").first()).toBeVisible(COLD);
 
-    const narrowed = await exported(page, t);
+    const narrowed = await exported(page, t, t("common.companies"));
     const shown = await onScreen(page);
     expect(shown.length, "the search matched nothing, so it proves nothing").toBeGreaterThan(0);
     expect(narrowed.rows.length, "the search did not narrow the file").toBeLessThan(
@@ -87,12 +96,27 @@ test("the customers file is the customers screen, narrowed the way the screen is
     expect(new Set(doorLabels(narrowed, t))).toEqual(new Set(shown));
   });
 
+  await test.step("the same screen hands over its contacts, of those same customers", async () => {
+    // Two files on one screen, so the control is a menu (D213). The contacts
+    // file is narrowed by the customers it belongs to, which is what makes it
+    // this screen's file and not a list of everybody's contacts.
+    await page.goto(`/${locale}/companies`);
+    await expect(page.locator("table [data-door]").first()).toBeVisible(COLD);
+
+    const contacts = keyed((await exported(page, t, t("common.contacts"))).rows, t);
+    expect(contacts.length, "the customers screen handed over no contacts").toBeGreaterThan(0);
+    const customers = new Set(keyed(whole.rows, t).map((row) => row.company));
+    for (const row of contacts) {
+      expect(customers.has(row.company), `${row.company} is not on this screen`).toBe(true);
+    }
+  });
+
   await test.step("and another rep's file is another rep's floor", async () => {
     await login(page, locale, "saad");
     await page.goto(`/${locale}/companies`);
     await expect(page.locator("table [data-door]").first()).toBeVisible(COLD);
 
-    const his = await exported(page, t);
+    const his = await exported(page, t, t("common.companies"));
     expect(new Set(doorLabels(his, t))).toEqual(new Set(await onScreen(page)));
 
     // A floor, and not the building. Counted rather than compared name by name:
@@ -177,6 +201,9 @@ test("a file that cannot be prepared says so, and the next press saves it", asyn
 
   await page.route("**/api/export/companies*", (route) => route.fulfill({ status: 500, body: "" }));
   await button.click();
+  // The customers screen holds two files, so the button opens the menu and the
+  // press that asks for one is the item (D213).
+  await page.getByRole("menuitem", { name: t("common.companies") }).click();
   const failed = page
     .locator("[data-sonner-toast]")
     .filter({ hasText: t("common.exportFailed", { file: t("common.companies") }) });
@@ -185,10 +212,74 @@ test("a file that cannot be prepared says so, and the next press saves it", asyn
   await page.unroute("**/api/export/companies*");
 
   const saved = page.waitForEvent("download");
+  // Try again is the same press, not the same menu: the toast knows which file
+  // was asked for.
   await failed.getByRole("button", { name: t("shell.tryAgain") }).click();
   const file = (await saved).suggestedFilename();
   // The day is in the name, so three downloads a month apart do not overwrite
   // each other in the Downloads folder.
   expect(file).toBe(`kladra-companies-${todayRiyadh()}.csv`);
   await expect(page.getByText(t("common.exportReady", { file }))).toBeVisible(COLD);
+});
+
+/**
+ * Every one of the ten, from the list the registry itself is built over
+ * (src/lib/export/names.ts) — so an eleventh file cannot be added without this
+ * walk asking for it, and one added without a builder does not compile.
+ *
+ * What it asks of each is the founder's own sentence minus the filters, which
+ * the walks above prove one screen at a time: it comes back, Excel will read
+ * its Arabic, and every word at the top of a column is a word in this reader's
+ * language rather than the key underneath it.
+ */
+test("every file the app offers comes back, and comes back in the reader's language", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow(); // Ten files.
+  await login(page, locale, "jerom");
+
+  const words = new Set(EXPORT_COLUMNS.map((column) => t(`export.${column}`)));
+
+  for (const name of EXPORTS) {
+    const response = await page.request.get(`/api/export/${name}?locale=${locale}`);
+    expect(response.status(), `${name} did not come back`).toBe(200);
+    expect(response.headers()["content-type"]).toContain("text/csv");
+
+    const body = await response.body();
+    // EF BB BF. Without it Excel reads the file in the system codepage and
+    // every Arabic name opens as mojibake — which is the whole of D19.
+    expect([body[0], body[1], body[2]], `${name} has no byte-order mark`).toEqual([
+      0xef, 0xbb, 0xbf,
+    ]);
+    // CRLF, for the same reason: Excel is the reader this file is for.
+    expect(body.toString("utf8"), `${name} is not CRLF`).toContain("\r\n");
+
+    const file = readCsv(body.toString("utf8"));
+    expect(file.head.length, `${name} has no columns`).toBeGreaterThan(0);
+    for (const word of file.head) {
+      expect(words.has(word), `${name}: "${word}" is not a column's word in ${locale}`).toBe(true);
+    }
+  }
+});
+
+/**
+ * Who may ask is the screen's question (D213). Seven of the ten are somebody's
+ * own screen and their builder has already narrowed to his rows; the three that
+ * are nobody's floor — the accounts, the leave table, everyone's targets — say
+ * so in the registry, and the refusal has to live on the route, because a route
+ * is a URL anybody can type.
+ */
+test("a rep is handed the files of his own screens and refused the office's", async ({
+  page,
+  locale,
+}) => {
+  await login(page, locale, "faisal");
+
+  const office = new Set(["users", "leave", "targets"]);
+  for (const name of EXPORTS) {
+    const response = await page.request.get(`/api/export/${name}?locale=${locale}`);
+    expect(response.status(), `a rep asked for ${name}`).toBe(office.has(name) ? 404 : 200);
+  }
 });

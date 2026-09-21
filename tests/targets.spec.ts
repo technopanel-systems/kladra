@@ -73,9 +73,13 @@ test("the admin's targets are this month's: no month to move to, and a box saves
 
     await test.step("nothing on the screen goes to another month", async () => {
       const main = page.getByRole("main");
-      // Every button on it belongs to a box — its Save, or its Keep it — and
-      // nothing is a link: the Back and Next that sat above the boxes are gone.
-      await expect(main.locator("button:not(form button)")).toHaveCount(0);
+      // Every button on it belongs to a box — its Save, or its Keep it — but
+      // the one that hands the screen over as a file, which asks for this month
+      // because this screen is this month (P14 14.10). Nothing is a link: the
+      // Back and Next that sat above the boxes are gone.
+      await expect(
+        main.locator('button:not(form button):not([data-slot="export"])'),
+      ).toHaveCount(0);
       await expect(main.getByRole("link")).toHaveCount(0);
     });
 

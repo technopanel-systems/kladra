@@ -328,8 +328,12 @@ export type NonWorkingRow = {
  * are skipped by pace and by reminders (S48). What differs is who they apply
  * to, which is the `user_id`.
  */
-export async function listNonWorking(from: Day): Promise<NonWorkingRow[]> {
-  const locale = await getLocale();
+export async function listNonWorking(from: Day, script?: string): Promise<NonWorkingRow[]> {
+  // The reader's script, which every page has for the asking (D68). The export
+  // route is the one caller that has not: `/api/export/leave` carries no locale
+  // in its path, so it sends the one the screen asked in and this read names
+  // people in it rather than in the default (src/lib/export/leave.ts).
+  const locale = script ?? (await getLocale());
   const rows = await db
     .select({
       id: nonWorkingDays.id,

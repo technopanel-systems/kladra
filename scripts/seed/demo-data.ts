@@ -2484,7 +2484,15 @@ export const NOTIFICATIONS: NotificationSeed[] = [
  */
 export const HOLIDAY_NOTE = "اليوم الوطني";
 export const LEAVE_NOTE = "إجازة سنوية";
-/** Day of next month the company holiday falls on. */
+/**
+ * Day of next month the company holiday falls on — or the first working day
+ * after it, which the seed decides, for the reason Saad's leave does (D75): the
+ * twenty-third is a Friday one year in seven, and a holiday on a Friday costs
+ * the office nothing. The screen and the leave file would then both say it is
+ * worth nought working days, which is a figure nobody has ever seen work
+ * (rules/data.md), and the fortnight it sits inside would quietly stop being a
+ * fortnight with a holiday in it.
+ */
 export const HOLIDAY_DAY_OF_MONTH = 23;
 /** Calendar days from today for Turki's leave — a day still ahead of us. */
 export const LEAVE_DAYS_AHEAD = 7;
@@ -2515,9 +2523,9 @@ export const AWAY_WORKING_DAYS = 3;
  * had never grouped more than three, and the sentence the founder asked for
  * ("thirty days off is one entry with its dates and its length") was a sentence
  * about a state the demo never reached. Fourteen calendar days from the twelfth:
- * two weekends inside it, and the company holiday on the twenty-third inside it
- * as well, so the entry reads ten working days rather than fourteen and the one
- * arithmetic nobody would check by hand is on a screen somebody has looked at
+ * two weekends inside it, and the company holiday inside it as well, so the
+ * entry reads nine working days rather than fourteen and the one arithmetic
+ * nobody would check by hand is on a screen somebody has looked at
  * (rules/data.md).
  */
 export const FORTNIGHT_REP: RepKey = "turki";

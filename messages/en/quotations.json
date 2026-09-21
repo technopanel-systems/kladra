@@ -78,7 +78,6 @@
   "sarPerSqm": "SAR / m²",
   "panels": "Panels",
   "panel": "Panel",
-  "serviceNumber": "Service {number}",
   "serviceTotal": "Service total",
   "addService": "Add service",
   "removeService": "Remove service",

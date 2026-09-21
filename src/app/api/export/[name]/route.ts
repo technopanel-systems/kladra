@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@/lib/authz";
-import { buildExport, isExportName, mayExport } from "@/lib/export";
+import { buildExport, mayExport } from "@/lib/export";
+import { isExportName } from "@/lib/export/names";
 import { todayRiyadh } from "@/lib/dates";
 import { isLocale } from "@/i18n/routing";
 

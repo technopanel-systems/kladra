@@ -27,8 +27,8 @@
   "statusRefused": "مرفوض",
   "differsChip": "يختلف عن عرض السعر",
   "differsFrom": "يختلف عن {label}",
-  "differenceNone": "لا شيء",
-  "differenceAdded": "{what}: إضافة ليست في عرض السعر",
+  "differenceNone": "لا اختلاف",
+  "differenceAdded": "{what}: إضافة غير واردة في عرض السعر",
   "differenceChanged": "{what}: {to} (سابقًا {from})",
   "changedWasUnit": "سابقًا {from} {unit}",
   "unit": {

@@ -275,7 +275,7 @@ export function differenceUnit(field: DifferenceField, t: Translate): string | n
  * whoever is reading that screen.
  *
  * The shape is the drawer's, not a sentence: the thing, then what it is now,
- * then what the paper said as an aside — "Item 1 supplier: K (was N)". A
+ * then what the paper said as an aside — "Item 1 · Supplier: K (was N)". A
  * sentence with a verb in it would have to agree with the gender of the noun in
  * front of it in Arabic, and «تغيّر» against «الخدمة» is the kind of wrong that
  * reads as machine-written; the three-part shape needs no verb at all. The
@@ -330,7 +330,10 @@ export function differenceInWords(
         return unit ? `${raw} ${unit}` : raw;
       };
       return t("dispatches.differenceChanged", {
-        what: [number, label].filter(Boolean).join(" "),
+        // A mark between them, never a gap: «البند 1 المورّد» is two definite
+        // nouns run together and reads as a mistake, and the app's answer to
+        // two values on one line is the separator (rules/words.md).
+        what: [number, label].filter(Boolean).join(" · "),
         to: value(entry.to),
         from: value(entry.from),
       });

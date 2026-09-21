@@ -112,7 +112,9 @@ export default async function QuotationsPage({
         <div className="flex flex-wrap items-center gap-2">
           {/* The file IS this list, narrowed the way it is narrowed at the
               moment it is asked for (P14 14.10). */}
-          {firstUse ? null : <ExportButton name="quotations" title={t("common.quotations")} />}
+          {firstUse ? null : (
+            <ExportButton files={[{ name: "quotations", title: t("common.quotations") }]} />
+          )}
           {canRequest ? (
             <RequestQuotationDialog
               targets={targets}

@@ -5,6 +5,7 @@ import { ProjectDrawer } from "@/components/projects/project-drawer";
 import { ProjectFlash } from "@/components/projects/project-flash";
 import { ProjectSheetSkeleton } from "@/components/projects/project-sheet";
 import { ProjectsTable } from "@/components/projects/projects-table";
+import { ExportButton } from "@/components/ui-ext/export-button";
 import { ListTail } from "@/components/ui-ext/list-tail";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -112,14 +113,19 @@ export default async function ProjectsPage({
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">{t("common.projects")}</h1>
-          {/* The brand gradient lives on the primary button and nowhere else. */}
-          {!canAdd ? null : companies.length > 0 ? (
-            <NewProjectDialog companies={companies} />
-          ) : (
-            <Button asChild variant="brand">
-              <Link href="/companies">{t("projects.openCompanies")}</Link>
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The file IS this list, narrowed the way it is narrowed at the
+                moment it is asked for (P14 14.10). */}
+            <ExportButton files={[{ name: "projects", title: t("common.projects") }]} />
+            {/* The brand gradient lives on the primary button and nowhere else. */}
+            {!canAdd ? null : companies.length > 0 ? (
+              <NewProjectDialog companies={companies} />
+            ) : (
+              <Button asChild variant="brand">
+                <Link href="/companies">{t("projects.openCompanies")}</Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         <ProjectsTable
