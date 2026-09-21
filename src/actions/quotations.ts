@@ -65,6 +65,7 @@ import {
   onProjectSql,
 } from "@/lib/visibility";
 import { mayWrite } from "@/lib/floor";
+import { safeError } from "@/lib/log-safe";
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -75,7 +76,7 @@ async function guard<T>(
     return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("quotations action failed", error);
+    console.error("quotations action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }
@@ -424,7 +425,7 @@ export async function quotationServiceChoicesAction(): Promise<
       data: rows.map((row) => ({ value: String(row.id), label: row.name, keywords: row.alt })),
     };
   } catch (error) {
-    console.error("services list failed", error);
+    console.error("services list failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }
@@ -1517,14 +1518,4 @@ export async function cancelQuotationAction(
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
   }, ...SELLING_ROLES);
-}
-
-/** Read: the quotations already on a project, for the request dialog's warning. */
-export async function countQuotationsOnProject(projectId: string): Promise<number> {
-  await requireActor();
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(quotations)
-    .where(and(eq(quotations.projectId, projectId), inArray(quotations.status, ["issued"])));
-  return row?.n ?? 0;
 }

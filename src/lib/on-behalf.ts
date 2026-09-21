@@ -27,6 +27,7 @@ import { mayBeRaisedFor, RAISED_FOR_ROLES, raisesForOthers } from "@/lib/floor";
 import { RAISED_FOR_NOBODY, type RaisedForPerson } from "@/lib/on-behalf-option";
 import { personName } from "@/lib/people";
 import type { Role, SessionUser } from "@/lib/types";
+import { isId } from "@/lib/id";
 
 /** May this reader raise paper for somebody else at all? Never while viewing as her (D42). */
 export function raisesOnBehalf(user: SessionUser): boolean {
@@ -120,7 +121,7 @@ export async function resolveRaiser(
   if (!raisesOnBehalf(actor)) return { ok: false, error: t("onBehalf.notForOthers") };
   // Checked by shape before it reaches a uuid cast, which would take the action
   // down as "something went wrong" rather than refuse it (rules/data.md).
-  if (!UUID.test(wanted)) return refusedAt(t("onBehalf.notSomebody"));
+  if (!isId(wanted)) return refusedAt(t("onBehalf.notSomebody"));
 
   const locale = await getLocale();
   const [row] = await db
@@ -152,8 +153,6 @@ export async function notTheirs(actor: SessionUser, raised: RaisedAs): Promise<R
       : t("onBehalf.pickSomebody"),
   );
 }
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Whose eyes a dialog's courtesy reads look through — the contacts at a

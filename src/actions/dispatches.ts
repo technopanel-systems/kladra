@@ -76,7 +76,7 @@ import {
 } from "@/lib/dispatches";
 import { dispatchable, getQuotation, type QuotationStatus } from "@/lib/quotations";
 import { isSmacClash, smacHolder } from "@/lib/smac";
-import { SELLING_ROLES } from "@/lib/floor";
+import { mayWrite, SELLING_ROLES } from "@/lib/floor";
 import {
   notTheirs,
   raisedForOptions,
@@ -109,6 +109,7 @@ import {
   onCompanySql,
   onProjectSql,
 } from "@/lib/visibility";
+import { safeError } from "@/lib/log-safe";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -121,7 +122,7 @@ async function guard<T>(
     return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("dispatches action failed", error);
+    console.error("dispatches action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }
@@ -154,6 +155,14 @@ type Loaded = {
   quotationLabel: string | null;
   projectId: string | null;
   companyId: string;
+  /**
+   * Whose load this IS — the rep it was raised for, which is the coordinator's
+   * answer to "For" when she raised it on his behalf and the raiser himself
+   * otherwise. The one who may change it (SPEC §3: "An item belongs to whoever
+   * created it, and only he edits it"), and not the same person as either of
+   * the two below since a project could be shared.
+   */
+  repId: string;
   /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
   companyRepId: string;
   /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
@@ -177,6 +186,7 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
       quotationRevision: quotations.revision,
       projectId: dispatches.projectId,
       companyId: dispatches.companyId,
+      repId: dispatches.repId,
       companyRepId: companies.repId,
       projectRepId: projects.repId,
       shared: onCompanySql(actor, sql`companies.id`).mapWith(Boolean),
@@ -205,6 +215,7 @@ async function load(actor: SessionUser, dispatchId: string): Promise<Loaded | nu
         : quotationLabel(row.quotationNumber, row.quotationRevision),
     projectId: row.projectId,
     companyId: row.companyId,
+    repId: row.repId,
     companyRepId: row.companyRepId,
     projectRepId: row.projectRepId,
     shared: row.shared,
@@ -1086,8 +1097,31 @@ export async function updateDispatchAction(
 
     const dispatch = await load(actor, parsed.data.dispatchId);
     if (!dispatch) return { ok: false, error: td("notFound") };
-    if (!mayRaiseFor(actor, dispatch.companyRepId, dispatch.projectRepId, dispatch.onProject))
-      throw new NotAllowed();
+    /**
+     * Its rep, and nobody else — the same sentence the quotation chain asks
+     * (`updateQuotationAction`), from the same line of SPEC §3: "An item
+     * belongs to whoever created it, and only he edits it."
+     *
+     * It asked `mayRaiseFor` until P14.5, which is the question the REQUEST
+     * asks and a wider one: it says yes to the customer's rep and to everybody
+     * on the job. So on a shared project either rep could rewrite the other's
+     * waiting load — and take its metres with it, because the credit is worked
+     * out again from whoever pressed Save (D148) and `resolveCredit` defaults
+     * to him. Raising a load beside a colleague's is work on a shared job;
+     * rewriting his is not, and the two questions look identical until the
+     * project has two names on it.
+     *
+     * What it deliberately does NOT have is the `raisesOnBehalf` branch the
+     * REQUEST has. The coordinator may raise a load for a rep who rang her
+     * ("For" on the dialog) and then may not correct it — only he may. That was
+     * already true under the old gate, so nothing changed; it is written down
+     * because the two actions now read as a matched pair and the gap would
+     * otherwise look like an oversight. It is the shape the quotation chain
+     * already has, where her way to get a wrong request fixed is to send it
+     * back rather than to edit it herself. SPEC §4 is where it would be decided
+     * otherwise; the founder has not been asked.
+     */
+    if (!mayWrite(actor, dispatch.repId)) throw new NotAllowed();
     // Waiting on the desk, or sent back by it (SPEC §3, P12-10). Refusing a
     // load is the dispatch chain's Send back — §2 S53 calls a request sent back
     // or refused one kind of event — and a refusal that cannot be answered

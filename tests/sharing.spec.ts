@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator, Page, Request } from "@playwright/test";
 import { login } from "./helpers/auth";
 import {
   floorOfCompany,
@@ -8,8 +8,10 @@ import {
   restoreCompanyFloor,
   userId,
 } from "./helpers/db";
-import { test, expect, type Locale } from "./helpers/i18n";
-import { pickFirst } from "./helpers/pick";
+import { test, expect, type Locale, type Translate } from "./helpers/i18n";
+import { pickFirst, pressChip } from "./helpers/pick";
+import { quotationLabel } from "@/lib/labels";
+import { quotationEvent } from "@/lib/quotation-events";
 
 /**
  * P12 — two reps on one customer (WORKFLOW §3 "Two reps on one customer",
@@ -588,6 +590,697 @@ test("a company handed to the rep who already holds his own people there", async
       `delete from notifications
         where subject_type = 'company' and subject_id = $1::uuid and kind = 'companyHandedOver'`,
       [target.id],
+    );
+  }
+});
+
+/** A line of the load, by the number it carries — the quotation's own (tests/dispatches.spec.ts). */
+function loadLine(form: Locator, position: number): Locator {
+  return form.locator(`[data-slot="dispatch-line"][data-position="${position}"]`);
+}
+
+/**
+ * The load cut down to one line of the paper, at this quantity
+ * (tests/dispatches.spec.ts, where the same helper is written for the same
+ * reason): the dialog opens on every line with something left on it, and a walk
+ * that wants one sheet says so the way a rep does — the other lines taken off,
+ * which is a partial load and not a difference.
+ */
+async function sendOnly(form: Locator, t: Translate, position: number, qty: number): Promise<void> {
+  await expect(loadLine(form, position)).toBeVisible(COLD);
+  const others = form.locator(`[data-slot="dispatch-line"]:not([data-position="${position}"])`);
+  for (let count = await others.count(); count > 0; count -= 1) {
+    await others.first().getByRole("button", { name: t("quotations.removeItem") }).click();
+    await expect(others).toHaveCount(count - 1);
+  }
+  await loadLine(form, position).getByLabel(t("dispatches.sending")).fill(String(qty));
+}
+
+/** Where this load is going — typed once, and read back off Faisal's screen. */
+const SITE = "Riyadh — the shared job, site gate";
+
+/**
+ * Faisal's own live paper on the shared job, and a line of it with a sheet
+ * still on it.
+ *
+ * Asked the way the app asks it (tests/dispatches.spec.ts): the latest revision
+ * of a quotation goods may move against, and a line whose quantity is more than
+ * everything already on a waiting or approved load (D12). One sheet is all this
+ * walk sends, so one is all it asks for — the dispatch specs earlier in the run
+ * have been eating the same papers all morning, in both locale projects against
+ * the one seeded database (playwright.config.ts).
+ */
+async function papersOnTheProject(projectId: string) {
+  return query<{ id: string; number: number; revision: number; status: string; position: number }>(
+    `select q.id, q.number, q.revision, q.status::text as status, qi.position
+       from quotations q
+       join quotation_items qi on qi.quotation_id = q.id
+      where q.project_id = $1::uuid
+        and q.status in ('issued', 'accepted')
+        and not exists (
+          select 1 from quotations later
+           where later.number = q.number and later.revision > q.revision
+        )
+        and qi.qty > (
+          select coalesce(sum(di.qty), 0)
+            from dispatch_items di
+            join dispatches d on d.id = di.dispatch_id
+           where di.quotation_item_id = qi.id
+             and d.status in ('submitted', 'approved')
+        )
+      order by q.number, qi.position
+      limit 1`,
+    [projectId],
+  );
+}
+
+/**
+ * The dispatch half of step 5 (SPEC §3: "An item belongs to whoever created it,
+ * and only he edits it"; P14.5).
+ *
+ * Step 5 above proves that sentence for a QUOTATION — Saad raises one on the
+ * shared job and Faisal, whose customer it is, is offered no Edit request and
+ * no Withdraw. The dispatch was never walked, and that is exactly where it was
+ * untrue. `updateDispatchAction` asked `mayRaiseFor`, which is the question the
+ * REQUEST asks and a wider one: it says yes to the customer's rep and to
+ * everybody on the job. And the drawer worked its Edit button out from
+ * `mayQuote(user, dispatch.companyRepId)` — the COMPANY's rep, which is neither
+ * the action's question nor §3's.
+ *
+ * So on a shared job Faisal could rewrite every line, quantity, destination and
+ * payment term of a load Saad had raised — and a plain re-save moved the metres
+ * with it, because the credit is worked out again from whoever pressed Save
+ * (D148) and `dispatch_credits` is what achieved m² is counted from. Both ask
+ * `mayWrite(actor, dispatch.repId)` now, the same sentence the quotation chain
+ * asks.
+ *
+ * A load against the paper, and not a direct one. That is not a preference: a
+ * direct load has no job under it, so `mayRaiseFor` is asked with a null
+ * project and the customer decides alone (src/lib/visibility.ts) — Saad cannot
+ * raise one on Faisal's customer at all, and a walk built on a load he is not
+ * entitled to raise would prove nothing about this rule. The project share is
+ * the whole of his standing here, so the load comes through the job: Faisal's
+ * own issued paper on it, which is what the seed already put there.
+ */
+test("a load raised on a shared job is the raiser's, and the customer's rep does not edit it", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow(); // Three sign-ins, a share, and a load raised through the dialog.
+
+  const start = new Date();
+  const fixture = fixtures(locale);
+  const { companyId, projectId } = await companyAndProject(fixture.company, fixture.project);
+  const saadId = await userId("saad@technopanel.com.sa");
+  const saadName = await personName("saad@technopanel.com.sa", locale);
+
+  const papers = await papersOnTheProject(projectId);
+  expect(
+    papers,
+    `no live quotation with a sheet left on it under ${fixture.project} — the dispatch specs earlier in the run have sent everything against it`,
+  ).toHaveLength(1);
+  const paper = papers[0];
+  const label = quotationLabel(paper.number, paper.revision);
+
+  let dispatchId = "";
+
+  try {
+    await test.step("1 · Faisal puts Saad on the job", async () => {
+      await login(page, locale, "faisal");
+      await page.goto(`/${locale}/projects?open=${projectId}`);
+      const project = dialogNamed(page, fixture.project);
+      await expect(project).toBeVisible(COLD);
+
+      // Sharing is in the project drawer's menu since P13-G6 S12.3.
+      await project
+        .getByRole("button", { name: t("common.moreFor", { name: fixture.project }) })
+        .click();
+      await page.getByRole("menuitem", { name: t("drawer.share.action"), exact: true }).click();
+      const share = page.getByRole("dialog", { name: t("drawer.share.projectTitle") });
+      await pickPerson(
+        page,
+        share.getByRole("combobox", { name: t("drawer.share.projectWho") }),
+        saadName,
+      );
+      await share.getByRole("button", { name: t("drawer.share.add") }).click();
+      await expect(
+        page.getByText(t("drawer.share.added", { name: saadName, label: fixture.project })),
+      ).toBeVisible(COLD);
+    });
+
+    await test.step("2 · Saad sends one sheet against Faisal's paper, and the load is his", async () => {
+      await login(page, locale, "saad");
+      await page.goto(`/${locale}/quotations?open=${paper.id}`);
+      const drawer = dialogNamed(page, label);
+      await expect(drawer).toBeVisible(COLD);
+
+      // Sending goods against a price is new work on a job §3 gives him, which
+      // is why the button is on his screen at all (src/components/quotations/
+      // quotation-drawer.tsx, §5 #163).
+      await drawer.getByRole("button", { name: t("dispatches.request") }).click();
+      const form = page.getByRole("dialog", { name: t("dispatches.requestFor", { label }) });
+      await sendOnly(form, t, paper.position, 1);
+      await pickFirst(form.getByRole("combobox", { name: t("common.shipment") }));
+      await form.getByLabel(t("common.destination")).fill(SITE);
+      await pressChip(form, t("dispatches.payment.cash"));
+      await pressChip(form, t("dispatches.payment.onDelivery"));
+      await form.getByRole("button", { name: t("common.save") }).click();
+
+      await expect(page.getByText(t("dispatches.requested"))).toBeVisible(COLD);
+      await expect(page).toHaveURL(/\/dispatches\?open=/, COLD);
+      dispatchId = new URL(page.url()).searchParams.get("open") ?? "";
+      expect(dispatchId).not.toBe("");
+
+      const row = await one<{ rep_id: string }>("select rep_id from dispatches where id = $1::uuid", [
+        dispatchId,
+      ]);
+      expect(row.rep_id, "the load Saad raised does not carry his own id").toBe(saadId);
+
+      // And the metres with it: `dispatch_credits` is what achieved m² is
+      // counted from (D148), and this load's are his alone.
+      const credited = await query<{ user_id: string }>(
+        "select user_id from dispatch_credits where dispatch_id = $1::uuid",
+        [dispatchId],
+      );
+      expect(
+        credited.map((person) => person.user_id),
+        "the load Saad raised counts for somebody else",
+      ).toEqual([saadId]);
+
+      // It is his: the raiser's own action is on its drawer.
+      const own = page.getByRole("dialog").first();
+      await expect(own.getByRole("button", { name: t("dispatches.editRequest") })).toBeVisible(COLD);
+    });
+
+    await test.step("3 · Faisal owns the customer, reads all of the load, and is offered no Edit on it", async () => {
+      await login(page, locale, "faisal");
+      await page.goto(`/${locale}/dispatches?open=${dispatchId}`);
+      const sheet = page.getByRole("dialog").first();
+      await expect(sheet).toBeVisible(COLD);
+      // Readable, down to the site Saad typed — a company shared is a company
+      // SEEN, all of it (D147), and this one is his own customer besides. The
+      // rule this step is about is the other half: seeing is not editing.
+      await expect(sheet.getByText(SITE).first()).toBeVisible();
+
+      await expect(
+        sheet.getByRole("button", { name: t("dispatches.editRequest") }),
+        "Faisal, who did not raise this load, was offered Edit request on it",
+      ).toHaveCount(0);
+    });
+  } finally {
+    // Whatever the walk above finished or did not: the load goes, the paper
+    // goes back to the answer it had, and the job and the customer go back to
+    // unshared — the Arabic run and every spec after this file need the floor
+    // the seed left (playwright.config.ts: one seeded database, no parallelism).
+    if (dispatchId) {
+      await query(
+        "delete from notifications where subject_type = 'dispatch' and subject_id = $1::uuid",
+        [dispatchId],
+      );
+      await query("delete from audit_log where record_type = 'dispatch' and record_id = $1::text", [
+        dispatchId,
+      ]);
+      // Lines, services and credit go with it (on delete cascade).
+      await query("delete from dispatches where id = $1::uuid", [dispatchId]);
+    }
+    // Raising a load ANSWERS the paper it came from — "a dispatch implies the
+    // customer accepted that quotation" (SPEC §3, P12-10) — so a paper that was
+    // merely issued has to be put back unanswered, trail and all, the way
+    // tests/dispatch-request.spec.ts puts its own back.
+    if (paper.status === "issued") {
+      await query(
+        `update quotations set status = 'issued', decided_at = null, decision_reason = null
+          where id = $1::uuid and status = 'accepted'`,
+        [paper.id],
+      );
+      await query(
+        `delete from audit_log
+          where record_type = 'quotation' and record_id = $1::text
+            and action = $2::text and details->>'impliedBy' = 'dispatch'`,
+        [paper.id, quotationEvent("accepted")],
+      );
+    }
+    await query("delete from project_shares where project_id = $1::uuid and user_id = $2::uuid", [
+      projectId,
+      saadId,
+    ]);
+    await query("delete from company_shares where company_id = $1::uuid and user_id = $2::uuid", [
+      companyId,
+      saadId,
+    ]);
+    await query(
+      `delete from audit_log
+        where record_type = 'projectShare' and record_id = $1::text and at >= $2::timestamptz`,
+      [projectId, start.toISOString()],
+    );
+    await query(
+      `delete from notifications
+        where subject_type = 'project' and subject_id = $1::uuid and created_at >= $2::timestamptz`,
+      [projectId, start.toISOString()],
+    );
+  }
+});
+
+/** One server-action press, as it went out on the wire. */
+type ActionCall = { id: string; body: string; contentType: string };
+
+/**
+ * The POST a press made, caught and kept.
+ *
+ * A Next server action is a POST to the page it was pressed on, carrying the
+ * action's own id in `next-action` and its arguments in the body. Keeping one
+ * is the only way left to ask the ACTION a question the screen will not ask for
+ * anybody: since D214 the Share control is simply ABSENT for the rep whose job
+ * it is, and a control that is not on the screen cannot be clicked into a
+ * refusal. So the manager's own press is caught here and made again below, by
+ * somebody else, which is exactly the direct call D214 is about.
+ *
+ * Listened for rather than intercepted (`page.on`, not `page.route`): the press
+ * being watched is a real one whose answer the step above is still asserting,
+ * and a route handler that has to hand every request back is one more thing
+ * between the button and the toast. The headers are read afterwards, because
+ * `allHeaders` is asynchronous and a listener that awaits inside itself is a
+ * race with the press it is watching.
+ */
+async function catchTheCall(
+  page: Page,
+  marker: string,
+  press: () => Promise<void>,
+): Promise<ActionCall> {
+  const posts: Request[] = [];
+  const watch = (request: Request) => {
+    if (request.method() === "POST") posts.push(request);
+  };
+  page.on("request", watch);
+  try {
+    await press();
+  } finally {
+    page.off("request", watch);
+  }
+
+  for (const request of posts) {
+    const headers = await request.allHeaders();
+    const body = request.postData();
+    const id = headers["next-action"];
+    if (id && body?.includes(marker)) {
+      return { id, body, contentType: headers["content-type"] ?? "text/plain;charset=UTF-8" };
+    }
+  }
+  throw new Error(
+    `no server action POST carrying ${marker} went out while Add was pressed — the share dialog no longer calls the action from the browser, and the direct call below has nothing to repeat`,
+  );
+}
+
+/**
+ * The same POST again, from whoever the page in hand is signed in as.
+ *
+ * Sent from inside the page rather than through `page.request`, so the browser
+ * puts this person's session cookie and this origin on it itself — a server
+ * action refuses a POST from anywhere else, and a refusal about the ORIGIN
+ * would read exactly like the refusal this walk is looking for. The answer is
+ * drained before the number is returned: the write happens while it is still
+ * being streamed, and a spec that read the table first would read it too early.
+ */
+async function callAgain(page: Page, call: ActionCall, body: string): Promise<number> {
+  return page.evaluate(
+    async ({ id, contentType, payload }) => {
+      const response = await fetch(window.location.href, {
+        method: "POST",
+        headers: { "next-action": id, "content-type": contentType },
+        body: payload,
+      });
+      await response.text();
+      return response.status;
+    },
+    { id: call.id, contentType: call.contentType, payload: body },
+  );
+}
+
+/**
+ * Everything one share writes for one person: the row on the job, and the row
+ * on the customer under it. `shareProjectAction` writes both in one
+ * transaction, because somebody put on a job he cannot see the customer of
+ * would open nothing — which is the whole of why D214 asks two owners.
+ */
+async function sharesFor(projectId: string, companyId: string, person: string) {
+  return query<{ kind: string }>(
+    `select 'company' as kind from company_shares
+      where company_id = $2::uuid and user_id = $3::uuid
+     union all
+     select 'project' as kind from project_shares
+      where project_id = $1::uuid and user_id = $3::uuid
+     order by kind`,
+    [projectId, companyId, person],
+  );
+}
+
+/**
+ * A job whose rep is not the customer's rep, on a customer he can nevertheless
+ * read — the shape D214 is about, asked by its definition rather than by a seed
+ * name.
+ *
+ * The demo already holds one and the APP put it there: the manager folded
+ * Turki's record of a customer into Faisal's and kept Faisal's
+ * (scripts/seed/demo-data.ts, FOLD "keptAndShared"), and a fold leaves a
+ * project on the survivor with its own rep unchanged (D158) and the man who
+ * found the customer reading it through a company share. It is the same gap a
+ * hand-over leaves, from the other end.
+ */
+async function aJobOnSomebodyElsesCustomer() {
+  return query<{
+    projectId: string;
+    projectName: string;
+    projectRepId: string;
+    companyId: string;
+    companyName: string;
+    companyRepId: string;
+  }>(
+    `select p.id as "projectId", p.name as "projectName", p.rep_id as "projectRepId",
+            c.id as "companyId", c.name as "companyName", c.rep_id as "companyRepId"
+       from projects p
+       join companies c on c.id = p.company_id
+      where p.rep_id <> c.rep_id
+        and p.archived_at is null and p.lost_at is null and c.archived_at is null
+        and exists (
+          select 1 from company_shares s
+           where s.company_id = c.id and s.user_id = p.rep_id
+        )
+      order by p.created_at
+      limit 1`,
+  );
+}
+
+/**
+ * D214 — a share is granted by the owner of the thing it actually opens (P14.5,
+ * the tooling sweep's security pass).
+ *
+ * §3 says a company's or a project's owner may share his own, because inviting
+ * help is his call. Kladra reads that as TWO gates, because sharing a job
+ * writes two rows: the project share, and a company share beside it — and a
+ * company share is total read on that customer, every contact, every price,
+ * every load. `shareProjectAction` asked only about the project, and on every
+ * ordinary record that is the same question, because the job's rep and the
+ * customer's rep are one man.
+ *
+ * They part company exactly where the customer has MOVED. A hand-over
+ * deliberately leaves a third rep's job with him — "a handover is not a way to
+ * take somebody else's work" (src/actions/companies.ts) — and a fold leaves one
+ * on the survivor the same way (D158). In that gap a rep could put anybody he
+ * liked on a customer who was not his and had never been his, and neither the
+ * customer's rep nor the manager was told.
+ *
+ * So this walks the gap being MADE, by the manager's own hand-over, which is a
+ * real control on a real screen; the job that stays behind was put there by the
+ * app's own fold before the demo was seeded. Then the three sentences D214
+ * ends on: the job is still his to work, it is not his to share, and the
+ * manager, who may share anybody's, still can.
+ *
+ * The one thing built by hand is nothing: the state this needs is in the seed
+ * already. What the walk itself writes — a customer on another floor, two
+ * shares and an audit trail — goes back in the `finally`, floor and all.
+ */
+test("D214 · a job on a customer who has moved is still his to work, and not his to share", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow(); // Four sign-ins, a hand-over, a share, and two direct calls.
+
+  const start = new Date();
+  const found = await aJobOnSomebodyElsesCustomer();
+  expect(
+    found,
+    "no live job sits on a customer whose rep is somebody else — the seed's fold (demo-data.ts FOLD) is what puts one there, and D214 has nothing to be about without it",
+  ).toHaveLength(1);
+  const job = found[0];
+  // Named, because the walk below signs in as him. The query asks for the state
+  // by its definition rather than by a seed key, and the one the demo holds is
+  // Turki's — so if it ever finds a different one, this says so here instead of
+  // failing four steps down as a drawer that will not open.
+  expect(
+    job.projectRepId,
+    "the job on somebody else's customer is not Turki's — this walk signs in as him",
+  ).toBe(await userId("turki@technopanel.com.sa"));
+
+  // Whom the customer is handed to. The coordinator, who "creates companies,
+  // projects and quotations like a rep" (SPEC §3) and holds a floor for them to
+  // sit on — and who holds nothing on this customer today, which is what lets
+  // the `finally` put it back exactly: a hand-over takes the new owner's own
+  // shares off what he now owns, and a share this walk never made is one it
+  // could not know to restore.
+  const rawanId = await userId("rawan@technopanel.com.sa");
+  const rawanName = await personName("rawan@technopanel.com.sa", locale);
+  expect(rawanId, "the coordinator already owns this customer").not.toBe(job.companyRepId);
+  expect(rawanId, "the coordinator already owns this job").not.toBe(job.projectRepId);
+  const hers = await query(
+    `select 1 from company_shares where company_id = $1::uuid and user_id = $2::uuid
+     union all
+     select 1 from project_shares ps join projects p on p.id = ps.project_id
+      where p.company_id = $1::uuid and ps.user_id = $2::uuid
+     union all
+     select 1 from contacts where company_id = $1::uuid and rep_id = $2::uuid`,
+    [job.companyId, rawanId],
+  );
+  expect(
+    hers,
+    "the coordinator already holds something on this customer — the hand-over would take it off her and this walk has no way to put it back",
+  ).toHaveLength(0);
+
+  // Two people with nothing to do with this customer: the one the manager
+  // actually puts on the job, and the one the direct call aims at. Faisal is
+  // the second on purpose — the hand-over has just taken this customer off him,
+  // so a share granted to him would hand a man back total read of a customer
+  // who is no longer his, which is the exact shape of the thing D214 stops.
+  const marketingId = await userId("marketing@technopanel.com.sa");
+  const marketingName = await personName("marketing@technopanel.com.sa", locale);
+  const faisalId = await userId("faisal@technopanel.com.sa");
+  const faisalName = await personName("faisal@technopanel.com.sa", locale);
+
+  const floor = await floorOfCompany(job.companyId);
+  let call: ActionCall | null = null;
+
+  try {
+    await test.step("1 · the manager hands the customer to the coordinator; the job stays where it was", async () => {
+      await login(page, locale, "abdulrahman");
+      await page.goto(`/${locale}/companies?open=${job.companyId}`);
+      const drawer = dialogNamed(page, job.companyName);
+      await expect(drawer).toBeVisible(COLD);
+
+      await fromMore(
+        page,
+        drawer,
+        t("common.moreFor", { name: job.companyName }),
+        t("drawer.handOver"),
+      );
+      const dialog = page.getByRole("dialog", {
+        name: t("drawer.handOverTitle", { name: job.companyName }),
+      });
+      await expect(dialog).toBeVisible();
+      await pickPerson(page, dialog.getByRole("combobox"), rawanName);
+      await dialog.getByRole("button", { name: t("drawer.handOver") }).click();
+
+      await expect
+        .poll(
+          async () =>
+            (
+              await one<{ repId: string }>(
+                'select rep_id as "repId" from companies where id = $1::uuid',
+                [job.companyId],
+              )
+            ).repId,
+          { timeout: 15_000 },
+        )
+        .toBe(rawanId);
+
+      // Only the departing rep's jobs travel with the customer, on purpose:
+      // "a handover is not a way to take somebody else's work". So this one is
+      // still its own rep's — and it now sits on a customer who has never been
+      // his and is no longer the man's who let him in.
+      const stayed = await one<{ repId: string }>(
+        'select rep_id as "repId" from projects where id = $1::uuid',
+        [job.projectId],
+      );
+      expect(stayed.repId, "the hand-over carried a third rep's job off with it").toBe(
+        job.projectRepId,
+      );
+    });
+
+    await test.step("2 · its own rep works it as before, and is offered no Sharing on it", async () => {
+      await login(page, locale, "turki");
+      await page.goto(`/${locale}/projects?open=${job.projectId}`);
+      const sheet = dialogNamed(page, job.projectName);
+      await expect(sheet).toBeVisible(COLD);
+
+      // His to work, quote and dispatch — which is the half of D214 that takes
+      // nothing away. He reads the customer through the share the fold gave
+      // him, and the job is his outright.
+      await sheet.getByRole("tab", { name: t("common.quotations") }).click();
+      await expect(
+        sheet.getByRole("button", { name: t("quotations.request"), exact: true }),
+      ).toBeVisible();
+
+      await sheet
+        .getByRole("button", { name: t("common.moreFor", { name: job.projectName }) })
+        .click();
+      const menu = page.getByRole("menu");
+      // The menu is open and it is his: Edit is in it, because owning the row
+      // is a different question from sharing it (src/components/projects).
+      await expect(menu.getByRole("menuitem", { name: t("common.edit"), exact: true })).toBeVisible();
+      await expect(
+        menu.getByRole("menuitem", { name: t("drawer.share.action"), exact: true }),
+        "the rep whose job this is was offered Sharing on a customer who is not his (D214)",
+      ).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(menu).toHaveCount(0);
+    });
+
+    await test.step("2a · and on a job of his own, on his own customer, it is there", async () => {
+      // The control that keeps the step above honest. The rule is not "a rep
+      // may not share a job" — it is "not one whose customer is not his" — and
+      // an absence proves nothing until the same menu is shown carrying it.
+      const own = await one<{ id: string; name: string }>(
+        `select p.id, p.name
+           from projects p
+           join companies c on c.id = p.company_id
+          where p.rep_id = $1::uuid and c.rep_id = $1::uuid
+            and p.archived_at is null and p.lost_at is null and c.archived_at is null
+          order by p.created_at
+          limit 1`,
+        [job.projectRepId],
+      );
+
+      await page.goto(`/${locale}/projects?open=${own.id}`);
+      const mine = dialogNamed(page, own.name);
+      await expect(mine).toBeVisible(COLD);
+      await mine.getByRole("button", { name: t("common.moreFor", { name: own.name }) }).click();
+      await expect(
+        page.getByRole("menu").getByRole("menuitem", { name: t("drawer.share.action"), exact: true }),
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+    });
+
+    await test.step("3 · the manager, who may share anybody's, is offered it and uses it", async () => {
+      await login(page, locale, "abdulrahman");
+      await page.goto(`/${locale}/projects?open=${job.projectId}`);
+      const sheet = dialogNamed(page, job.projectName);
+      await expect(sheet).toBeVisible(COLD);
+
+      await sheet
+        .getByRole("button", { name: t("common.moreFor", { name: job.projectName }) })
+        .click();
+      const menu = page.getByRole("menu");
+      // He writes nothing on anybody's floor (D42), so Sharing is the only
+      // thing in his menu — no Edit, no Archive, no Mark lost.
+      await expect(menu.getByRole("menuitem")).toHaveCount(1);
+      await expect(menu.getByRole("menuitem")).toHaveText(t("drawer.share.action"));
+      await menu.getByRole("menuitem", { name: t("drawer.share.action"), exact: true }).click();
+
+      const share = page.getByRole("dialog", { name: t("drawer.share.projectTitle") });
+      await expect(share).toBeVisible();
+      await pickPerson(
+        page,
+        share.getByRole("combobox", { name: t("drawer.share.projectWho") }),
+        marketingName,
+      );
+
+      call = await catchTheCall(page, job.projectId, async () => {
+        await share.getByRole("button", { name: t("drawer.share.add") }).click();
+        await expect(
+          page.getByText(
+            t("drawer.share.added", { name: marketingName, label: job.projectName }),
+          ),
+        ).toBeVisible(COLD);
+      });
+
+      expect(
+        (await sharesFor(job.projectId, job.companyId, marketingId)).map((row) => row.kind),
+        "the manager's share did not write both rows",
+      ).toEqual(["company", "project"]);
+    });
+
+    await test.step("4 · the same call, made by the job's own rep, writes nothing", async () => {
+      const made = call as ActionCall | null;
+      expect(made, "the manager's press was never caught on the wire").not.toBeNull();
+      const pressed = made as ActionCall;
+
+      // His press with another name in it. Both are uuids and the body carries
+      // them as text, so the swap changes who it is aimed at and nothing else —
+      // and a body that came back unchanged would mean the call did not carry
+      // the person he shared it with, which is worth failing on here rather
+      // than three assertions later.
+      const aimedAtFaisal = pressed.body.split(marketingId).join(faisalId);
+      expect(
+        aimedAtFaisal,
+        "the manager's own call did not carry the id of the person he put on the job",
+      ).not.toBe(pressed.body);
+      expect(
+        await sharesFor(job.projectId, job.companyId, faisalId),
+        `${faisalName} is already on this customer, so the call below would prove nothing`,
+      ).toHaveLength(0);
+
+      await login(page, locale, "turki");
+      await page.goto(`/${locale}/projects?open=${job.projectId}`);
+      await expect(dialogNamed(page, job.projectName)).toBeVisible(COLD);
+      const refused = await callAgain(page, pressed, aimedAtFaisal);
+
+      expect(
+        await sharesFor(job.projectId, job.companyId, faisalId),
+        `the job's own rep put ${faisalName} on a customer that is not his, straight past the screen that no longer offers it (the action answered ${refused})`,
+      ).toHaveLength(0);
+
+      // And the same call from the manager goes through — which is what says
+      // the refusal above was the ACTION's answer and not a POST that never
+      // reached it. Without this the step passes just as well when the id is
+      // wrong, the body is malformed or the route is gone.
+      await login(page, locale, "abdulrahman");
+      await page.goto(`/${locale}/projects?open=${job.projectId}`);
+      await expect(dialogNamed(page, job.projectName)).toBeVisible(COLD);
+      const allowed = await callAgain(page, pressed, aimedAtFaisal);
+
+      expect(
+        (await sharesFor(job.projectId, job.companyId, faisalId)).map((row) => row.kind),
+        `the manager's own repeat of the same call wrote nothing either, so the refusal above proves nothing about the action (it answered ${allowed})`,
+      ).toEqual(["company", "project"]);
+    });
+  } finally {
+    // The two people this walk put on the job, and the customer under it.
+    for (const person of [marketingId, faisalId]) {
+      await query("delete from project_shares where project_id = $1::uuid and user_id = $2::uuid", [
+        job.projectId,
+        person,
+      ]);
+      await query("delete from company_shares where company_id = $1::uuid and user_id = $2::uuid", [
+        job.companyId,
+        person,
+      ]);
+    }
+    // And the customer back on the floor it was on, with its jobs, its people
+    // and the shares it already had — by id, each row to the state it was
+    // actually in (tests/helpers/db.ts, and the five failures that taught it).
+    await restoreCompanyFloor(floor);
+    await query(
+      `delete from audit_log
+        where record_type = 'company' and record_id = $1::text
+          and action = 'company.handOver' and at >= $2::timestamptz`,
+      [job.companyId, start.toISOString()],
+    );
+    await query(
+      `delete from audit_log
+        where record_type = 'projectShare' and record_id = $1::text and at >= $2::timestamptz`,
+      [job.projectId, start.toISOString()],
+    );
+    await query(
+      `delete from notifications
+        where subject_type = 'company' and subject_id = $1::uuid
+          and kind = 'companyHandedOver' and created_at >= $2::timestamptz`,
+      [job.companyId, start.toISOString()],
+    );
+    await query(
+      `delete from notifications
+        where subject_type = 'project' and subject_id = $1::uuid
+          and kind = 'projectShared' and created_at >= $2::timestamptz`,
+      [job.projectId, start.toISOString()],
     );
   }
 });

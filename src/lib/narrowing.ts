@@ -15,6 +15,7 @@
  * in SQL is `src/lib/counted.ts`, read by the figure and by the list alike.
  */
 import type { Day } from "@/lib/dates";
+import { isId } from "@/lib/id";
 
 export type Narrowing = {
   from: Day;
@@ -35,7 +36,6 @@ export type Narrowing = {
 };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A city's id, a typed name folded, or none — `cityKey` in counted.ts. */
 const CITY = /^(\d+|t:.+|-)$/;
 
@@ -63,7 +63,7 @@ export function parseNarrowing(params: Params): Narrowing | null {
   return {
     from,
     to: to && DAY.test(to) ? to : null,
-    credited: credited && UUID.test(credited) ? credited : null,
+    credited: isId(credited) ? credited : null,
     segment: all(params.segment).filter((v) => /^\d+$/.test(v)).map(Number),
     source: all(params.source).filter((v) => /^\d+$/.test(v)).map(Number),
     city: all(params.city).filter((v) => CITY.test(v)),

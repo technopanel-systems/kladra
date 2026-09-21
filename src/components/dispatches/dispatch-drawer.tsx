@@ -9,7 +9,7 @@ import { DispatchSheet } from "@/components/dispatches/dispatches-table";
 import { ReportButton } from "@/components/reports/report-dialog";
 import { mayReportOn } from "@/lib/activities";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { mayQuote } from "@/lib/floor";
+import { mayWrite } from "@/lib/floor";
 import { dispatchHistory, getDispatch } from "@/lib/dispatches";
 import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
 
@@ -69,9 +69,19 @@ async function DispatchDrawerBody({ dispatchId, param }: { dispatchId: string; p
 
   const scope = {
     coordinator: user.role === "coordinator",
-    // The rep whose COMPANY it is — not whoever raised it, and not a
-    // manager, who sees everything and owns none of it (S8).
-    owner: mayQuote(user, dispatch.companyRepId),
+    /**
+     * Whose load this is — the rep it was raised for, and nobody else: not a
+     * manager, who sees everything and owns none of it (S8), and since P14.5
+     * not the customer's rep either unless the load is also his.
+     *
+     * It read the COMPANY's rep, which was neither the action's question nor
+     * SPEC §3's, and was wrong in both directions once a project could carry
+     * two names: it offered Edit to the customer's rep on a load his colleague
+     * had raised on their shared job, and withheld it from the colleague whose
+     * load it actually was — a screen refusing work the write permits, the same
+     * defect as offering work it refuses, one mirror over (§5 #163).
+     */
+    owner: mayWrite(user, dispatch.repId),
   };
 
   return (

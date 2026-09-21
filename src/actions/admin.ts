@@ -40,6 +40,7 @@ import { mayActOnUser, NotAllowed, OFFICE_ROLES, refusalKey, requireActor } from
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { addDays, diffDays, firstOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
+import { safeError } from "@/lib/log-safe";
 
 /** bcrypt cost. The same one the seed uses, so a reset and a seed match. */
 const BCRYPT_ROUNDS = 10;
@@ -53,7 +54,7 @@ async function guarded<T>(
     return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("admin action failed", error);
+    console.error("admin action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }

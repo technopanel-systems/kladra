@@ -18,6 +18,7 @@
  */
 import { addMonths, firstOfMonth, lastOfMonth, todayRiyadh, type Day } from "@/lib/dates";
 import { parseRange, rangeStart, type Range } from "@/lib/ranges";
+import { isId } from "@/lib/id";
 
 /** How much of what. In the order the work happens, metres first. */
 export const MEASURES = [
@@ -47,8 +48,6 @@ export type Question = {
   repId: string | null;
 };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 type Params = Record<string, string | string[] | undefined>;
 
 function first(value: string | string[] | undefined): string | undefined {
@@ -69,7 +68,7 @@ export function parseQuestion(params: Params, windowOfTab: Range): Question {
     measure: MEASURES.includes(m as Measure) ? (m as Measure) : "metres",
     by: BREAKDOWNS.includes(by as Breakdown) ? (by as Breakdown) : "rep",
     period: PERIODS.includes(p as Period) ? (p as Period) : (parseRange(windowOfTab) ?? "quarter"),
-    repId: rep && UUID.test(rep) ? rep : null,
+    repId: isId(rep) ? rep : null,
   };
 }
 

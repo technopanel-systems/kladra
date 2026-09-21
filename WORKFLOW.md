@@ -336,8 +336,48 @@ below by number.
       with `/skill-doctor`, every skill, agent, command, MCP server and dependency that did not earn
       its place uninstalled, the survivors listed in §1, and every artefact these tools generate
       gitignored and removed.
-      - [ ] the aspect I am on: **not started** — Phase 14 landed first (triage in the session
-            scratchpad's `plan_part25.md`)
+      - [ ] the aspect I am on: **security** (triage in the session scratchpad's `plan_part25.md`)
+            - [x] dependencies — `npm audit`: production clean; four moderate advisories, all dev-only
+                  (`drizzle-kit` → `@esbuild-kit` → `esbuild`'s dev server), no fix published upstream
+            - [x] static analysis — semgrep `p/typescript` + `p/react` + `p/owasp-top-ten` over 419
+                  files: nothing. Installed into a venv under the scratchpad, never globally: `pip
+                  install semgrep` at the machine level raised `starlette` to 1.6.0 and broke the
+                  founder's own `fastapi`, which had to be put back
+            - [x] secrets — gitleaks over all 202 commits: nothing
+            - [x] the surface a scanner cannot read — three readers over the route handlers and the
+                  ten export builders, every server action's write gate, and the cookie/headers/
+                  bundle boundary. Eight findings, all fixed:
+                  **a load belonged to the wrong man** — `updateDispatchAction` asked `mayRaiseFor`,
+                  the question the REQUEST asks, so on a shared project either rep could rewrite the
+                  other's waiting load and a plain re-save moved its metres to whoever pressed Save
+                  (`resolveCredit` defaults to the actor). It asks `mayWrite(actor, dispatch.repId)`
+                  now, the sentence the quotation chain already asked, and the drawer asks it too
+                  — it had read the COMPANY's rep, which was wrong in both directions;
+                  **a share opened a customer who was not the sharer's** (D214);
+                  **the stream outlived the account** — `/api/events` asked once, at connect, so a
+                  deactivated rep's open tab kept hearing numbers. The heartbeat carries the
+                  revocation now (`sessionStillLive`);
+                  **`?rep=` reached a uuid cast** in the customers and contacts files — `?rep=x` was
+                  a 500, not an unnarrowed list. One `floorAsked`, and the uuid shape that was
+                  written five times is `src/lib/id.ts`;
+                  **`PUBLIC_URL` was a checkbox** — compose defaulted to http and the cookie
+                  quietly lost `Secure`. Compose refuses to start without it and the app refuses an
+                  http origin that is not this machine;
+                  **no security headers at all** — HSTS, `X-Frame-Options`, `nosniff` and
+                  `Referrer-Policy` set, `Permissions-Policy` refused as noise, CSP scheduled rather
+                  than bolted on (next.config.ts says why);
+                  **every action logged the whole error** — drizzle's message carries the SQL AND
+                  its bound parameters, so customer names and phone numbers went into `docker logs`
+                  (`safeError`);
+                  **a dead `"use server"` export** — `countQuotationsOnProject`, unguarded and
+                  never called since P4. Knip only warns on unused exports, which is why it lived.
+                  No SQL injection: every `sql.raw` was read by name and each interpolates a
+                  constant, a table alias written at the call site, or a value from a closed map.
+                  Rate limiting is D215 — one Cloudflare rule, not code, because the origin only
+                  ever sees 127.0.0.1 and there are two login doors, not one.
+            - [ ] next: the data layer (scratchpad `data_aspect.md`: no query plans worth taking at
+                  demo size, eight FK columns to check against their readers, and a warehouse twin
+                  that wants a decision), then the front end, the tests, performance and dead code
 
 **Where I stopped.** Stage 1 is done and approved (founder, P13): a dispatch carries services as well
 as panels so the flag compares the whole thing; S1 grows into the identity itself, three directions

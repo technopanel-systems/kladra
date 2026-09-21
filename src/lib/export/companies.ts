@@ -23,7 +23,7 @@ import {
   leadSources,
   users,
 } from "@/db/schema";
-import { mainContactIdSql, narrowCompanies } from "@/lib/companies";
+import { floorAsked, mainContactIdSql, narrowCompanies } from "@/lib/companies";
 import type { Day } from "@/lib/dates";
 import { exportDay, type ExportRead } from "@/lib/export/kit";
 import { parseFollowUpFilter } from "@/lib/followups";
@@ -31,7 +31,7 @@ import { personName } from "@/lib/people";
 
 export const companiesSheet: ExportRead = async ({ user, locale, params }) => {
   const ar = locale.startsWith("ar");
-  const repId = params.get("rep") ?? undefined;
+  const repId = floorAsked(user, params.get("rep"));
 
   const rows = await db
     .select({

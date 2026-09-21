@@ -18,6 +18,7 @@
  */
 import { addDays, firstOfMonth, lastOfMonth, weekday, type Day } from "@/lib/dates";
 import { isWorkingDay, type NonWorking } from "@/lib/workdays";
+import { isId } from "@/lib/id";
 
 /** The manager reads the team by day or by week (SPEC §3, 13.8). */
 export const PERIODS = ["day", "week"] as const;
@@ -47,7 +48,6 @@ export type ReportQuery = {
   outcome: number | null;
 };
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const MONTH = /^\d{4}-\d{2}$/;
 
@@ -83,11 +83,11 @@ export function parseReportQuery(
   const outcome = one(raw.outcome);
   const monthDay = month && MONTH.test(month) ? `${month}-01` : null;
   return {
-    person: person && UUID.test(person) ? person : null,
+    person: isId(person) ? person : null,
     day: day && isRealDay(day) && day <= today ? day : null,
     month: monthDay && isRealDay(monthDay) && monthDay <= today ? monthDay : null,
     period: parsePeriod(one(raw.period)),
-    company: company && UUID.test(company) ? company : null,
+    company: isId(company) ? company : null,
     kind: kind && kinds.includes(kind) ? kind : null,
     outcome: outcome && /^\d{1,9}$/.test(outcome) ? Number(outcome) : null,
   };

@@ -20,6 +20,7 @@ import { answerArchiveRequest } from "@/lib/archive-requests";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { answersArchiveRequests } from "@/lib/floor";
 import type { ActionResult, SessionUser } from "@/lib/types";
+import { safeError } from "@/lib/log-safe";
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -29,7 +30,7 @@ async function guard<T>(
     return await run(await requireActor());
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("archive request action failed", error);
+    console.error("archive request action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }

@@ -499,3 +499,89 @@ test("the listener's outage ends with a resync, not a hole", async ({ page, loca
     await query("delete from quotations where id = $1::uuid", [inserted.id]);
   }
 });
+
+/**
+ * The stream is the one thing in Kladra that outlives the request that opened
+ * it, and until P14.5 it was the one exception to D17 ("deactivating a user
+ * ends their sessions at once").
+ *
+ * Everywhere else that promise keeps itself: `getSessionAndUser` inner-joins
+ * `users.active`, so a sacked employee's very next click resolves to no session
+ * at all. But `/api/events` asks `requireReader` ONCE, at connect, and then
+ * lives on a 25-second heartbeat — so a laptop left open on the day somebody
+ * walked out went on receiving quotation and dispatch numbers and their
+ * statuses for as long as the tab stayed open. Nothing followed it (his
+ * browser's answer to every event is a refresh, and the refresh is refused),
+ * which is exactly why nobody would ever have noticed.
+ *
+ * The heartbeat carries the revocation now, so the promise becomes "within one
+ * heartbeat" for this route. That is what this walks: a live stream, a person
+ * deactivated in the database beneath it, and the socket closing itself with
+ * nobody asking it to.
+ *
+ * Deactivation here is a bare UPDATE and not the admin's screen on purpose. The
+ * screen also DELETES the person's session rows, which would close the stream
+ * through the other half of the check; this isolates `users.active`, which is
+ * the half that survives a row the admin never reached.
+ */
+test("a stream left open outlives the request that opened it, and not the account behind it", async ({
+  page,
+  locale,
+}) => {
+  // Longer than `test.slow()` gives, because the walk below deliberately sits
+  // through a whole heartbeat before it touches anything.
+  test.setTimeout(150_000);
+
+  await login(page, locale, "saad");
+  const saadId = await userId("saad@technopanel.com.sa");
+  await page.goto(`/${locale}/companies`);
+
+  // A second stream beside the app's own, held open by this test so its end is
+  // something the test can watch. Same cookie jar, same route, same hub.
+  await page.evaluate(() => {
+    const held = { open: false, ended: false };
+    (window as unknown as { __stream: typeof held }).__stream = held;
+    void (async () => {
+      const response = await fetch("/api/events", { headers: { accept: "text/event-stream" } });
+      const reader = response.body?.getReader();
+      if (!reader) return;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if ((value?.byteLength ?? 0) > 0) held.open = true;
+      }
+      held.ended = true;
+    })();
+  });
+
+  const stream = () =>
+    page.evaluate(() => (window as unknown as { __stream: { open: boolean; ended: boolean } }).__stream);
+
+  // The route writes `retry:` and `: open` before anything else, so bytes
+  // arriving is the stream being alive rather than a guess about timing.
+  await expect.poll(async () => (await stream()).open, { timeout: 15_000 }).toBe(true);
+
+  /*
+   * One whole heartbeat with the account untouched, BEFORE anything is done to
+   * it. Without this the test cannot tell a stream that closed because Saad was
+   * deactivated from a stream that closes every 25 seconds whatever happens —
+   * it would pass either way, which is the check that passes for the wrong
+   * reason rules/data.md keeps naming. The heartbeat is `HEARTBEAT_MS` in
+   * src/app/api/events/route.ts; it is not imported, because that module opens
+   * a real pg socket.
+   */
+  await new Promise((resolve) => setTimeout(resolve, 30_000));
+  expect(
+    (await stream()).ended,
+    "the stream closed on its own heartbeat, with nothing wrong with the account",
+  ).toBe(false);
+
+  try {
+    await query("update users set active = false where id = $1::uuid", [saadId]);
+    await expect
+      .poll(async () => (await stream()).ended, { timeout: 45_000 })
+      .toBe(true);
+  } finally {
+    await query("update users set active = true where id = $1::uuid", [saadId]);
+  }
+});

@@ -17,7 +17,7 @@
  * count from /api/notifications/count. Silently missing events is the worse bug.
  */
 import { Client } from "pg";
-import { NotAllowed, requireReader } from "@/lib/authz";
+import { NotAllowed, requireReader, sessionStillLive, sessionTokenHere } from "@/lib/authz";
 import { LIVE_CHANNEL, parseLivePayload } from "@/lib/live";
 import type { LiveEvent } from "@/lib/types";
 
@@ -181,6 +181,13 @@ export async function GET(request: Request) {
     if (err instanceof NotAllowed) return new Response("Unauthorized", { status: 401 });
     throw err;
   }
+  /**
+   * Read here and not in the heartbeat: `cookies()` answers inside the request
+   * that opened the stream and nowhere after it, and the stream outlives that
+   * request by days. The token is what the heartbeat re-asks the database
+   * about (P14.5 — see `sessionStillLive`).
+   */
+  const token = await sessionTokenHere();
 
   const h = hub();
   // Do not fail the stream because Postgres is momentarily down: the reader
@@ -230,7 +237,30 @@ export async function GET(request: Request) {
       write("retry: 3000\n\n");
       write(": open\n\n"); // flushes headers through any buffering proxy
 
-      const timer = setInterval(() => write(": ping\n\n"), HEARTBEAT_MS);
+      /**
+       * The heartbeat carries the revocation with it. It is the only clock this
+       * route has, so it is where "is he still allowed to be here" gets asked —
+       * a primary-key lookup every 25 seconds per open tab, which for fourteen
+       * people is nothing, and which turns D17's promise from "on his next
+       * request" into "within one heartbeat" for the one channel that has no
+       * next request. A token the browser never sent (no cookie jar, which
+       * should not happen for a reader `requireReader` just admitted) is
+       * treated as gone rather than as permission.
+       */
+      const timer = setInterval(() => {
+        void (async () => {
+          if (closed) return;
+          if (!token || !(await sessionStillLive(token))) {
+            teardown();
+            return;
+          }
+          write(": ping\n\n");
+        })().catch(() => {
+          // The database is momentarily down: keep the socket, say nothing.
+          // `ensureListening` is already backing off, and cutting every reader
+          // loose on a blip is the reconnect storm this hub exists to avoid.
+        });
+      }, HEARTBEAT_MS);
       unref(timer);
       heartbeat = timer;
 

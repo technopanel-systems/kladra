@@ -127,3 +127,47 @@ test("a company named like a formula is exported as text", async ({ page, locale
     if (companyId) await query("delete from companies where id = $1::uuid", [companyId]);
   }
 });
+
+/**
+ * C. The four response headers the app had none of until P14.5, asserted here
+ *    because a header nobody looks at is a header that drifts out of
+ *    `next.config.ts` and nothing says so.
+ *
+ *    Each earns its place for a stated reason, and the reasons are in the
+ *    config beside them: HSTS is the other half of the `Secure` cookie, and
+ *    stops the first plaintext request a rep's browser makes on a new device;
+ *    `X-Frame-Options` keeps the tunnel hostname out of a frame on a page
+ *    somebody was phished onto, because Kladra's destructive controls are one
+ *    press and ask for no password; `nosniff` matters for the CSV the export
+ *    route hands back, whose first cell a rep typed; `Referrer-Policy` because
+ *    record ids and a customer's name travel in this app's query strings.
+ *
+ *    `Permissions-Policy` is deliberately absent and `Content-Security-Policy`
+ *    is deliberately owed — the config says why for both, and this asserts
+ *    nothing about either, so adding one later does not fail a test that was
+ *    never about it.
+ */
+test("the headers the app promises are on every answer, the page and the file alike", async ({
+  page,
+  locale,
+}) => {
+  await login(page, locale, "faisal");
+
+  const expected: Record<string, string> = {
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-frame-options": "DENY",
+    "x-content-type-options": "nosniff",
+    "referrer-policy": "same-origin",
+  };
+
+  for (const path of [`/${locale}/companies`, `/api/export/companies?locale=${locale}`]) {
+    const response = await page.request.get(path);
+    expect(response.status(), `${path} did not answer`).toBe(200);
+    const headers = response.headers();
+    for (const [name, value] of Object.entries(expected)) {
+      expect(headers[name], `${path} is missing ${name}`).toBe(value);
+    }
+    // It named the framework on every answer. One line in the config.
+    expect(headers["x-powered-by"], `${path} still names the framework`).toBeUndefined();
+  }
+});

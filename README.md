@@ -173,8 +173,10 @@ Before real users, on the host machine:
 
 - [ ] BIOS: power on after AC loss · Windows Update: no auto-restart · Docker Desktop on boot · `.wslconfig` memory cap · UPS
 - [ ] `cloudflared` ingress for `kladra.<your-domain>` (placeholder) points at `http://localhost:3100` — the app does not answer on the LAN address
-- [ ] **`PUBLIC_URL` set** to the https tunnel hostname — it is what makes the session cookie `Secure`, and forgetting it is **silent** (login works, the token crosses the tunnel unprotected)
+- [ ] **`PUBLIC_URL` set** to the https tunnel hostname — it is what makes the session cookie `Secure`. This is no longer a box you can forget: compose refuses to start the app without it, and the app refuses to start if it names http somewhere that is not this machine
 - [ ] Cloudflare Access with a test code to a `technopanel.com.sa` address first (confirm it is not filed as spam)
+- [ ] **Access actually enforcing on that hostname** — open the tunnel URL from a browser with no Access cookie and confirm you are stopped before the login screen. Kladra counts no failed sign-ins of its own and does not intend to (D215); the edge is the lock
+- [ ] **A Cloudflare rate-limiting rule** on `POST` to `/*/login` and `/api/auth/*` — roughly ten attempts per five minutes per IP. The second path is Auth.js's own callback, which takes an email and a password with no browser involved, so a rule naming only the login page covers half the door
 - [ ] Backups configured (below), then **pull the plug and confirm it comes back unattended**
 
 The Docker build downloads fonts from Google Fonts, so the **build** needs internet access.

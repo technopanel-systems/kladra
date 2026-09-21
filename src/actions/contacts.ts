@@ -27,6 +27,7 @@ import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { violatedUnique } from "@/lib/pg-errors";
 import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, SessionUser } from "@/lib/types";
+import { safeError } from "@/lib/log-safe";
 
 /**
  * Postgres 23505 on the (company_id, phone_normalized) index — a real answer.
@@ -45,7 +46,7 @@ async function guard<T>(
     return await run(await requireActor());
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("contacts action failed", error);
+    console.error("contacts action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }

@@ -19,6 +19,7 @@ import { liveAudienceFor, notifyLive } from "@/lib/live";
 import { createNotification } from "@/lib/notify";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
 import { sharersOfCompany } from "@/lib/visibility";
+import { safeError } from "@/lib/log-safe";
 
 /**
  * Putting somebody else on a customer, and taking him off again (SPEC §3, D147).
@@ -42,7 +43,7 @@ async function guard<T>(
     return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("shares action failed", error);
+    console.error("shares action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }
@@ -229,7 +230,21 @@ export async function shareProjectAction(
       .where(eq(projects.id, ids.subject))
       .limit(1);
     if (!project) return { ok: false, error: t("projectNotFound") };
+    /**
+     * Both, because this grant is both writes (D214). Sharing a job carries a
+     * company share with it — see the transaction below — and a company share
+     * is total read on that customer, so asking only about the project let
+     * somebody hand out access to a customer who is not his.
+     *
+     * The two owners are the same person on every ordinary project and part
+     * company only where the customer has moved: a hand-over deliberately
+     * leaves a third rep's project with him on a shared company ("a handover is
+     * not a way to take somebody else's work"), and so does a fold. His job
+     * stays his to work; who else may READ the customer went back to the
+     * customer's own rep and the manager, which is the sentence SPEC §3 wrote.
+     */
     if (!mayShare(actor, project.repId)) throw new NotAllowed();
+    if (!mayShare(actor, project.companyRepId)) throw new NotAllowed();
 
     const target = await receiver(ids.user);
     if (!target) return { ok: false, error: t("shareWho") };
@@ -281,6 +296,16 @@ export async function shareProjectAction(
   });
 }
 
+/**
+ * Taking somebody off a job asks ONE owner, where putting him on asks two
+ * (D214). Deliberate, and worth saying so beside the asymmetry: a grant opens a
+ * customer, and the man who owns that customer is the one entitled to decide
+ * it; a revocation opens nothing, so the job's own rep may always close his own
+ * job, and a person may always take himself off one. The company share stays
+ * where it is on purpose — it may be the only reason he can still read a
+ * customer somebody else put him on, and guessing which grant it came from is
+ * exactly the stale-permission trap D147 chose two real tables to avoid.
+ */
 export async function unshareProjectAction(
   projectId: unknown,
   userId: unknown,

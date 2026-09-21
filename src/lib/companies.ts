@@ -38,7 +38,8 @@ import {
 } from "@/db/schema";
 import { assertCompanyVisible, mayOpen } from "@/lib/activities";
 import { archiveStandsAt, type ArchiveRequestState } from "@/lib/archive-requests";
-import { NotAllowed } from "@/lib/authz";
+import { NotAllowed, seesAll } from "@/lib/authz";
+import { isId } from "@/lib/id";
 import { smacState, type SmacState } from "@/lib/smac";
 import { mayWrite, seesSmacBacklog } from "@/lib/floor";
 import type { Day } from "@/lib/dates";
@@ -313,6 +314,28 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
  */
 export function narrowCompanies(input: ListCompaniesInput): (SQL | undefined)[] {
   return narrowTo(input);
+}
+
+/**
+ * The floor named in an address, for `repId` above — the manager's drill-down
+ * from the team table (S8), read the one way so the screen and the file it
+ * exports are looking at the same rows.
+ *
+ * Two things it refuses, and the second is why it exists. **Anybody who does
+ * not read every floor** gets nothing: a rep naming a colleague's id changes
+ * nothing anyway, since `ownedBy` narrows him underneath — but "changes
+ * nothing" is a property of the WHERE beneath it, and a rule that only holds
+ * because of a line somewhere else is a rule waiting to stop holding. **And
+ * anything that is not the shape of an id**: `companies.rep_id` is a `uuid`, an
+ * address is text, and `?rep=x` was a `22P02` and a 500 rather than an
+ * unnarrowed list. The screen never met it because it nulled the value first
+ * for a rep and never built a bad one for a manager; the customers and contacts
+ * files, which take the address as it comes, met it at once (P14.5).
+ */
+export function floorAsked(user: SessionUser, value: string | null | undefined): string | undefined {
+  if (!seesAll(user)) return undefined;
+  const id = (value ?? "").trim();
+  return isId(id) ? id : undefined;
 }
 
 function narrowTo(input: ListCompaniesInput): (SQL | undefined)[] {

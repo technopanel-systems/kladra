@@ -73,6 +73,12 @@ export async function startViewingAction(
     httpOnly: true,
     sameSite: "lax",
     path: "/",
+    // The same flag the theme and sidebar cookies already carry (prefs.ts).
+    // It buys little on its own — this one holds an id that is worthless
+    // without a live ADMIN session, which `shouldView` re-checks against the
+    // real session on every request — but a cookie of Kladra's that crosses
+    // the tunnel without it is one more thing to explain (P14.5).
+    secure: process.env.NODE_ENV === "production",
     // The session's own life. It is deliberately not remembered any longer
     // than that: nobody should come back tomorrow still wearing somebody
     // else's screen.

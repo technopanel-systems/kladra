@@ -5,7 +5,7 @@ import { EXPORT_COLUMNS } from "@/lib/export/columns";
 import { EXPORTS } from "@/lib/export/names";
 import { quotationLabel } from "@/lib/labels";
 import { login } from "./helpers/auth";
-import { one } from "./helpers/db";
+import { one, userId } from "./helpers/db";
 import { keyed, readCsv, type CsvFile } from "./helpers/file";
 import { test, expect, type Translate } from "./helpers/i18n";
 
@@ -282,4 +282,59 @@ test("a rep is handed the files of his own screens and refused the office's", as
     const response = await page.request.get(`/api/export/${name}?locale=${locale}`);
     expect(response.status(), `a rep asked for ${name}`).toBe(office.has(name) ? 404 : 200);
   }
+});
+
+/**
+ * A mangled id in the address opens the screen; it does not open the error page
+ * (P14.5, `floorAsked` in src/lib/companies.ts).
+ *
+ * `?rep=` is the manager's drill-down, and `companies.rep_id` is a `uuid`. The
+ * customers and contacts builders took what the address said and compared it to
+ * that column, so `?rep=x` was `22P02 invalid input syntax for type uuid` — an
+ * unhandled throw and a 500, from a link anybody can type or forward with a
+ * character knocked off. The screen never met it because it nulled the value
+ * first; the files take the address as it comes, which is the whole point of
+ * them, so the rule they were missing is now written once where both read it.
+ *
+ * The second half is the one that matters more and reads like nothing: a rep
+ * naming a real colleague's id gets his own rows and not that colleague's.
+ */
+test("a rep asked for in the address is a rep or is nothing, and is never another man's floor", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const saad = await userId("saad@technopanel.com.sa");
+
+  for (const who of ["faisal", "abdulrahman"] as const) {
+    await login(page, locale, who);
+    for (const rep of ["x", "", "  ", "not-a-uuid", `${saad}'`, `${saad} or 1=1`]) {
+      for (const name of ["companies", "contacts"]) {
+        const response = await page.request.get(
+          `/api/export/${name}?locale=${locale}&rep=${encodeURIComponent(rep)}`,
+        );
+        expect(
+          response.status(),
+          `${who} asked ${name} for rep="${rep}" and the route did not answer a file`,
+        ).toBe(200);
+      }
+    }
+  }
+
+  // Faisal reads his own floor whoever he names on it — the narrowing beneath
+  // him is what says so, and this is the assertion that keeps it true.
+  await login(page, locale, "faisal");
+  const his = readCsv(
+    await (
+      await page.request.get(`/api/export/companies?locale=${locale}&rep=${saad}`)
+    ).text(),
+  );
+  const mine = readCsv(
+    await (await page.request.get(`/api/export/companies?locale=${locale}`)).text(),
+  );
+  const names = (file: CsvFile) => keyed(file.rows, t).map((row) => row.company).sort();
+  expect(
+    names(his),
+    "naming another rep in the address changed which customers a rep's file holds",
+  ).toEqual(names(mine));
 });

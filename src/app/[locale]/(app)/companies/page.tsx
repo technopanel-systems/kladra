@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { MonthCard } from "@/components/team/month-card";
 import { PersonStrip } from "@/components/team/person-strip";
-import { requireUser, seesAll } from "@/lib/authz";
+import { requireUser } from "@/lib/authz";
 import { addsCompanies, filesLeads, mayWrite, ownsCompanies, sells } from "@/lib/floor";
-import { countCompanies, listCompanies } from "@/lib/companies";
+import { countCompanies, floorAsked, listCompanies } from "@/lib/companies";
 import { LIST_LIMIT } from "@/lib/list-size";
 import {
   followUpCounts,
@@ -70,7 +70,7 @@ export default async function CompaniesPage({
    * asking for somebody else's id gets his own list either way, because
    * `listCompanies` still scopes him underneath.
    */
-  const repId = seesAll(user) ? (params.rep?.trim() || null) : null;
+  const repId = floorAsked(user, params.rep) ?? null;
   const viewing = repId ?? (ownsCompanies(user.role) ? user.id : null);
 
   /**

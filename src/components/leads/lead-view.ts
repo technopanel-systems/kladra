@@ -12,6 +12,8 @@
  * the client filters build their links with it.
  */
 
+import { isId } from "@/lib/id";
+
 /** Acknowledged or not: the one state a lead has that a company does not. */
 export const LEAD_STATES = ["waiting", "acknowledged"] as const;
 export type LeadState = (typeof LEAD_STATES)[number];
@@ -21,8 +23,6 @@ export type LeadQuery = {
   with: string | null;
   state: LeadState | null;
 };
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function one(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
@@ -37,7 +37,7 @@ export function parseLeadQuery(raw: Record<string, string | string[] | undefined
   const person = one(raw.with)?.trim();
   const state = one(raw.state);
   return {
-    with: person && UUID.test(person) ? person : null,
+    with: isId(person) ? person : null,
     state: LEAD_STATES.includes(state as LeadState) ? (state as LeadState) : null,
   };
 }

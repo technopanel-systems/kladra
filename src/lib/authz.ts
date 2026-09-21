@@ -1,12 +1,12 @@
 import "server-only";
 import { cache } from "react";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { auth } from "@/auth";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { sessions, users } from "@/db/schema";
 import { seesAllRoles } from "./floor";
 import { shouldView, VIEW_AS_COOKIE } from "./view-as";
 import { ROLES, type Role, type SessionUser } from "./types";
@@ -277,4 +277,52 @@ export function homeFor(role: Role): string {
       // opens Kladra with. Leads is one press away, third in its rail.
       return "/day";
   }
+}
+
+/**
+ * The session cookie's own name, whatever the deployment made it. Auth.js
+ * prefixes it `__Secure-` when it decides the site is https (rules/deploy.md),
+ * so neither name can be written down — the suffix is the constant, which is
+ * the test `tests/unhappy.spec.ts` already uses to find the same cookie.
+ */
+const SESSION_COOKIE_SUFFIX = "session-token";
+
+/** The token in this request's cookie jar, or none. */
+export async function sessionTokenHere(): Promise<string | null> {
+  const jar = await cookies();
+  const found = jar.getAll().find((c) => c.name.endsWith(SESSION_COOKIE_SUFFIX));
+  return found?.value || null;
+}
+
+/**
+ * Is this session still a session — right now, asked of the database rather
+ * than of anything the request carried?
+ *
+ * The same condition as the revocation point in `src/auth.config.ts`, and it is
+ * here for the one caller that cannot use that one. Every other way into Kladra
+ * is a REQUEST, and D17's "it ends on the very next request" is true of all of
+ * them. `/api/events` is not a request, it is a socket that stays open for
+ * days: `requireReader` runs once, at connect, and a rep deactivated an hour
+ * later went on hearing quotation and dispatch numbers on a laptop nobody had
+ * closed. Nothing followed — his browser's answer to every event is a refresh,
+ * and the refresh is refused — but the promise D17 makes had one exception, and
+ * it was the one channel designed to outlive the request that opened it.
+ *
+ * Expiry is asked here and nowhere else in this app: Auth.js checks it inside
+ * its own session read, which the stream does not go through.
+ */
+export async function sessionStillLive(token: string): Promise<boolean> {
+  const [row] = await db
+    .select({ token: sessions.sessionToken })
+    .from(sessions)
+    .innerJoin(users, eq(users.id, sessions.userId))
+    .where(
+      and(
+        eq(sessions.sessionToken, token),
+        eq(users.active, true),
+        gt(sessions.expires, new Date()),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
 }

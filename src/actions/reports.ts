@@ -53,6 +53,7 @@ import type { ActionResult, SessionUser } from "@/lib/types";
 import { mayWorkProject, onCompanySql, onProjectSql } from "@/lib/visibility";
 import { isLatestRevisionSql } from "@/lib/quotations";
 import { sameField, sinceTwinWindow } from "@/lib/writes";
+import { safeError } from "@/lib/log-safe";
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -62,7 +63,7 @@ async function guard<T>(
     return await run(await requireActor());
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("reports action failed", error);
+    console.error("reports action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }

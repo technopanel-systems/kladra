@@ -27,7 +27,7 @@ import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { getTranslations } from "next-intl/server";
 import { db } from "@/db";
 import { companies, contacts } from "@/db/schema";
-import { mainContactIdSql, narrowCompanies } from "@/lib/companies";
+import { floorAsked, mainContactIdSql, narrowCompanies } from "@/lib/companies";
 import type { Day } from "@/lib/dates";
 import { exportDay, type ExportRead } from "@/lib/export/kit";
 import { parseFollowUpFilter } from "@/lib/followups";
@@ -61,7 +61,7 @@ export const contactsSheet: ExportRead = async ({ user, locale, params }) => {
             locale,
             q: params.get("q") ?? undefined,
             filter: parseFollowUpFilter(params.get("filter")),
-            repId: params.get("rep") ?? undefined,
+            repId: floorAsked(user, params.get("rep")),
           }),
         ),
       )

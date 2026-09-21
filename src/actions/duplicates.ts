@@ -46,6 +46,7 @@ import { mayHandOver } from "@/lib/floor";
 import { holdDuplicateFlag } from "@/lib/hold";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import type { ActionResult, SessionUser } from "@/lib/types";
+import { safeError } from "@/lib/log-safe";
 
 async function guard<T>(run: (actor: SessionUser) => Promise<ActionResult<T>>) {
   const t = await getTranslations("common");
@@ -53,7 +54,7 @@ async function guard<T>(run: (actor: SessionUser) => Promise<ActionResult<T>>) {
     return await run(await requireActor());
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false as const, error: t(refusalKey(error)) };
-    console.error("duplicates action failed", error);
+    console.error("duplicates action failed", safeError(error));
     return { ok: false as const, error: t("somethingWrong") };
   }
 }

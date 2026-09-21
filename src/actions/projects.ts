@@ -27,6 +27,7 @@ import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import type { ActionResult, SessionUser } from "@/lib/types";
+import { safeError } from "@/lib/log-safe";
 
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -36,7 +37,7 @@ async function guard<T>(
     return await run(await requireActor());
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("projects action failed", error);
+    console.error("projects action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }

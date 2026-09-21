@@ -49,6 +49,7 @@ import { clearNotifications, createNotification } from "@/lib/notify";
 import { marketingLeadSource, SAUDI_CODE, seesEveryLeadSource } from "@/lib/lookups";
 import { isSaudi, normalizePhone } from "@/lib/phone";
 import type { ActionResult, Role, SessionUser } from "@/lib/types";
+import { safeError } from "@/lib/log-safe";
 
 /**
  * The one place `requireActor` and NotAllowed become an ActionResult.
@@ -73,7 +74,7 @@ async function guard<T>(
     return await run(await requireActor(...roles));
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };
-    console.error("companies action failed", error);
+    console.error("companies action failed", safeError(error));
     return { ok: false, error: t("somethingWrong") };
   }
 }

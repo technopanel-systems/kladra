@@ -44,11 +44,18 @@ services:
       # localhost:5433 for host-side `npm run dev` and drizzle-kit.
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       NODE_ENV: production
-      # The container is reached through the tunnel, not at localhost. Set
-      # PUBLIC_URL in .env to the https tunnel hostname on the office PC; it
-      # falls back to localhost here. PUBLIC_URL is what makes the session
-      # cookie Secure — forgetting it is silent.
-      AUTH_URL: ${PUBLIC_URL:-http://localhost:3100}
+      # The container is reached through the tunnel, not at localhost, and
+      # PUBLIC_URL is what makes the session cookie Secure.
+      #
+      # `:?` and not `:-` since P14.5. It defaulted to http://localhost:3100,
+      # so a PUBLIC_URL missing, misspelled or commented out did not stop
+      # anything: login worked, every screen rendered, the suite passed, and the
+      # session token crossed the tunnel with no Secure flag on it. Compose now
+      # refuses to bring the app up at all, which is the only kind of notice
+      # that works for a failure with no symptom. The app refuses a second time
+      # at start if the value is http to somewhere that is not this machine
+      # (src/lib/deploy-check.ts).
+      AUTH_URL: ${PUBLIC_URL:?set PUBLIC_URL in .env to the https tunnel hostname — it is what makes the session cookie Secure}
       AUTH_TRUST_HOST: "true"
     ports:
       # Bound to loopback, for the same reason db is. `cloudflared` runs on the

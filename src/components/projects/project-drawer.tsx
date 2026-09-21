@@ -101,7 +101,15 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
    * answer "It is already theirs" to.
    */
   const sharers = await projectSharers(project.id);
-  const shareWith = mayShare(user, project.repId)
+  /**
+   * Both owners, the job's and the customer's, because putting somebody on a
+   * job also puts him on the customer (D214, and `shareProjectAction`, which
+   * asks the same two). They are one person on every ordinary project; they
+   * part company only on a customer who has moved floors and left a third rep's
+   * job behind him, and there the customer is the manager's to hand out. The
+   * control is absent rather than present and refusing (DESIGN §5).
+   */
+  const shareWith = mayShare(user, project.repId) && mayShare(user, project.company.repId)
     ? (await floorHolderOptions(project.repId, (role) => t(`common.${role}`))).filter(
         (option) => !sharers.some((person) => person.id === option.value),
       )
