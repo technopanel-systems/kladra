@@ -1,11 +1,13 @@
 "use client";
 
 import { useLocale } from "next-intl";
-import { WORK_ROW, WORK_ROWS } from "@/components/team/work-grid";
+import { ArchiveAnswerButtons } from "@/components/archive/archive-request-notice";
+import { WORK_ROW, WORK_ROWS, WORK_ROW_ACTIONS } from "@/components/team/work-grid";
 import { Avatar } from "@/components/ui-ext/avatar";
 import { DayText } from "@/components/ui-ext/day-text";
 import { Ref } from "@/components/ui-ext/figures";
 import { LinkPending } from "@/components/ui-ext/link-pending";
+import { Prose } from "@/components/ui-ext/prose";
 import { Link } from "@/i18n/navigation";
 import type { Day } from "@/lib/dates";
 import { TONE_TEXT, type StateTone } from "@/lib/state-tone";
@@ -39,6 +41,18 @@ export type StuckRowData = {
   note: string;
   /** The note's colour where it says somebody is late; none where it measures silence. */
   noteTone?: StateTone;
+  /**
+   * Somebody's own words about this row, under it — typed, so in their
+   * direction (rules/words.md). Only the archive band has any: the decision it
+   * asks for is "archive X because Y", and Y was read and then not drawn.
+   */
+  reason?: string;
+  /**
+   * The request this row answers, where the reader answers it from here (M2).
+   * Plain data and not a node, because these rows cross to the browser (D82);
+   * the buttons are the drawer's own.
+   */
+  answer?: { requestId: string; name: string };
 };
 
 export function StuckRows({ rows }: { rows: StuckRowData[] }) {
@@ -55,18 +69,18 @@ export function StuckRows({ rows }: { rows: StuckRowData[] }) {
    *
    * The spans stay in this order, note last: specs read how late a row is from
    * its last span (tests/calendar.spec.ts).
+   *
+   * The row is the door and the whole of it is pressable (`row-door`, D161), so
+   * a row that also carries an answer can hold buttons beside the door rather
+   * than inside it — an anchor with a button in it is not a link. The reason
+   * and the buttons sit under the words at the card's one action inset, the
+   * place the day screen already puts them (`WORK_ROW_ACTIONS`, S12.6).
    */
   return (
     <ul className={WORK_ROWS}>
       {rows.map((row) => (
-        <li key={row.key}>
-          <Link
-            href={row.href}
-            className={cn(
-              WORK_ROW,
-              "hover-tint flex items-start gap-3 outline-none focus-visible:outline-3 focus-visible:-outline-offset-3 focus-visible:outline-ring/50",
-            )}
-          >
+        <li key={row.key} className={cn(WORK_ROW, "row-door flex flex-col gap-2")}>
+          <Link data-door href={row.href} className="touch flex items-start gap-3">
             <Avatar id={row.face.id} name={row.face.name} kind="company" size="sm" ring={row.face.ring} />
             <span className="flex min-w-0 flex-1 flex-col gap-1">
               <span className="min-w-0 text-sm font-medium">
@@ -113,6 +127,23 @@ export function StuckRows({ rows }: { rows: StuckRowData[] }) {
               </span>
             </span>
           </Link>
+
+          {/* Why somebody wants it gone, in the words they wrote — the half of
+              the decision the row was carrying and not showing. A line rather
+              than a paragraph, so it starts where its row starts and only the
+              words take the writer's direction (rules/words.md). */}
+          {row.reason ? (
+            <Prose line text={row.reason} className="ps-9 text-xs text-muted-foreground" />
+          ) : null}
+
+          {/* Above the row's door, like the day's. The row is still a door to
+              the record — where the rest of the customer is, and where he goes
+              when the reason is not enough to decide on. */}
+          {row.answer ? (
+            <div className={WORK_ROW_ACTIONS}>
+              <ArchiveAnswerButtons requestId={row.answer.requestId} name={row.answer.name} />
+            </div>
+          ) : null}
         </li>
       ))}
     </ul>

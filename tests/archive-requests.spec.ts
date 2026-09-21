@@ -14,10 +14,11 @@ import { test, expect } from "./helpers/i18n";
  * one per kind of record."
  *
  * Five claims and five tests: asking changes nothing about the record; his band
- * holds what is waiting on him and answering it yes takes the record off the
- * floor; a refusal comes back on the record carrying his words; a record with a
- * request waiting is not offered a second one; and the reason is mandatory on a
- * kind that never asked for one before.
+ * holds what is waiting on him — the record, the asker, the age and the REASON
+ * — and yes, pressed on the row, takes the record off the floor; a refusal
+ * comes back on the record carrying his words; a record with a request waiting
+ * is not offered a second one; and the reason is mandatory on a kind that never
+ * asked for one before.
  *
  * `tests/archive.spec.ts` is the other end of this — the admin's screen, where
  * an archived thing is found and put back. This file is about how it got there.
@@ -100,7 +101,19 @@ test("a rep asks to archive a customer, and it stays on his floor until somebody
   }
 });
 
-test("his own band holds what is waiting on him, and yes takes the record off the floor", async ({
+/**
+ * The band on his own screen, and the whole decision on the row (P14 14.8,
+ * Stage-3 audit M1 and M2).
+ *
+ * The question is "archive X because Y: yes or no". The row carried X, the
+ * asker and the age, and the reason it had already read was drawn nowhere — so
+ * the one band on that screen he can finish from where he is standing sent him
+ * into a record to find a sentence the row was holding, and for a person it
+ * landed him on the drawer's Reports tab with the notice inside the Contacts
+ * one. Reason, Approve and Refuse are on the row now, and the row is still a
+ * door to the record for the times the reason is not enough.
+ */
+test("his own band holds what is waiting on him, with the reason and the answer on the row", async ({
   page,
   locale,
   t,
@@ -109,8 +122,8 @@ test("his own band holds what is waiting on him, and yes takes the record off th
 
   // The seed leaves one waiting on a customer (P14 14.8): his band is drawn
   // from it, and this is the row he answers.
-  const waiting = await one<{ id: string; recordId: string; name: string }>(
-    `select r.id, r.record_id as "recordId", c.name
+  const waiting = await one<{ id: string; recordId: string; name: string; reason: string }>(
+    `select r.id, r.record_id as "recordId", c.name, r.reason
        from archive_requests r join companies c on c.id = r.record_id
       where r.kind = 'company' and r.status = 'waiting'
       order by r.created_at
@@ -121,22 +134,34 @@ test("his own band holds what is waiting on him, and yes takes the record off th
     await login(page, locale, "abdulrahman");
     await page.goto(`/${locale}/team`);
 
-    // Its own group, beside the coordinator's desk and not inside it.
+    /*
+     * Its own group, beside the coordinator's desk and not inside it. The whole
+     * stuck list is a section too and it contains every heading, so the CARD is
+     * the last section that holds this one.
+     */
     const band = page
       .locator("section")
       .filter({ has: page.getByRole("heading", { name: t("team.archiveAsks") }) })
-      .first();
+      .last();
     await expect(band).toBeVisible(COLD);
-    await expect(band).toContainText(waiting.name);
 
-    // The row is a door to the record, which is where he answers it.
-    await band.getByRole("link").filter({ hasText: waiting.name }).first().click();
-    const drawer = page.getByRole("dialog").first();
-    await expect(drawer).toBeVisible(COLD);
-    const notice = drawer.locator('[data-slot="archive-request"][data-state="waiting"]');
-    await expect(notice).toBeVisible(COLD);
+    // And the screen is not simultaneously telling him nothing is stuck: the
+    // archive band is one of the groups that sentence is counted over (M1).
+    await expect(page.getByText(t("team.stuckNothing"))).toHaveCount(0);
 
-    await notice.getByRole("button", { name: t("dispatches.approve") }).click();
+    const row = band.getByRole("listitem").filter({ hasText: waiting.name }).first();
+    await expect(row).toBeVisible();
+    // Why somebody wants it gone — the half of the decision the row was
+    // holding and not showing.
+    await expect(row, "the asker's reason is not on the row").toContainText(waiting.reason);
+    // Still a door to the record, for when the reason does not settle it.
+    await expect(row.getByRole("link").first()).toHaveAttribute(
+      "href",
+      new RegExp(`/companies\\?open=${waiting.recordId}$`),
+    );
+
+    // And the answer is pressed here, on the row, not two screens away.
+    await row.getByRole("button", { name: t("dispatches.approve") }).click();
     const confirm = page.getByRole("dialog", {
       name: t("drawer.approveArchiveTitle", { name: waiting.name }),
     });

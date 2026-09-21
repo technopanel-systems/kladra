@@ -100,7 +100,12 @@ export function ContactFields({
   return (
     <>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id("name")}>{t("common.name")}</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor={id("name")}>{t("common.name")}</Label>
+          <span aria-hidden="true" className="text-sm leading-none font-medium text-brand">
+            *
+          </span>
+        </div>
         <Input
           id={id("name")}
           name={names.name}

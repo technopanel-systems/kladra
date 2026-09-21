@@ -37,6 +37,7 @@ import { parseQuestion, questionQuery, type Question } from "@/lib/builder-choic
 import { chainCohort } from "@/lib/chain";
 import { lossCohort } from "@/lib/losses";
 import { chainRatios, metresBySegment } from "@/lib/metrics";
+import { isId } from "@/lib/id";
 import { monthsBack } from "@/lib/months";
 import { RANGES, RANGE_SCREEN, rangeFor, rangeStart, type Range } from "@/lib/ranges";
 import { chosen, rememberedChoices } from "@/lib/screen-choice";
@@ -260,7 +261,16 @@ async function TeamMetrics({
    */
   const range: Range = rangeFor(params.range, storedRange);
   const from = rangeStart(range);
-  const repId = params.rep?.trim() || null;
+  /*
+   * The picker's own answer, or nobody. `?rep=` goes from here into five
+   * readers that each cast it `::uuid`, so a link somebody forwarded with a
+   * mangled id was `22P02` and the error boundary where the whole tab should
+   * have been. The house rule for a mangled filter is to drop it and show
+   * everything (src/lib/id.ts, `parseNarrowing`): a mangled rep reads as the
+   * whole team, which is what the tab opens on anyway.
+   */
+  const askedRep = params.rep?.trim();
+  const repId = isId(askedRep) ? askedRep : null;
 
   // The builder's question (SPEC §3 P13): what, by what, over when — and whose,
   // which is the picker above everything on the tab. Nothing chosen opens on

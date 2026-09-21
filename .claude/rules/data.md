@@ -233,9 +233,13 @@ the quantity sum it reads is the one the previous request wrote. A comment that 
 Save in two tabs at once and reads the table afterwards.
 
 ## The square-metre formula lives in one file
-`src/lib/sqm.ts` — `LINE_SQM` / `SUM_SQM` for SQL written as text (dispatch lines `di`,
-quotation lines `qi`), `lineSqm` / `sumSqm` for a Drizzle query. It was retyped in six
+`src/lib/sqm.ts` — `LINE_SQM` / `SUM_SQM` for SQL written as text over dispatch lines
+aliased `di`, `lineSqm` / `sumSqm` for a Drizzle query that reads `dispatchItems`, and
+`sqmOf(qty)` for the one figure still taken from a quotation line's own sheet (`qi`):
+what is left to send. It was retyped in six
 files, each copy right and none checked against another, until P11A (D86);
 `scripts/one-figure.mts` fails the lint on any copy outside that file. The specs keep
-their own copy on purpose. And "achieved" attributes by `dispatches.rep_id`, the rep who
-raised it — never by the company's current owner, which a hand-over changes.
+their own copy on purpose. And "achieved" attributes by the people CREDITED on the
+dispatch since D148 (`dispatch_credits`, `src/lib/credit.ts`, and `CREDITED_METRES` in
+this same file) — a load with no credit rows counts for the company and for no person —
+never by the company's current owner, which a hand-over changes.

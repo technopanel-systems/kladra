@@ -14,8 +14,11 @@ import type { Channel } from "@/db/schema";
  * The fields are in the order a rep has the answers when a call ends: who it
  * was (the company, then the person — the main contact already chosen), what
  * it was about if it was about a paper, what kind of thing happened, what came
- * of it, and a line in his own words. The next follow-up and the day are last
- * because they are nearly always what they open on. A call to the main contact
+ * of it, when the next one is, and a line in his own words. The next follow-up
+ * stands above the words since the Stage 3 audit: where a call was owed it is a
+ * question he must answer — a date, or "no next step" — because a report that
+ * left the old date standing left the reminder red after the work was done
+ * (S52). The day is last; it is nearly always today. A call to the main contact
  * that reached him, from the top bar, is: Add report · the company box · the
  * company · Call · Reached · the text box · Send — seven presses and the words.
  * From a customer's drawer or a call card the company is already there, and it
@@ -54,6 +57,8 @@ export type ReportRequest = {
   projectId?: string | null;
   quotationId?: string | null;
   dispatchId?: string | null;
+  /** What happened, where the screen already knows: a card under "calls due" opens on Call. */
+  kind?: Channel;
   entry?: ReportEdit;
 };
 
@@ -117,7 +122,8 @@ function setOpen(open: boolean): void {
  * passed to it on top. Stable for the same prefill values.
  */
 export function useReport(prefill: ReportRequest = {}): (override?: ReportRequest) => void {
-  const { companyId, companyName, contactId, projectId, quotationId, dispatchId, entry } = prefill;
+  const { companyId, companyName, contactId, projectId, quotationId, dispatchId, kind, entry } =
+    prefill;
   return useCallback(
     (override: ReportRequest = {}) =>
       openReport({
@@ -127,10 +133,11 @@ export function useReport(prefill: ReportRequest = {}): (override?: ReportReques
         projectId,
         quotationId,
         dispatchId,
+        kind,
         entry,
         ...override,
       }),
-    [companyId, companyName, contactId, projectId, quotationId, dispatchId, entry],
+    [companyId, companyName, contactId, projectId, quotationId, dispatchId, kind, entry],
   );
 }
 
@@ -147,13 +154,23 @@ export function ReportButton({
   projectId,
   quotationId,
   dispatchId,
+  kind,
   entry,
   icon = false,
   onClick,
   children,
   ...button
 }: Omit<ComponentProps<typeof Button>, "asChild"> & ReportRequest & { icon?: boolean }) {
-  const open = useReport({ companyId, companyName, contactId, projectId, quotationId, dispatchId, entry });
+  const open = useReport({
+    companyId,
+    companyName,
+    contactId,
+    projectId,
+    quotationId,
+    dispatchId,
+    kind,
+    entry,
+  });
   return (
     <Button
       type="button"

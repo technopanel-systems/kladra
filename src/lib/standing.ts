@@ -17,8 +17,9 @@ import { db } from "@/db";
 import type { Day } from "@/lib/dates";
 import { waitingOnRep } from "@/lib/day";
 import { dispatchEvent } from "@/lib/dispatch-events";
+import { liveRevision } from "@/lib/live-revision";
 import { quotationEvent } from "@/lib/quotation-events";
-import { COMMITTING_IN, SUM_SQM, sqmOf } from "@/lib/sqm";
+import { committedQty, SUM_SQM, sqmOf } from "@/lib/sqm";
 
 export type CompanyStanding = {
   /** SPEC S45: expected m² on live projects — not lost, not archived. */
@@ -75,10 +76,7 @@ export function approvedSqmSql(scope: SQL): SQL<string> {
 function openQuotationRows(scope: SQL): SQL {
   return sql`from quotations q
      where q.status in ('requested', 'returned', 'issued')
-       and not exists (
-         select 1 from quotations later
-          where later.number = q.number and later.revision > q.revision
-       )
+       and ${sql.raw(liveRevision("q"))}
        and ${scope}`;
 }
 
@@ -163,7 +161,9 @@ export type PersonStanding = {
  *
  * The two counts come from `waitingOnRep` — the list his own day renders — so
  * the manager's reading of "2 sent back" and the two rows the rep sees on his
- * day cannot be two different twos (rules/data.md).
+ * day cannot be two different twos (rules/data.md). That one figure is about
+ * the PERSON and not the floor since D216: what is stopped on him is the paper
+ * that names him, which is the only paper he has an Edit on.
  *
  * Who may ask this about whom is the caller's question, as it is for every read
  * helper here: the companies screen takes a rep from the URL only for somebody
@@ -250,10 +250,7 @@ export async function projectStanding(projectId: string): Promise<ProjectStandin
           join quotations q on q.id = qi.quotation_id
          where q.project_id = ${id}
            and q.status in ('issued', 'accepted', 'rejected')
-           and not exists (
-             select 1 from quotations later
-              where later.number = q.number and later.revision > q.revision
-           )
+           and ${sql.raw(liveRevision("q"))}
       ) as quoted_sqm,
       ${approvedSqmSql(sql`d.project_id = ${id}`)} as approved_sqm,
       ${openQuotationsSql(sql`q.project_id = ${id}`)} as open_quotations,
@@ -287,13 +284,7 @@ export type QuotationStanding = {
  * (D12).
  */
 /** What a line has left to send: quoted minus committed, never below nought (D12). */
-const REMAINING_QTY = `greatest(qi.qty - (
-               select coalesce(sum(di.qty), 0)::int
-                 from dispatch_items di
-                 join dispatches d on d.id = di.dispatch_id
-                where di.quotation_item_id = qi.id
-                  and d.status in ${COMMITTING_IN}
-             ), 0)`;
+const REMAINING_QTY = `greatest(qi.qty - ${committedQty("qi")}, 0)`;
 
 export async function quotationStanding(quotationId: string): Promise<QuotationStanding> {
   const id = sql`${quotationId}::uuid`;

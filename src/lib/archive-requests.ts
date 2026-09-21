@@ -412,6 +412,17 @@ export async function archiveOrAsk(input: {
         actorId: input.actor.id,
       });
 
+      /*
+       * The refusal that came back last time is answered by this (D79). It is a
+       * work notice — the rep's answer to "no, and here is why" is a better
+       * reason or none at all — and asking again with a better one IS that
+       * answer, so the notice goes at the instant the work behind it is done.
+       * Nothing else was ever going to clear it: the drawer already drops the
+       * refusal the moment a newer request exists, and the bell was the one
+       * place still carrying it a fortnight later.
+       */
+      await clearNotifications(tx, { type: input.kind, id: record.id }, ["archiveRefused"]);
+
       const link = archiveLink(record);
       for (const userId of await archiveAnswerers(tx)) {
         if (userId === input.actor.id) continue;

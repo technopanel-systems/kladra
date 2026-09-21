@@ -49,7 +49,19 @@ import type { DuplicatePair, DuplicateSide } from "@/lib/duplicates";
  */
 export type DuplicateRow = DuplicatePair & { waited: { days: number; late: boolean } };
 
-export function DuplicateList({ rows }: { rows: DuplicateRow[] }) {
+export function DuplicateList({
+  rows,
+  mayRule,
+}: {
+  rows: DuplicateRow[];
+  /**
+   * Whether this reader rules on a pair (`mayHandOver`, the sentence the action
+   * asks). An admin viewing as the manager reads the queue and rules on nothing
+   * (D42), so the three answers are absent for him rather than there and
+   * refusing (DESIGN §5).
+   */
+  mayRule: boolean;
+}) {
   const t = useTranslations();
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
@@ -76,23 +88,25 @@ export function DuplicateList({ rows }: { rows: DuplicateRow[] }) {
           {/* One column each from `sm` up; stacked below it, older first, which
               is the order the sentence under the card reads them in. */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Side pair={row} side={row.older} onDone={refresh} />
-            <Side pair={row} side={row.newer} onDone={refresh} />
+            <Side pair={row} side={row.older} onDone={refresh} mayRule={mayRule} />
+            <Side pair={row} side={row.newer} onDone={refresh} mayRule={mayRule} />
           </div>
 
-          <ConfirmDialog
-            trigger={
-              <Button variant="outline" size="sm" className="w-full sm:w-fit">
-                {t("duplicates.notTheSame")}
-              </Button>
-            }
-            title={t("duplicates.notTheSameTitle")}
-            description={t("duplicates.notTheSameHint")}
-            confirmLabel={t("duplicates.notTheSame")}
-            successMessage={t("duplicates.notTheSameDone")}
-            onConfirm={() => ruleDuplicateAction(row.id, "notDuplicate")}
-            onDone={refresh}
-          />
+          {mayRule ? (
+            <ConfirmDialog
+              trigger={
+                <Button variant="outline" size="sm" className="w-full sm:w-fit">
+                  {t("duplicates.notTheSame")}
+                </Button>
+              }
+              title={t("duplicates.notTheSameTitle")}
+              description={t("duplicates.notTheSameHint")}
+              confirmLabel={t("duplicates.notTheSame")}
+              successMessage={t("duplicates.notTheSameDone")}
+              onConfirm={() => ruleDuplicateAction(row.id, "notDuplicate")}
+              onDone={refresh}
+            />
+          ) : null}
         </li>
       ))}
     </ul>
@@ -104,10 +118,12 @@ function Side({
   pair,
   side,
   onDone,
+  mayRule,
 }: {
   pair: DuplicateRow;
   side: DuplicateSide;
   onDone: () => void;
+  mayRule: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -191,34 +207,36 @@ function Side({
         ]}
       />
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <ConfirmDialog
-          trigger={
-            <Button variant="secondary" size="sm">
-              {t("duplicates.keepThis")}
-            </Button>
-          }
-          title={t("duplicates.keepTitle", { name: side.name })}
-          description={t("duplicates.keepHint", { other: other.name, rep: other.repName })}
-          confirmLabel={t("duplicates.keepThis")}
-          successMessage={t("duplicates.keptDone", { name: side.name })}
-          onConfirm={() => ruleDuplicateAction(pair.id, "kept", side.id)}
-          onDone={onDone}
-        />
-        <ConfirmDialog
-          trigger={
-            <Button variant="outline" size="sm">
-              {t("duplicates.keepAndShare")}
-            </Button>
-          }
-          title={t("duplicates.keepAndShareTitle", { name: side.name })}
-          description={t("duplicates.keepAndShareHint", { other: other.name, rep: other.repName })}
-          confirmLabel={t("duplicates.keepAndShare")}
-          successMessage={t("duplicates.keptSharedDone", { name: side.name, rep: other.repName })}
-          onConfirm={() => ruleDuplicateAction(pair.id, "keptAndShared", side.id)}
-          onDone={onDone}
-        />
-      </div>
+      {mayRule ? (
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <ConfirmDialog
+            trigger={
+              <Button variant="secondary" size="sm">
+                {t("duplicates.keepThis")}
+              </Button>
+            }
+            title={t("duplicates.keepTitle", { name: side.name })}
+            description={t("duplicates.keepHint", { other: other.name, rep: other.repName })}
+            confirmLabel={t("duplicates.keepThis")}
+            successMessage={t("duplicates.keptDone", { name: side.name })}
+            onConfirm={() => ruleDuplicateAction(pair.id, "kept", side.id)}
+            onDone={onDone}
+          />
+          <ConfirmDialog
+            trigger={
+              <Button variant="outline" size="sm">
+                {t("duplicates.keepAndShare")}
+              </Button>
+            }
+            title={t("duplicates.keepAndShareTitle", { name: side.name })}
+            description={t("duplicates.keepAndShareHint", { other: other.name, rep: other.repName })}
+            confirmLabel={t("duplicates.keepAndShare")}
+            successMessage={t("duplicates.keptSharedDone", { name: side.name, rep: other.repName })}
+            onConfirm={() => ruleDuplicateAction(pair.id, "keptAndShared", side.id)}
+            onDone={onDone}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

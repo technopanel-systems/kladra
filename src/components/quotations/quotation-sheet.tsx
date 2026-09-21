@@ -148,6 +148,8 @@ export function QuotationSheet({
   const t = useTranslations();
   const locale = useLocale();
   const close = useCloseDrawer();
+  // The coordinator's desk, where a paper is opened to be answered.
+  const onDesk = usePathname() === "/queue";
 
   return (
     <Sheet
@@ -314,6 +316,10 @@ export function QuotationSheet({
                     </Fragment>
                   ))}
                 </Fact>
+              ) : credit.length === 0 ? (
+                // Nobody on it earns this month (D207): said on the paper, not
+                // only on the form that raised it.
+                <Fact label={t("common.credit.label")}>{t("common.credit.nobody")}</Fact>
               ) : null}
             </dl>
             <RaisedBy name={quotation.raisedByName} place="drawer" />
@@ -344,6 +350,9 @@ export function QuotationSheet({
             }}
             scope={scope}
             reportable={reportable}
+            // On her desk an answered paper is finished work: the drawer closes
+            // and the next row is under her hand (quotation-actions.tsx).
+            onAnswered={onDesk ? close : undefined}
           />
         </SheetHeader>
 

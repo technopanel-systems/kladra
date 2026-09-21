@@ -32,6 +32,8 @@
  *   for; this answers what has actually gone.
  */
 import { sql, type SQL } from "drizzle-orm";
+import { liveRevision } from "@/lib/live-revision";
+import { committedQty } from "@/lib/sqm";
 
 /** In the order a job lives them, which is the board's order left to right (inline start to end). */
 export const PROJECT_STAGES = ["open", "quoted", "dispatching", "won", "lost"] as const;
@@ -90,10 +92,7 @@ export function projectStage(facts: StageFacts): ProjectStage {
 
 /** `q` is the live revision of its number and still in play. */
 export const STANDING = `q.status in ('requested', 'returned', 'issued', 'accepted')
-       and not exists (
-         select 1 from quotations later
-          where later.number = q.number and later.revision > q.revision
-       )`;
+       and ${liveRevision("q")}`;
 
 /** Some revision of `q`'s number has been issued. */
 export const PRICED = `exists (
@@ -105,12 +104,7 @@ export const PRICED = `exists (
 const TO_GO = `exists (
          select 1 from quotation_items qi
           where qi.quotation_id = q.id
-            and qi.qty > (
-              select coalesce(sum(di.qty), 0)
-                from dispatch_items di
-                join dispatches gone on gone.id = di.dispatch_id
-               where di.quotation_item_id = qi.id and gone.status = 'approved'
-            )
+            and qi.qty > ${committedQty("qi", true)}
        )`;
 
 /** An approved load against any revision of `q`'s number. */
@@ -197,10 +191,7 @@ export function stageSinceSql(stage: SQL): SQL<Date | null> {
       (select max(q.decided_at) from quotations q
         where q.project_id = projects.id
           and q.status in ('rejected', 'cancelled')
-          and not exists (
-            select 1 from quotations later
-             where later.number = q.number and later.revision > q.revision
-          ))
+          and ${sql.raw(liveRevision("q"))})
     )
   end)`;
 }

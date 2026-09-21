@@ -1093,6 +1093,8 @@ async function seedQuotations(
           issuedAt: q.issuedBack === undefined ? null : instant(back(q.issuedBack), 13, 5),
           decidedAt: q.decidedBack === undefined ? null : instant(back(q.decidedBack), 15, 40),
           createdAt: created,
+          // A seeded paper landed on the desk the day it was raised (`desk_since`).
+          deskSince: created,
           updatedAt: created,
         })
         .returning({ id: quotations.id });
@@ -1444,6 +1446,8 @@ async function seedDispatches(
           refuseReason: d.refuseReason ?? null,
           approvedAt,
           createdAt: created,
+          // A seeded paper landed on the desk the day it was raised (`desk_since`).
+          deskSince: created,
           updatedAt: ended ?? created,
         })
         .returning({ id: dispatches.id });
@@ -1620,6 +1624,8 @@ async function seedHistory(
           issuedAt: instant(on(18), 13, 5),
           decidedAt: instant(on(20), 15, 40),
           createdAt: created,
+          // A seeded paper landed on the desk the day it was raised (`desk_since`).
+          deskSince: created,
           updatedAt: instant(on(20), 15, 40),
         })
         .returning({ id: quotations.id });
@@ -1679,6 +1685,8 @@ async function seedHistory(
           smacDispatchNumber: String(8000 + dispatchNumber),
           approvedAt: approved,
           createdAt: instant(on(24), 12, 15),
+          // A seeded paper landed on the desk the day it was raised (`desk_since`).
+          deskSince: instant(on(24), 12, 15),
           updatedAt: approved,
         })
         .returning({ id: dispatches.id });
@@ -1785,6 +1793,8 @@ async function seedHistory(
               ? instant(on(21), 16, 5)
               : null,
           createdAt: created,
+          // A seeded paper landed on the desk the day it was raised (`desk_since`).
+          deskSince: created,
           updatedAt: instant(on(21), 16, 5),
         })
         .returning({ id: quotations.id });

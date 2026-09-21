@@ -28,11 +28,22 @@ import { awayFrom, type Away } from "@/lib/workdays";
 export type { Away };
 
 /**
- * How far ahead the walk for "back on" looks. Long enough for the longest leave
- * anybody takes here in one stretch, and bounded so a wrong row in the table
- * cannot turn into an unbounded scan.
+ * How far ahead the walk for "back on" looks.
+ *
+ * Long enough for the longest stretch the admin can actually enter, which is
+ * `LONGEST_PERIOD_DAYS` in src/lib/admin.ts — 62 — plus a week, because "back
+ * on" is the first WORKING day after the leave and the day after a fortnight
+ * that ends on a Thursday is two days further out again. It was 45, so a
+ * six-week leave entered in one go loaded rows that stopped inside it and the
+ * manager's screen told him the rep was back at his desk on a day he was still
+ * away (S48, D75). Bounded all the same, so a wrong row in the table cannot
+ * turn into an unbounded scan.
+ *
+ * A number here rather than the constant itself: src/lib/admin.ts reads
+ * `CARRIES_METRES` out of src/lib/team.ts, and src/lib/team.ts reads this file,
+ * so importing it would close a ring of three.
  */
-const LOOK_AHEAD_DAYS = 45;
+const LOOK_AHEAD_DAYS = 70;
 
 /**
  * Everybody whose own leave falls on this Riyadh day, by user id.

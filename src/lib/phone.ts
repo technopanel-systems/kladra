@@ -21,6 +21,8 @@
  * instead of in front of a rep with an unreachable customer.
  */
 
+import { westernDigits } from "@/lib/digits";
+
 declare const E164_BRAND: unique symbol;
 
 /** A number in storage form: "+" then digits, nothing else. */
@@ -114,7 +116,8 @@ export function isSaudi(country?: string): boolean {
 }
 
 export function normalizePhone(input: string, country: string = "SA"): E164 | null {
-  const digits = input.replace(/[^\d+]/g, "");
+  // Folded first: `\d` is ASCII, and ٠٥٥ typed on an Arabic keyboard was no number at all.
+  const digits = westernDigits(input).replace(/[^\d+]/g, "");
   if (!digits) return null;
   let d = digits;
   if (d.startsWith("00")) d = "+" + d.slice(2);

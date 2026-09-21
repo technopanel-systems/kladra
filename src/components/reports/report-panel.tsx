@@ -51,6 +51,15 @@ import { cn } from "@/lib/utils";
  * library under it — rendered on none of them until somebody pressed one, yet
  * every screen carried it in its first load (P14.5, measured). The host fetches
  * it once the page is idle, so the first press still opens at once.
+ *
+ * The boxes are in the order a rep has the answers when a call ends: who it
+ * was, what it was about if it was about a paper, what kind of thing happened,
+ * what came of it — and then the next follow-up, ABOVE the words. It sat last,
+ * under the box a thumb sends from, on the reasoning that it is nearly always
+ * already right. On a customer who was owed a call it is the whole point of
+ * writing the report (S52), and a required question below the send key is a
+ * question answered by a refusal. The day stays last, because that one really
+ * is nearly always already right.
  */
 
 /* ---- the form ----------------------------------------------------------------- */
@@ -111,10 +120,16 @@ export function ReportPanel({
 
   const [first] = useState(() => initialPicks(request));
   const [picks, setPicks] = useState<Picks>(first);
-  const [kind, setKind] = useState<Channel | "">(entry?.kind ?? "");
+  // The kind a screen already knows: a card in a band of calls opens on Call,
+  // and he may still change it. Kept as the form's starting point too, or an
+  // untouched popup would count as dirty and guard its own close (D84).
+  const [firstKind] = useState<Channel | "">(entry?.kind ?? request.kind ?? "");
+  const [kind, setKind] = useState<Channel | "">(firstKind);
   const [outcome, setOutcome] = useState<string>(entry ? String(entry.outcomeId) : "");
   const [text, setText] = useState(entry?.text ?? "");
   const [nextFollowUp, setNextFollowUp] = useState<Day | null>(null);
+  /** "No next step" — the other answer to a follow-up that is owed (S52). */
+  const [noNextStep, setNoNextStep] = useState(false);
   const [day, setDay] = useState<"today" | "previous">("today");
   const [showLinks, setShowLinks] = useState(
     Boolean(first.project || first.quotation || first.dispatch),
@@ -187,6 +202,29 @@ export function ReportPanel({
     !editing &&
     targets !== null &&
     (targets.companyFollowUp || (project !== "" && targets.workedProjects.includes(project)));
+  // And whether the popup INSISTS on an answer: something in the scope he has
+  // chosen is already owed and his to clear (S52). `targets.due` is the action's
+  // own reading of that, so the question this makes required is exactly the one
+  // `addReportAction` refuses a report without (DESIGN §5).
+  const followUpDue =
+    followUpOffered &&
+    targets !== null &&
+    (targets.due.company !== null ||
+      (project !== "" && targets.due.projects.some((row) => row.id === project)));
+
+  // The three quick answers, each already the next day this person is at work
+  // (S47, S48 — worked out in `reportFormAction`, where the holidays and his
+  // leave are). A chip carries its word; the picker beside it shows the date it
+  // chose. Two of them can land on the same day — a Thursday's "tomorrow" and
+  // "in 3 days" are both Sunday — and both then read as pressed, which is what
+  // is true of them.
+  const quickDays = form
+    ? [
+        { label: t("reports.dialog.tomorrow"), day: form.presets.tomorrow },
+        { label: t("reports.dialog.inThreeDays"), day: form.presets.inThreeDays },
+        { label: t("reports.dialog.nextWeek"), day: form.presets.nextWeek },
+      ]
+    : [];
 
   const quotations = (targets?.quotations ?? []).filter(
     (row) => !project || !row.projectId || row.projectId === project,
@@ -204,9 +242,10 @@ export function ReportPanel({
   // — is work a tap beside the sheet must not throw away (D84).
   const dirty =
     text.trim() !== (entry?.text ?? "").trim() ||
-    kind !== (entry?.kind ?? "") ||
+    kind !== firstKind ||
     outcome !== (entry ? String(entry.outcomeId) : "") ||
     nextFollowUp !== null ||
+    noNextStep ||
     day !== "today" ||
     picks !== first;
   // And the phone's back gesture, which is a route change and not a tap (D96).
@@ -263,6 +302,20 @@ export function ReportPanel({
     });
   }
 
+  /** A day answers the question, and un-answers "no next step" with it. */
+  function chooseFollowUp(next: Day | null) {
+    setNextFollowUp(next);
+    setNoNextStep(false);
+    setErrors((current) => ({ ...current, nextFollowUp: "" }));
+  }
+
+  /** And the other way round. Pressed again it lets go, and nothing is answered. */
+  function chooseNoNextStep() {
+    setNoNextStep((was) => !was);
+    setNextFollowUp(null);
+    setErrors((current) => ({ ...current, nextFollowUp: "" }));
+  }
+
   function refuse(found: Record<string, string>) {
     setErrors(found);
     // The caret goes to the first box that was refused: a sheet can be taller
@@ -293,6 +346,11 @@ export function ReportPanel({
     if (!companyId) found.companyId = t("common.required");
     if (!kind) found.kind = t("reports.dialog.kindRequired");
     if (!outcome) found.outcomeId = t("reports.dialog.outcomeRequired");
+    // The same sentence the action refuses with, so the box says one thing
+    // whether the answer is missed here or on the way in.
+    if (followUpDue && !nextFollowUp && !noNextStep) {
+      found.nextFollowUp = t("reports.refused.followUpOwed");
+    }
     if (!written) found.text = t("reports.dialog.textRequired");
     if (Object.keys(found).length > 0) {
       refuse(found);
@@ -317,6 +375,11 @@ export function ReportPanel({
         const previous = form?.lastWorkingDay;
         fields.set("happenedOn", day === "previous" && previous ? previous : (form?.today ?? ""));
         fields.set("nextFollowUp", followUpOffered ? (nextFollowUp ?? "") : "");
+        // One answer or the other, never both: a day wins if somehow both are
+        // held, and the action refuses the pair outright. Sent only while the
+        // question is the required one — pick a different job and "no next
+        // step" is an answer to a question that has stopped being asked.
+        fields.set("clearFollowUp", followUpDue && noNextStep && !nextFollowUp ? "1" : "");
       }
 
       // Guarded: no signal in a lobby is a refusal too, with the words kept and
@@ -565,6 +628,60 @@ export function ReportPanel({
               {fieldError("outcomeId")}
             </fieldset>
 
+            {/* Above the words, and required where a call was already owed: a
+                reminder is cleared by doing the work (S52), and that answer is
+                the reason the report is being written. Never offered when
+                correcting (D70) — the follow-up is a figure the company row and
+                two bands on the day screen read. */}
+            {followUpOffered ? (
+              <div className="flex flex-col gap-2">
+                <span id={`${ids}-follow-up`} className="text-sm font-medium">
+                  {t("common.nextFollowUp")}
+                  {followUpDue ? null : (
+                    <span className="ps-1 text-xs font-normal text-faint">
+                      {t("reports.dialog.optional")}
+                    </span>
+                  )}
+                </span>
+                <div
+                  role="group"
+                  aria-labelledby={`${ids}-follow-up`}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <DatePicker
+                    value={nextFollowUp}
+                    onChange={chooseFollowUp}
+                    min={form?.today}
+                    // A reminder landing on a Friday is a reminder nobody reads
+                    // until Sunday (S47).
+                    workingDaysOnly
+                    disabled={pending}
+                    invalid={errors.nextFollowUp ? true : undefined}
+                    aria-describedby={errors.nextFollowUp ? errorId("nextFollowUp") : undefined}
+                    className="w-auto min-w-36"
+                  />
+                  {quickDays.map((quick) => (
+                    <FollowUpChip
+                      key={quick.label}
+                      label={quick.label}
+                      pressed={nextFollowUp === quick.day}
+                      onPress={() => chooseFollowUp(quick.day)}
+                      disabled={pending}
+                    />
+                  ))}
+                  {followUpDue ? (
+                    <FollowUpChip
+                      label={t("reports.dialog.noNextStep")}
+                      pressed={noNextStep}
+                      onPress={chooseNoNextStep}
+                      disabled={pending}
+                    />
+                  ) : null}
+                </div>
+                {fieldError("nextFollowUp")}
+              </div>
+            ) : null}
+
             <div className="flex flex-col gap-2">
               <Label htmlFor={`${ids}-text`}>{t("reports.dialog.text")}</Label>
               <Textarea
@@ -585,83 +702,101 @@ export function ReportPanel({
               {fieldError("text")}
             </div>
 
-            {/* Neither of these is offered when correcting (D70): the day is the
-                entry's identity, and the follow-up is a figure the company row
-                and two bands on the day screen read. */}
-            {!editing ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {followUpOffered ? (
-                  <div className="flex flex-col gap-2">
-                    <span id={`${ids}-follow-up`} className="text-sm font-medium">
-                      {t("common.nextFollowUp")}
-                      <span className="ps-1 text-xs font-normal text-faint">
-                        {t("reports.dialog.optional")}
-                      </span>
-                    </span>
-                    <div role="group" aria-labelledby={`${ids}-follow-up`}>
-                      <DatePicker
-                        value={nextFollowUp}
-                        onChange={setNextFollowUp}
-                        min={form?.today}
-                        disabled={pending}
-                        invalid={errors.nextFollowUp ? true : undefined}
-                        aria-describedby={errors.nextFollowUp ? errorId("nextFollowUp") : undefined}
-                      />
-                    </div>
-                    {fieldError("nextFollowUp")}
-                  </div>
-                ) : null}
-
-                {form ? (
-                  <fieldset className="flex flex-col gap-2" disabled={pending}>
-                    <legend className="mb-2 text-sm font-medium">
-                      {t("reports.dialog.happenedOn")}
-                    </legend>
-                    <div
-                      role="radiogroup"
-                      aria-label={t("reports.dialog.happenedOn")}
-                      aria-invalid={errors.happenedOn ? true : undefined}
-                      tabIndex={-1}
-                      className="flex flex-wrap gap-2 outline-none"
+            {/* Last, and not offered when correcting (D70): the day a report
+                belongs to is the entry's identity. */}
+            {!editing && form ? (
+              <fieldset className="flex flex-col gap-2" disabled={pending}>
+                <legend className="mb-2 text-sm font-medium">
+                  {t("reports.dialog.happenedOn")}
+                </legend>
+                <div
+                  role="radiogroup"
+                  aria-label={t("reports.dialog.happenedOn")}
+                  aria-invalid={errors.happenedOn ? true : undefined}
+                  tabIndex={-1}
+                  className="flex flex-wrap gap-2 outline-none"
+                >
+                  {(["today", "previous"] as const).map((which) => (
+                    <label
+                      key={which}
+                      className={cn(
+                        "touch inline-flex cursor-pointer items-center min-h-8 rounded-md border px-3 py-1 text-sm transition-colors",
+                        "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
+                        errors.happenedOn && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
+                        day === which
+                          ? "border-line-strong bg-secondary font-medium text-foreground"
+                          : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
+                      )}
                     >
-                      {(["today", "previous"] as const).map((which) => (
-                        <label
-                          key={which}
-                          className={cn(
-                            "touch inline-flex cursor-pointer items-center min-h-8 rounded-md border px-3 py-1 text-sm transition-colors",
-                            "has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50",
-                            errors.happenedOn && "has-[:focus]:ring-3 has-[:focus]:ring-ring/50",
-                            day === which
-                              ? "border-line-strong bg-secondary font-medium text-foreground"
-                              : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
-                          )}
-                        >
-                          <input
-                            type="radio"
-                            name={`${ids}-day`}
-                            value={which}
-                            checked={day === which}
-                            onChange={() => setDay(which)}
-                            className="sr-only"
-                          />
-                          {which === "today" ? (
-                            t("common.today")
-                          ) : (
-                            <DayText day={form.lastWorkingDay} locale={locale} />
-                          )}
-                        </label>
-                      ))}
-                    </div>
-                    {fieldError("happenedOn")}
-                  </fieldset>
-                ) : null}
-              </div>
+                      <input
+                        type="radio"
+                        name={`${ids}-day`}
+                        value={which}
+                        checked={day === which}
+                        onChange={() => setDay(which)}
+                        className="sr-only"
+                      />
+                      {which === "today" ? (
+                        t("common.today")
+                      ) : (
+                        <DayText day={form.lastWorkingDay} locale={locale} />
+                      )}
+                    </label>
+                  ))}
+                </div>
+                {fieldError("happenedOn")}
+              </fieldset>
             ) : null}
           </FormBody>
         )}
         <FormFooter pending={pending} onCancel={() => onOpenChange(false)} />
       </form>
     </ResponsiveDialog>
+  );
+}
+
+/**
+ * One quick answer to the follow-up question, beside the picker.
+ *
+ * Not a radio, unlike every other row of chips in this form, because the picker
+ * next to it is one of the answers and no radio can stand for it: the group is
+ * a date, and a chip either IS that date or is the decision that there is not
+ * one. `aria-pressed` says exactly that and stays true when he then opens the
+ * calendar and picks the same day by hand.
+ *
+ * The chip carries its word — Tomorrow, In 3 days — and never the date, which
+ * the picker beside it shows the moment the chip is pressed. A chip that read
+ * "Sun 27/Sep" would be a second date control saying the same thing twice.
+ */
+function FollowUpChip({
+  label,
+  pressed,
+  onPress,
+  disabled,
+}: {
+  label: string;
+  pressed: boolean;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onPress}
+      disabled={disabled}
+      className={cn(
+        // `touch`: 44px under a thumb, as the kit's own chips are (D130).
+        "touch inline-flex cursor-pointer items-center min-h-8 rounded-md border px-3 py-1 text-sm transition-colors",
+        "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-hidden",
+        "disabled:cursor-not-allowed disabled:opacity-60",
+        pressed
+          ? "border-line-strong bg-secondary font-medium text-foreground"
+          : "border-line bg-surface-2 text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -43,7 +43,6 @@ const PASSWORD = "kladra2026";
 const LOCALES = ["en", "ar"] as const;
 const THEMES = ["dark", "light"] as const;
 type Locale = (typeof LOCALES)[number];
-type Theme = (typeof THEMES)[number];
 
 const VIEWPORTS: Record<number, { width: number; height: number }> = {
   1366: { width: 1366, height: 900 },
@@ -247,6 +246,33 @@ function openRowOffering(key: string, paramName = "open"): Step {
       }
     }
     throw new Error(`no row in the first ${count} offers ${key}`);
+  };
+}
+
+/**
+ * The first row whose drawer shows this element. "The newest row is the one on
+ * credit" was true of the seed for a month and then was not, and the state
+ * failed on all eight variants without anybody being told (P13 audit): a state
+ * names what it needs, never where that happened to stand in the list.
+ */
+function openRowShowing(selector: string, paramName = "open"): Step {
+  return async (page) => {
+    const rows = page.locator(`a[href*="${paramName}="]:visible`);
+    await rows.first().waitFor({ state: "visible" });
+    const count = Math.min(await rows.count(), 12);
+    for (let index = 0; index < count; index += 1) {
+      await rows.nth(index).click();
+      const dialog = page.getByRole("dialog").first();
+      await dialog.waitFor({ state: "visible" });
+      try {
+        await dialog.locator(selector).first().waitFor({ state: "visible", timeout: 6_000 });
+        return;
+      } catch {
+        await page.keyboard.press("Escape");
+        await dialog.waitFor({ state: "hidden" });
+      }
+    }
+    throw new Error(`no row in the first ${count} shows ${selector}`);
   };
 }
 
@@ -676,8 +702,10 @@ const MANIFEST: StateDef[] = [
     key: "company-archive",
     identity: "rep",
     path: "/companies",
-    steps: chain(openCompanyMenu(), chooseMenuItem("drawer.archive")),
-    waitFor: dialogWithText("drawer.archiveWarning"),
+    // A rep ASKS since P14 14.8 and the manager answers; the item and the
+    // dialog it opens were both renamed, and this state failed in silence.
+    steps: chain(openCompanyMenu(), chooseMenuItem("drawer.requestArchive")),
+    waitFor: dialogWithText("drawer.requestArchiveWarning"),
   },
   {
     role: "rep",
@@ -1259,9 +1287,9 @@ const MANIFEST: StateDef[] = [
     role: "rep",
     key: "dispatch-credit",
     identity: "rep",
-    // The newest load on the demo floor is paid for on credit, with the note.
+    // A load paid for on credit, with the note: whichever row that is today.
     path: "/dispatches?view=list",
-    steps: openFirstRow("open"),
+    steps: openRowShowing('[data-slot="payment-note"]'),
     waitFor: async (page) => {
       const note = page.getByRole("dialog").locator('[data-slot="payment-note"]');
       await note.waitFor({ state: "visible" });
@@ -1735,6 +1763,8 @@ const MANIFEST: StateDef[] = [
         await route.continue().catch(() => {});
       });
       await page.getByRole("button", { name: T("common.export") }).first().click();
+      // Two files on this screen since P14 14.10, so the button is a menu.
+      await page.getByRole("menuitem").first().click();
     },
     waitFor: textVisible("common.preparing"),
   },
@@ -1746,6 +1776,7 @@ const MANIFEST: StateDef[] = [
     steps: async (page, T) => {
       await page.route("**/api/export/**", (route) => route.fulfill({ status: 500, body: "" }));
       await page.getByRole("button", { name: T("common.export") }).first().click();
+      await page.getByRole("menuitem").first().click();
     },
     // The file's name is itself a message, so the sentence is built in two steps.
     waitFor: (page, T, prefix, width) =>
@@ -1957,6 +1988,18 @@ async function main(): Promise<void> {
             assertHost(page);
 
             await page.waitForTimeout(400);
+            // A drawer slides in for half a second and a loaded one for longer:
+            // the fixed pause caught the dispatch drawer half way, see-through,
+            // on fifteen shots of sixteen (P13 audit). What is moving stops
+            // first; a skeleton's pulse never ends and is not waited for.
+            await page.evaluate(() =>
+              Promise.all(
+                document
+                  .getAnimations()
+                  .filter((a) => a.effect?.getComputedTiming().iterations !== Infinity)
+                  .map((a) => a.finished.catch(() => undefined)),
+              ),
+            );
             await page.screenshot({ path: resolve(outDir, `${name}.png`) });
             captured += 1;
           } catch (error) {

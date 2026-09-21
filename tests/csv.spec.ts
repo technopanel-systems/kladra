@@ -19,10 +19,30 @@ test("a cell Excel would run is read as text, and a number is left a number", ()
   expect(csvCell("+cmd|' /C calc'!A0")).toBe("\"'+cmd|' /C calc'!A0\"");
   expect(csvCell("-2+3")).toBe("\"'-2+3\"");
   expect(csvCell("\tstart")).toBe("\"'\tstart\"");
-  // Every phone in the file, and any figure below nought.
-  expect(csvCell("+966501234567")).toBe('"+966501234567"');
+  // A figure below nought is a figure.
   expect(csvCell("-1500.50")).toBe('"-1500.50"');
   expect(csvCell(-3)).toBe('"-3"');
+});
+
+/**
+ * A phone is text, in every file it appears in (D96, and the addendum's "stored
+ * E.164"). It was let through as a signed number, and Excel read +966501234567
+ * as 9.66501E+11 — the digits past the twelfth gone and the plus with them, on
+ * the one column somebody would pick up and dial.
+ */
+test("a phone keeps every digit and its plus", () => {
+  expect(csvCell("+966501234567")).toBe("\"'+966501234567\"");
+  expect(csvCell("+971501234567")).toBe("\"'+971501234567\"");
+  // And in a file, where the column is not declared numeric because a phone is
+  // not a figure (src/lib/export/contacts.ts).
+  const file = csv(
+    [
+      { key: "contact", label: "Contact" },
+      { key: "phone", label: "Phone" },
+    ],
+    [{ contact: "Saud Al-Mutairi", phone: "+966551204477" }],
+  );
+  expect(file).toContain("\"Saud Al-Mutairi\",\"'+966551204477\"");
 });
 
 test("a quote is doubled, a comma and a newline stay inside the cell, nothing is nothing", () => {

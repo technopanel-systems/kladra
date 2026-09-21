@@ -130,11 +130,36 @@ export function CallBand({ band }: { band: CallBandData }) {
                 </span>
 
                 {row.nextFollowUp ? (
-                  <DayText
-                    day={row.nextFollowUp}
-                    locale={locale}
-                    className={cn("shrink-0 text-xs", dateTone)}
-                  />
+                  <span className="flex shrink-0 items-baseline gap-1 text-xs">
+                    {/* Whose date this is, when it is not the customer's own
+                        (D9, D94). Without it the card showed a red day and the
+                        report it opened moved the COMPANY's date, so the call
+                        was made and the card stayed red. A dot and not a gap:
+                        two values side by side with space between them are read
+                        in the page's order by an eye running the other way
+                        (rules/words.md). */}
+                    {row.dueProject ? (
+                      <>
+                        <span className="max-w-28 truncate text-muted-foreground">
+                          {/* Read rather than drawn: beside the customer's name
+                              and a date, a bare job name is plain to an eye and
+                              says nothing to a screen reader. Not an aria-label
+                              on this span — a name on an element with no role of
+                              its own is a thing readers may drop (axe). */}
+                          <span className="sr-only">
+                            {t("reports.dueFor", { name: row.dueProject.name })}
+                          </span>
+                          <span aria-hidden="true">
+                            <bdi>{row.dueProject.name}</bdi>
+                          </span>
+                        </span>
+                        <span aria-hidden="true" className="text-faint">
+                          ·
+                        </span>
+                      </>
+                    ) : null}
+                    <DayText day={row.nextFollowUp} locale={locale} className={dateTone} />
+                  </span>
                 ) : null}
               </span>
             </span>
@@ -148,6 +173,14 @@ export function CallBand({ band }: { band: CallBandData }) {
                 companyId={row.id}
                 companyName={row.name}
                 contactId={row.mainContactId}
+                // The job whose date is the one that is due, so the report
+                // lands where the reminder is and the call clears it (S52). On
+                // most cards there is none and the report is the customer's.
+                projectId={row.dueProject?.id}
+                // A card in a band of calls is a call until he says otherwise:
+                // the kind is the first of five answers and this is the one
+                // screen that already knows it (SPEC §3 P13).
+                kind="call"
                 variant="outline"
                 size="sm"
                 aria-label={t("reports.addFor", { name: row.name })}

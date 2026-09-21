@@ -127,13 +127,32 @@ export function LiveProvider({
     );
   }, []);
 
+  // A tab nobody is looking at re-reads nothing. It owes one refresh, and pays
+  // it when somebody looks at it again. A forgotten tab used to re-render every
+  // screen for every event on the floor, all day, for no reader — and each of
+  // those renders was a page the server served to that person, which is what
+  // the admin's "last seen" is counted from (D77, Stage 3 audit).
+  const owed = useRef(false);
   const scheduleRefresh = useCallback(() => {
+    if (document.visibilityState === "hidden") {
+      owed.current = true;
+      return;
+    }
     if (refreshTimer.current) return;
     refreshTimer.current = setTimeout(() => {
       refreshTimer.current = null;
       routerRef.current.refresh();
     }, REFRESH_COALESCE_MS);
   }, []);
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || !owed.current) return;
+      owed.current = false;
+      scheduleRefresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [scheduleRefresh]);
 
   // A list's rows are on screen: everything that arrived while the refresh
   // was in flight is highlighted now, for the full two seconds, on the row as

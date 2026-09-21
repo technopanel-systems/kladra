@@ -47,14 +47,14 @@ async function companyHolidays(from: Day, to: Day): Promise<NonWorking[]> {
 async function desk(): Promise<{ label: string; since: Day }[]> {
   const quotations = await query<{ number: number; revision: number; since: Day }>(
     `select q.number, q.revision,
-            to_char((q.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as since
+            to_char((q.desk_since at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as since
        from quotations q
        join companies c on c.id = q.company_id
       where q.status = 'requested' and c.archived_at is null`,
   );
   const dispatches = await query<{ number: number; since: Day }>(
     `select d.number,
-            to_char((d.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as since
+            to_char((d.desk_since at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as since
        from dispatches d
        join companies c on c.id = d.company_id
       where d.status = 'submitted' and c.archived_at is null`,
@@ -93,8 +93,8 @@ test("a request is on the manager's awaiting list the morning it is raised", asy
   // Raised this minute, which is the case that used to be invisible. Both
   // halves of the desk, because both are "a request waiting on the
   // coordinator".
-  await query("update quotations set created_at = now() where id = $1::uuid", [quotation.id]);
-  await query("update dispatches set created_at = now() where id = $1::uuid", [dispatch.id]);
+  await query("update quotations set created_at = now(), desk_since = now() where id = $1::uuid", [quotation.id]);
+  await query("update dispatches set created_at = now(), desk_since = now() where id = $1::uuid", [dispatch.id]);
 
   try {
     // Twenty rows are drawn (STUCK_SHOWN) and a real desk holds a handful, so
@@ -138,14 +138,14 @@ test("a request is on the manager's awaiting list the morning it is raised", asy
       /\/dispatches\?open=/,
     );
   } finally {
-    await query("update quotations set created_at = $1::timestamptz where id = $2::uuid", [
-      quotation.before,
-      quotation.id,
-    ]);
-    await query("update dispatches set created_at = $1::timestamptz where id = $2::uuid", [
-      dispatch.before,
-      dispatch.id,
-    ]);
+    await query(
+      "update quotations set created_at = $1::timestamptz, desk_since = $1::timestamptz where id = $2::uuid",
+      [quotation.before, quotation.id],
+    );
+    await query(
+      "update dispatches set created_at = $1::timestamptz, desk_since = $1::timestamptz where id = $2::uuid",
+      [dispatch.before, dispatch.id],
+    );
   }
 });
 

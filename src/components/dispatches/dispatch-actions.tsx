@@ -47,6 +47,7 @@ export function DispatchActions({
   dispatch,
   scope,
   report,
+  onAnswered,
 }: {
   dispatch: {
     id: string;
@@ -63,10 +64,18 @@ export function DispatchActions({
   scope: DispatchScope;
   /** "Add report", built on the server, which knows whether he may write one. */
   report?: ReactNode;
+  /** Closes the drawer after Approve or Refuse, where the screen is her desk. */
+  onAnswered?: () => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
+  // After Approve or Refuse on her desk the load is finished work and the next
+  // row is what she came for: the drawer closes (quotation-actions.tsx says why).
+  const answered = useCallback(() => {
+    router.refresh();
+    onAnswered?.();
+  }, [router, onAnswered]);
 
   const { id, label, status, superseded } = dispatch;
   /** Hers to answer: only while it is waiting. */
@@ -136,7 +145,7 @@ export function DispatchActions({
             onConfirm={(smacDispatchNumber) =>
               withId(approveDispatchAction, { smacDispatchNumber })()
             }
-            onDone={refresh}
+            onDone={answered}
           />
         ) : null}
 
@@ -203,7 +212,7 @@ export function DispatchActions({
               confirmLabel={t("dispatches.refuse")}
               successMessage={t("dispatches.refused", { label })}
               onConfirm={(reason) => withId(refuseDispatchAction, { reason })()}
-              onDone={refresh}
+              onDone={answered}
             />
           </span>
         ) : null}

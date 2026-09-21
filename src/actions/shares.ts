@@ -33,6 +33,18 @@ import { safeError } from "@/lib/log-safe";
  * Neither is a handover. Nothing moves, the metres stay where they were, and
  * the person who granted it keeps everything he had — which is why its own
  * permission says so (`mayShare`) rather than borrowing the handover's.
+ *
+ * **And nobody grants one to himself** (SPEC D42). `mayShare` says yes to the
+ * manager and the admin on anybody's record, because deciding who else may
+ * read a customer is theirs; it says nothing about who the receiver is. Naming
+ * himself made it a self-service door out of the one rule this whole app is
+ * built round: a manager reads every rep's floor and writes on none of it. Two
+ * presses on Faisal's customer and he could keep people on it, file reports
+ * against it and raise paper there. Refused below, at both grants, in the same
+ * sentence the pickers are drawn from (company-drawer.tsx, project-drawer.tsx).
+ *
+ * A rep sharing his OWN customer is untouched — he is the owner, and the
+ * receiver being himself is already answered by `shareOwner`.
  */
 async function guard<T>(
   run: (actor: SessionUser) => Promise<ActionResult<T>>,
@@ -103,6 +115,11 @@ export async function shareCompanyAction(
     // Sharing a company with the rep whose company it is would be a permission
     // he already has, written down twice.
     if (target.id === company.repId) return { ok: false, error: t("shareOwner") };
+    // And putting yourself on a customer who is not yours is not sharing, it is
+    // taking (D42 — see the note at the top of this file).
+    if (target.id === actor.id && company.repId !== actor.id) {
+      return { ok: false, error: t("shareSelf") };
+    }
 
     await db.transaction(async (tx) => {
       // Pressing it twice is one share, not an error: the second press means
@@ -249,6 +266,12 @@ export async function shareProjectAction(
     const target = await receiver(ids.user);
     if (!target) return { ok: false, error: t("shareWho") };
     if (target.id === project.repId) return { ok: false, error: t("shareOwner") };
+    // The job's own rep is the owner here, and a share carries a company share
+    // with it — so naming himself would put the manager on the customer too
+    // (D42, D214 — see the note at the top of this file).
+    if (target.id === actor.id && project.repId !== actor.id) {
+      return { ok: false, error: t("shareSelf") };
+    }
 
     await db.transaction(async (tx) => {
       // Working a job means reading the customer it is for. Somebody put on a

@@ -122,6 +122,9 @@ export function linesPayload(lines: LineDraft[]): string {
       width: line.width,
       length: line.length,
       pricePerSqm: line.pricePerSqm,
+      // Which stored line this one opened on, so a revision's line still knows
+      // what has already gone out on it (`origin_item_id`).
+      fromItemId: line.fromItemId,
     })),
   );
 }

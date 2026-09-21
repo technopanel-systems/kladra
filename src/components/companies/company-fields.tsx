@@ -136,7 +136,12 @@ export function CompanyFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={id("category")}>{t("common.category")}</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor={id("category")}>{t("common.category")}</Label>
+            <span aria-hidden="true" className="text-sm leading-none font-medium text-brand">
+              *
+            </span>
+          </div>
           <SearchableSelect
             id={id("category")}
             value={value.categoryId}
@@ -158,7 +163,12 @@ export function CompanyFields({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor={id("lead-source")}>{t("common.leadSource")}</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor={id("lead-source")}>{t("common.leadSource")}</Label>
+            <span aria-hidden="true" className="text-sm leading-none font-medium text-brand">
+              *
+            </span>
+          </div>
           <SearchableSelect
             id={id("lead-source")}
             value={value.leadSourceId}
@@ -182,7 +192,12 @@ export function CompanyFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor={id("country")}>{t("common.country")}</Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor={id("country")}>{t("common.country")}</Label>
+            <span aria-hidden="true" className="text-sm leading-none font-medium text-brand">
+              *
+            </span>
+          </div>
           <SearchableSelect
             id={id("country")}
             value={value.countryId}

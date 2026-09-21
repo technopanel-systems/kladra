@@ -163,12 +163,27 @@ async function CompanyDrawerBody({ companyId }: { companyId: string }) {
     canHandOver || canShare
       ? await floorHolderOptions(company.repId, (role) => t(`common.${role}`))
       : [];
+  // Handing over may name the reader: a customer has to be able to reach a
+  // living person, and the manager taking one on makes it his, with his id on
+  // the row (D42's "a manager who sells is not an exception").
   const handOverTo = canHandOver ? floorHolders : null;
-  // Its rep is already off this list; everybody on it comes off too, so the
-  // picker never offers a share the action would answer "It is already theirs"
-  // to (DESIGN §5).
+  /*
+   * Its rep is already off this list; everybody on it comes off too, so the
+   * picker never offers a share the action would answer "It is already theirs"
+   * to (DESIGN §5).
+   *
+   * And so does the reader himself, wherever the customer is not his. Sharing
+   * does not move a floor — it adds somebody to one — so a manager naming
+   * himself would be writing himself onto Faisal's customer with a rep's
+   * powers, which is the one thing D42 exists to refuse. `shareCompanyAction`
+   * answers the same pair; this takes the question off the screen.
+   */
   const shareWith = canShare
-    ? floorHolders.filter((option) => !sharers.some((person) => person.id === option.value))
+    ? floorHolders.filter(
+        (option) =>
+          !sharers.some((person) => person.id === option.value) &&
+          !(option.value === user.id && company.repId !== user.id),
+      )
     : null;
 
   /**

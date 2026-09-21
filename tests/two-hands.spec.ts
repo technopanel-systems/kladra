@@ -179,21 +179,19 @@ async function settleDispatchRequest(
  * true here because `blockLiveChannel` has already cut this tab off from
  * news of the OTHER tab's press, so neither signal can be pre-empted by it.
  *
- * The winner's own drawer comes to show its own SMAC number once its action
- * answers (`myNumber`, not "Issued" in general — the badge alone cannot say
- * WHICH press wrote it, only that somebody did). The loser's `PromptDialog`
- * stays open with its own refusal sentence, because nothing here is left
- * to un-mount it from underneath.
+ * On her desk an answer closes the paper (P13 audit: the queue is a
+ * list of what is left, and the next row is what she wants), so the winner's
+ * proof is that its question went away with no refusal in it; the database
+ * step below says WHICH number was written. The loser's `PromptDialog` stays
+ * open with its own refusal sentence, because nothing here is left to un-mount
+ * it from underneath.
  */
 async function settleQuotationIssue(
-  page: Page,
   ask: Locator,
-  label: string,
-  myNumber: string,
   t: Translate,
 ): Promise<"success" | "notWaiting"> {
   return firstOf(
-    expect(sheetFor(page, label)).toContainText(myNumber, COLD).then(() => "success" as const),
+    expect(ask).toBeHidden(COLD).then(() => "success" as const),
     expect(ask.getByText(t("quotations.notWaiting")))
       .toBeVisible(COLD)
       .then(() => "notWaiting" as const),
@@ -440,8 +438,8 @@ test("two hands on one request: one issue wins, the other is refused, in the app
   // `SELECT … FOR UPDATE` (holdQuotation, src/lib/hold.ts) reaches the row
   // first — never which tab happened to click a moment sooner.
   const outcomesPromise = Promise.all([
-    settleQuotationIssue(page, askA, label, numberA, t),
-    settleQuotationIssue(pageB, askB, label, numberB, t),
+    settleQuotationIssue(askA, t),
+    settleQuotationIssue(askB, t),
   ]);
   await test.step("both press Issue at the same moment", async () => {
     await Promise.all([

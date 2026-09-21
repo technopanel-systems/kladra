@@ -280,14 +280,31 @@ test("achieved metres stay with the person who earned them", async ({ page, loca
       ).toBe(Math.round(saadByCredit));
     });
 
-    await test.step("3 · the quotation still says Faisal raised it, not Saad", async () => {
+    await test.step("3 · the paper is Saad's to work now, and still says Faisal raised it", async () => {
+      // A paper still in play goes with the customer, as the hand-over dialog
+      // has always said it does (Stage 3 audit): since D147 only the rep a
+      // paper names may answer or revise it, so one left naming the man who
+      // gave the customer up was a paper nobody could touch. Who RAISED it is
+      // history and does not move — and neither did one metre, which is step 2.
+      const names = await one<{ rep_id: string; raised_by_id: string }>(
+        "select rep_id, raised_by_id from quotations where id = $1::uuid",
+        [target.quotation_id],
+      );
+      expect(names.rep_id, "the open paper stayed with the man who left").toBe(saad.id);
+      expect(names.raised_by_id, "who raised it was rewritten").toBe(faisal.id);
+
       await page.goto(`/${locale}/quotations?open=${target.quotation_id}`);
       const drawer = page.getByRole("dialog").first();
       await expect(drawer).toBeVisible(COLD);
 
-      const raisedBy = drawer.locator("dl > div").filter({ hasText: t("common.raisedBy") });
-      await expect(raisedBy).toBeVisible();
-      await expect(raisedBy.locator("dd")).toHaveText(faisal.name);
+      // The label exactly: "Counts for" is a fact on the same sheet.
+      const forWhom = drawer
+        .locator("dl > div")
+        .filter({ has: page.getByText(t("common.onBehalf.for"), { exact: true }) });
+      await expect(forWhom.locator("dd")).toHaveText(saad.name);
+      await expect(drawer.locator("[data-slot='raised-by']")).toHaveText(
+        t("common.onBehalf.raisedBy", { name: faisal.name }),
+      );
     });
   } finally {
     // The floor as the seed left it, for every spec that runs after this one

@@ -154,6 +154,42 @@ export function goneQuietCompanySql(followUp: SQL): SQL {
 }
 
 /**
+ * The job the effective date belongs to, when it is a job's and it is owed —
+ * `{ id, name }` as JSON, or null.
+ *
+ * `effectiveFollowUpSql` answers WHEN a customer is next owed something and
+ * says nothing about WHOSE date that is. A call card showing the day alone sent
+ * a rep into a popup filed against the company while the date colouring the row
+ * belonged to one of its projects, so the report he wrote moved the company's
+ * date and left the project's where it was — the card stayed red after the call
+ * (D9, D94, S52). It is computed beside the date, in the list's own statement,
+ * because a band draws twenty-five cards and a second query per row is the
+ * shape rules/data.md refuses.
+ *
+ * Only a date EARLIER than the company's own, and only one on or before today.
+ * Where the two are equal the company's own is due as well, so there is no job
+ * to name; where the job's date is still ahead nothing is owed yet (S50).
+ *
+ * One object rather than one subquery for the id and another for the name: two
+ * copies of one predicate is the drift trap rules/data.md names, and here it
+ * would let a card name one job and open the popup on another.
+ */
+export function dueProjectSql(): SQL<{ id: string; name: string } | null> {
+  return sql`(
+    select json_build_object('id', p.id, 'name', p.name)
+      from projects p
+     where p.company_id = companies.id
+       and p.archived_at is null
+       and p.lost_at is null
+       and p.next_follow_up is not null
+       and p.next_follow_up <= ${riyadhTodaySql()}
+       and (companies.next_follow_up is null or p.next_follow_up < companies.next_follow_up)
+     order by p.next_follow_up asc, p.name asc
+     limit 1
+  )`;
+}
+
+/**
  * A lead the person holding it has not yet said he has (SPEC §3 P13, D157).
  */
 function waitingLeadSql(): SQL {
@@ -181,17 +217,28 @@ export function waitingLeadOnSql(repId: string): SQL {
 }
 
 /**
- * "Never contacted": no log entry at all, and added long enough ago that the
- * silence is a habit rather than a fresh row (S51).
+ * "Never contacted": nothing waiting on him, no log entry at all, and added
+ * long enough ago that the silence is a habit rather than a fresh row (S51).
+ *
+ * The first clause is S50 said about a band instead of about a date: a date the
+ * rep set silences chasing until it arrives. Without it, a customer typed in
+ * three weeks ago and given a follow-up for next month sat under "Never
+ * contacted" as though nobody had decided anything about him — and he is on
+ * that band while the decision is exactly what the band says is missing. A date
+ * that has ARRIVED puts him on Overdue or Due today, so with this clause every
+ * customer is on one band and only one, which is how the four counts above the
+ * list add up to a floor rather than to more than a floor.
+ * `goneQuietCompanySql` has taken the follow-up this way since D63.
  *
  * BOTH tables are named outright inside the correlated subquery, because
  * Drizzle drops a column's qualifier when the outer query joins nothing —
  * `where company_id = id` then resolves inside `activities` and is never true,
  * returning zero and raising nothing (rules/data.md; three times in FACET).
  */
-export function neverContactedCompanySql(): SQL {
+export function neverContactedCompanySql(followUp: SQL): SQL {
   return sql`(
-    not exists (
+    (${followUp}) is null
+    and not exists (
       select 1 from activities
        where activities.company_id = companies.id and activities.archived_at is null
     )
@@ -260,7 +307,7 @@ async function countsWhere(mine: SQL): Promise<FollowUpCounts> {
   // calls with the same date expression (D108, rules/data.md). A count written
   // any other way is a number above rows it does not describe.
   const effective = effectiveFollowUpSql();
-  const never = neverContactedCompanySql();
+  const never = neverContactedCompanySql(effective);
   const quiet = goneQuietCompanySql(effective);
   const overdue = followUpFilterSql(effective, "overdue", never, quiet);
   const today = followUpFilterSql(effective, "today", never, quiet);

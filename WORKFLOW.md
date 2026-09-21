@@ -580,9 +580,9 @@ everything built, fix, then continue · `/state` ten lines on where things stand
 ## §3 Acceptance scripts — the Playwright tests walk these steps, in en and ar
 
 **Faisal (rep)** — `tests/rep.spec.ts`
-1. Sign in as Faisal. Home is Companies with the follow-up strip at the top.
+1. Sign in as Faisal. Home is his day (D71); Companies is one press away, with the follow-up strip at the top.
 2. Add company "Al Noor Towers" with contact Khalid, phone 0551234567. Toast; row highlighted; drawer opens.
-3. Log a visit: "Showed catalogue, wants 4 mm samples", follow-up tomorrow. Toast; it is first in Activity.
+3. Report a visit: "Showed catalogue, wants 4 mm samples", follow-up tomorrow. Toast; it is first in Reports.
 4. Move the clock to tomorrow; the strip says 1 today and the company is listed under it.
 5. Open the company, add project "Tower A" with 1,200 m² expected. It appears under Projects.
 
@@ -1254,6 +1254,21 @@ the rail is a list of links too and an unscoped `li` finds a nav item first.
 **Words dropped into sentences** — `tests/isolate.spec.ts`
 The other one, and for the same reason: it has no appearance until a customer is called "3M Arabia". Every `{placeholder}` in every shipped message, both locales, is checked to come out of the loader isolated — and the loader is checked to have added the two invisible characters and changed nothing else (D46). A plural branch is not a value and stays untouched.
 
+
+**A logged call answers the reminder (P13 audit)** — `tests/follow-up.spec.ts`
+1. Faisal's day has an Overdue card. He presses Add report on it: the popup opens on Call, and the follow-up question stands above the words and is not optional, because a call was owed (S52, D221).
+2. Send without answering it is refused, with the caret on the question.
+3. He presses "No next step", writes his line, sends. The card is gone from Overdue and the band's count fell by one; the date on the customer is cleared, not left in the past.
+4. The next overdue card: Tomorrow, one press, which lands on a working day. Send. Gone from Overdue.
+5. Everything the walk moved is put back in a `finally`: the suite shares one seeded database.
+
+**What a viewer is offered (P13 audit)** — `tests/viewing.spec.ts`
+1. Jerom views as Abdulrahman. Users and Holidays are readable and offer no Add, Edit, Deactivate or Remove; the duplicates queue is readable and offers no ruling (D42, D222: a control is absent rather than present and refusing).
+2. He switches the theme, which is what he opened view-as to check, and it changes.
+
+**What waits on a person is the paper that names him (P13 audit)** — `tests/attribution.spec.ts`, `tests/awaiting.spec.ts`, `tests/calendar.spec.ts`
+1. A customer is handed from Faisal to Saad. The open papers go with it: a quotation still with the customer now reads "For Saad, raised by Faisal", and what was approved stays Faisal's (D86, D216).
+2. A wait is counted from when the paper last landed on the desk (`desk_since`, D219): the specs that age a request age that column with `created_at`, and the manager's list and her queue say the same number of working days.
 
 ## §5 What a stranger found — the ledger, one line per entry (P11A–P12)
 

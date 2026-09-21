@@ -22,6 +22,7 @@
   "personGone": "There is nobody here by that link.",
   "total": "Total",
   "addFor": "Add a report on {name}",
+  "dueFor": "Follow-up due on {name}",
   "clearFilters": "Clear filters",
   "nothingThisMonth": "Nothing written this month yet.",
   "nothingInMonth": "Nothing was written in {month}.",
@@ -68,6 +69,10 @@
     "linkPaper": "About a project, quotation or dispatch",
     "noCompanies": "No companies on your floor yet.",
     "happenedOn": "When",
+    "tomorrow": "Tomorrow",
+    "inThreeDays": "In 3 days",
+    "nextWeek": "Next week",
+    "noNextStep": "No next step",
     "added": "Report added on {company}.",
     "corrected": "Report corrected."
   },
@@ -79,6 +84,8 @@
     "dispatchNotOnPaper": "That dispatch is on another project or quotation.",
     "outcomeGone": "That outcome is no longer on the list. Choose another.",
     "dayClosed": "That day is closed. A report can be for today or the last working day.",
-    "followUpNotYours": "The follow-up date on this company is its rep’s. Choose a project you work on to set one."
+    "followUpNotYours": "The follow-up date on this company is its rep’s. Choose a project you work on to set one.",
+    "followUpOwed": "A call was due here. Say when the next one is, or that there is no next step.",
+    "followUpPast": "A follow-up cannot be in the past. Choose today or a later day."
   }
 }

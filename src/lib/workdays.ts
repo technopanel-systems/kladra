@@ -72,15 +72,24 @@ export function stepWorkingDay(
   by: -1 | 1,
   nonWorking: NonWorking[] = [],
   userId?: string,
+  /** How far it may walk. Three weeks, unless the caller knows of a longer absence. */
+  reach = 21,
 ): Day {
   let d = addDays(day, by);
-  for (let i = 0; i < 21 && !isWorkingDay(d, nonWorking, userId); i += 1) d = addDays(d, by);
+  for (let i = 0; i < reach && !isWorkingDay(d, nonWorking, userId); i += 1) d = addDays(d, by);
   return d;
 }
 
 /** The next working day on or after `day` — today itself, when today is one. */
-export function nextWorkingDay(day: Day, nonWorking: NonWorking[] = [], userId?: string): Day {
-  return isWorkingDay(day, nonWorking, userId) ? day : stepWorkingDay(day, 1, nonWorking, userId);
+export function nextWorkingDay(
+  day: Day,
+  nonWorking: NonWorking[] = [],
+  userId?: string,
+  reach?: number,
+): Day {
+  return isWorkingDay(day, nonWorking, userId)
+    ? day
+    : stepWorkingDay(day, 1, nonWorking, userId, reach);
 }
 
 /** One person who is not at work while the office is (D75). */
@@ -110,7 +119,12 @@ export function awayFrom(day: Day, nonWorking: NonWorking[] = []): Map<string, A
 
   for (const row of nonWorking) {
     if (row.userId === null || row.day !== day || away.has(row.userId)) continue;
-    away.set(row.userId, { backOn: nextWorkingDay(addDays(day, 1), nonWorking, row.userId) });
+    // As far as the rows reach: the admin may enter two months of leave, and
+    // three weeks into it the default walk stopped and named a day the person
+    // was still away on (Stage 3 audit). The rows a caller loads are the bound.
+    away.set(row.userId, {
+      backOn: nextWorkingDay(addDays(day, 1), nonWorking, row.userId, nonWorking.length + 21),
+    });
   }
   return away;
 }

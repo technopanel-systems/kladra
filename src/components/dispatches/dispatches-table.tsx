@@ -743,6 +743,8 @@ export function DispatchSheet({
   const t = useTranslations();
   const locale = useLocale();
   const close = useCloseDrawer(param);
+  // The coordinator's desk, where a load is opened to be answered.
+  const onDesk = usePathname() === "/queue";
   // What the load comes to, by the function the form adds it up with while the
   // rep types (money.ts) — on the stored figures, so the two agree to the halala.
   const totals = loadTotals(items, dispatch.services);
@@ -904,6 +906,7 @@ export function DispatchSheet({
             }}
             scope={scope}
             report={report}
+            onAnswered={onDesk ? close : undefined}
           />
         </SheetHeader>
 
@@ -1084,6 +1087,15 @@ export function DispatchSheet({
                     </span>
                   ))}
                 </dd>
+              </div>
+            ) : credit.length === 0 ? (
+              // Nobody on it earns this month (D207), so these metres moved
+              // nobody's target — said here, on the record itself, because a
+              // load that reached nobody's month and said nothing was the
+              // wondering §3 P14 asked to stop.
+              <div className="flex flex-col gap-1">
+                <dt className="text-xs text-muted-foreground">{t("common.credit.label")}</dt>
+                <dd data-slot="credit-nobody">{t("common.credit.nobody")}</dd>
               </div>
             ) : null}
             {/* What the load comes to, the five figures a quotation's totals

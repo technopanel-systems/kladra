@@ -26,6 +26,7 @@
   "activityNotFound": "That report is no longer there.",
   "shareWho": "Choose who to share it with.",
   "shareOwner": "It is already theirs.",
+  "shareSelf": "You cannot put yourself on a record that is not yours. Whoever holds it can share it with you.",
   "leadSourceNotYours": "That lead source is for management and marketing.",
   "noMarketingSource": "Marketing’s own lead source is missing from the lists, so the lead cannot be filed. An admin can put it back under Lookups.",
   "leadNeedsAFloor": "Choose someone a company can sit with.",

@@ -640,17 +640,19 @@ test("a manager reads the rep floor and works none of it", async ({ page, locale
 test("a stale or foreign ?open= leaves the list standing", async ({ page, locale, t }) => {
   await login(page, locale, "faisal");
 
-  // Saad's company: real, and not Faisal's. Found through Saad's own list so
-  // the spec never has to hard-code an id.
-  await login(page, locale, "saad");
-  await page.goto(`/${locale}/companies`);
-  const first = page.getByRole("table").first().getByRole("link").first();
-  const foreign = new URL(await first.getAttribute("href") ?? "", page.url()).searchParams.get(
-    "open",
-  );
-  expect(foreign).toBeTruthy();
-
-  await login(page, locale, "faisal");
+  // Saad's company: real, and not Faisal's. Asked of the table rather than read
+  // off the top of Saad's list: his list holds what is SHARED with him too, and
+  // the top of it is whichever customer was last worked, which another spec's
+  // report can make one of Faisal's.
+  const foreign = (
+    await one<{ id: string }>(
+      `select c.id from companies c
+        where c.rep_id = $1::uuid and c.archived_at is null
+          and not exists (select 1 from company_shares s where s.company_id = c.id)
+        order by c.name limit 1`,
+      [await userId("saad@technopanel.com.sa")],
+    )
+  ).id;
 
   for (const [what, open] of [
     ["not a uuid", "not-a-uuid"],

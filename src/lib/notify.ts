@@ -123,6 +123,21 @@ const CLEARED_BY: Record<NotificationKind, "work" | "reading"> = {
 const READING_KINDS = NOTIFICATION_KINDS.filter((kind) => CLEARED_BY[kind] === "reading");
 
 /**
+ * The other half of the same table: the kinds that only the WORK clears.
+ *
+ * For the one transition that settles every kind of work at once — the record
+ * the notice is about leaving the floor (`archiveRecord`). A notice about a
+ * lead nobody acknowledged, or about an archive somebody refused, points at a
+ * company that is no longer on any list, and nothing else was ever going to
+ * come and clear it: the acts that clear these each settle one kind, and
+ * archiving settles the record under all of them (D79).
+ *
+ * Derived from `CLEARED_BY` like its twin above, so a kind added there is
+ * answered here without anybody remembering to.
+ */
+export const WORK_KINDS = NOTIFICATION_KINDS.filter((kind) => CLEARED_BY[kind] === "work");
+
+/**
  * Whether reading one of these is the whole of acting on it.
  *
  * Exported for the seed, which writes `read_at` straight onto a row and is

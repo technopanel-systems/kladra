@@ -101,7 +101,7 @@ export function PhoneLinks({
   };
 
   const link = cn(
-    "touch relative z-10 inline-flex items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+    "touch relative z-10 inline-flex items-center gap-1.5 outline-hidden focus-visible:ring-3 focus-visible:ring-ring/50",
     chip
       ? "rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs hover:bg-surface"
       : "rounded-sm text-muted-foreground transition-colors hover:text-foreground hover:underline",

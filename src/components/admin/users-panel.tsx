@@ -71,6 +71,12 @@ import { cn } from "@/lib/utils";
  * menu of three things the action would refuse is worse than no menu. The
  * sentence under the heading says it once, at the top, instead of fourteen
  * times down the rows (`mayManage`, decided in `src/lib/authz.ts`).
+ *
+ * **A third reader, and the screen is only a list for him.** An admin viewing
+ * as somebody writes nothing anywhere in Kladra (D42, P8.8), so Add user, View
+ * as and every row's menu are gone while `me.viewing` — the page decides it,
+ * the same way it decides `mayManage`, and the banner across the top of the app
+ * already says whose eyes these are.
  */
 
 type Act = "edit" | "password" | "active";
@@ -87,7 +93,18 @@ export function UsersPanel({
   title: string;
   users: PanelUser[];
   /** Who is reading: his own row is not offered View as, and his role decides the rest. */
-  me: { id: string; role: Role };
+  me: {
+    id: string;
+    role: Role;
+    /** Reading through somebody else's eyes: this screen offers nothing (D42). */
+    viewing: boolean;
+    /**
+     * He is the only active admin left, so his own role is not a picker: the
+     * action refuses a change that would leave nobody able to administer the
+     * app, and the form says so where he would have chosen (D119).
+     */
+    lastAdmin: boolean;
+  };
   /** The roles this reader may hand out — the picker's whole list (P14, §4). */
   roles: Role[];
 }) {
@@ -157,20 +174,24 @@ export function UsersPanel({
               nobody's own floor, so the registry gates it rather than the
               narrowing (src/lib/export/index.ts). */}
           <ExportButton files={[{ name: "users", title }]} />
-          <UserDialog
-            mode="create"
-            roles={roles}
-            trigger={
-              <Button variant="brand">
-                <Plus aria-hidden="true" />
-                {t("admin.addUser")}
-              </Button>
-            }
-            onSaved={(email) => {
-              flash([email]);
-              refresh();
-            }}
-          />
+          {/* The file is a read and stays; the form is a write and does not
+              (DESIGN §5). */}
+          {me.viewing ? null : (
+            <UserDialog
+              mode="create"
+              roles={roles}
+              trigger={
+                <Button variant="brand">
+                  <Plus aria-hidden="true" />
+                  {t("admin.addUser")}
+                </Button>
+              }
+              onSaved={(email) => {
+                flash([email]);
+                refresh();
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -286,6 +307,10 @@ export function UsersPanel({
             mode="edit"
             user={subject}
             roles={roles}
+            // His own row, and nobody else active can administer the app: the
+            // role is stated rather than offered, because the only change it
+            // could take is the one the action refuses (M6, DESIGN §5).
+            roleLocked={me.lastAdmin && subject.id === me.id}
             open={act === "edit"}
             onOpenChange={closeTo}
             onSaved={() => {
@@ -342,13 +367,24 @@ export function UsersPanel({
  * sales manager reads it too (P14). `mayViewAs` is the admin and nobody else,
  * and `startViewingAction` checks the REAL session against it; drawing the
  * button for a manager would be a control that always fails (DESIGN §5).
+ *
+ * Not while already viewing either: the row for the real admin is the one row
+ * `startViewingAction` answers "you cannot view yourself" to, and the way out
+ * of viewing is Stop in the banner, which is where a reader is already looking
+ * for it.
  */
-function ViewAs({ user, me }: { user: AdminUser; me: { id: string; role: Role } }) {
+function ViewAs({
+  user,
+  me,
+}: {
+  user: AdminUser;
+  me: { id: string; role: Role; viewing: boolean };
+}) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
 
-  if (me.role !== "admin" || !user.active || user.id === me.id) return null;
+  if (me.viewing || me.role !== "admin" || !user.active || user.id === me.id) return null;
   const name = personNameFrom(user, locale);
 
   return (
@@ -488,6 +524,7 @@ function UserDialog({
   mode,
   user,
   roles,
+  roleLocked = false,
   trigger,
   open: held,
   onOpenChange,
@@ -497,6 +534,8 @@ function UserDialog({
   user?: AdminUser;
   /** What the picker offers this reader (P14, §4). */
   roles: Role[];
+  /** The role is stated, not chosen: the last active admin's own account (M6). */
+  roleLocked?: boolean;
   trigger?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -524,6 +563,7 @@ function UserDialog({
         mode={mode}
         user={user}
         roles={roles}
+        roleLocked={roleLocked}
         onClose={() => setOpen(false)}
         onSaved={onSaved}
       />
@@ -535,12 +575,14 @@ function UserForm({
   mode,
   user,
   roles,
+  roleLocked,
   onClose,
   onSaved,
 }: {
   mode: "create" | "edit";
   user?: AdminUser;
   roles: Role[];
+  roleLocked: boolean;
   onClose: () => void;
   onSaved: (email: string) => void;
 }) {
@@ -644,18 +686,31 @@ function UserForm({
 
         <div className="flex flex-col gap-2">
           <Label id="user-role-label">{t("common.role")}</Label>
-          <SearchableSelect
-            aria-labelledby="user-role-label"
-            aria-describedby={fieldErrors.role ? "user-role-error" : undefined}
-            invalid={fieldErrors.role ? true : undefined}
-            options={options}
-            value={role}
-            onChange={setRole}
-            disabled={pending}
-            placeholder={t("forms.choose")}
-            searchPlaceholder={t("forms.searchList")}
-            emptyText={t("forms.noMatch")}
-          />
+          {/* The last active admin's own account: the only change this picker
+              could take is the one `updateUserAction` refuses, so the role is
+              a word and the reason is under it — never a list whose every
+              other entry locks him out of his own app (M6, DESIGN §5). The
+              hidden field above still carries the role, so the rest of the
+              form saves as it always did. */}
+          {roleLocked ? (
+            <>
+              <p className="text-sm">{t(`common.${role}`)}</p>
+              <p className="text-xs text-muted-foreground">{t("admin.lastAdmin")}</p>
+            </>
+          ) : (
+            <SearchableSelect
+              aria-labelledby="user-role-label"
+              aria-describedby={fieldErrors.role ? "user-role-error" : undefined}
+              invalid={fieldErrors.role ? true : undefined}
+              options={options}
+              value={role}
+              onChange={setRole}
+              disabled={pending}
+              placeholder={t("forms.choose")}
+              searchPlaceholder={t("forms.searchList")}
+              emptyText={t("forms.noMatch")}
+            />
+          )}
           {/* A role with no floor, refused while companies are still on the
               account (D91): the sentence sits under the field it is about. */}
           {fieldErrors.role ? (

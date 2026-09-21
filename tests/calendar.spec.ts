@@ -105,8 +105,12 @@ test("a holiday before the first of the month is a day off on both desks", async
     // read from (this month's first, and sixty flat days) — old enough that
     // only the D97 fix reads the holiday below at all.
     await query(
+      // Both instants: a wait is counted from the day a paper landed on the
+      // desk (`desk_since`), which for a request never sent back is the day it
+      // was raised — the seed writes the two the same, and so does this.
       `update quotations
-          set created_at = (($1::date - 45)::text || ' 09:00')::timestamp at time zone 'Asia/Riyadh'
+          set created_at = (($1::date - 45)::text || ' 09:00')::timestamp at time zone 'Asia/Riyadh',
+              desk_since = (($1::date - 45)::text || ' 09:00')::timestamp at time zone 'Asia/Riyadh'
         where id = $2::uuid`,
       [today, target.id],
     );
@@ -174,7 +178,7 @@ test("a holiday before the first of the month is a day off on both desks", async
       await query("delete from non_working_days where id = $1::int", [holiday.id]);
     }
   } finally {
-    await query("update quotations set created_at = $1 where id = $2::uuid", [
+    await query("update quotations set created_at = $1, desk_since = $1 where id = $2::uuid", [
       target.created_at,
       target.id,
     ]);

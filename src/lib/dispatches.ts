@@ -71,10 +71,11 @@ import {
 import { LIST_LIMIT } from "@/lib/list-size";
 import type { SessionUser } from "@/lib/types";
 import { creditOnDispatch, type CreditLine } from "@/lib/credit-rows";
-import { COMMITTING_IN, CREDITED_METRES, lineSqm, sumSqm } from "@/lib/sqm";
+import { COMMITTING, committedQtySql, CREDITED_METRES, lineSqm, sumSqm } from "@/lib/sqm";
 import { maySeeCompany, onCompanySql, seesCompany } from "@/lib/visibility";
 import { approvedDispatches, companyWhere } from "@/lib/counted";
 import type { Narrowing } from "@/lib/narrowing";
+import { liveRevision } from "@/lib/live-revision";
 
 /**
  * The three states a load passes through, read off the database's own enum, for
@@ -144,6 +145,8 @@ export type DispatchRow = {
   /** Riyadh days as text, computed in SQL (rules/data.md). */
   approvedOn: string | null;
   createdOn: string;
+  /** The day it last landed on the desk; a wait is counted from here. */
+  deskSince: string;
   /** numeric(12,2) all the way to the screen. */
   totalSqm: string;
   itemCount: number;
@@ -221,24 +224,6 @@ const dispatchTotals = qb
   .as("dispatch_totals");
 
 /**
- * How much of one quotation line is already spoken for.
- *
- * Both tables are named outright: in a correlated subquery with no join a bare
- * Drizzle column renders unqualified and resolves inside the INNER table, so
- * the condition is silently never true and the answer is always zero
- * (rules/data.md — it has cost three days across two systems).
- */
-export function committedQtySql(quotationItemId: SQL): SQL<number> {
-  return sql`(
-    select coalesce(sum(di.qty), 0)::int
-      from dispatch_items di
-      join dispatches d on d.id = di.dispatch_id
-     where di.quotation_item_id = ${quotationItemId}
-       and d.status in ${sql.raw(COMMITTING_IN)}
-  )`;
-}
-
-/**
  * The shared column list, now a function of the reader's language: a person's
  * name is one of its columns and Arabic screens name people in Arabic (D68).
  * The same shape `shipmentName(locale)` already had beside it.
@@ -276,6 +261,9 @@ function selection(locale: string) {
     approvedOn: riyadhDay(sql`dispatches.approved_at`),
     // `created_at` is NOT NULL, so this one always has a day.
     createdOn: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+    // The day it last landed on the desk — what a wait is counted from
+    // (`desk_since`, schema.ts), which is not the day it was first raised.
+    deskSince: sql<string>`to_char((dispatches.desk_since at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
     totalSqm: sql<string>`coalesce(${dispatchTotals.sqm}, 0)`,
     itemCount: sql<number>`coalesce(${dispatchTotals.itemCount}, 0)`,
     // Whose metres these are, on the row rather than only inside the drawer
@@ -294,11 +282,7 @@ function selection(locale: string) {
     // refuse it (D85), and the queue says so before the press. The same test
     // `isLiveRevision` runs at approval, written out because a correlated
     // subquery names its tables (rules/data.md).
-    superseded: sql<boolean>`exists (
-      select 1 from quotations later
-       where later.number = quotations.number
-         and later.revision > quotations.revision
-    )`,
+    superseded: sql<boolean>`not ${sql.raw(liveRevision("quotations"))}`,
     // Null on a direct dispatch and an empty list on one that matched its paper;
     // both are "does not differ" (SPEC §3, P13).
     differs: sql<boolean>`coalesce(jsonb_array_length(dispatches.quotation_difference), 0) > 0`,
@@ -332,6 +316,8 @@ type Selected = {
   refuseReason: string | null;
   approvedOn: string | null;
   createdOn: string;
+  /** The day it last landed on the desk; a wait is counted from here. */
+  deskSince: string;
   totalSqm: string;
   itemCount: number;
   creditNames: string[] | null;
@@ -373,6 +359,7 @@ function toRow(row: Selected, shipmentMethod: string): DispatchRow {
     refuseReason: row.refuseReason ?? null,
     approvedOn: row.approvedOn ?? null,
     createdOn: row.createdOn,
+    deskSince: row.deskSince,
     totalSqm: String(row.totalSqm ?? "0"),
     itemCount: Number(row.itemCount ?? 0),
     creditNames: row.creditNames ?? [],
@@ -403,7 +390,8 @@ export async function listDispatches(input: ListDispatchesInput): Promise<Dispat
     .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(and(...conditions))
-    .orderBy(input.order === "oldest" ? asc(dispatches.createdAt) : desc(dispatches.createdAt))
+    // Oldest first is the desk's order, and the desk counts from the landing.
+    .orderBy(input.order === "oldest" ? asc(dispatches.deskSince) : desc(dispatches.createdAt))
     // Capped (D80).
     .limit(input.limit ?? LIST_LIMIT);
 
@@ -468,13 +456,13 @@ function narrowTo(input: ListDispatchesInput): (SQL | undefined)[] {
 /** The same, for the other half of her desk (D144). */
 export async function dispatchWaitDays(input: ListDispatchesInput): Promise<Day[]> {
   const rows = await db
-    .select({ day: riyadhDay(sql`dispatches.created_at`) })
+    .select({ day: riyadhDay(sql`dispatches.desk_since`) })
     .from(dispatches)
     .innerJoin(companies, eq(companies.id, dispatches.companyId))
     .leftJoin(quotations, eq(quotations.id, dispatches.quotationId))
     .leftJoin(projects, eq(projects.id, dispatches.projectId))
     .where(and(...narrowTo(input)))
-    .orderBy(asc(dispatches.createdAt));
+    .orderBy(asc(dispatches.deskSince));
   return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
 }
 
@@ -632,16 +620,11 @@ export async function getDispatch(
       colourCode: dispatchItems.colourCode,
       qty: dispatchItems.qty,
       quotedQty: quotationItems.qty,
-      // Both tables named outright inside the subquery (rules/data.md), and
-      // the same status test as committedQtySql: waiting counts as spoken for.
-      elsewhereQty: sql<number>`(
-        select coalesce(sum(di.qty), 0)::int
-          from dispatch_items di
-          join dispatches d on d.id = di.dispatch_id
-         where di.quotation_item_id = dispatch_items.quotation_item_id
-           and d.status in ${sql.raw(COMMITTING_IN)}
-           and d.id <> dispatch_items.dispatch_id
-      )`,
+      // What every OTHER load has spoken for on the line this one came from —
+      // `committedQtySql`, with this load left out. The line is the joined
+      // `quotation_items` row; a line of the load's own joins nothing and
+      // counts nothing.
+      elsewhereQty: committedQtySql("quotation_items", sql`d.id <> dispatch_items.dispatch_id`),
       supplier: suppliers.code,
       fireRating: fireRatings.name,
       className: classes.name,
@@ -723,7 +706,7 @@ export async function getDispatch(
 
   // This dispatch holds its own share only while it is waiting or approved; a
   // refused or cancelled one gave its quantities back (D12).
-  const holds = row.status === "submitted" || row.status === "approved";
+  const holds = (COMMITTING as readonly string[]).includes(row.status);
   const detail = toRow(row, row.shipmentMethod);
   return {
     shared: row.shared,
@@ -748,7 +731,7 @@ export async function getDispatch(
   };
 }
 
-/** The dispatches raised against one quotation, newest first — the drawer's tab. */
+/** The dispatches raised against one quotation NUMBER, newest first — the drawer's tab. */
 export async function listDispatchesForQuotation(
   user: SessionUser,
   quotationId: string,
@@ -765,7 +748,15 @@ export async function listDispatchesForQuotation(
     .leftJoin(dispatchTotals, eq(dispatchTotals.dispatchId, dispatches.id))
     .where(
       and(
-        eq(dispatches.quotationId, quotationId),
+        // Every load on this NUMBER, whichever revision it was raised against:
+        // a revision's drawer counts what went out on the papers before it
+        // (`committedQty`), and a list that showed only its own loads beside
+        // that figure would be a figure with nothing under it.
+        sql`${dispatches.quotationId} in (
+          select sibling.id from quotations sibling
+            join quotations asked on asked.number = sibling.number
+           where asked.id = ${quotationId}::uuid
+        )`,
         seesEveryDispatch(user) ? undefined : seesCompany(user),
       ),
     )
@@ -804,14 +795,10 @@ export async function remainingOnQuotation(
   quotationId: string,
   exclude?: string,
 ): Promise<RemainingItem[]> {
-  const committed = sql<number>`(
-    select coalesce(sum(di.qty), 0)::int
-      from dispatch_items di
-      join dispatches d on d.id = di.dispatch_id
-     where di.quotation_item_id = quotation_items.id
-       and d.status in ${sql.raw(COMMITTING_IN)}
-       and (${exclude ?? null}::uuid is null or d.id <> ${exclude ?? null}::uuid)
-  )`;
+  const committed = committedQtySql(
+    "quotation_items",
+    exclude ? sql`d.id <> ${exclude}::uuid` : undefined,
+  );
 
   const rows = await db
     .select({
@@ -895,6 +882,9 @@ export async function achievedByRep(month: string): Promise<Map<string, string>>
       from credited
      where date_trunc('month', (approved_at at time zone 'Asia/Riyadh')::date)
              = date_trunc('month', ${month}::date)
+       -- A load that counts for nobody is a row with no person (sqm.ts): it is
+       -- the company's metre and nobody's, so it is on no person's line here.
+       and user_id is not null
      group by user_id
   `);
 

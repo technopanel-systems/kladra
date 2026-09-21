@@ -6,7 +6,7 @@
  * — the failure this guards is silent). src/auth.ts wires it into Auth.js.
  */
 import bcrypt from "bcryptjs";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { Adapter, AdapterSession, AdapterUser } from "@auth/core/adapters";
 
 import { db } from "@/db";
@@ -101,23 +101,6 @@ export const kladraAdapter: Adapter = {
       .where(and(eq(sessions.sessionToken, sessionToken), eq(users.active, true)))
       .limit(1);
     if (!row) return null;
-
-    /*
-     * Last seen, written here because this is the one query every authenticated
-     * request already makes (D77). A day rather than an instant: the question is
-     * who has not opened it this week, and a day makes the write cheap — one
-     * UPDATE per person per day, skipped for every request after it.
-     *
-     * Awaited rather than fired and forgotten: an un-awaited promise in a server
-     * request is cut off when the response is sent, and a figure that is right
-     * on a slow day and wrong on a fast one is worse than no figure. It costs
-     * one round trip, once a day, per person.
-     */
-    const today = todayRiyadh();
-    if (row.user.lastSeenOn !== today) {
-      await db.update(users).set({ lastSeenOn: today }).where(eq(users.id, row.user.id));
-    }
-
     return { session: toAdapterSession(row.session), user: toAdapterUser(row.user) };
   },
 
@@ -167,4 +150,31 @@ export async function verifyCredentials(
   if (!row || !row.active || !matches) return null;
 
   return { id: row.id, name: row.name, email: row.email };
+}
+
+/**
+ * Last seen: the last Riyadh day a SCREEN was served to this person (D77).
+ *
+ * A day rather than an instant: the question is who has not opened it this
+ * week, and a day makes the write cheap — the UPDATE matches no row on every
+ * render after the first of the day.
+ *
+ * Called from the signed-in layout and from nowhere else. It was written inside
+ * `getSessionAndUser`, "the one query every authenticated request already
+ * makes" — and that was the defect: the live stream reconnecting from a tab
+ * left open on Thursday, and the bell's count behind it, are authenticated
+ * requests too, so a rep who had not looked at Kladra for a week read "seen
+ * today" on the one screen that exists to notice he had stopped (Stage 3
+ * audit). A screen is what somebody looks at; an `/api/*` request is not.
+ *
+ * Awaited rather than fired and forgotten: an un-awaited promise in a server
+ * request is cut off when the response is sent, and a figure that is right on a
+ * slow day and wrong on a fast one is worse than no figure.
+ */
+export async function noteLastSeen(userId: string): Promise<void> {
+  const today = todayRiyadh();
+  await db
+    .update(users)
+    .set({ lastSeenOn: today })
+    .where(and(eq(users.id, userId), sql`${users.lastSeenOn} is distinct from ${today}::date`));
 }

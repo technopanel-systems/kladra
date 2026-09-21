@@ -13,6 +13,9 @@
   "noDispatches": "No dispatch is waiting to be approved.",
   "late": "late",
   "notInSmac": "Customers not in SMAC yet",
-  "notInSmacMeans": "Customers a quotation has been asked for who are not in SMAC. One leaves this list when you issue its quotation there.",
-  "notInSmacSince": "quotation asked for since {date}"
+  "notInSmacMeans": "Customers a quotation has been asked for who are not in SMAC. One leaves this list once it is registered there — said here, or while issuing its quotation.",
+  "notInSmacSince": "quotation asked for since {date}",
+  "registerInSmac": "Registered in SMAC",
+  "registerInSmacFor": "{company} is registered in SMAC",
+  "registeredInSmac": "{company} is marked as registered in SMAC."
 }

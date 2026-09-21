@@ -19,7 +19,7 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
 import { findPossibleDuplicates, getCompany } from "@/lib/companies";
-import { creditPoolNamed } from "@/lib/credit-rows";
+import { creditDefault, creditPoolNamed } from "@/lib/credit-rows";
 import {
   type CityOption,
   type CountryOption,
@@ -365,10 +365,17 @@ export type CreditChoices = {
    */
   withoutTarget: string[];
   /**
-   * Whether the person filling the form is one of them — the case where the
-   * work is raised and counts for nobody at all.
+   * Whether the person this paper is for is one of them. It then counts for
+   * whoever on the job does earn (`creditDefault`), and for nobody only when
+   * nobody there does.
    */
   mineEarnsNothing: boolean;
+  /**
+   * The one person it counts for when that is not the person raising it and
+   * there is nobody to choose between — named, so the form can say where the
+   * metres go instead of drawing a list of one.
+   */
+  soleEarner: string | null;
 };
 
 export async function creditChoicesAction(
@@ -413,13 +420,27 @@ export async function creditChoicesAction(
     }
     const pool = await creditPoolNamed(projectId, reader.id);
     const mineEarnsNothing = !pool.people.some((person) => person.value === reader.id);
+    // What the field opens on is what a blank answer would be written as — the
+    // same function the write asks, so the two cannot differ (DESIGN §5).
+    const opensOn = await creditDefault(
+      projectId,
+      reader.id,
+      pool.people.map((person) => person.value),
+    );
     // One name is not a question. The founder's own line: where the project
     // has one rep the dialog asks nothing at all. The sentence under it is not
     // a question either, and is said whenever there is one to say (P14).
     const people = pool.people.length < 2 ? [] : pool.people;
+    const sole = pool.people.length === 1 && mineEarnsNothing ? pool.people[0].label : null;
     return {
       ok: true,
-      data: { people, mine: reader.id, withoutTarget: pool.withoutTarget, mineEarnsNothing },
+      data: {
+        people,
+        mine: opensOn ?? reader.id,
+        withoutTarget: pool.withoutTarget,
+        mineEarnsNothing,
+        soleEarner: sole,
+      },
     };
   } catch (error) {
     if (error instanceof NotAllowed) return { ok: false, error: t(refusalKey(error)) };

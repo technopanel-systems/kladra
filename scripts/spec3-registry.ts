@@ -489,7 +489,7 @@ export const SPEC3: Spec3Entry[] = [
     says: "whoever asks writes a mandatory reason, the request goes to the manager",
     tests: [
       "a rep asks to archive a customer, and it stays on his floor until somebody answers",
-      "his own band holds what is waiting on him, and yes takes the record off the floor",
+      "his own band holds what is waiting on him, with the reason and the answer on the row",
       "a refusal comes back on the record, carrying his reason",
       "a record with a request waiting is not offered a second one",
       "a job is asked for with a reason too, and an empty one is refused at the field",

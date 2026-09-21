@@ -45,6 +45,7 @@ import type { Day } from "@/lib/dates";
 import {
   type FollowUpFilter,
   type FollowUpState,
+  dueProjectSql,
   followUpFilterSql,
   effectiveFollowUpSql,
   followUpStateSql,
@@ -106,6 +107,15 @@ export type CompanyRow = {
   /** The soonest date waiting on this customer — its own or an open project's. */
   nextFollowUp: Day | null;
   followUpState: FollowUpState | null;
+  /**
+   * The job that date belongs to, when it is a job's and it is already owed
+   * (D9, D94). Null on most rows, which is what it should be: it is set only
+   * where the customer's own date is later than a project's, or absent.
+   *
+   * The card that shows it names the job and opens its report on the job, so
+   * the call clears the date that is actually red (S52).
+   */
+  dueProject: { id: string; name: string } | null;
 };
 
 export type ListCompaniesInput = {
@@ -247,8 +257,15 @@ function ownedBy(user: SessionUser): SQL | undefined {
 }
 
 /**
- * The rep's home list. Newest activity first, companies never touched at the
- * bottom, ties broken by name so the order never wobbles between renders.
+ * The rep's home list, and the day's call bands under it.
+ *
+ * Unfiltered it is the floor, newest activity first with the companies nobody
+ * has touched at the bottom. Under a filter it is a BAND, and a band is read
+ * top-down until the reading stops — so its order is what is owed rather than
+ * what was touched last (`bandOrder`).
+ *
+ * Ties are broken by name in every order, so the rows never wobble between
+ * renders and "and 4 more" points at the same four twice running.
  *
  * `q` matches the company name, or a contact's number when it looks like a
  * phone — the strongest sign two records are the same company (S14).
@@ -274,11 +291,12 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
       lastActivityText: lastActivityTextSql(),
       nextFollowUp: effective,
       followUpState: followUpStateSql(effective),
+      dueProject: dueProjectSql(),
     })
     .from(companies)
     .leftJoin(cities, eq(cities.id, companies.cityId))
     .where(and(...conditions))
-    .orderBy(sql`${lastActivity} desc nulls last`, asc(companies.name))
+    .orderBy(...bandOrder(input.filter, effective, lastActivity))
     // A screen that draws 25 rows asks for 25. Without this the list was the
     // whole floor at every width, twice over — the phone's cards and the desk's
     // table are both rendered and one is hidden by CSS (D80).
@@ -295,7 +313,53 @@ export async function listCompanies(input: ListCompaniesInput): Promise<CompanyR
     lastActivityText: row.lastActivityText ?? null,
     nextFollowUp: row.nextFollowUp ?? null,
     followUpState: row.followUpState ?? null,
+    // `json_build_object` comes back decoded by pg, but a `sql<T>` is an
+    // assertion and not a decoder (rules/data.md), so the shape is checked here
+    // rather than trusted into a card that would render `undefined`.
+    dueProject:
+      row.dueProject && typeof row.dueProject.id === "string"
+        ? { id: row.dueProject.id, name: row.dueProject.name }
+        : null,
   }));
+}
+
+/**
+ * How a band is read: worst first, and "worst" is a different column in each of
+ * them.
+ *
+ * Every filter sorted by last activity, which is the order of the UNFILTERED
+ * floor and answers a question nobody asked of a band: "Overdue" put the
+ * customer somebody rang yesterday above the one nobody has rung since May, and
+ * the cap at twenty-five cards then hid the worst of them behind "and 12 more".
+ * A band that is cut off has to be cut off at the right end.
+ *
+ * So each band sorts by the thing that put a row IN it: the three date bands by
+ * the date they are late against, "never contacted" by how long ago somebody
+ * typed the name in, and "gone quiet" by how long the silence has been. With no
+ * filter the list is the floor and the order is unchanged.
+ */
+function bandOrder(
+  filter: FollowUpFilter | undefined,
+  effective: SQL,
+  lastActivity: SQL,
+): SQL[] {
+  const byName = sql`${companies.name} asc`;
+  switch (filter) {
+    case "overdue":
+    case "today":
+    case "followups":
+      return [sql`(${effective}) asc`, byName];
+    case "never":
+      // Nothing has ever happened on these rows, so the only age they have is
+      // the day somebody typed the name in — which is the very day S51 counts.
+      return [sql`${companies.createdAt} asc`, byName];
+    case "quiet":
+      // The band requires at least one entry (`goneQuietCompanySql`), so this
+      // is never null: the longest silence first.
+      return [sql`${lastActivity} asc`, byName];
+    default:
+      return [sql`${lastActivity} desc nulls last`, byName];
+  }
 }
 
 /**
@@ -377,7 +441,7 @@ function narrowTo(input: ListCompaniesInput): (SQL | undefined)[] {
       followUpFilterSql(
         effective,
         filter,
-        neverContactedCompanySql(),
+        neverContactedCompanySql(effective),
         goneQuietCompanySql(effective),
       ),
     );
@@ -1028,6 +1092,9 @@ export async function companiesNotInSmac(
         join quotations on quotations.company_id = companies.id
        where companies.smac_registered_at is null
          and companies.archived_at is null
+         -- A request he withdrew asks nothing of SMAC: a customer whose only
+         -- paper is a withdrawn one was on her list for a price nobody wants.
+         and quotations.status <> 'cancelled'
        -- By the person's ID and not by either spelling of his name: Postgres
        -- lets the select name any column of a table grouped by its primary
        -- key, and the reader's own spelling is what the select asks for.

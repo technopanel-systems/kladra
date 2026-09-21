@@ -3,6 +3,7 @@ import type { db } from "@/db";
 import { dispatches, duplicateFlags, quotations, type DuplicateFlagStatus } from "@/db/schema";
 import type { DispatchStatus } from "@/lib/dispatches";
 import type { QuotationStatus } from "@/lib/quotations";
+import { liveRevision } from "@/lib/live-revision";
 
 /**
  * A write holds its row before it decides (SPEC D85, DESIGN §5).
@@ -69,7 +70,8 @@ export async function holdDuplicateFlag(
 }
 
 /**
- * Whether no later revision of this quotation's number exists (S34, D36).
+ * Whether this is the live revision of its number (S34, D36; the sentence is
+ * `liveRevision`, and a withdrawn revision supersedes nothing).
  * Asked AFTER the hold, because a revision holds the same row while it is
  * raised: whichever of the two came second sees the first.
  *
@@ -81,11 +83,7 @@ export async function holdDuplicateFlag(
  */
 export async function isLiveRevision(tx: Tx, quotationId: string): Promise<boolean> {
   const result = await tx.execute<{ live: boolean }>(sql`
-    select not exists (
-             select 1 from quotations later
-              where later.number = quotations.number
-                and later.revision > quotations.revision
-           ) as live
+    select ${sql.raw(liveRevision("quotations"))} as live
       from quotations
      where quotations.id = ${quotationId}::uuid
   `);

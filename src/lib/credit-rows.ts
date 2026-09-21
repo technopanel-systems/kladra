@@ -52,9 +52,20 @@ export async function creditPool(projectId: string | null, actorId: string): Pro
  * rep with no target is support, not sales: they may raise work without it
  * counting."
  *
- * So the question is asked of the target row for the CURRENT Riyadh month, and
- * of nothing else: a target above nought, or the tick beside it. A person with
- * no row at all has no target, which is the same answer as nought.
+ * So the question is asked of the target row for the CURRENT Riyadh month: a
+ * target above nought, or the tick beside it. A person with no row has no
+ * target, which is the same answer as nought — and is how the admin says
+ * "support this month": he leaves the box blank (D41).
+ *
+ * One case is not this month's rows (Stage 3 audit, D217). A month's targets
+ * can only be typed once the month has begun, so on the first of every month
+ * there was no row for ANYBODY: every paper raised before the admin reached the
+ * targets screen was written with no credit rows and — frozen at the raise —
+ * counted for nobody for good. Until somebody has typed a target for this
+ * month, the newest month that has any is the one that stands; the moment one
+ * box of this month is saved, this month's rows are the answer again, blanks
+ * included. (`approveDispatchAction` closes the rest of that window: a load
+ * that reaches approval counting for nobody is asked once more.)
  *
  * This month and not the paper's month, because a paper waiting on the desk has
  * no month yet — a dispatch earns its metres on the day it is approved, which
@@ -74,12 +85,45 @@ export async function earners(userIds: readonly string[]): Promise<string[]> {
     .where(
       and(
         inArray(targets.userId, ids),
-        eq(targets.month, month),
+        // The newest month anybody has a target in, at or before this one.
+        sql`${targets.month} = (select max(typed.month) from targets typed where typed.month <= ${month}::date)`,
         or(gt(targets.sqm, "0"), eq(targets.shares, true)),
       ),
     );
   const may = new Set(rows.map((row) => row.userId));
   return ids.filter((id) => may.has(id));
+}
+
+/**
+ * Who a paper counts for when nobody has said — one rule, asked by the form
+ * for what its field opens on and by the write for what a blank answer means,
+ * so the two cannot differ (DESIGN §5).
+ *
+ * The person raising it, when he earns. When he does not — "support, not
+ * sales: he may raise the work without it counting FOR HIM" (§3 P14) — the
+ * metres are still somebody's: the job's own rep if he earns, the only earner
+ * on the job if there is one, and otherwise everybody on it who earns. Nobody
+ * only when nobody on the job earns at all, which is D207's own sentence. It
+ * used to be nobody whenever the raiser earned nothing, so a support rep
+ * raising a load on a seller's job cost the seller his metres and the form had
+ * no box to say otherwise (Stage 3 audit).
+ */
+export async function creditDefault(
+  projectId: string | null,
+  actorId: string,
+  pool: readonly string[],
+): Promise<string | typeof CREDIT_SPLIT | null> {
+  if (pool.includes(actorId)) return actorId;
+  if (pool.length === 0) return null;
+  if (pool.length === 1) return pool[0];
+  if (projectId) {
+    const owner = await db.execute<{ rep_id: string }>(
+      sql`select rep_id from projects where id = ${projectId}::uuid`,
+    );
+    const repId = owner.rows[0]?.rep_id;
+    if (repId && pool.includes(repId)) return repId;
+  }
+  return CREDIT_SPLIT;
 }
 
 /**
@@ -96,12 +140,14 @@ export async function resolveCredit(
   answer: string | undefined,
 ): Promise<string[] | null> {
   const pool = await creditPool(projectId, actorId);
-  // Nobody named, and the person raising it earns nothing: the work is raised
-  // and counts for no one (P14, "support, not sales"). An empty list, not his
-  // name — `creditQuotation` writes no rows for it.
-  if (!answer || answer === actorId) return pool.includes(actorId) ? [actorId] : [];
   if (answer === CREDIT_SPLIT) return pool;
-  return pool.includes(answer) ? [answer] : null;
+  if (answer && answer !== actorId) return pool.includes(answer) ? [answer] : null;
+  // Nobody named, or his own name: what `creditDefault` says, which is him when
+  // he earns. An empty list when nobody on the job earns at all — the work is
+  // raised and counts for no one (D207), and `creditQuotation` writes no rows.
+  const fallback = await creditDefault(projectId, actorId, pool);
+  if (fallback === null) return [];
+  return fallback === CREDIT_SPLIT ? pool : [fallback];
 }
 
 /**

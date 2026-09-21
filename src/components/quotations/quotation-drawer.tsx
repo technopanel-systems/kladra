@@ -9,7 +9,7 @@ import { QuotationSheet } from "@/components/quotations/quotation-sheet";
 import { mayReportOn } from "@/lib/activities";
 import { Button } from "@/components/ui/button";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { issuesOwnQuotations, mayWrite } from "@/lib/floor";
+import { answersTheDesk, issuesOwnQuotations, mayWrite } from "@/lib/floor";
 import { maySeeCompany, mayRaiseFor } from "@/lib/visibility";
 import { raisesOnBehalf } from "@/lib/on-behalf";
 import { listDispatchesForQuotation } from "@/lib/dispatches";
@@ -26,8 +26,8 @@ import { quotationStanding } from "@/lib/standing";
  *
  * It also decides what the person looking at it may do, because that is a
  * question about the reader and the row, not about the screen: the coordinator
- * runs the chain, and the rep who owns the company owns the answers on it (S8,
- * S9). The buttons themselves are in QuotationActions.
+ * runs the chain, and the rep the paper names owns the answers on it (S9, D147).
+ * The buttons themselves are in QuotationActions.
  */
 export async function QuotationDrawer({ quotationId }: { quotationId: string | null }) {
   if (!quotationId) return null;
@@ -169,13 +169,14 @@ export async function QuotationDrawer({ quotationId }: { quotationId: string | n
         contactId: quotation.contactId ?? "",
       }}
       scope={{
-        coordinator: user.role === "coordinator",
+        coordinator: answersTheDesk(user),
         // Her revision goes out as she raises it, so the dialog behind Revise
         // asks for the SMAC number instead of joining a queue she owns (§3).
         issuesDirectly: issuesOwnQuotations(user.role),
-        // The rep whose COMPANY it is — not whoever raised it, and not a
-        // manager, who sees everything and owns none of it (S8). The same fact
-        // the actions check, so nothing is offered that would then be refused.
+        // The rep the PAPER names (D147) — not the customer's owner, who is
+        // somebody else on a shared job, and not a manager, who sees everything
+        // and owns none of it (S8). The same fact the actions check, so nothing
+        // is offered that would then be refused.
         owner,
       }}
     />

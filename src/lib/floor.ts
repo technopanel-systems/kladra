@@ -130,6 +130,20 @@ export function issuesOwnQuotations(role: Role): boolean {
 }
 
 /**
+ * Whether this reader answers the desk's paper — Issue, Send back, Approve,
+ * Refuse, Correct number.
+ *
+ * The coordinator, and not somebody viewing AS her (D42, D52). Both drawers
+ * asked the role alone, so the admin viewing as Rawan was offered all five,
+ * filled in a SMAC number and was refused by `requireActor` — a control that is
+ * there and refuses, which DESIGN §5 rules out and `mayWrite` above had already
+ * stopped for every button that asks it.
+ */
+export function answersTheDesk(user: SessionUser): boolean {
+  return user.role === "coordinator" && !user.viewedBy;
+}
+
+/**
  * Who may raise a quotation or a dispatch on somebody else's behalf (SPEC §3,
  * P13): "the coordinator may raise a quotation or a dispatch on a rep's behalf;
  * it counts toward that rep".

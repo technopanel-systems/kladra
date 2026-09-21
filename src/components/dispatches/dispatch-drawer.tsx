@@ -9,7 +9,7 @@ import { DispatchSheet } from "@/components/dispatches/dispatches-table";
 import { ReportButton } from "@/components/reports/report-dialog";
 import { mayReportOn } from "@/lib/activities";
 import { NotAllowed, requireUser } from "@/lib/authz";
-import { mayWrite } from "@/lib/floor";
+import { answersTheDesk, mayWrite } from "@/lib/floor";
 import { dispatchHistory, getDispatch } from "@/lib/dispatches";
 import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
 
@@ -21,7 +21,7 @@ import { draftLinesFrom, draftServicesFrom } from "@/lib/quotation-draft";
  * reopens exactly this.
  *
  * It also decides what the person looking at it may do: the coordinator runs
- * the chain, and the rep who owns the company owns the request on it (S8, S9).
+ * the chain, and the rep the load names owns the request on it (S9, D147).
  *
  * And a read that fails fails in the drawer's own panel, with Try again, not on
  * the screen under it (`DispatchTrouble`, P13-G6 S12.5): the boundary stands
@@ -68,7 +68,7 @@ async function DispatchDrawerBody({ dispatchId, param }: { dispatchId: string; p
   const history = await dispatchHistory(dispatch.id);
 
   const scope = {
-    coordinator: user.role === "coordinator",
+    coordinator: answersTheDesk(user),
     /**
      * Whose load this is — the rep it was raised for, and nobody else: not a
      * manager, who sees everything and owns none of it (S8), and since P14.5

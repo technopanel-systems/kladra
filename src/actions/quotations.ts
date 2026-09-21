@@ -40,7 +40,7 @@ import { firstRefusedBox, lineFieldKey } from "@/lib/line-refusal";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
 import { round2 } from "@/lib/money";
 import { clearNotifications, createNotification } from "@/lib/notify";
-import { holdQuotation } from "@/lib/hold";
+import { holdQuotation, isLiveRevision } from "@/lib/hold";
 import { quotationLabel } from "@/lib/labels";
 import { isSmacClash, smacHolder } from "@/lib/smac";
 import { quotationEvent } from "@/lib/quotation-events";
@@ -108,7 +108,7 @@ type Loaded = {
   companyName: string;
   projectId: string;
   repId: string;
-  /** The rep who owns the COMPANY — who hears about it, and whose floor it is. */
+  /** The rep who owns the COMPANY — whose floor it is, and who may therefore see it. */
   companyRepId: string;
   /** The rep whose PROJECT it is, and whether this actor is on that job (D147). */
   projectRepId: string;
@@ -227,6 +227,12 @@ const itemSchema = z.object({
   width: typed(z.coerce.number().positive().max(100)),
   length: typed(z.coerce.number().positive().max(1_000)),
   pricePerSqm: typed(z.coerce.number().min(0).max(1_000_000)),
+  // The stored line this one opened on, when the form opened on a paper: what
+  // has gone out is counted against where a line BEGAN (`origin_item_id`), and
+  // only the form knows which of its lines is the old one carried through and
+  // which he added. Never trusted as it arrives — `originsOf` keeps an id only
+  // when it is a line of the paper being edited or revised.
+  fromItemId: typed(z.uuid().optional()),
 });
 
 type Item = z.infer<typeof itemSchema>;
@@ -282,15 +288,36 @@ function money(value: number): string {
   return round2(value).toFixed(2);
 }
 
+/**
+ * Where each line of one paper began: its own `origin_item_id`, or itself.
+ *
+ * Read BEFORE the lines are rewritten, inside the same transaction. A revision
+ * asks it of the paper it revises and an edit asks it of the paper being edited,
+ * so an id the form sends is only ever honoured when it names a line of that
+ * paper — anything else began here.
+ */
+async function originsOf(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  quotationId: string,
+): Promise<Map<string, string>> {
+  const rows = await tx
+    .select({ id: quotationItems.id, originItemId: quotationItems.originItemId })
+    .from(quotationItems)
+    .where(eq(quotationItems.quotationId, quotationId));
+  return new Map(rows.map((row) => [row.id, row.originItemId ?? row.id]));
+}
+
 async function insertItems(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   quotationId: string,
   items: Item[],
+  origins: Map<string, string> = new Map(),
 ): Promise<void> {
   await tx.insert(quotationItems).values(
     items.map((item, index) => ({
       quotationId,
       position: index + 1,
+      originItemId: (item.fromItemId && origins.get(item.fromItemId)) || null,
       colourCode: item.colourCode,
       supplierId: item.supplierId,
       fireRatingId: item.fireRatingId,
@@ -785,7 +812,8 @@ export async function updateQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // The rep it names (`rep_id` — her "For" when she raised it for him), and
+    // nobody else. An item belongs to whoever created it and
     // only he edits it (SPEC §3, D147) — which was the same person as the
     // company's owner until a project could be shared, and is not any more.
     if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
@@ -827,8 +855,14 @@ export async function updateQuotationAction(
       const status = await holdQuotation(tx, quotation.id);
       if (!withTheRep(status as QuotationStatus)) return false;
 
+      // An edit rewrites the rows, so where each line began is read first and
+      // handed back: a returned REVISION that is edited must still know which
+      // of the first paper's lines it carries. A line that began on this very
+      // paper is about to be deleted, and names nothing.
+      const began = await originsOf(tx, quotation.id);
+      for (const [id, origin] of began) if (origin === id) began.delete(id);
       await tx.delete(quotationItems).where(eq(quotationItems.quotationId, quotation.id));
-      await insertItems(tx, quotation.id, items);
+      await insertItems(tx, quotation.id, items, began);
       // The services the same way as the lines: what the form sends now is the
       // whole of them, and one it no longer sends is gone (SPEC §3, P13).
       await tx.delete(quotationServices).where(eq(quotationServices.quotationId, quotation.id));
@@ -843,6 +877,10 @@ export async function updateQuotationAction(
         .update(quotations)
         .set({
           status: "requested",
+          // Coming back from him is a landing (`desk_since`): her wait starts
+          // again, and the days it spent with him were never hers. An edit of a
+          // request that never left her desk moves nothing.
+          ...(status === "returned" ? { deskSince: new Date() } : {}),
           notes,
           returnReason: null,
           contactId: addressing.contactId,
@@ -975,7 +1013,10 @@ export async function issueQuotationAction(
       ]);
 
       await createNotification(tx, {
-        userId: quotation.companyRepId,
+        // The paper's own rep — the one person who can act on the answer (S29,
+        // S53). It was the customer's owner, who is somebody else on a shared job
+        // and after a hand-over, and who has no Edit on it.
+        userId: quotation.repId,
         kind: "quotationIssued",
         params: { label: quotation.label, smacNumber: parsed.data.smacNumber },
         link: `/quotations?open=${quotation.id}`,
@@ -1005,6 +1046,46 @@ export async function issueQuotationAction(
 
     revalidateChain();
     return { ok: true, data: { quotationId: quotation.id } };
+  }, "coordinator");
+}
+
+/**
+ * "He is in SMAC now" — the coordinator's answer from her backlog (P14 14.6).
+ *
+ * The list of customers a price has been asked for who are not in SMAC could be
+ * read and never worked: the only place her answer could be given was the Issue
+ * prompt on a WAITING request, so a customer she registered on a quiet afternoon
+ * stayed on the list until his next request happened to pass through her hands,
+ * and the list only grew — the founder's "dead field nobody acts on", one step
+ * along (Stage 3 audit). One press on the row, written where nobody has
+ * answered yet, exactly as the prompt writes it, and never taken away here.
+ */
+export async function registerInSmacAction(companyId: unknown): Promise<ActionResult> {
+  return guard(async (actor) => {
+    const tc = await getTranslations("common");
+    const id = idSchema.safeParse(companyId);
+    if (!id.success) return { ok: false, error: tc("invalid") };
+
+    await db.transaction(async (tx) => {
+      const changed = await tx
+        .update(companies)
+        .set({ smacRegisteredAt: new Date(), smacRegisteredBy: actor.id })
+        .where(and(eq(companies.id, id.data), isNull(companies.smacRegisteredAt)))
+        .returning({ id: companies.id });
+      // Answered already, in the other tab or by the prompt: what she asked for
+      // is the case, and a second audit row would say it happened twice (D87).
+      if (changed.length === 0) return;
+      await tx.insert(auditLog).values({
+        userId: actor.id,
+        action: "company.smacRegistered",
+        recordType: "company",
+        recordId: id.data,
+        details: {},
+      });
+    });
+
+    revalidateChain();
+    return { ok: true };
   }, "coordinator");
 }
 
@@ -1151,7 +1232,10 @@ export async function sendBackQuotationAction(
       ]);
 
       await createNotification(tx, {
-        userId: quotation.companyRepId,
+        // The paper's own rep — the one person who can act on the answer (S29,
+        // S53). It was the customer's owner, who is somebody else on a shared job
+        // and after a hand-over, and who has no Edit on it.
+        userId: quotation.repId,
         kind: "quotationReturned",
         params: { label: quotation.label, reason: parsed.data.reason },
         link: `/quotations?open=${quotation.id}`,
@@ -1208,7 +1292,8 @@ export async function decideQuotationAction(
 
     const quotation = await load(actor, parsed.data.quotationId);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // The rep it names (`rep_id` — her "For" when she raised it for him), and
+    // nobody else. An item belongs to whoever created it and
     // only he edits it (SPEC §3, D147) — which was the same person as the
     // company's owner until a project could be shared, and is not any more.
     if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
@@ -1218,6 +1303,9 @@ export async function decideQuotationAction(
       // Held, and still with the customer: an answer already recorded stands (D85).
       const status = await holdQuotation(tx, quotation.id);
       if (status !== "issued") return false;
+      // The customer answers the price in front of him, which is the live one: an
+      // answer filed on a paper a revision has replaced is an answer to nothing.
+      if (!(await isLiveRevision(tx, quotation.id))) return "revised" as const;
 
       await tx
         .update(quotations)
@@ -1256,6 +1344,7 @@ export async function decideQuotationAction(
       });
       return true;
     });
+    if (held === "revised") return { ok: false, error: tq("revisedSince") };
     if (!held) return { ok: false, error: tq("notIssued") };
 
     revalidateChain();
@@ -1283,13 +1372,18 @@ export async function reviseQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // The rep it names (`rep_id` — her "For" when she raised it for him), and
+    // nobody else. An item belongs to whoever created it and
     // only he edits it (SPEC §3, D147) — which was the same person as the
     // company's owner until a project could be shared, and is not any more.
     if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();
     if (quotation.status === "requested" || quotation.status === "returned") {
       return { ok: false, error: tq("notIssuedYet") };
     }
+    // What the drawer offers is what this takes (DESIGN §5): a paper that went
+    // out. A withdrawn one was accepted here while no screen offered it, and a
+    // revision raised off it buried whatever stood at the front of the number.
+    if (!NUMBERED.includes(quotation.status)) return { ok: false, error: tq("notIssued") };
 
     const items = readItems(formData);
     if (isRefused(items)) return listRefusal(tq("needsLines"), items);
@@ -1340,6 +1434,12 @@ export async function reviseQuotationAction(
       // Held: two revisions raised at once take consecutive numbers rather
       // than colliding on the unique index and crashing the second (D85).
       await holdQuotation(tx, quotation.id);
+      // And still the live one, asked under the hold: a tab left open on Q-12/1
+      // raised Q-12/3 off its lines and took Q-12/2 — still waiting on the desk —
+      // out of every list with its status and its notice left standing.
+      if (!(await isLiveRevision(tx, quotation.id))) {
+        return { ok: false as const, error: tq("revisedSince") };
+      }
       // The newest revision of this number decides the next one, not the row
       // this was raised from: two revisions raised at once would otherwise
       // collide on the (number, revision) key.
@@ -1367,7 +1467,9 @@ export async function reviseQuotationAction(
         })
         .returning({ id: quotations.id, revision: quotations.revision });
 
-      await insertItems(tx, row.id, items);
+      // The lines he kept carry where they began, so what has already gone out
+      // on this number still counts against them (`committedQty`).
+      await insertItems(tx, row.id, items, await originsOf(tx, quotation.id));
       await insertServices(tx, row.id, servicesIn);
 
       // A revision is a new quotation, so credit is decided again rather than
@@ -1455,7 +1557,8 @@ export async function cancelQuotationAction(
 
     const quotation = await load(actor, id.data);
     if (!quotation) return { ok: false, error: tq("notFound") };
-    // Its raiser, and nobody else. An item belongs to whoever created it and
+    // The rep it names (`rep_id` — her "For" when she raised it for him), and
+    // nobody else. An item belongs to whoever created it and
     // only he edits it (SPEC §3, D147) — which was the same person as the
     // company's owner until a project could be shared, and is not any more.
     if (!mayWrite(actor, quotation.repId)) throw new NotAllowed();

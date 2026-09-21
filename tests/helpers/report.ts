@@ -66,6 +66,21 @@ export async function writeReport(
   answers: ReportAnswers,
 ): Promise<void> {
   await answerReport(dialog, t, locale, answers);
-  await dialog.getByRole("button", { name: t("common.save") }).click();
+  const save = dialog.getByRole("button", { name: t("common.save") });
+  await save.click();
+  // A customer who was owed a call asks when the next one is before it will
+  // save (S52, Stage 3 audit). A spec that is about something else answers "no
+  // next step" — found by the refusal itself rather than by looking for the
+  // question first, because whether it is asked arrives with a read that is
+  // still in flight when the form is already fillable.
+  const owed = dialog.getByText(t("reports.refused.followUpOwed")).first();
+  const outcome = await Promise.race([
+    dialog.waitFor({ state: "hidden", ...COLD }).then(() => "closed" as const),
+    owed.waitFor({ state: "visible", ...COLD }).then(() => "owed" as const),
+  ]);
+  if (outcome === "owed") {
+    await dialog.getByRole("button", { name: t("reports.dialog.noNextStep") }).click();
+    await save.click();
+  }
   await expect(dialog).toBeHidden(COLD);
 }

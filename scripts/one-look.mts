@@ -4,10 +4,10 @@
  * Two rules with teeth, both from the 9E audit, both of which had already been
  * broken by hand:
  *
- *   1. The primary button. `--brand-grad` was a class string in fourteen files,
+ *   1. The primary button. It was a gradient class string in fourteen files,
  *      in two syntaxes and two token names for the same colour — the app's most
- *      important control, copy-pasted. It is `variant="brand"` now, and the
- *      gradient belongs to `button.tsx` and the stylesheet that defines it.
+ *      important control, copy-pasted. It is `variant="brand"` now, and the fill
+ *      belongs to `button.tsx` and the stylesheet that defines it.
  *   2. The edge of a surface. Every floating surface shadcn ships draws a RING
  *      in its own colour, which sits outside the box and matched no border in
  *      the app. Kladra surfaces take the `--line` border.
@@ -26,7 +26,7 @@ const RULES: Rule[] = [
     // It was a gradient class string in fourteen files before it was a variant;
     // since P13-G6 it is a flat fill, and a flat fill is easier still to copy.
     name: "the primary button is a variant, not a class string",
-    pattern: /\bbg-brand\b[^"'`]*\btext-brand-ink\b|\btext-brand-ink\b[^"'`]*\bbg-brand\b|--brand-grad/,
+    pattern: /\bbg-brand\b[^"'`]*\btext-brand-ink\b|\btext-brand-ink\b[^"'`]*\bbg-brand\b/,
     // The bell's count is a mark, not a control: the one other place the red is
     // a fill with its ink on it.
     allow: [
@@ -72,8 +72,7 @@ const RULES: Rule[] = [
     //    itself with it and its link with `data-door`.
     name: "the row door is written once",
     pattern: /after:inset-0/,
-    // shadcn's avatar uses the same overlay for its own ring, not for a door.
-    allow: ["src/components/ui/avatar.tsx"],
+    allow: [],
     fix: 'put `row-door` on the row or card and `data-door` on its link',
   },
   {
@@ -131,7 +130,7 @@ const RULES: Rule[] = [
     //    person and square for a company. The top bar drew its own circle in a
     //    gradient of its own, which is how an identity becomes four.
     name: "an avatar is drawn once",
-    pattern: /AvatarFallback|avatar-user-grad|initialsOf\(/,
+    pattern: /initialsOf\(/,
     allow: ["src/components/ui-ext/avatar.tsx", "src/lib/avatar.ts"],
     fix: "use <Avatar id={…} name={…} /> from @/components/ui-ext/avatar",
   },

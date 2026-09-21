@@ -18,6 +18,7 @@ import { and, asc, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { companies, dispatches, projects, quotations } from "@/db/schema";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
+import { liveRevision } from "@/lib/live-revision";
 
 /**
  * Why a row is here, as the message key that names it — a closed set. It is
@@ -84,11 +85,7 @@ export type Waiting = {
  * waiting, not three (S34, S35).
  */
 export async function waitingOnRep(repId: string): Promise<Waiting[]> {
-  const live = sql`not exists (
-    select 1 from quotations later
-     where later.number = quotations.number
-       and later.revision > quotations.revision
-  )`;
+  const live = sql.raw(liveRevision("quotations"));
 
   const [leads, returned, refused, issued] = await Promise.all([
     db
@@ -124,7 +121,12 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       .innerJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
-          eq(companies.repId, repId),
+          // The paper's own rep: what waits on a person is what HE can act on,
+          // and since D147 that is whoever the paper names, not whoever owns the
+          // customer under it. Asked of the company, a quotation Saad raised on
+          // Faisal's shared job came back to Faisal — who has no Edit — and was
+          // on no screen of Saad's at all (Stage 3 audit, D216).
+          eq(quotations.repId, repId),
           isNull(companies.archivedAt),
           eq(quotations.status, "returned"),
           live,
@@ -146,9 +148,15 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       .leftJoin(projects, eq(projects.id, dispatches.projectId))
       .where(
         and(
-          eq(companies.repId, repId),
+          eq(dispatches.repId, repId),
           isNull(companies.archivedAt),
           eq(dispatches.status, "refused"),
+          // Only while he can still answer it. A refused load is fixed and sent
+          // again, and the action refuses that once its paper has been revised:
+          // such a load waited here for ever on a man with nothing to press.
+          sql`(${dispatches.quotationId} is null or exists (
+                select 1 from quotations where quotations.id = ${dispatches.quotationId}
+                   and ${live}))`,
         ),
       )
       .orderBy(desc(dispatches.number)),
@@ -169,7 +177,7 @@ export async function waitingOnRep(repId: string): Promise<Waiting[]> {
       .innerJoin(projects, eq(projects.id, quotations.projectId))
       .where(
         and(
-          eq(companies.repId, repId),
+          eq(quotations.repId, repId),
           isNull(companies.archivedAt),
           eq(quotations.status, "issued"),
           live,

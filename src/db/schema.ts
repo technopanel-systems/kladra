@@ -888,6 +888,19 @@ export const quotations = pgTable(
     smacNumber: text("smac_number"),
     returnReason: text("return_reason"),
     decisionReason: text("decision_reason"),
+    /**
+     * When this last landed on the coordinator's desk (Stage 3 audit).
+     *
+     * A wait is counted from the event it is about (rules/data.md), and the
+     * event is the paper ARRIVING — the day it was first asked for, and again
+     * each time it comes back from the rep after she sent it back. It was read
+     * off `created_at`, which never moves: a request she returned on Monday and
+     * he fixed on Thursday landed reading "4 working days · late", on her
+     * longest wait, her late count and the manager's stuck list — three days of
+     * his, charged to her. Written by the three acts that put a paper on the
+     * desk (request, revise, send again) and by nothing else.
+     */
+    deskSince: timestamp("desk_since", { withTimezone: true }).notNull().defaultNow(),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     /**
@@ -974,6 +987,22 @@ export const quotationItems = pgTable(
       .notNull()
       .references(() => quotations.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
+    /**
+     * The line this one began as, on the first revision that carried it (Stage
+     * 3 audit). Null on a line that began here.
+     *
+     * A revision is a new paper with new lines, and what has already gone out
+     * was counted against a line's own id — so revising Q-12 after sixty of its
+     * hundred sheets had left put "100 left to send" on Q-12/2, and D12's limit
+     * with it. A line that is carried through a revision (or through an edit of
+     * a returned one, which rewrites the rows) names where it started, and what
+     * is spoken for is counted across everything that started there
+     * (`committedQty`, src/lib/sqm.ts). A line the rep ADDS on a revision began
+     * on that revision and names nothing.
+     */
+    originItemId: uuid("origin_item_id").references((): AnyPgColumn => quotationItems.id, {
+      onDelete: "set null",
+    }),
     colourCode: text("colour_code").notNull(),
     supplierId: integer("supplier_id")
       .notNull()
@@ -999,6 +1028,9 @@ export const quotationItems = pgTable(
   },
   (t) => [
     index("quotation_items_quotation_idx").on(t.quotationId),
+    // What is spoken for is asked of "everything that began as this line", once
+    // per line on every drawer and every picker.
+    index("quotation_items_origin_idx").on(sql`(coalesce(${t.originItemId}, ${t.id}))`),
     // "Item 1, Item 2 …" is the position, and the position is how a dispatch
     // names the line it moves. Two lines at one position are one label for two
     // figures (D100). The app rewrites a quotation's lines by delete-and-insert,
@@ -1166,6 +1198,8 @@ export const dispatches = pgTable(
     paymentNote: text("payment_note"),
     smacDispatchNumber: text("smac_dispatch_number"),
     refuseReason: text("refuse_reason"),
+    /** When this last landed on the desk — `quotations.desk_since` says why. */
+    deskSince: timestamp("desk_since", { withTimezone: true }).notNull().defaultNow(),
     approvedAt: timestamp("approved_at", { withTimezone: true }),
     ...stamps,
   },

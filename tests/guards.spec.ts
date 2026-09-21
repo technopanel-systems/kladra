@@ -122,7 +122,9 @@ test("a company named like a formula is exported as text", async ({ page, locale
       "the formula name reached the file unarmed, ready for Excel to run it",
     ).toContain(`"'=HYPERLINK(""http://x"")"`);
     expect(body, "a naked formula cell reached the file").not.toContain(`"=HYPERLINK`);
-    expect(body, "a phone number lost its country prefix in the export").toMatch(/"\+966\d+"/);
+    // Text, by the same apostrophe the formula above is disarmed with: bare, Excel
+    // read +966501234567 as a number and showed 9.66501E+11 (P13 audit).
+    expect(body, "a phone number lost its country prefix in the export").toMatch(/"'\+966\d{9}"/);
   } finally {
     if (companyId) await query("delete from companies where id = $1::uuid", [companyId]);
   }

@@ -105,6 +105,7 @@
   "notWaiting": "This request is not waiting any more.",
   "notIssued": "The customer’s answer is recorded once the quotation has been issued.",
   "notIssuedYet": "This one has not been issued yet — edit the request instead of revising it.",
+  "revisedSince": "This quotation has been revised since — the latest revision is the one to work on.",
   "history": "What happened",
   "sentBackTimes": "{count, plural, one {sent back once} other {sent back # times}}",
   "event": {

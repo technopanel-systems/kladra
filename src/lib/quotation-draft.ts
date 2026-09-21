@@ -20,6 +20,8 @@ export type DraftLine = {
   width: string;
   length: string;
   pricePerSqm: string;
+  /** The stored line this draft opened on (Edit, Revise); absent on a line he added. */
+  fromItemId?: string;
 };
 
 /**
@@ -28,6 +30,8 @@ export type DraftLine = {
  * different one.
  */
 export type StoredLine = {
+  /** The row's own id, where the reader has it: it travels as `fromItemId`. */
+  id?: string;
   colourCode: string;
   supplierId: number;
   fireRatingId: number;
@@ -57,6 +61,7 @@ export function draftLinesFrom(items: readonly StoredLine[]): DraftLine[] {
     width: item.width,
     length: item.length,
     pricePerSqm: item.pricePerSqm,
+    fromItemId: item.id,
   }));
 }
 

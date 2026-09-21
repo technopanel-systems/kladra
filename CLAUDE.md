@@ -21,6 +21,8 @@ Playwright. Ports: app **3100**, Postgres **5433**, compose project **kladra**.
 - **WORKFLOW.md** — §0 checklist and where-I-stopped, toolbox, how a session runs, acceptance scripts.
 - **CLAUDE.md** — this file. **README.md** — run, seed logins, tests, deployment, backups.
 No other `.md` in the repo (hook H2). Skills, rules and agents under `.claude/` are not documents.
+`.claude/UX-RESTYLE-PROGRESS.md` is the Stone restyle's progress log, frozen since Stage 2 ended
+and kept because WORKFLOW.md points at it; it records what was done, never a new rule.
 
 ## How Jerom and Claude Code work
 Jerom is the founder and not a developer. He decides in chat; Claude Code builds. One
@@ -32,8 +34,8 @@ obvious, record it in SPEC.md §4 as "DEFAULT — founder may change", and conti
 A screen is done when its user has tried it: Faisal (rep), Rawan (coordinator),
 Abdulrahman (manager), Jerom (admin). Until then it is a Playwright acceptance run in
 WORKFLOW.md §3 plus shot-looker screenshots at 1366 and 375, en and ar, dark and light.
-Both locales ship together — a string that exists in `messages/en.json` and not in
-`messages/ar.json` fails the build (`npm run check:messages`).
+Both locales ship together — a string that exists in `messages/en/<namespace>.json` and not in
+`messages/ar/<namespace>.json` fails the build (`npm run check:messages`).
 
 ## Commands
 `npm run dev` (3100) · `npm run typecheck` · `npm run lint` · `npm run build` ·

@@ -93,7 +93,11 @@ export function ReassignLeadDialog({
         </Button>
       }
       title={t("leads.reassignTitle", { name: companyName })}
-      description={outcome ? `${t("leads.reassignWarning")} ${outcome}` : t("leads.reassignWarning")}
+      // What is true of all three moves, on its own. What is true of the person
+      // picked is a second sentence under the picker, where the choice that
+      // decides it is: two sentences glued into one string with a template
+      // literal is a paragraph neither locale wrote (rules/words.md).
+      description={t("leads.reassignWarning")}
       confirmLabel={t("leads.reassign")}
       successMessage={t("leads.filed", { name: companyName, rep: chosen?.label ?? "" })}
       onOpenChange={(open) => {
@@ -117,6 +121,9 @@ export function ReassignLeadDialog({
           searchPlaceholder={t("drawer.handOverSearch")}
           emptyText={t("drawer.handOverNobody")}
         />
+        {/* What this move means for the person just chosen — under the choice
+            that decides it, and gone again while nobody is chosen. */}
+        {outcome ? <p className="text-sm text-muted-foreground">{outcome}</p> : null}
       </div>
     </ConfirmDialog>
   );

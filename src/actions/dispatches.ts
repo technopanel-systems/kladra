@@ -43,6 +43,7 @@ import {
   auditLog,
   classes,
   companies,
+  dispatchCredits,
   dispatchItems,
   dispatchServices,
   dispatches,
@@ -88,7 +89,7 @@ import { dispatchTargets } from "@/lib/pickers";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { firstRefusedBox, type LineList } from "@/lib/line-refusal";
 import { round2 } from "@/lib/money";
-import { COMMITTING_IN } from "@/lib/sqm";
+import { committedQtySql } from "@/lib/sqm";
 import {
   detailsFor,
   needsNote,
@@ -484,12 +485,7 @@ async function paperOf(tx: Tx, quotationId: string, exclude: string | null): Pro
            s.code as supplier, fr.name as fire_rating, cl.name as class, th.mm::text as thickness,
            qi.width::text as width, qi.length::text as length, qi.price_per_sqm::text as price_per_sqm,
            qi.qty,
-           (select coalesce(sum(di.qty), 0)::int
-              from dispatch_items di
-              join dispatches d on d.id = di.dispatch_id
-             where di.quotation_item_id = qi.id
-               and d.status in ${sql.raw(COMMITTING_IN)}
-               and (${exclude}::uuid is null or d.id <> ${exclude}::uuid)) as committed
+           ${committedQtySql("qi", exclude ? sql`d.id <> ${exclude}::uuid` : undefined)} as committed
       from quotation_items qi
       join suppliers s on s.id = qi.supplier_id
       join fire_ratings fr on fr.id = qi.fire_rating_id
@@ -1182,6 +1178,9 @@ export async function updateDispatchAction(
           // with it (D72, and the constraint that holds the pair together).
           status: "submitted",
           refuseReason: null,
+          // Coming back from him is a landing: her wait starts again, and the
+          // days it spent refused were never hers (`desk_since`, schema.ts).
+          ...(cameBack ? { deskSince: new Date() } : {}),
           updatedAt: new Date(),
         })
         .where(eq(dispatches.id, dispatch.id));
@@ -1497,6 +1496,24 @@ export async function approveDispatchAction(
       // A direct dispatch has no paper to be superseded (SPEC §3, P13).
       if (dispatch.quotationId && !(await isLiveRevision(tx, dispatch.quotationId)))
         return "superseded" as const;
+
+      // A load reaches approval counting for nobody only when nobody on it
+      // earned on the day it was raised (D207) — and this is the day its metres
+      // are earned. So it is asked once more, of the rep it names, by the same
+      // rule a blank answer gets (`creditDefault`): a load raised in the hour
+      // before this month's targets were typed no longer counts for nobody for
+      // good (Stage 3 audit, D217). A load that already names somebody is left
+      // exactly as he chose it.
+      const [credited] = await tx
+        .select({ one: sql<number>`1` })
+        .from(dispatchCredits)
+        .where(eq(dispatchCredits.dispatchId, dispatch.id))
+        .limit(1);
+      if (!credited) {
+        const people = await resolveCredit(dispatch.projectId, dispatch.repId, undefined);
+        if (people && people.length > 0) await creditDispatch(tx, dispatch.id, people);
+      }
+
       await tx
         .update(dispatches)
         .set({
@@ -1521,7 +1538,9 @@ export async function approveDispatchAction(
       ]);
 
       await createNotification(tx, {
-        userId: dispatch.companyRepId,
+        // The load's own rep, who is the one person who can act on the answer
+        // (S29, S53) — not the customer's owner, who may be somebody else.
+        userId: dispatch.repId,
         kind: "dispatchApproved",
         params: { label: dispatch.label, smacNumber: parsed.data.smacDispatchNumber },
         link: `/dispatches?open=${dispatch.id}`,
@@ -1697,7 +1716,9 @@ export async function refuseDispatchAction(
       ]);
 
       await createNotification(tx, {
-        userId: dispatch.companyRepId,
+        // The load's own rep, who is the one person who can act on the answer
+        // (S29, S53) — not the customer's owner, who may be somebody else.
+        userId: dispatch.repId,
         kind: "dispatchRefused",
         params: { label: dispatch.label, reason: parsed.data.reason },
         link: `/dispatches?open=${dispatch.id}`,

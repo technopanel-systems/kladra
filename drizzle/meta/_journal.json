@@ -225,6 +225,13 @@
       "when": 1789972649093,
       "tag": "0031_the_paper_on_a_job_is_looked_up_not_scanned",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789999482284,
+      "tag": "0032_a_wait_and_a_line_are_counted_from_where_they_began",
+      "breakpoints": true
     }
   ]
 }

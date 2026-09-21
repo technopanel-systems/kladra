@@ -489,10 +489,17 @@ function LoadForm({
     null,
   );
   useEffect(() => {
-    if (!quotation) return;
-    const key = `${quotation}|${raisedFor}`;
+    // A direct load is asked too, with no paper and so no job: the pool is the
+    // person alone, and the one thing there can be to say is that he has no
+    // target and these metres will count for nobody. It was not asked at all,
+    // so that was the one form which said nothing about it.
+    if (!source) return;
+    const key = `${source}|${raisedFor}`;
     let cancelled = false;
-    guarded(creditChoicesAction)({ quotationId: quotation, repId: raisedFor || undefined }).then(
+    guarded(creditChoicesAction)({
+      quotationId: quotation ?? undefined,
+      repId: raisedFor || undefined,
+    }).then(
       (outcome) => {
         if (!cancelled) setCredit({ key, choices: outcome.ok ? (outcome.data ?? null) : null });
       },
@@ -500,9 +507,8 @@ function LoadForm({
     return () => {
       cancelled = true;
     };
-  }, [quotation, raisedFor, guarded]);
-  const creditChoices =
-    quotation && credit?.key === `${quotation}|${raisedFor}` ? credit.choices : null;
+  }, [source, quotation, raisedFor, guarded]);
+  const creditChoices = source && credit?.key === `${source}|${raisedFor}` ? credit.choices : null;
   const [creditPick, setCreditPick] = useState<{ source: string; value: string } | null>(
     existing?.creditTo ? { source: `${existing.quotationId ?? DIRECT}|`, value: existing.creditTo } : null,
   );
@@ -987,6 +993,7 @@ function LoadForm({
                   sqm={totals.sqm}
                   withoutTarget={creditChoices?.withoutTarget ?? []}
                   earnsNothing={creditChoices?.mineEarnsNothing ?? false}
+                  soleEarner={creditChoices?.soleEarner ?? null}
                   id="dispatch-credit"
                 />
               </>

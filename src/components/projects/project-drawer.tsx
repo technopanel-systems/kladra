@@ -109,10 +109,17 @@ export async function ProjectDrawer({ projectId }: { projectId: string | null })
    * part company only on a customer who has moved floors and left a third rep's
    * job behind him, and there the customer is the manager's to hand out. The
    * control is absent rather than present and refusing (DESIGN §5).
+   *
+   * And the reader is off his own picker wherever the job is not his. A share
+   * he granted himself would be a rep's powers on somebody else's work, taken
+   * in two presses — the door D42 exists to keep shut. `shareProjectAction`
+   * refuses the same pair.
    */
   const shareWith = mayShare(user, project.repId) && mayShare(user, project.company.repId)
     ? (await floorHolderOptions(project.repId, (role) => t(`common.${role}`))).filter(
-        (option) => !sharers.some((person) => person.id === option.value),
+        (option) =>
+          !sharers.some((person) => person.id === option.value) &&
+          !(option.value === user.id && project.repId !== user.id),
       )
     : null;
 

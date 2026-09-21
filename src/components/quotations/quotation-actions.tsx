@@ -79,6 +79,7 @@ export function QuotationActions({
   quotation,
   scope,
   reportable,
+  onAnswered,
 }: {
   quotation: {
     id: string;
@@ -105,6 +106,8 @@ export function QuotationActions({
    * server, which asks the same sentence the report's action asks (SPEC §3 P13).
    */
   reportable: boolean;
+  /** Closes the drawer after the desk's own answer, where the screen is her desk. */
+  onAnswered?: () => void;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -120,6 +123,18 @@ export function QuotationActions({
     router.refresh();
   }
 
+  /**
+   * After the desk's own answer — Issue, Send back. On her desk the paper she
+   * has just answered is finished work, and what she came for is the next row:
+   * the drawer stayed open on it, over the list, so every answer cost a closing
+   * press before the next one, dozens of times a day (Stage 3 audit). Anywhere
+   * else the drawer stays, because there the paper is what she opened.
+   */
+  function deskAnswered() {
+    done();
+    onAnswered?.();
+  }
+
   const waiting = status === "requested";
   // Still his to change: asked for and unanswered, or sent back. The dispatch
   // drawer asks the same question of its own two states (`withTheRep`).
@@ -130,7 +145,9 @@ export function QuotationActions({
   // What the paper is waiting on from THIS reader, which is the brand.
   const issuing = scope.coordinator && waiting;
   const fixing = his && status === "returned";
-  const answering = scope.owner && issued;
+  // Only on the live revision: the customer answers the price in front of him,
+  // and the action refuses an answer on a paper a revision has replaced.
+  const answering = scope.owner && issued && quotation.isLatest;
   const owed = issuing || fixing || answering;
 
   function withId(
@@ -197,7 +214,7 @@ export function QuotationActions({
             registerInSmac: registered ? "true" : "false",
           })()
         }
-        onDone={done}
+        onDone={deskAnswered}
       />,
       <PromptDialog
         key="send-back"
@@ -214,7 +231,7 @@ export function QuotationActions({
         confirmLabel={t("quotations.sendBack")}
         successMessage={t("quotations.sentBack", { label })}
         onConfirm={(reason) => withId(sendBackQuotationAction, { reason })()}
-        onDone={done}
+        onDone={deskAnswered}
       />,
     );
   }

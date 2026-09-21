@@ -29,6 +29,10 @@ import type { ArchiveRequestState } from "@/lib/archive-requests";
  * request it was read with, so this knows nothing about companies, contacts or
  * projects — which is what keeps the founder's "one approval path" one path
  * rather than three that look alike.
+ *
+ * The two buttons are `ArchiveAnswerButtons` below, because the manager's own
+ * band answers from the row as well (P14 14.8, M2): one pair of dialogs, one
+ * pair of actions, one pair of sentences, wherever he presses them.
  */
 export function ArchiveRequestNotice({
   request,
@@ -43,7 +47,6 @@ export function ArchiveRequestNotice({
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const router = useRouter();
 
   if (request.status === "approved") return null;
 
@@ -81,41 +84,78 @@ export function ArchiveRequestNotice({
         <p className="text-xs text-muted-foreground">{t("drawer.archiveRefusedMeans")}</p>
       ) : canAnswer ? (
         <div className="flex flex-wrap gap-2">
-          <ConfirmDialog
-            destructive
-            trigger={
-              <Button type="button" size="sm" variant="outline">
-                {t("dispatches.approve")}
-              </Button>
-            }
-            title={t("drawer.approveArchiveTitle", { name })}
-            description={t("drawer.approveArchiveWarning")}
-            confirmLabel={t("dispatches.approve")}
-            successMessage={t("drawer.archived", { name })}
-            onConfirm={() => approveArchiveAction(request.id)}
-            onDone={() => router.refresh()}
-          />
-          <PromptDialog
-            destructive
-            multiline
-            trigger={
-              <Button type="button" size="sm" variant="ghost">
-                {t("dispatches.refuse")}
-              </Button>
-            }
-            title={t("drawer.refuseArchiveTitle", { name })}
-            description={t("drawer.refuseArchiveHint")}
-            label={t("drawer.refuseArchiveLabel")}
-            placeholder={t("drawer.refuseArchivePlaceholder")}
-            confirmLabel={t("dispatches.refuse")}
-            successMessage={t("drawer.archiveRefused", { name })}
-            onConfirm={(reason) => refuseArchiveAction(request.id, reason)}
-            onDone={() => router.refresh()}
-          />
+          <ArchiveAnswerButtons requestId={request.id} name={name} />
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">{t("drawer.archiveWaitingMeans")}</p>
       )}
     </div>
+  );
+}
+
+/**
+ * Yes and no, wherever he is standing (P14 14.8, M2).
+ *
+ * The notice above is one place he answers from and his own band on the team
+ * screen is the other — the band row carries the name, the asker, the age and
+ * the reason, which is the whole of "archive X because Y", so making him open
+ * the record to press a button he could have pressed on the row was asking him
+ * to travel for the answer he had already reached (S52: a reminder is cleared
+ * by doing the work, where the work is).
+ *
+ * Two call sites, one pair of dialogs. A second copy on the band would be two
+ * confirmations that disagree about how dangerous the same act is — the defect
+ * `ConfirmDialog` itself was written to end — and two chances to forget that
+ * refusing cannot happen without his words.
+ *
+ * Both dialogs name the record, because on the band the row is one of several
+ * and the question has to say which one it is about.
+ */
+export function ArchiveAnswerButtons({
+  requestId,
+  name,
+}: {
+  /** The request, not the record: this is what is answered. */
+  requestId: string;
+  /** The record's own name, for the two dialogs' titles. */
+  name: string;
+}) {
+  const t = useTranslations();
+  const router = useRouter();
+
+  return (
+    <>
+      <ConfirmDialog
+        destructive
+        trigger={
+          <Button type="button" size="sm" variant="outline">
+            {t("dispatches.approve")}
+          </Button>
+        }
+        title={t("drawer.approveArchiveTitle", { name })}
+        description={t("drawer.approveArchiveWarning")}
+        confirmLabel={t("dispatches.approve")}
+        successMessage={t("drawer.archived", { name })}
+        onConfirm={() => approveArchiveAction(requestId)}
+        onDone={() => router.refresh()}
+      />
+      <PromptDialog
+        destructive
+        multiline
+        trigger={
+          <Button type="button" size="sm" variant="ghost">
+            {t("dispatches.refuse")}
+          </Button>
+        }
+        title={t("drawer.refuseArchiveTitle", { name })}
+        description={t("drawer.refuseArchiveHint")}
+        label={t("drawer.refuseArchiveLabel")}
+        placeholder={t("drawer.refuseArchivePlaceholder")}
+        confirmLabel={t("dispatches.refuse")}
+        successMessage={t("drawer.archiveRefused", { name })}
+        onConfirm={(reason) => refuseArchiveAction(requestId, reason)}
+        onDone={() => router.refresh()}
+      />
+    </>
   );
 }

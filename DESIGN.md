@@ -182,7 +182,8 @@ Call, the drawer's own buttons — are `opacity-0` until the row is hovered or f
 within, then 150ms to 1 — the `reveal` utility; on a phone, where nothing hovers, they are always
 drawn (`@media (hover: hover)` gates the hiding, never the showing), and a control whose
 menu is open stays drawn. Hover and focus are two things: focus
-is the 2px brand outline offset 1px on the focused element itself, and it never borrows
+is a 3px outline on the focused element itself, in the text colour at half strength with
+no offset — never the brand red, which on this app means a refusal — and it never borrows
 the hover tint. A button, a chip and a tab hover by one step on the same tint ladder. (Twenty
 wraps every hover in `hover-capable` for exactly this reason; Linear's rows tint, they do not
 lift.)
@@ -218,7 +219,7 @@ a breathing one. Both take `aria-busy` and `role="status"` where a reader needs 
 
 **Charts are the shadcn kit's, drawn in the language.** The kit (`npx shadcn add chart`) is
 added by the first slice that draws a chart (S7) rather than by S1, because a kit file nothing
-imports fails `check:dead` — the rule §3 already keeps. `ChartContainer` over Recharts, the
+imports is a file to delete — the rule §3 already keeps. `ChartContainer` over Recharts, the
 series colours as above, `accessibilityLayer` on, every mark labelled with its figure in the
 text beside the drawing so the drawing is never the only carrier (D150's reading argument
 stands even where the shape changed). A bar for a comparison, a pie for a share of a whole
@@ -261,7 +262,9 @@ behind the bar — the page, a card, or a chain the caller has already painted.
 shadcn/ui via CLI (Radix, RTL on): Dialog, Sheet, Drawer (phone bottom sheet), Command
 (searchable dropdowns), Popover + Calendar (date pickers), Sonner (toasts), Skeleton, Tabs,
 Badge, Table, Field (forms), Select, Tooltip, plus Button, Input, Textarea,
-Dropdown-menu, Checkbox — a kit file nothing imports is deleted, and `check:dead` says so
+Dropdown-menu, Checkbox — a kit file nothing imports is deleted, and that one is kept by
+hand: `check:dead` ignores `src/components/ui/**` (knip.json), because shadcn ships each
+file with more exports than the app uses and knip would name every one
 (the kit's Avatar went in P13-S1, when `ui-ext/avatar` replaced its one user). On top of them, the app's own
 small pieces: `StandingStrip`, `StateBadge`, `Board`, `Sqm`/`Money`, `DayText`, `Prose`
 — one `<p dir="auto">` for any block a PERSON typed — and `NoteBlock`, which is `Prose` under
@@ -280,6 +283,21 @@ drawer a record opens in — one width, one edge and one border for a company, a
 quotation or a dispatch, and for the skeleton that stands in while each of them loads (D166); and, from P13-S1,
 `Avatar` (a person or a company, §1b), `Empty` (nothing here, and why), `StickyScroll` (a wide
 surface with its scrollbar at the top) and the `hover-tint` and `reveal` utilities.
+And the pieces the screens ask for by name: `ResponsiveDialog`, the only way a form opens — a
+centred box on a desk, a bottom sheet on a phone, in two widths; `ConfirmDialog`, "are you
+sure?" before an act that takes a row off a rep's floor, and `PromptDialog`, its sibling for a
+decision that needs a reason written down; `DatePicker`, the one date control, which takes a
+Riyadh day and never an instant; `SearchableSelect`, the searchable dropdown with its pinned
+values first; `ChoiceChips`, a short closed list of answers drawn as real radios; `CreditField`,
+"who does this count for?", and `RaisedForField`, "for whom" — the two questions both request
+dialogs ask in the same words — with `RaisedBy` saying afterwards, in words, that somebody else
+pressed the button; `WarehouseField`, where the panels come out of, one store and rarely a
+second; `Clip`, a name cut to fit at its OWN end so the other script keeps its first word;
+`PhoneLinks`, a number that messages and dials; `FilterRow`, the chips over a list held to one
+line at every width; `ViewSwitch`, list or board and the memory of which; `RowMenu`, the menu at
+the end of a row with the act that ends something last; `WaitedFor`, how long this one has been
+sitting, in working days; `ListTail`, what a capped list is not showing; and `ExportButton`, the
+file this screen is holding, carrying the filters the screen is standing on.
 **A long form is a paper of parts** (founder, 2026-09-15, after the request dialogs were reported
 three times as a stock form): `FormSection` names a part with a 14.5px semibold word, a sentence
 under it where the part needs one and the part's own action at its end (Add service beside
@@ -306,7 +324,9 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
   Edge set to translate Arabic swapped React's text nodes for `<font>` wrappers, broke hydration and
   left a picker reading its translated placeholder; on a page translated that way a Select given a
   new value brought the screen down when it was opened again. `translate="no"` sits on `<html>` in
-  the root layout and nowhere else, so it covers every popup rendered into `<body>`. A searchable
+  the root layout, so it covers every popup rendered into `<body>`, and on `Ref` in
+  `ui-ext/figures.tsx`, which carries its own mark so a document number stays untranslated
+  wherever it is lifted out of the shell; `one-look` allows those two and nowhere else. A searchable
   picker's rows are keyed so that no row's value is empty, because cmdk never highlights one.
 - **A wheel inside a popup belongs to the popup** (P14, 14F). A dialog locks the page's
   scrolling, and the lock cancels any wheel that did not start inside the dialog's own subtree —
@@ -1076,7 +1096,8 @@ Each of these was a defect first. They are here so the fix is the rule, not the 
 ## §4 Not built until asked
 
 Drag-and-drop, bulk edit, saved views, comments, file attachments, refresh buttons, any
-gradient beyond the primary button. "Charts beyond bars" came off this list in P13: the founder
+gradient in the running app (§1: the primary button is a flat fill, and only the installed
+app's icon keeps one). "Charts beyond bars" came off this list in P13: the founder
 asked twice for pies and rings where a share is the point, and §1b says how they are drawn.
 
 Refused in P13's research, so the next reader does not re-propose them: a density toggle (one

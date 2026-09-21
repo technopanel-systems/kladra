@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DayText } from "@/components/ui-ext/day-text";
 import { formatMonth, parseDay, todayRiyadh, type Day } from "@/lib/dates";
+import { isWeekend } from "@/lib/workdays";
 import { cn } from "@/lib/utils";
 
 /**
@@ -54,6 +55,7 @@ export function DatePicker({
   id,
   min,
   max,
+  workingDaysOnly = false,
   placeholder,
   disabled,
   invalid,
@@ -67,6 +69,16 @@ export function DatePicker({
   min?: Day;
   /** Latest day that may be picked, inclusive. */
   max?: Day;
+  /**
+   * Weekends are off the calendar. For a day somebody will be AT WORK on — the
+   * next follow-up — where Friday and Saturday are the weekend (S47) and a
+   * reminder landing on one is a reminder nobody reads until Sunday.
+   *
+   * The weekend only: a company holiday and a person's leave are rows in a
+   * table this control never reads, so the quick answers beside a picker that
+   * needs them are worked out on the server (`reportFormAction`).
+   */
+  workingDaysOnly?: boolean;
   placeholder?: string;
   disabled?: boolean;
   invalid?: boolean;
@@ -99,7 +111,13 @@ export function DatePicker({
   const selected = toDate(value);
   const before = toDate(min);
   const after = toDate(max);
-  const todayBlocked = (min !== undefined && today < min) || (max !== undefined && today > max);
+  // The Today button offers whatever the grid above it offers and nothing more:
+  // on a Friday, a picker that has taken the weekend off the calendar would
+  // otherwise hand out a Friday from its own footer.
+  const todayBlocked =
+    (min !== undefined && today < min) ||
+    (max !== undefined && today > max) ||
+    (workingDaysOnly && isWeekend(today));
 
   // Two matchers, never one `{ before, after }` object: react-day-picker reads
   // that pair as a single interval and disables everything BETWEEN the bounds,
@@ -109,6 +127,9 @@ export function DatePicker({
   const blocked: Matcher[] = [];
   if (before) blocked.push({ before });
   if (after) blocked.push({ after });
+  // 0 is Sunday, so Friday and Saturday are 5 and 6 — the same two days
+  // `isWeekend` names, and the same reason the week starts on Sunday below.
+  if (workingDaysOnly) blocked.push({ dayOfWeek: [5, 6] });
 
   function pick(day: Day | null) {
     onChange(day);

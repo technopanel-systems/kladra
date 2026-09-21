@@ -10,6 +10,7 @@ import { db } from "@/db";
 import { notifications } from "@/db/schema";
 import { dirOf } from "@/i18n/routing";
 import { personNameFrom } from "@/lib/people";
+import { noteLastSeen } from "@/auth.config";
 import { homeFor, requireUser } from "@/lib/authz";
 import { SIDEBAR_COOKIE, sidebarCollapsed } from "@/lib/sidebar";
 import { getTheme } from "@/lib/theme";
@@ -34,6 +35,9 @@ async function unreadCount(userId: string): Promise<number> {
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  // A screen has been served, which is what "last seen" counts (D77) — of the
+  // person at the keyboard: an admin viewing as Rawan has not made her seen.
+  await noteLastSeen(user.viewedBy?.id ?? user.id);
   const [locale, theme, unread, t, jar] = await Promise.all([
     getLocale(),
     getTheme(),

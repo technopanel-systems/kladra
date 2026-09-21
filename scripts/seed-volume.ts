@@ -40,7 +40,6 @@ const {
   companies,
   contacts,
   dispatchCredits,
-  dispatchItems,
   dispatches,
   projects,
   quotationCredits,
@@ -365,6 +364,7 @@ async function main(): Promise<void> {
         decidedAt: decided ? at(decided) : null,
         returnReason: sentBack ? "المقاسات ناقصة" : null,
         createdAt: at(created),
+        deskSince: at(created),
         updatedAt: at(decided ?? sentBack ?? issued ?? created),
       })
       .returning({ id: quotations.id });
@@ -452,6 +452,7 @@ async function main(): Promise<void> {
         approvedAt: status === "approved" && decided ? at(decided) : null,
         refuseReason: status === "refused" ? "الكمية أكبر من المتبقي" : null,
         createdAt: at(created),
+        deskSince: at(created),
         updatedAt: at(decided ?? created),
       })
       .returning({ id: dispatches.id });

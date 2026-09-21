@@ -8,7 +8,7 @@ import { countOpenDuplicates, listOpenDuplicates } from "@/lib/duplicates";
 import { mayHandOver } from "@/lib/floor";
 import { LIST_LIMIT } from "@/lib/list-size";
 import { waitedSince } from "@/lib/waiting";
-import { homeFor, requireUser } from "@/lib/authz";
+import { homeFor, requireUser, seesAll } from "@/lib/authz";
 import { redirect } from "@/i18n/navigation";
 
 /**
@@ -30,12 +30,20 @@ import { redirect } from "@/i18n/navigation";
  * give). The rep whose company is under a flag is told nothing until it is
  * ruled — an open flag is a question about whose customer this is, and a
  * half-answered one on his own drawer would be a state he can do nothing with.
+ *
+ * **Seeing it and ruling it are two questions** (rules/data.md). The gate is
+ * the first: whoever reads every rep's floor reads this queue, which is the
+ * manager and the admin. `mayHandOver` was standing in for it and answers no to
+ * an admin viewing as the manager (D42, P8.8) — so the sidebar linked him here
+ * and the screen bounced him to his own home, which reads as a broken link
+ * rather than as a rule. He reads the pairs; the three answers are a write and
+ * are not offered him.
  */
 export default async function DuplicatesPage() {
   const [user, locale] = await Promise.all([requireUser(), getLocale()]);
-  // The same permission as a hand-over and not a second one beside it: a fold
-  // moves a customer between floors, which is exactly what a hand-over is (§3).
-  if (!mayHandOver(user)) redirect({ href: homeFor(user.role), locale });
+  // Who may READ every rep's floor: the manager and the admin, which is the
+  // pair the rail draws this entry for (src/components/shell/nav.ts).
+  if (!seesAll(user)) redirect({ href: homeFor(user.role), locale });
 
   const today = todayRiyadh();
   const t = await getTranslations();
@@ -74,7 +82,7 @@ export default async function DuplicatesPage() {
       {rows.length === 0 ? (
         <Empty>{t("duplicates.empty")}</Empty>
       ) : (
-        <DuplicateList rows={rows} />
+        <DuplicateList rows={rows} mayRule={mayHandOver(user)} />
       )}
 
       <ListTail shown={rows.length} total={total} />

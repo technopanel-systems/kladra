@@ -205,6 +205,10 @@ export async function answer(
       with ev as (${ev})
       select ${column} as col, ${value} as value, ${won} as won
         from ev
+       -- By person, the total is of the people: a load that counts for nobody
+       -- (sqm.ts) is on no row above, so it is not in the sum under them either.
+       -- Every other breakdown is of the company, and keeps it.
+       ${question.by === "rep" ? sql`where ev.person is not null` : sql``}
        group by 1
     `),
   ]);

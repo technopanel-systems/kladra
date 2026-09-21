@@ -83,7 +83,7 @@
   "signIn": "Sign in",
   "signOut": "Sign out",
   "search": "Search",
-  "searchPlaceholder": "Search companies, contacts, projects — name or phone",
+  "searchPlaceholder": "Search by name, phone or quotation number",
   "save": "Save",
   "saving": "Saving…",
   "cancel": "Cancel",
@@ -151,6 +151,8 @@
     "notOnProject": "That person is not on this project.",
     "earnsNothing": "Nobody. No target this month, so these metres count for no one.",
     "forNobody": "Nobody on this job has a target this month, so these metres count for no one.",
+    "forOther": "{name} — nobody else on this job has a target this month.",
+    "nobody": "No one — nobody on it has a target",
     "withoutTarget": "{count, plural, one {No target this month, so nothing counts for} other {No target this month, so nothing counts for}}"
   },
   "onBehalf": {

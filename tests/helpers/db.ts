@@ -110,6 +110,14 @@ export type CompanyFloor = {
   contacts: { id: string; repId: string; isMain: boolean; archivedAt: Date | null }[];
   /** Who could see it, and who let them — the share rows the move may delete. */
   shares: { userId: string; grantedBy: string }[];
+  /**
+   * The papers on it and who each names: a hand-over moves the open ones with
+   * the customer since the Stage 3 audit (`moveCustomer`), and the notices the
+   * desk left about them follow.
+   */
+  quotations: { id: string; repId: string }[];
+  dispatches: { id: string; repId: string }[];
+  notices: { id: string; userId: string }[];
 };
 
 export async function floorOfCompany(companyId: string): Promise<CompanyFloor> {
@@ -132,6 +140,22 @@ export async function floorOfCompany(companyId: string): Promise<CompanyFloor> {
     shares: await query<{ userId: string; grantedBy: string }>(
       `select user_id as "userId", granted_by as "grantedBy"
          from company_shares where company_id = $1::uuid`,
+      [companyId],
+    ),
+    quotations: await query<{ id: string; repId: string }>(
+      'select id, rep_id as "repId" from quotations where company_id = $1::uuid',
+      [companyId],
+    ),
+    dispatches: await query<{ id: string; repId: string }>(
+      'select id, rep_id as "repId" from dispatches where company_id = $1::uuid',
+      [companyId],
+    ),
+    notices: await query<{ id: string; userId: string }>(
+      `select n.id, n.user_id as "userId"
+         from notifications n
+        where n.subject_id in (select id from quotations where company_id = $1::uuid
+                               union all
+                               select id from dispatches where company_id = $1::uuid)`,
       [companyId],
     ),
   };
@@ -158,6 +182,24 @@ export async function restoreCompanyFloor(floor: CompanyFloor): Promise<void> {
         where id = $4::uuid`,
       [contact.repId, contact.isMain, contact.archivedAt, contact.id],
     );
+  }
+  for (const paper of floor.quotations) {
+    await query("update quotations set rep_id = $1::uuid where id = $2::uuid", [
+      paper.repId,
+      paper.id,
+    ]);
+  }
+  for (const load of floor.dispatches) {
+    await query("update dispatches set rep_id = $1::uuid where id = $2::uuid", [
+      load.repId,
+      load.id,
+    ]);
+  }
+  for (const notice of floor.notices) {
+    await query("update notifications set user_id = $1::uuid where id = $2::uuid", [
+      notice.userId,
+      notice.id,
+    ]);
   }
   for (const share of floor.shares) {
     await query(

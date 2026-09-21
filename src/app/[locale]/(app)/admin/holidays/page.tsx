@@ -30,6 +30,12 @@ import { addDays, firstOfMonth, todayRiyadh } from "@/lib/dates";
  * about a day (rules/data.md: one definition per figure). The read starts a
  * period's length before this month, because a fortnight that began in August
  * and runs into September is ONE entry and has to say the dates it really has.
+ *
+ * **A viewer reads it and changes nothing.** An admin looking through the
+ * manager's eyes is refused by `requireActor` in both calendar actions (D42,
+ * P8.8), so Add a day and every Remove are absent rather than present and
+ * refusing (DESIGN §5). The month, the marks and the entries are the whole of
+ * what he came to see.
  */
 type Search = { month?: string };
 
@@ -38,7 +44,7 @@ export default async function AdminHolidaysPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const [, params] = await Promise.all([requireOffice(), searchParams]);
+  const [viewer, params] = await Promise.all([requireOffice(), searchParams]);
 
   const locale = await getLocale();
   const today = todayRiyadh();
@@ -72,6 +78,7 @@ export default async function AdminHolidaysPage({
       marks={monthMarks(month, rows)}
       today={today}
       people={people}
+      mayEdit={!viewer.viewedBy}
     />
   );
 }

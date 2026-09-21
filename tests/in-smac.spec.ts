@@ -191,7 +191,7 @@ test("her own screen says which customers are not in SMAC yet", async ({ page, l
   const outstanding = await one<{ n: number; name: string }>(
     `select count(*) over ()::int as n, c.name
        from companies c
-       join quotations q on q.company_id = c.id
+       join quotations q on q.company_id = c.id and q.status <> 'cancelled'
       where c.smac_registered_at is null and c.archived_at is null
       group by c.id, c.name
       order by min(q.created_at), c.name

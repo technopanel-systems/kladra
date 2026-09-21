@@ -14,6 +14,8 @@
  * letters in it, so it carries `dir="ltr"` wherever it is rendered — that is
  * exactly the case the direction rule keeps for itself (DESIGN §5).
  */
+
+import { westernDigits } from "@/lib/digits";
 export function quotationLabel(number: number, revision: number): string {
   return revision > 1 ? `Q-${number}/${revision}` : `Q-${number}`;
 }
@@ -46,9 +48,3 @@ export function numberInTerm(term: string): number | null {
   return Number.isSafeInteger(n) && n <= 2_147_483_647 ? n : null;
 }
 
-/** Arabic-Indic (٠–٩) and Extended Arabic-Indic (۰–۹) digits as 0–9. */
-const EASTERN_DIGITS = /[٠-٩۰-۹]/g;
-function westernDigits(text: string): string {
-  // Both ranges end in the digit's own value: U+0660 & 0xF is 0, U+06F9 & 0xF is 9.
-  return text.replace(EASTERN_DIGITS, (d) => String(d.charCodeAt(0) & 0xf));
-}

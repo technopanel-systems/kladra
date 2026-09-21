@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { DispatchDrawer } from "@/components/dispatches/dispatch-drawer";
 import { DispatchSheetSkeleton, DispatchesTable } from "@/components/dispatches/dispatches-table";
 import { QuotationDrawer } from "@/components/quotations/quotation-drawer";
+import { RegisterInSmacButton } from "@/components/quotations/register-in-smac-button";
 import {
   QuotationSheetSkeleton,
   QuotationsTable,
@@ -13,7 +14,7 @@ import { ListTail } from "@/components/ui-ext/list-tail";
 import { StandingStrip } from "@/components/ui-ext/standing-strip";
 import { requireUser } from "@/lib/authz";
 import { companiesNotInSmac } from "@/lib/companies";
-import { seesSmacBacklog } from "@/lib/floor";
+import { answersTheDesk, seesSmacBacklog } from "@/lib/floor";
 import { listNonWorkingDays } from "@/lib/calendar";
 import { formatDay, todayRiyadh, type Day } from "@/lib/dates";
 import { dispatchWaitDays, listDispatches } from "@/lib/dispatches";
@@ -108,6 +109,10 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
   // the list still cannot disagree, because neither is derived from the other —
   // both come from `narrowTo` (rules/data.md).
   const waiting = quotationDays.length + dispatchDays.length;
+  // Whether this reader may say a customer is in SMAC now: the coordinator, and
+  // not the manager or the admin reading her desk, nor anybody viewing as her —
+  // the sentence `registerInSmacAction` asks (DESIGN §5).
+  const mayAnswer = answersTheDesk(user);
 
   // Both chains, one rule (src/lib/waiting.ts): the manager's screen has called
   // a request stuck after two working days since P8, and until now the person
@@ -131,8 +136,10 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
   // Computed here and handed down, rather than in each table: the tables are
   // client components and the holiday table is a database read, so the rule
   // stays on the server and only its answer crosses (rules/data.md).
-  const waits = (rows: { id: string; createdOn: string }[]): Record<string, Waited> =>
-    Object.fromEntries(rows.map((row) => [row.id, waitedSince(row.createdOn, today, nonWorking)]));
+  // From the day it LANDED, not the day it was raised: a request she sent back
+  // and he fixed three days later has waited on her since this morning.
+  const waits = (rows: { id: string; deskSince: string }[]): Record<string, Waited> =>
+    Object.fromEntries(rows.map((row) => [row.id, waitedSince(row.deskSince, today, nonWorking)]));
 
   const lateText = (count: number) =>
     t("queue.latePart", { late: count, days: LATE_AFTER_WORKING_DAYS });
@@ -296,12 +303,14 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
             {notInSmac.rows.map((row) => (
               // No door: another rep's company is his to open (D42), and what
               // this row leads to is work in SMAC. His name is what it gives
-              // her — the person to ring.
+              // her — the person to ring — and the button is where she says the
+              // work is done, which is what takes the row away.
               <li
                 key={row.id}
                 data-slot="not-in-smac-row"
-                className="card-face flex flex-col gap-1 p-3"
+                className="card-face flex flex-wrap items-center justify-between gap-x-4 gap-y-2 p-3"
               >
+                <span className="flex min-w-0 flex-col gap-1">
                 {/* The customer on his own line and the rest under him, rather
                     than three things across one row: at 375 the row's name got
                     a column of its own a word wide, and an Arabic name came
@@ -321,6 +330,8 @@ export default async function QueuePage({ searchParams }: { searchParams: Promis
                     {t("queue.notInSmacSince", { date: formatDay(row.since, locale) })}
                   </span>
                 </span>
+                </span>
+                {mayAnswer ? <RegisterInSmacButton companyId={row.id} companyName={row.name} /> : null}
               </li>
             ))}
           </ul>

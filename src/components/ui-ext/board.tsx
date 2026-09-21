@@ -190,7 +190,7 @@ export function Board({ columns }: { columns: BoardColumn[] }) {
                 onClick={() => choose(column.key)}
                 className={cn(
                   chipClass({ active }),
-                  "touch inline-flex items-center gap-2 whitespace-nowrap outline-none transition-[color,background-color,border-color,box-shadow] duration-100 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "touch inline-flex items-center gap-2 whitespace-nowrap outline-hidden transition-[color,background-color,border-color,box-shadow] duration-100 ease-out focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                 )}
               >
                 <span

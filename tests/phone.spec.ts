@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { westernFigure } from "@/lib/digits";
+import { toNumber } from "@/lib/money";
 import { normalizePhone } from "@/lib/phone";
 
 /**
@@ -46,4 +48,15 @@ test("what cannot be read is refused rather than guessed", () => {
   expect(normalizePhone("+299 12 34 56", "ZZ")).toBe("+299123456");
   expect(normalizePhone("", "SA")).toBeNull();
   expect(normalizePhone("abc", "AE")).toBeNull();
+});
+
+// A phone's Arabic keyboard types these, and until the P13 audit every number
+// box refused them: \d is ASCII, and Number("١٢") is NaN.
+test("digits typed on an Arabic keyboard are the same number", () => {
+  expect(normalizePhone("٠٥٠ ١٢٣ ٤٥٦٧")).toBe("+966501234567");
+  expect(normalizePhone("+٩٦٦٥٠١٢٣٤٥٦٧", "SA")).toBe("+966501234567");
+  expect(normalizePhone("۰۵۰۱۲۳۴۵۶۷")).toBe("+966501234567");
+  expect(westernFigure("١٬٢٥٠٫٥")).toBe("1250.5");
+  expect(toNumber("١٢٫٥")).toBe(12.5);
+  expect(westernFigure("4 mm عينات")).toBe("4 mm عينات");
 });

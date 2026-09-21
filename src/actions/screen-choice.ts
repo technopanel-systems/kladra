@@ -31,16 +31,43 @@ import { NotAllowed, requireActor } from "@/lib/authz";
 import type { SessionUser } from "@/lib/types";
 
 /**
+ * The screens that remember what somebody was looking at.
+ *
+ * `screen` is half the key of a row anybody signed in can write, and it was
+ * bounded by a shape rather than by a vocabulary — `/^[a-z][a-z-]{0,30}$/` —
+ * so a hand-made POST could fill `screen_choices` with as many distinct rows
+ * per person as it cared to type, none of which any screen would ever read.
+ * A word nothing asks for is not a preference, it is a row.
+ *
+ * `choice` stays a shape on purpose, and the note below says why: each reader
+ * parses its own and falls back when it does not know the word, so a screen
+ * that gains a third view needs no migration. WHICH screens exist is not like
+ * that — it is a closed list, and this is it: the three `useRemembered` call
+ * sites (`PageTabs`, `RangeChips`, `ViewSwitch`, `PeriodSwitch`) pass one of
+ * these and nothing else. A new remembering screen adds its name here, which
+ * is the same one line its rail entry and its page already cost.
+ */
+const SCREENS = [
+  "day",
+  "team",
+  // The window a metric is measured over, remembered once for the whole app
+  // rather than per tab (`RANGE_SCREEN` in src/lib/ranges.ts).
+  "metrics",
+  "reports",
+  "projects",
+  "quotations",
+  "dispatches",
+] as const;
+
+/**
  * The word is not trusted, only bounded. Each reader parses its own — an
- * unknown view falls back to the list — so this refuses shapes rather than
+ * unknown view falls back to the list — so `choice` refuses shapes rather than
  * vocabulary, and a screen that gains a third view needs no migration and no
  * change here.
  */
 const schema = z.object({
   kind: z.enum(CHOICE_KINDS),
-  screen: z
-    .string()
-    .regex(/^[a-z][a-z-]{0,30}$/),
+  screen: z.enum(SCREENS),
   choice: z
     .string()
     .regex(/^[a-z][a-z-]{0,30}$/),

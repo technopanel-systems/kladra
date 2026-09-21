@@ -70,6 +70,7 @@ import {
 } from "@/lib/quotation-diff";
 
 import { LIST_LIMIT } from "@/lib/list-size";
+import { isLiveAmong, liveRevision } from "@/lib/live-revision";
 import type { SessionUser } from "@/lib/types";
 import { creditOnQuotation } from "@/lib/credit-rows";
 import { cohortWhere, statusesOf } from "@/lib/chain";
@@ -148,6 +149,8 @@ export type QuotationRow = {
   issuedOn: string | null;
   decidedOn: string | null;
   createdOn: string;
+  /** The day it last landed on the desk; a wait is counted from here. */
+  deskSince: string;
   /**
    * numeric(12,2) all the way to the screen — a float would round it on the way.
    * `totalSqm` is the panels' m² alone: a service's m² never counts (D173).
@@ -267,12 +270,7 @@ const totalSql = sql<string>`round(${beforeVat} + round(${beforeVat} * ${VAT_RAT
  * never true (rules/data.md).
  */
 export function isLatestRevisionSql(): SQL<boolean> {
-  return sql`not exists (
-    select 1
-      from quotations later
-     where later.number = quotations.number
-       and later.revision > quotations.revision
-  )`;
+  return sql`${sql.raw(liveRevision("quotations"))}`;
 }
 
 /**
@@ -307,6 +305,9 @@ function selection(locale: string) {
     decidedOn: riyadhDay(sql`quotations.decided_at`),
     // `created_at` is NOT NULL, so this one always has a day.
     createdOn: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+    // The day it last landed on the desk — what a wait is counted from
+    // (`desk_since`, schema.ts), which is not the day it was first raised.
+    deskSince: sql<string>`to_char((quotations.desk_since at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
     totalSqm: sql<string>`coalesce(${lineTotals.sqm}, 0)`,
     panelsSubtotal: panelsSql,
     servicesSubtotal: servicesSql,
@@ -339,6 +340,8 @@ type Selected = {
   issuedOn: string | null;
   decidedOn: string | null;
   createdOn: string;
+  /** The day it last landed on the desk; a wait is counted from here. */
+  deskSince: string;
   totalSqm: string;
   panelsSubtotal: string;
   servicesSubtotal: string;
@@ -371,6 +374,7 @@ function toRow(row: Selected): QuotationRow {
     issuedOn: row.issuedOn ?? null,
     decidedOn: row.decidedOn ?? null,
     createdOn: row.createdOn,
+    deskSince: row.deskSince,
     totalSqm: String(row.totalSqm ?? "0"),
     panelsSubtotal: String(row.panelsSubtotal ?? "0"),
     servicesSubtotal: String(row.servicesSubtotal ?? "0"),
@@ -400,7 +404,8 @@ export async function listQuotations(input: ListQuotationsInput): Promise<Quotat
     .leftJoin(lineTotals, eq(lineTotals.quotationId, quotations.id))
     .leftJoin(serviceTotals, eq(serviceTotals.quotationId, quotations.id))
     .where(and(...conditions))
-    .orderBy(input.order === "oldest" ? asc(quotations.createdAt) : desc(quotations.createdAt))
+    // Oldest first is the desk's order, and the desk counts from the landing.
+    .orderBy(input.order === "oldest" ? asc(quotations.deskSince) : desc(quotations.createdAt))
     // Capped: this list is years long on a real floor, and what anybody reads
     // on it is the top (D80).
     .limit(input.limit ?? LIST_LIMIT);
@@ -486,12 +491,12 @@ function narrowTo(input: ListQuotationsInput): (SQL | undefined)[] {
  */
 export async function quotationWaitDays(input: ListQuotationsInput): Promise<Day[]> {
   const rows = await db
-    .select({ day: riyadhDay(sql`quotations.created_at`) })
+    .select({ day: riyadhDay(sql`quotations.desk_since`) })
     .from(quotations)
     .innerJoin(companies, eq(companies.id, quotations.companyId))
     .innerJoin(projects, eq(projects.id, quotations.projectId))
     .where(and(...narrowTo(input)))
-    .orderBy(asc(quotations.createdAt));
+    .orderBy(asc(quotations.deskSince));
   return rows.flatMap((row) => (row.day ? [row.day as Day] : []));
 }
 
@@ -822,7 +827,9 @@ export async function getQuotation(
       revision: sibling.revision,
       status: sibling.status as QuotationStatus,
     })),
-    isLatest: siblings.length === 0 || siblings[0].revision === base.revision,
+    // The same sentence the queries ask (`liveRevision`): a revision that was
+    // withdrawn supersedes nothing, so the paper under it is the latest again.
+    isLatest: isLiveAmong(base.revision, siblings),
   };
 }
 
@@ -984,7 +991,14 @@ export async function quotationHistory(id: string): Promise<QuotationEvent[]> {
       select replace(a.action, 'quotation.', '') as what,
              to_char((a.at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD') as day,
              ${personNameOf("u", locale)} as who,
-             nullif(btrim(coalesce(a.details ->> 'reason', a.details ->> 'from', '')), '') as note
+             -- The old number only on a number correction: an edit records the
+             -- status it came FROM under the same key, and that is not a note —
+             -- it printed "returned" under "Lines edited", in English, on both
+             -- locales (the dispatch trail was fixed for this and this was not).
+             nullif(btrim(coalesce(
+               case when a.action = 'quotation.correctNumber'
+                    then a.details ->> 'from'
+                    else a.details ->> 'reason' end, '')), '') as note
         from audit_log a
         left join users u on u.id = a.user_id
        where a.record_type = 'quotation'

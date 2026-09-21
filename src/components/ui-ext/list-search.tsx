@@ -136,7 +136,7 @@ export function ListSearch({
           type="button"
           onClick={() => change("")}
           aria-label={clearLabel || t("common.clear")}
-          className="touch absolute end-1.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 max-md:end-0"
+          className="touch absolute end-1.5 top-1/2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-hidden transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 max-md:end-0"
         >
           <X className="size-4" />
         </button>

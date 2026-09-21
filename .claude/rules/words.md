@@ -91,8 +91,12 @@ that selects the first straight onto a screen puts "Faisal Al-Harbi" under a
 heading that says المندوب (D68). One helper resolves it — `personName(locale)`,
 `personNameOf(alias, locale)` and `personNameFrom(row, locale)` in
 `src/lib/people.ts` — and `npm run lint` fails on anything else, with a short
-allowlist naming the files that may use the Latin name and the reason each may:
-the CSV export, the audit log, the admin's own list, the session, the schema.
+allowlist naming the files that may use the Latin name and the reason each may
+(`scripts/one-name.mts`): the resolver itself, the session, the admin's own list
+which edits the pair, the schema and its type, the audit line that records the
+canonical name, and the hand-over whose target is never shown. The exports are
+not on it — every one of them asks the helper for the reader's script, like a
+screen.
 A new query that forgets is caught by the check, not by an Arabic screen.
 
 **And a read that resolves the name itself cannot be called from a route with no

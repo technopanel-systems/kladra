@@ -31,8 +31,11 @@ import {
   contacts,
   countries,
   leadSources,
+  dispatches,
+  notifications,
   projectShares,
   projects,
+  quotations,
   users,
 } from "@/db/schema";
 import { assertCompanyMine } from "@/lib/activities";
@@ -962,6 +965,47 @@ async function moveCustomer(
   // (P12-8) lands rows on somebody's list the same way and would otherwise
   // have needed the same forty lines a second time.
   await moveContacts(tx, { companyId, repId: from }, { companyId, repId: to }, actorId);
+
+  // His open paper goes with the customer, which is what the hand-over dialog
+  // has always promised ("their projects, open quotations and dispatches move")
+  // and D86 decided — and what nothing did (Stage 3 audit). Since D147 a paper
+  // is worked by the rep it NAMES, so a quotation left naming the man who gave
+  // the customer up could be fixed, answered, revised or withdrawn by nobody:
+  // he can no longer open the company, and its new owner had no button. A
+  // quotation still in play moves; a load still to be answered moves. What was
+  // approved stays where it is (D86), and so does every credit row (D148) —
+  // `rep_id` says who works a paper, never whose metres it was.
+  const papers = await tx
+    .update(quotations)
+    .set({ repId: to })
+    .where(
+      and(
+        eq(quotations.companyId, companyId),
+        eq(quotations.repId, from),
+        inArray(quotations.status, ["requested", "returned", "issued", "accepted"]),
+      ),
+    )
+    .returning({ id: quotations.id });
+  const loads = await tx
+    .update(dispatches)
+    .set({ repId: to })
+    .where(
+      and(
+        eq(dispatches.companyId, companyId),
+        eq(dispatches.repId, from),
+        inArray(dispatches.status, ["submitted", "refused"]),
+      ),
+    )
+    .returning({ id: dispatches.id });
+  // And what the desk said about them follows: a "sent back" left on the bell of
+  // a man who can no longer open it is a notice nothing will ever clear (D79).
+  const carried = [...papers, ...loads].map((row) => row.id);
+  if (carried.length > 0) {
+    await tx
+      .update(notifications)
+      .set({ userId: to })
+      .where(and(eq(notifications.userId, from), inArray(notifications.subjectId, carried)));
+  }
 
   // And he is not left sharing what he now owns — the company, and every
   // job under it that has just become his.

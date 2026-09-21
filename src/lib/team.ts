@@ -586,14 +586,16 @@ async function readLate(locale: string): Promise<RawLate> {
         revision: quotations.revision,
         companyName: companies.name,
         repName: personName(locale),
-        repId: companies.repId,
-        since: sql<string>`to_char((quotations.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+        // Whose request it is — the paper's own rep, who is not the customer's
+        // owner on a shared job or after a hand-over (D147, D216).
+        repId: quotations.repId,
+        since: sql<string>`to_char((quotations.desk_since at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
       })
       .from(quotations)
       .innerJoin(companies, eq(companies.id, quotations.companyId))
-      .innerJoin(users, eq(users.id, companies.repId))
+      .innerJoin(users, eq(users.id, quotations.repId))
       .where(and(eq(quotations.status, "requested"), isNull(companies.archivedAt)))
-      .orderBy(asc(quotations.createdAt)),
+      .orderBy(asc(quotations.deskSince)),
 
     /*
      * The other half of the same desk (P14, 14B). "A request waiting on the
@@ -612,14 +614,16 @@ async function readLate(locale: string): Promise<RawLate> {
         number: dispatches.number,
         companyName: companies.name,
         repName: personName(locale),
-        repId: companies.repId,
-        since: sql<string>`to_char((dispatches.created_at at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
+        // Whose request it is — the paper's own rep, who is not the customer's
+        // owner on a shared job or after a hand-over (D147, D216).
+        repId: dispatches.repId,
+        since: sql<string>`to_char((dispatches.desk_since at time zone 'Asia/Riyadh')::date, 'YYYY-MM-DD')`,
       })
       .from(dispatches)
       .innerJoin(companies, eq(companies.id, dispatches.companyId))
-      .innerJoin(users, eq(users.id, companies.repId))
+      .innerJoin(users, eq(users.id, dispatches.repId))
       .where(and(eq(dispatches.status, "submitted"), isNull(companies.archivedAt)))
-      .orderBy(asc(dispatches.createdAt)),
+      .orderBy(asc(dispatches.deskSince)),
 
     db.execute<{
       id: string;

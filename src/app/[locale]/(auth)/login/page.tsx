@@ -76,7 +76,7 @@ export default async function LoginPage({ params }: { params: Promise<{ locale: 
           href="/login"
           locale={other}
           lang={other}
-          className="shrink-0 rounded-sm text-muted-foreground underline-offset-4 outline-none hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="shrink-0 rounded-sm text-muted-foreground underline-offset-4 outline-hidden hover:text-foreground hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {other === "ar" ? t("common.arabic") : t("common.english")}
         </Link>

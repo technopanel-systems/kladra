@@ -49,6 +49,7 @@ export function CreditField({
   sqm,
   withoutTarget = [],
   earnsNothing = false,
+  soleEarner = null,
   id = "credit",
 }: {
   /** Everybody on the job who may earn. Fewer than two and no control is drawn. */
@@ -57,8 +58,10 @@ export function CreditField({
   onChange: (next: string) => void;
   /** People on the job with no target this month, named, so their absence is said. */
   withoutTarget?: string[];
-  /** The person this paper is for has no target: it counts for nobody at all. */
+  /** The person this paper is for has no target, so it does not count for him. */
   earnsNothing?: boolean;
+  /** The one person it counts for instead, when there is exactly one (`creditDefault`). */
+  soleEarner?: string | null;
   /**
    * What this record is worth as it stands, so a split can say what it comes
    * to before it is saved rather than after. Optional: a quotation's m² is an
@@ -79,9 +82,18 @@ export function CreditField({
     return (
       <Field>
         <FieldLabel htmlFor={id}>{t("common.credit.label")}</FieldLabel>
-        <p data-slot="credit-none" id={id} className="text-sm">
-          {earnsNothing ? t("common.credit.earnsNothing") : t("common.credit.forNobody")}
-        </p>
+        {/* Somebody else on the job earns and he does not: the metres are that
+            person's, and the form names him rather than saying "nobody" (§3 P14:
+            "without it counting FOR HIM"). */}
+        {soleEarner ? (
+          <p data-slot="credit-other" id={id} className="text-sm">
+            {t("common.credit.forOther", { name: soleEarner })}
+          </p>
+        ) : (
+          <p data-slot="credit-none" id={id} className="text-sm">
+            {earnsNothing ? t("common.credit.earnsNothing") : t("common.credit.forNobody")}
+          </p>
+        )}
         {withoutTarget.length > 0 ? <WithoutTarget names={withoutTarget} /> : null}
       </Field>
     );

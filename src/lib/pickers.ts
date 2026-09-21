@@ -22,7 +22,7 @@ import { getLocale } from "next-intl/server";
 import { db } from "@/db";
 import { personName } from "@/lib/people";
 import { companies, projects, quotations, users } from "@/db/schema";
-import { committedQtySql } from "@/lib/dispatches";
+import { committedQtySql } from "@/lib/sqm";
 import { holdsFloor, sells } from "@/lib/floor";
 import { onProjectSql } from "@/lib/visibility";
 import { quotationLabel } from "@/lib/labels";
@@ -177,7 +177,7 @@ async function dispatchableRows(user: SessionUser) {
           select 1
             from quotation_items qi
            where qi.quotation_id = quotations.id
-             and qi.qty > ${committedQtySql(sql`qi.id`)}
+             and qi.qty > ${committedQtySql("qi")}
         )`,
       ),
     )

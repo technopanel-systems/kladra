@@ -17,6 +17,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { auditLog, companies, contacts, projects, type ArchiveKind } from "@/db/schema";
 import { liveAudienceForCompany, notifyLive } from "@/lib/live";
+import { clearNotifications, WORK_KINDS } from "@/lib/notify";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -98,7 +99,8 @@ export async function holdArchivable(
 }
 
 /**
- * Archive it: the row, the audit line, and everyone whose screen has it on it.
+ * Archive it: the row, the audit line, the notices about it, and everyone whose
+ * screen has it on it.
  *
  * The reason goes in the audit line for all three kinds. A company also keeps
  * it on its own column, which is what the archive screen has always read, and
@@ -106,6 +108,14 @@ export async function holdArchivable(
  * one sentence, which is two too many, and the other two are read by nothing
  * new. The column stays because restoring reads it (D80); the audit line stays
  * because it is what "who took it off the floor" is answered from.
+ *
+ * And the work notices about this record go with it, inside the same
+ * transaction (D79). A notice that has to be cleared by doing the work is a
+ * pointer at work that still exists; once the record is off the floor there is
+ * no work left to do and no screen to do it on, so a `leadAssigned` on an
+ * archived company sat in its rep's bell for ever with an Acknowledge button
+ * behind it that the drawer no longer draws. The kinds are `WORK_KINDS`, read
+ * out of the one table that classifies them, never a list typed here.
  */
 export async function archiveRecord(
   tx: Tx,
@@ -139,6 +149,11 @@ export async function archiveRecord(
     recordId: record.id,
     details: { reason, companyId: record.companyId },
   });
+
+  // Everything anybody was still being asked to do about this record. The
+  // caller may write a notice of its own after this — "it was approved" — and
+  // that one is news, not work, so it survives.
+  await clearNotifications(tx, { type: record.kind, id: record.id }, WORK_KINDS);
 
   const audience = await liveAudienceForCompany(record.companyId, actorId);
   await notifyLive(tx, audience, { type: "company", id: record.companyId });

@@ -15,7 +15,7 @@
  * one; nobody, admin included, can see the old one.
  */
 
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
@@ -118,22 +118,28 @@ const roleSchema = z.enum(["rep", "marketing", "coordinator", "manager", "admin"
 async function heldUser(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   id: string,
-): Promise<{ role: Role } | null> {
+): Promise<{ role: Role; active: boolean } | null> {
   const [row] = await tx
-    .select({ role: users.role })
+    .select({ role: users.role, active: users.active })
     .from(users)
     .where(eq(users.id, id))
     .for("update")
     .limit(1);
-  return row ? { role: row.role as Role } : null;
+  return row ? { role: row.role as Role, active: row.active } : null;
 }
 
 /** What a refused write on somebody else's account comes back saying (P14, §4). */
-type UserOutcome = "ok" | "gone" | "refused";
+type UserOutcome = "ok" | "gone" | "refused" | "lastAdmin";
 
 async function answerFor(outcome: Exclude<UserOutcome, "ok">): Promise<ActionResult<undefined>> {
   const ta = await getTranslations("admin");
-  return { ok: false, error: outcome === "gone" ? ta("notFound") : ta("accountIsAdmins") };
+  if (outcome === "gone") return { ok: false, error: ta("notFound") };
+  if (outcome === "lastAdmin") {
+    // Under the field it is about: the role is the one thing on the form that
+    // was refused, and the rest of the edit is still good.
+    return { ok: false, error: ta("lastAdmin"), fieldErrors: { role: ta("lastAdmin") } };
+  }
+  return { ok: false, error: ta("accountIsAdmins") };
 }
 
 /** Long enough to be worth having; nothing else, because a rule nobody can meet
@@ -215,7 +221,14 @@ export async function createUserAction(
   });
 }
 
-/** Name, email and role. Never the password — that is its own action. */
+/**
+ * Name, email and role. Never the password — that is its own action.
+ *
+ * Two things the role cannot become: one that holds no floor while companies
+ * are still on the account (D91), and — on the last active admin's own row —
+ * anything but admin, which is `setUserActiveAction`'s "you cannot deactivate
+ * your own account" said about the other door out of the app.
+ */
 export async function updateUserAction(
   _prev: ActionResult<undefined> | null,
   formData: FormData,
@@ -283,6 +296,36 @@ export async function updateUserAction(
       const held = await heldUser(tx, parsed.data.userId);
       if (!held) return "gone";
       if (!mayActOnUser(actor.role, held.role)) return "refused";
+
+      /*
+       * The last way back into the app. `setUserActiveAction` already refuses
+       * an admin deactivating himself — "an app with nobody who can administer
+       * it is a support call, not a decision" — and the role picker was the
+       * same act by the other door, unguarded: one save from Admin to Rep on
+       * his own row and there is nobody left who can add a user, set a target,
+       * edit a lookup or put an archived customer back, and no screen in
+       * Kladra that can undo it.
+       *
+       * Asked of the held row and counted inside the transaction (D85): two
+       * tabs each demoting one of the last two admins would otherwise both read
+       * "there is another" and both commit.
+       *
+       * An INACTIVE admin is not one of the ways in, so demoting him takes
+       * nothing away.
+       */
+      if (held.role === "admin" && held.active && parsed.data.role !== "admin") {
+        const [others] = await tx
+          .select({ count: sql<number>`count(*)::int` })
+          .from(users)
+          .where(
+            and(
+              eq(users.role, "admin"),
+              eq(users.active, true),
+              ne(users.id, parsed.data.userId),
+            ),
+          );
+        if (!others || others.count === 0) return "lastAdmin";
+      }
 
       const rows = await tx
         .update(users)

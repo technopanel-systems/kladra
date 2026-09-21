@@ -4,6 +4,8 @@
  * database and arrives as a string; keep it a string until display.
  */
 
+import { westernFigure } from "@/lib/digits";
+
 export const VAT_RATE = 0.15;
 
 /** Half-up to 2 decimals, avoiding float drift on .005 boundaries. */
@@ -13,7 +15,7 @@ export function round2(n: number): number {
 
 export function toNumber(v: string | number | null | undefined): number {
   if (v === null || v === undefined || v === "") return 0;
-  const n = typeof v === "number" ? v : Number(v);
+  const n = typeof v === "number" ? v : Number(westernFigure(v));
   return Number.isFinite(n) ? n : 0;
 }
 

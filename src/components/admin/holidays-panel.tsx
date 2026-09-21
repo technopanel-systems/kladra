@@ -67,6 +67,11 @@ import { cn } from "@/lib/utils";
  * A day here is removed rather than archived — the one place in the app where
  * that is right. A holiday entered on the wrong date is not history, it is a
  * typo, and leaving it would quietly shorten somebody's month for ever.
+ *
+ * `mayEdit` is false for exactly one reader: an admin viewing as somebody
+ * (D42, P8.8). Both calendar actions refuse him, so the screen offers him
+ * neither — the month, the marks and the entries are all still there, because
+ * reading the calendar is the whole reason he opened it.
  */
 export function HolidaysPanel({
   title,
@@ -77,6 +82,7 @@ export function HolidaysPanel({
   marks,
   today,
   people,
+  mayEdit,
 }: {
   title: string;
   periods: NonWorkingPeriod[];
@@ -88,6 +94,8 @@ export function HolidaysPanel({
   marks: Record<Day, DayMark>;
   today: Day;
   people: { id: string; name: string }[];
+  /** Whether this reader may add or remove days (`requireActor`, DESIGN §5). */
+  mayEdit: boolean;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -126,13 +134,16 @@ export function HolidaysPanel({
           {/* The month the strip is showing, as a file: one row per period with
               the working days it really costs (P14 14.10, D210). */}
           <ExportButton files={[{ name: "leave", title }]} />
-          <AddDayDialog
-            people={people}
-            onAdded={(keys) => {
-              flash(keys);
-              refresh();
-            }}
-          />
+          {/* The file is a read and stays; the form is a write and does not. */}
+          {mayEdit ? (
+            <AddDayDialog
+              people={people}
+              onAdded={(keys) => {
+                flash(keys);
+                refresh();
+              }}
+            />
+          ) : null}
         </div>
       </div>
       <p className="max-w-prose text-sm text-muted-foreground">{t("admin.dayHint")}</p>
@@ -155,6 +166,7 @@ export function HolidaysPanel({
               key={period.key}
               period={period}
               locale={locale}
+              mayEdit={mayEdit}
               marked={markOf(period)}
               onRemovePeriod={(opener) => {
                 setOneDay(null);
@@ -381,12 +393,15 @@ const AWAY_DOTS = 3;
 function PeriodRow({
   period,
   locale,
+  mayEdit,
   marked,
   onRemovePeriod,
   onRemoveDay,
 }: {
   period: NonWorkingPeriod;
   locale: string;
+  /** Remove is a write; the days inside are a read and open for everybody. */
+  mayEdit: boolean;
   marked: ReturnType<ReturnType<typeof useRowFlash>["flashOf"]>;
   onRemovePeriod: (opener: HTMLElement | null) => void;
   onRemoveDay: (day: { id: number; day: Day }, opener: HTMLElement | null) => void;
@@ -476,13 +491,15 @@ function PeriodRow({
               {t("admin.daysInside", { count: period.days.length })}
             </Button>
           ) : null}
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={(event) => onRemovePeriod(event.currentTarget)}
-          >
-            {t("admin.removeDay")}
-          </Button>
+          {mayEdit ? (
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={(event) => onRemovePeriod(event.currentTarget)}
+            >
+              {t("admin.removeDay")}
+            </Button>
+          ) : null}
         </span>
       </div>
 
@@ -500,15 +517,17 @@ function PeriodRow({
                   <span className="text-xs text-faint">{t("admin.notAWorkingDay")}</span>
                 ) : null}
               </span>
-              <Button
-                variant="ghost"
-                size="xs"
-                className="shrink-0"
-                aria-label={t("admin.removeDayTitle", { date: formatDay(day.day, locale) })}
-                onClick={(event) => onRemoveDay(day, event.currentTarget)}
-              >
-                {t("admin.removeDay")}
-              </Button>
+              {mayEdit ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="shrink-0"
+                  aria-label={t("admin.removeDayTitle", { date: formatDay(day.day, locale) })}
+                  onClick={(event) => onRemoveDay(day, event.currentTarget)}
+                >
+                  {t("admin.removeDay")}
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -528,8 +547,11 @@ function PeriodRow({
  */
 function Dates({ period, locale }: { period: { from: Day; until: Day }; locale: string }) {
   if (period.from === period.until) return <DayText day={period.from} locale={locale} />;
+  // The two days may part at the dash, and only there: held on one line, a
+  // range ran under the row's own buttons on a phone and the three were read
+  // through each other (P13 audit). Each day stays whole.
   return (
-    <span className="flex items-center gap-1 whitespace-nowrap">
+    <span className="flex min-w-0 flex-wrap items-center gap-x-1">
       <DayText day={period.from} locale={locale} />
       <span aria-hidden="true">–</span>
       <DayText day={period.until} locale={locale} />

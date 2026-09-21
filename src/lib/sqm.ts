@@ -38,6 +38,49 @@ export const COMMITTING = ["submitted", "approved"] as const satisfies readonly 
 /** The same, as a SQL list for text or `sql.raw`: `('submitted', 'approved')`. */
 export const COMMITTING_IN = `(${COMMITTING.map((status) => `'${status}'`).join(", ")})`;
 
+/**
+ * How many sheets of one quotation line are spoken for (D12) — written once.
+ *
+ * `line` is the alias of a `quotation_items` row in the caller's own query. What
+ * counts against it is every load, waiting or approved, on any line that BEGAN
+ * as this one: a revision is a new paper with new lines, and until the Stage 3
+ * audit the count was keyed on the line's own id, so revising a paper that had
+ * already sent sixty of its hundred sheets gave the revision a hundred to send
+ * again. `quotation_items.origin_item_id` says where a carried line began, and
+ * a line that began here is its own beginning.
+ *
+ * It was six copies — the drawer's figure, the dispatch form's check under its
+ * lock, the picker, the load's own "elsewhere", the project's stage and the
+ * rep's list — which is how one of them came to ask only for approved loads on
+ * purpose and nobody could tell it from a slip. `approvedOnly` is that purpose,
+ * said out loud. `scripts/one-figure.mts` refuses a seventh.
+ *
+ * Text, with the alias passed in from a closed set, because half its readers
+ * are SQL written as text; `also` is any further condition on the load `d`
+ * (leaving one dispatch out, say), written by the caller with its own binds.
+ */
+export type LineAlias = "qi" | "quotation_items";
+
+export function committedFrom(line: LineAlias, approvedOnly = false): string {
+  return `select coalesce(sum(di.qty), 0)::int
+            from dispatch_items di
+            join dispatches d on d.id = di.dispatch_id
+            join quotation_items began on began.id = di.quotation_item_id
+           where coalesce(began.origin_item_id, began.id) = coalesce(${line}.origin_item_id, ${line}.id)
+             and d.status in ${approvedOnly ? "('approved')" : COMMITTING_IN}`;
+}
+
+/** The same as a closed expression, for a query with nothing to add to it. */
+export const committedQty = (line: LineAlias, approvedOnly = false): string =>
+  `(${committedFrom(line, approvedOnly)})`;
+
+/** And with one more condition on the load, bound by the caller. */
+export function committedQtySql(line: LineAlias, also?: SQL): SQL<number> {
+  return also
+    ? sql<number>`(${sql.raw(committedFrom(line))} and ${also})`
+    : sql<number>`${sql.raw(committedQty(line))}`;
+}
+
 /** The sheet, times any quantity expression, rounded once — for SQL written as text with quotation_items `qi`. */
 export const sqmOf = (qty: string): string => `round(qi.width * qi.length * ${qty}, 2)`;
 
@@ -66,6 +109,16 @@ export const sumSqm: SQL<string> = sql`round(coalesce(sum(${lineSqm}), 0), 2)`;
  * round on the seeded month, because it is the only property that keeps the
  * manager's table and the reps' cards from disagreeing.
  *
+ * **A load that counts for nobody is still a row** — with no `user_id` and the
+ * whole of its metres (Stage 3 audit). P14 made "no credit rows" a legal state
+ * (D207: nobody on the job earns this month), and this was an inner join, so
+ * such a load fell out of every figure built here — the six months, the pie,
+ * the builder, the list behind each — while the company's month card, summed
+ * over dispatches, kept it. The manager read 4,200 on the card and 3,800 on
+ * that month's bar. Asked of the whole company these rows now add to exactly
+ * what `companyAchievedSqm` says; asked of a person they are not his, because
+ * no `user_id` equals his.
+ *
  * Unfiltered on purpose. A caller wraps it and filters the month or the person
  * outside, so the window and the person are bound parameters in the caller's
  * own `sql` template rather than text spliced into this one; the whole history
@@ -76,12 +129,13 @@ export const CREDITED_METRES = `
          d.id as dispatch_id,
          d.approved_at,
          d.company_id,
-         ${shareOf("d.sqm", "c.parts", "c.part")} as sqm
+         case when c.user_id is null then d.sqm
+              else ${shareOf("d.sqm", "c.parts", "c.part")} end as sqm
     from (select dd.id, dd.approved_at, dd.company_id, ${SUM_SQM} as sqm
             from dispatches dd
             join dispatch_items di on di.dispatch_id = dd.id
            where dd.status = 'approved'
            group by dd.id) d
-    join (select dispatch_id, user_id, ${creditedParts("dispatch_id")}
-            from dispatch_credits) c
+    left join (select dispatch_id, user_id, ${creditedParts("dispatch_id")}
+                 from dispatch_credits) c
       on c.dispatch_id = d.id`;

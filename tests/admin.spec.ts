@@ -577,3 +577,72 @@ test("a rep who types an admin URL lands on his own home", async ({
     }
   });
 });
+
+/**
+ * The last way back in (Stage-3 audit, M6).
+ *
+ * `setUserActiveAction` has refused an admin deactivating his own account since
+ * it was written — "an app with nobody who can administer it is a support call,
+ * not a decision". The role picker was the same act by the other door and
+ * nothing stopped it: one save from Admin to Rep on his own row and there is
+ * nobody left who can add a user, set a target, edit a lookup or put an
+ * archived customer back, and no screen in Kladra that can undo it.
+ *
+ * The screen says so where he would have chosen, not after he has (D119): the
+ * role is a word on his own row and a picker on everybody else's.
+ */
+test("the only active admin is not offered a role on his own account", async ({
+  page,
+  locale,
+  t,
+}) => {
+  const jerom = {
+    id: await userId("jerom@technopanel.com.sa"),
+    name: await personName("jerom@technopanel.com.sa", locale),
+  };
+  const others = await query(
+    "select 1 from users where role = 'admin' and active = true and id <> $1::uuid",
+    [jerom.id],
+  );
+  expect(
+    others,
+    "there is a second active admin, so nothing on this screen is the last one and this walk proves nothing",
+  ).toHaveLength(0);
+
+  await login(page, locale, "jerom");
+  await openAdmin(page, locale, "users", t("common.users"));
+
+  await test.step("his own row states the role and says why", async () => {
+    await fromRowMenu(page, t, row(page, jerom.name), jerom.name, t("common.edit"));
+    const form = page.getByRole("dialog", { name: t("admin.editUser") });
+    await expect(form).toBeVisible(COLD);
+
+    await expect(
+      form.getByRole("combobox", { name: t("common.role") }),
+      "the last active admin was offered a picker whose every other entry locks him out of his own app",
+    ).toHaveCount(0);
+    await expect(form.getByText(t("admin.lastAdmin"))).toBeVisible();
+
+    // The rest of the form still saves, and the account comes out of it
+    // unchanged — the refusal is about one field, not about the row.
+    await form.getByRole("button", { name: t("common.save") }).click();
+    await expect(page.getByText(t("admin.userSaved", { name: jerom.name }))).toBeVisible(COLD);
+    const after = await one<{ role: string }>("select role from users where id = $1::uuid", [
+      jerom.id,
+    ]);
+    expect(after.role, "the admin saved his own row out of the admin role").toBe("admin");
+  });
+
+  await test.step("and everybody else's row still has one", async () => {
+    // The control. The rule is not "an admin may not change a role" — it is
+    // "not the last admin's own" — and an absence proves nothing until the same
+    // dialog is shown carrying the picker.
+    const faisal = await personName("faisal@technopanel.com.sa", locale);
+    await fromRowMenu(page, t, row(page, faisal), faisal, t("common.edit"));
+    const form = page.getByRole("dialog", { name: t("admin.editUser") });
+    await expect(form).toBeVisible(COLD);
+    await expect(form.getByRole("combobox", { name: t("common.role") })).toBeVisible();
+    await expect(form.getByText(t("admin.lastAdmin"))).toHaveCount(0);
+    await form.getByRole("button", { name: t("common.cancel") }).click();
+  });
+});

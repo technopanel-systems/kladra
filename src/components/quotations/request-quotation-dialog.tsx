@@ -674,6 +674,7 @@ function RequestForm({
                 onChange={(next) => setCreditPick(creditKey ? { key: creditKey, value: next } : null)}
                 withoutTarget={choices?.withoutTarget ?? []}
                 earnsNothing={choices?.mineEarnsNothing ?? false}
+                soleEarner={choices?.soleEarner ?? null}
                 id="quotation-credit"
               />
 

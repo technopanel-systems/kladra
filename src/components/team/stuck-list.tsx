@@ -8,7 +8,9 @@ import {
   splitByLength,
 } from "@/components/team/work-grid";
 import { Empty } from "@/components/ui-ext/empty";
+import { requireUser } from "@/lib/authz";
 import { formatDay } from "@/lib/dates";
+import { answersArchiveRequests } from "@/lib/floor";
 import { NEVER_CONTACTED_DAYS } from "@/lib/followups";
 import { LEAD_LATE_WORKING_DAYS } from "@/lib/leads";
 import type { StateTone } from "@/lib/state-tone";
@@ -18,12 +20,13 @@ import { STUCK_REQUEST_WORKING_DAYS, type Stuck } from "@/lib/team";
 /**
  * What is waiting longer than it should be (SPEC D14).
  *
- * Seven questions, each with its own window: two records that hold one
+ * Eight questions, each with its own window: two records that hold one
  * telephone number and are waiting on him to say whether they are one customer
  * (P12-8), work due today on the floor of somebody who is on leave (D75), a
  * lead marketing handed somebody and nobody has picked up (§3, P12-7), a
  * request on the coordinator's desk — a quotation to issue or a load to
- * approve, from the morning it is raised (P14, 14B) — a
+ * approve, from the morning it is raised (P14, 14B) — a request to take a
+ * record off the floor, waiting on his yes or no (P14 14.8), a
  * follow-up more than three days past its date, a company added more than
  * fourteen days ago and never contacted, and a customer somebody DID contact and
  * then dropped — no next step anywhere on him and nothing logged for a fortnight
@@ -31,11 +34,13 @@ import { STUCK_REQUEST_WORKING_DAYS, type Stuck } from "@/lib/team";
  * of any screen, because every band this app had was keyed on a date and these
  * have none.
  *
- * The duplicates are first because they are the only rows here that are the
- * MANAGER's own work rather than somebody else's that he is watching, and the
- * only ones he can finish from where he is standing. Every other group asks him
- * to ring somebody. The uncovered are next, because they are the only ones about
- * TODAY. The lead is third: the youngest kind of stuck and the cheapest to clear.
+ * **Two of the eight are HIS OWN work** rather than somebody else's that he is
+ * watching: the duplicates and the requests to archive. Nobody else can answer
+ * either, and he can finish both from where he is standing — every other group
+ * asks him to ring somebody. The duplicates are first because they are also the
+ * oldest question on the screen; the uncovered are next, because they are the
+ * only ones about TODAY. The lead is third: the youngest kind of stuck and the
+ * cheapest to clear.
  *
  * Working days for the first ones because a request raised on a Thursday is not
  * late on Sunday, and a rep back from Eid must not be told he is behind (S48).
@@ -59,13 +64,21 @@ import { STUCK_REQUEST_WORKING_DAYS, type Stuck } from "@/lib/team";
  * from that data (D82).
  */
 export async function StuckList({ stuck }: { stuck: Stuck }) {
-  const [t, locale] = await Promise.all([getTranslations(), getLocale()]);
+  const [t, locale, user] = await Promise.all([getTranslations(), getLocale(), requireUser()]);
 
+  /*
+   * Every group, counted. It listed seven of the eight — the requests to
+   * archive were added beside the others and never added here — so a morning
+   * whose only waiting work was a request to archive drew "Nothing is stuck"
+   * over a band the screen then did not draw at all. The one group that is the
+   * manager's own was the one the empty test could not see.
+   */
   const nothing =
     stuck.duplicates.total === 0 &&
     stuck.uncovered.total === 0 &&
     stuck.leads.total === 0 &&
     stuck.requests.total === 0 &&
+    stuck.archives.total === 0 &&
     stuck.followUps.total === 0 &&
     stuck.neverContacted.total === 0 &&
     stuck.goneQuiet.total === 0;
@@ -108,6 +121,12 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     row.kind === "project"
       ? `/projects?open=${row.recordId}`
       : `/companies?open=${row.companyId}`;
+
+  // Whether this reader ANSWERS a request to archive, which is the one act this
+  // screen offers rather than points at. `answersArchiveRequests` is the same
+  // sentence the action decides by, and it says no to an admin looking through
+  // the manager's eyes (D42, P8.8): he reads the band and presses nothing.
+  const answers = answersArchiveRequests(user);
 
   /*
    * The customer as the arriving record spells him, and the two people holding
@@ -193,16 +212,24 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
   }));
 
   /*
-   * His own desk, and the only band on this screen that is (P14 14.8). Every
-   * other group here is somebody else's work that he is watching; these are
-   * requests waiting on him to say yes or no, and the row is a door to the
-   * record where he answers.
+   * His own desk — one of the two bands on this screen that is (P14 14.8, and
+   * the duplicates above are the other). Most groups here are somebody else's
+   * work that he is watching; these are requests waiting on him to say yes or
+   * no.
    *
    * The face is the customer's, as it is on every row of this screen, and the
    * first line names the record itself — the person or the job where it is not
    * the customer, so "archive Prime Facade" and "archive Ahmed at Prime Facade"
    * do not read alike. Who asked, not whose floor it is: this is the one row
    * here where those can differ and the asker is the one he answers.
+   *
+   * **The reason is on the row, and so are the two answers** (M2). The decision
+   * is "archive X because Y: yes or no", and the row held Y all along and drew
+   * only X — so the one band he can finish from where he is standing sent him
+   * to the record to read a sentence it already had, and for a contact it
+   * landed him on the drawer's Reports tab with the notice inside the Contacts
+   * one. The row stays a door as well: the rest of the customer is where he
+   * goes when the reason alone does not settle it.
    */
   const archives: StuckRowData[] = stuck.archives.rows.map((row) => ({
     key: row.id,
@@ -216,6 +243,8 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     // phrasing, so a manager reading both is not reading two (D59).
     note: t("team.waitingDays", { count: row.workingDaysWaiting }),
     noteTone: "wait",
+    reason: row.reason,
+    answer: answers ? { requestId: row.id, name: row.name } : undefined,
   }));
 
   const followUps: StuckRowData[] = stuck.followUps.rows.map((row) => ({
@@ -259,7 +288,9 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
    * rest, so the Tab key and a phone walk them in this order too.
    */
   const groups = [
-    // First, because it is the only group here he can finish himself.
+    // First, because it is his own work and the oldest question on the screen:
+    // until he rules a pair, two reps are ringing one customer and neither
+    // knows. The archive band below is the other group he finishes himself.
     stuck.duplicates.total > 0 && {
       key: "duplicates",
       title: t("duplicates.title"),
@@ -328,9 +359,23 @@ export async function StuckList({ stuck }: { stuck: Stuck }) {
     },
   ].filter((group) => group !== false);
 
-  // A card is as tall as its title, its rule, its rows and its tail line.
+  /*
+   * A card is as tall as its title, its rule, its rows and its tail line — and
+   * a row is not one height any more. An archive row carries the asker's reason
+   * under it and two buttons under that (M2), so a band of four of them is
+   * nearer nine rows than six, and a split that counted them as six put the two
+   * stacks a card's height apart.
+   */
+  const rowHeight = (row: StuckRowData) =>
+    1.5 + (row.reason ? 0.75 : 0) + (row.answer ? 1.25 : 0);
   const split = splitByLength(
-    groups.map((group) => 1 + (group.means ? 1 : 0) + group.rows.length * 1.5 + (group.more > 0 ? 1 : 0)),
+    groups.map(
+      (group) =>
+        1 +
+        (group.means ? 1 : 0) +
+        group.rows.reduce((tall, row) => tall + rowHeight(row), 0) +
+        (group.more > 0 ? 1 : 0),
+    ),
   );
   const cards = groups.map((group) => (
     <Group

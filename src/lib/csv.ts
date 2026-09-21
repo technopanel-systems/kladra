@@ -10,8 +10,8 @@
 
 /** What Excel reads as a formula when it opens a cell: `=`, `@`, a tab, a return. */
 const FORMULA = /^[=@\t\r]/;
-/** A plain signed number — a phone with its plus, a negative figure — is a number. */
-const SIGNED_NUMBER = /^[+-]\d+(\.\d+)?$/;
+/** A figure below nought, and the only thing a leading sign may mean here. */
+const NEGATIVE_NUMBER = /^-\d+(\.\d+)?$/;
 
 /**
  * One cell, and one that is text when it would otherwise be run (D96).
@@ -20,14 +20,22 @@ const SIGNED_NUMBER = /^[+-]\d+(\.\d+)?$/;
  * `@`, `+` or `-` is a formula to Excel — `=HYPERLINK(...)` in a customer's
  * name is the oldest trick in the export book, and the admin opening the file
  * is the one person whose machine matters. A leading apostrophe is how Excel is
- * told to read the cell as text. A `+` or `-` in front of a plain number is
- * left alone: every phone in the file starts with `+966`, and a figure below
- * nought is a figure.
+ * told to read the cell as text.
+ *
+ * **A leading `-` in front of a plain number is a figure and is left alone. A
+ * leading `+` never is.** Every value in these files that opens with one is a
+ * phone, stored E.164 (`+966501234567`, D-addendum 2) — and the rule that let
+ * a signed number through read that as a number, so the contacts file handed
+ * the office `9.66501E+11` where a number to ring should have been: the four
+ * digits past the twelfth gone, the plus gone, and nothing on the screen to say
+ * so. A phone is text in every file it appears in, and the one column an
+ * accountant adds up is declared numeric and goes through `csvNumber` below,
+ * where a negative figure is still written bare.
  */
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return '""';
   const text = String(value);
-  const armed = FORMULA.test(text) || (/^[+-]/.test(text) && !SIGNED_NUMBER.test(text));
+  const armed = FORMULA.test(text) || (/^[+-]/.test(text) && !NEGATIVE_NUMBER.test(text));
   return `"${(armed ? "'" + text : text).replace(/"/g, '""')}"`;
 }
 

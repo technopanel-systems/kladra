@@ -1284,3 +1284,149 @@ test("D214 · a job on a customer who has moved is still his to work, and not hi
     );
   }
 });
+
+/**
+ * D42 · a manager reads every rep's floor and works none of it — including by
+ * putting HIMSELF on one (Stage-3 audit, M4).
+ *
+ * `mayShare` says yes to him on anybody's customer, because deciding who else
+ * may read one is his to decide (D147). It says nothing about who the RECEIVER
+ * is, and naming himself turned that sentence into a self-service door out of
+ * the rule the whole app is built round: two presses and the man whose every
+ * screen is read-only holds a rep's powers on Faisal's customer — his own
+ * people on it, reports against it, quotations and loads raised there. Nobody
+ * is told, because a share tells only the person it is granted to.
+ *
+ * Both ends, the way D214 above is walked, because either alone proves half:
+ * the picker does not offer him, and the action refuses the same press made
+ * straight at the wire.
+ *
+ * A rep sharing his own customer is untouched — he is its owner, and a receiver
+ * who is its owner is already answered by "It is already theirs".
+ */
+test("D42 · the manager is not offered himself on a rep's customer, and the action refuses him", async ({
+  page,
+  locale,
+  t,
+}) => {
+  test.slow(); // A sign-in, a share, and the same call made twice.
+
+  const start = new Date();
+  const manager = {
+    id: await userId("abdulrahman@technopanel.com.sa"),
+    name: await personName("abdulrahman@technopanel.com.sa", locale),
+  };
+  // Somebody he MAY put on it, so the absence below is the rule rather than an
+  // empty picker.
+  const marketing = {
+    id: await userId("marketing@technopanel.com.sa"),
+    name: await personName("marketing@technopanel.com.sa", locale),
+  };
+
+  const company = await one<{ id: string; name: string }>(
+    `select c.id, c.name
+       from companies c
+       join users u on u.id = c.rep_id
+      where u.email = 'faisal@technopanel.com.sa'
+        and c.archived_at is null and c.merged_into_id is null
+        and not exists (
+          select 1 from company_shares s
+           where s.company_id = c.id and s.user_id in ($1::uuid, $2::uuid)
+        )
+      order by c.created_at
+      limit 1`,
+    [manager.id, marketing.id],
+  );
+
+  let call: ActionCall | null = null;
+
+  try {
+    await login(page, locale, "abdulrahman");
+    await page.goto(`/${locale}/companies?open=${company.id}`);
+    const drawer = dialogNamed(page, company.name);
+    await expect(drawer).toBeVisible(COLD);
+
+    await fromMore(
+      page,
+      drawer,
+      t("common.moreFor", { name: company.name }),
+      t("drawer.share.action"),
+    );
+    const share = page.getByRole("dialog", { name: t("drawer.share.companyTitle") });
+    await expect(share).toBeVisible();
+    const who = share.getByRole("combobox", { name: t("drawer.share.companyWho") });
+
+    await test.step("1 · his own name is not among the people it can be shared with", async () => {
+      await who.click();
+      const offered = (await page.getByRole("option").allInnerTexts()).map((line) => line.trim());
+      expect(
+        offered.some((line) => line.includes(marketing.name)),
+        "the picker offers nobody at all, so the absence below would prove nothing",
+      ).toBe(true);
+      expect(
+        offered.some((line) => line.includes(manager.name)),
+        "the manager is offered himself on a customer that is not his (D42)",
+      ).toBe(false);
+      await page.keyboard.press("Escape");
+    });
+
+    await test.step("2 · the share he may make goes through, and is caught on the wire", async () => {
+      await pickPerson(page, who, marketing.name);
+      call = await catchTheCall(page, company.id, async () => {
+        await share.getByRole("button", { name: t("drawer.share.add") }).click();
+        await expect(
+          page.getByText(t("drawer.share.added", { name: marketing.name, label: company.name })),
+        ).toBeVisible(COLD);
+      });
+    });
+
+    await test.step("3 · the same call aimed at himself writes nothing", async () => {
+      const made = call as ActionCall | null;
+      expect(made, "the manager's press was never caught on the wire").not.toBeNull();
+      const pressed = made as ActionCall;
+
+      // The same body with his own id where the receiver's was. Both are uuids
+      // carried as text, so the swap changes who it is aimed at and nothing
+      // else — and a body that came back unchanged would mean the call never
+      // carried the person he shared it with.
+      const aimedAtHimself = pressed.body.split(marketing.id).join(manager.id);
+      expect(
+        aimedAtHimself,
+        "the caught call did not carry the id of the person he put on the customer",
+      ).not.toBe(pressed.body);
+
+      // First the call UNCHANGED, so the refusal below is the action's answer
+      // and not a POST that never reached it: a second share is one share
+      // (`onConflictDoNothing`), so repeating it is safe and says nothing new.
+      const reached = await callAgain(page, pressed, pressed.body);
+      expect(reached, "the replayed call never reached the action").toBe(200);
+
+      const answered = await callAgain(page, pressed, aimedAtHimself);
+      expect(
+        await query(
+          "select 1 from company_shares where company_id = $1::uuid and user_id = $2::uuid",
+          [company.id, manager.id],
+        ),
+        `the manager put himself on a rep's customer straight past the picker that no longer offers him (the action answered ${answered})`,
+      ).toHaveLength(0);
+    });
+  } finally {
+    for (const person of [marketing.id, manager.id]) {
+      await query("delete from company_shares where company_id = $1::uuid and user_id = $2::uuid", [
+        company.id,
+        person,
+      ]);
+    }
+    await query(
+      `delete from audit_log
+        where record_type = 'companyShare' and record_id = $1::text and at >= $2::timestamptz`,
+      [company.id, start.toISOString()],
+    );
+    await query(
+      `delete from notifications
+        where subject_type = 'company' and subject_id = $1::uuid
+          and kind = 'companyShared' and created_at >= $2::timestamptz`,
+      [company.id, start.toISOString()],
+    );
+  }
+});

@@ -50,8 +50,9 @@ export function approvedWhere(alias: string, window: Window, personId: string | 
 /**
  * The dispatches a list shows for that figure: the ones with a credited row in
  * the window, for the list's own `dispatches` table. The same rows, read through
- * the same definition of an achieved metre rather than past it — a dispatch with
- * no credited row moves nobody's month, so it opens nobody's list either.
+ * the same definition of an achieved metre rather than past it — a load that
+ * counts for nobody (D207) is in the company's figure and so in the company's
+ * list, and in no person's figure and so in no person's list.
  */
 export function approvedDispatches(window: Window, personId: string | null): SQL {
   return sql`dispatches.id in (

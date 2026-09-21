@@ -6,14 +6,21 @@
  *
  * The popup asks for what a rep has to hand the moment a call ends: which
  * customer, who he spoke to, what kind of thing it was, what came of it, and a
- * line in his own words. Twenty seconds on a phone. Everything else — the day,
- * the paper it was about, the next follow-up — is prefilled or optional.
+ * line in his own words. Twenty seconds on a phone. The day and the paper it
+ * was about are prefilled or optional.
+ *
+ * The next follow-up is optional only while nothing is owed. On a customer who
+ * was DUE a call it is required — a day, or "no next step" — because a reminder
+ * is cleared by doing the work and never by dismissing it (S52), and a report
+ * with no answer used to leave the overdue date where it was and the card red
+ * after the call had been made.
  *
  * Every write commits together (ONE transaction): the entry, the follow-up date
- * it sets on the company and on the project, the audit row and the live notice.
- * A report is one of the two things that set a next follow-up (D9), so writing
- * the entry without moving the date would leave two answers for one figure —
- * the drift trap rules/data.md names.
+ * it sets or clears on the company and on the project, the audit row and the
+ * live notice. A report is one of the two things that set a next follow-up (D9)
+ * and the only thing that clears one, so writing the entry without moving the
+ * date would leave two answers for one figure — the drift trap rules/data.md
+ * names.
  *
  * Two reads live here as well, because they are the popup's and nothing else's:
  * the lists it opens on, and the people and papers at the company it is about.
@@ -42,8 +49,9 @@ import {
   projectOwner,
 } from "@/lib/activities";
 import { NotAllowed, refusalKey, requireActor } from "@/lib/authz";
-import { lastWorkingDay } from "@/lib/calendar";
-import { parseDay, todayRiyadh, type Day } from "@/lib/dates";
+import { lastWorkingDay, listNonWorkingDays } from "@/lib/calendar";
+import { addDays, parseDay, todayRiyadh, type Day } from "@/lib/dates";
+import { nextWorkingDay } from "@/lib/workdays";
 import { mayWrite } from "@/lib/floor";
 import { field, fieldErrorsOf } from "@/lib/form-fields";
 import { dispatchLabel, quotationLabel } from "@/lib/labels";
@@ -97,7 +105,20 @@ export type ReportForm = {
   /** The two days a report may be about (D58). */
   today: Day;
   lastWorkingDay: Day;
+  /**
+   * The three quick answers under the follow-up picker, as days. The chip shows
+   * its word and the picker then shows the date it chose.
+   */
+  presets: { tomorrow: Day; inThreeDays: Day; nextWeek: Day };
 };
+
+/**
+ * How far ahead the quick answers may reach: a week, plus the three the walker
+ * itself is capped at (`stepWorkingDay`). A run of holidays longer than that
+ * has never happened here, and if it ever does the answer is a holiday table
+ * nobody filled in rather than a popup that asks for rows it never loaded.
+ */
+const PRESET_WINDOW_DAYS = 7 + 21;
 
 /**
  * What the popup needs before anything is chosen. Read when it opens rather than
@@ -109,7 +130,7 @@ export async function reportFormAction(): Promise<ActionResult<ReportForm>> {
   return guard(async (actor) => {
     const locale = await getLocale();
     const today = todayRiyadh();
-    const [companyRows, outcomeRows, previous] = await Promise.all([
+    const [companyRows, outcomeRows, previous, ahead] = await Promise.all([
       mayWrite(actor, actor.id)
         ? db
             .select({ id: companies.id, name: companies.name })
@@ -124,6 +145,7 @@ export async function reportFormAction(): Promise<ActionResult<ReportForm>> {
         : [],
       listOutcomes(locale),
       lastWorkingDay(today),
+      listNonWorkingDays(today, addDays(today, PRESET_WINDOW_DAYS)),
     ]);
     return {
       ok: true,
@@ -132,6 +154,16 @@ export async function reportFormAction(): Promise<ActionResult<ReportForm>> {
         outcomes: outcomeRows.filter((row) => row.active).map(({ id, name }) => ({ id, name })),
         today,
         lastWorkingDay: previous,
+        // "Tomorrow" is the next day THIS PERSON is at work, not the next day
+        // on the calendar: Friday and Saturday are the weekend (S47), the
+        // company's holidays are off and so is his own leave (S48). All three
+        // are rows in a table only the server reads, which is why the three
+        // days are worked out here and the browser is handed the answers.
+        presets: {
+          tomorrow: nextWorkingDay(addDays(today, 1), ahead, actor.id),
+          inThreeDays: nextWorkingDay(addDays(today, 3), ahead, actor.id),
+          nextWeek: nextWorkingDay(addDays(today, 7), ahead, actor.id),
+        },
       },
     };
   });
@@ -153,7 +185,83 @@ export type ReportTargets = {
   companyFollowUp: boolean;
   /** The jobs whose follow-up date he may move: its rep, or somebody put on it. */
   workedProjects: string[];
+  /** What is already owed here and his to clear — why the popup insists (S52). */
+  due: DueFollowUps;
 };
+
+/**
+ * A follow-up date on this customer that is already owed AND that this person
+ * may move (S52, D9, D147).
+ *
+ * `company` is the customer's own date; `projects` is one entry per open job.
+ * Both are empty as often as not — most reports are written on a customer
+ * nobody is late for, and the popup then asks for the next follow-up the way it
+ * always has.
+ */
+export type DueFollowUps = {
+  company: Day | null;
+  projects: { id: string; day: Day }[];
+};
+
+/**
+ * What is due here that he may move — the ONE answer, asked by the popup when
+ * it opens and by the write when it lands.
+ *
+ * S52 says a reminder is cleared by doing the work, so a report on a customer
+ * who was owed a call has to answer "and when is the next one?". The screen
+ * that asks and the action that insists must be asking about the same dates: two
+ * readings of "what is due" would either put a required question in front of a
+ * rep the action did not want answered, or take a report that left the card red
+ * (DESIGN §5, rules/data.md — one definition per figure).
+ *
+ * "May move" is the WRITE gate and never the read one: the customer's own date
+ * belongs to his rep (D9) and a job's to whoever works the job (D147). A rep
+ * reporting on a colleague's customer is owed nothing here, because nothing on
+ * the screen is his to clear.
+ */
+async function dueFollowUps(
+  actor: SessionUser,
+  companyId: string,
+  companyRepId: string,
+  today: Day,
+): Promise<DueFollowUps> {
+  const [companyRows, projectRows] = await Promise.all([
+    db
+      .select({ nextFollowUp: companies.nextFollowUp })
+      .from(companies)
+      .where(eq(companies.id, companyId))
+      .limit(1),
+    db
+      .select({
+        id: projects.id,
+        repId: projects.repId,
+        nextFollowUp: projects.nextFollowUp,
+        onProject: onProjectSql(actor, sql`projects.id`).mapWith(Boolean),
+      })
+      .from(projects)
+      .where(
+        and(
+          eq(projects.companyId, companyId),
+          isNull(projects.archivedAt),
+          // A lost job is finished work and chases nobody (S20).
+          isNull(projects.lostAt),
+        ),
+      )
+      .orderBy(asc(projects.nextFollowUp), asc(projects.name)),
+  ]);
+
+  const own = companyRows[0]?.nextFollowUp ?? null;
+  return {
+    company: own !== null && own <= today && mayWrite(actor, companyRepId) ? own : null,
+    projects: projectRows.flatMap((row) =>
+      row.nextFollowUp !== null &&
+      row.nextFollowUp <= today &&
+      mayWorkProject(actor, row.repId, row.onProject)
+        ? [{ id: row.id, day: row.nextFollowUp }]
+        : [],
+    ),
+  };
+}
 
 /**
  * The people and papers at one customer, for the popup's second half.
@@ -179,6 +287,7 @@ export async function reportTargetsAction(input: unknown): Promise<ActionResult<
     if (!parsed.success) return { ok: false, error: tc("invalid") };
     const { companyId } = parsed.data;
     const gate = await assertMayReport(actor, companyId);
+    const today = todayRiyadh();
 
     // Read by id, and only at THIS company: the gate above is what says he may
     // see what is under it (D147), and a paper at another company is not his to
@@ -222,7 +331,7 @@ export async function reportTargetsAction(input: unknown): Promise<ActionResult<
             .orderBy(desc(quotations.number), desc(quotations.revision))
         : [];
 
-    const [company, contactRows, projectRows, quotationRows, dispatchRows] = await Promise.all([
+    const [company, contactRows, projectRows, quotationRows, dispatchRows, due] = await Promise.all([
       db.select({ name: companies.name }).from(companies).where(eq(companies.id, companyId)).limit(1),
       db
         .select({
@@ -290,6 +399,9 @@ export async function reportTargetsAction(input: unknown): Promise<ActionResult<
         .where(eq(dispatches.companyId, companyId))
         .orderBy(desc(dispatches.number))
         .limit(30),
+      // The same read the write does, so the question the popup makes required
+      // is exactly the one `addReportAction` refuses without (DESIGN §5).
+      dueFollowUps(actor, companyId, gate.repId, today),
     ]);
 
     // The main contact, when there is one marked; the only contact, when there
@@ -328,6 +440,7 @@ export async function reportTargetsAction(input: unknown): Promise<ActionResult<
         workedProjects: projectRows
           .filter((row) => mayWorkProject(actor, row.repId, row.onProject))
           .map((row) => row.id),
+        due,
       },
     };
   });
@@ -349,6 +462,12 @@ const addSchema = z.object({
   text: z.string().trim().min(1).max(4000),
   happenedOn: dayString.optional(),
   nextFollowUp: dayString.optional(),
+  /**
+   * "No next step" — the other answer to a follow-up that is owed (S52). It
+   * nulls what was due rather than setting anything, and it is the only way a
+   * report clears a reminder without naming a day.
+   */
+  clearFollowUp: z.literal("1").optional(),
 });
 
 type Links = {
@@ -490,6 +609,7 @@ export async function addReportAction(
       text: field(formData, "text"),
       happenedOn: field(formData, "happenedOn"),
       nextFollowUp: field(formData, "nextFollowUp"),
+      clearFollowUp: field(formData, "clearFollowUp"),
     });
     if (!parsed.success) {
       return refusedFields(parsed.error, tc("required"), tc("invalid"), t("textRequired"));
@@ -527,12 +647,51 @@ export async function addReportAction(
     if (input.nextFollowUp && !setsCompany && !setsProject) {
       return refusal("nextFollowUp", tr("refused.followUpNotYours"));
     }
+    // A day and "no next step" are two answers to one question. The popup sends
+    // one or the other, so a form carrying both is not the popup's.
+    if (input.nextFollowUp && input.clearFollowUp) {
+      return refusal("nextFollowUp", tc("invalid"));
+    }
+    // A date behind us silences nothing and reminds nobody: S50 is about a day
+    // that ARRIVES, and one already gone lands the customer straight back on
+    // Overdue with the call just made forgotten.
+    if (input.nextFollowUp && input.nextFollowUp < today) {
+      return refusal("nextFollowUp", tr("refused.followUpPast"));
+    }
+
+    // What the popup asked him, read by the same function it read it with: a
+    // reminder is cleared by doing the work and never by dismissing it (S52),
+    // so a report on a customer who was owed a call says when the next one is
+    // — or says there is not one.
+    const due = await dueFollowUps(actor, input.companyId, gate.repId, today);
+    const dueProject = input.projectId
+      ? due.projects.find((row) => row.id === input.projectId)
+      : undefined;
+    const owed = due.company !== null || dueProject !== undefined;
+    if (owed && !input.nextFollowUp && !input.clearFollowUp) {
+      return refusal("nextFollowUp", tr("refused.followUpOwed"));
+    }
+    // What "no next step" actually nulls. Only a date that was DUE: one still
+    // ahead is a decision the rep made earlier and this report is not about it
+    // (S50). And only a date `dueFollowUps` handed back, which is already the
+    // answer to "is it his to move" — asking `mayWrite` a second time here
+    // would be the second derivation rules/data.md names.
+    const clearsCompany = input.clearFollowUp !== undefined && due.company !== null;
+    const clearsProject = input.clearFollowUp !== undefined && dueProject !== undefined;
 
     // Pressed twice is one write (D134): the wire can lose the answer after the
     // row has landed, and the rep presses Save again with the same words. It has
     // to be the SAME write — the same words, kind and outcome, against the same
     // people and papers, on the same day, with the same follow-up. An unfiled
     // row is never a twin: unfiling and writing again is how a wrong day is fixed.
+    //
+    // A report that answered "no next step" is a twin on exactly those terms and
+    // no extra one: it stores no date, so the comparison below is what decides,
+    // and the second press finds the row the first one wrote rather than writing
+    // a second entry against a reminder that has already gone. It cannot be
+    // confused with a report that merely left a date alone, because that report
+    // is only accepted when nothing was owed — and when nothing was owed, "no
+    // next step" cleared nothing either.
     const recent = await db
       .select({
         id: activities.id,
@@ -599,6 +758,21 @@ export async function addReportAction(
             .set({ nextFollowUp: input.nextFollowUp })
             .where(eq(projects.id, input.projectId));
         }
+      } else {
+        // "No next step": the reminder goes because the work was done (S52),
+        // which is the one thing that may take it off the screen.
+        if (clearsCompany) {
+          await tx
+            .update(companies)
+            .set({ nextFollowUp: null })
+            .where(eq(companies.id, input.companyId));
+        }
+        if (clearsProject && input.projectId) {
+          await tx
+            .update(projects)
+            .set({ nextFollowUp: null })
+            .where(eq(projects.id, input.projectId));
+        }
       }
 
       await tx.insert(auditLog).values({
@@ -615,6 +789,10 @@ export async function addReportAction(
           outcomeId: input.outcomeId,
           happenedOn,
           nextFollowUp: input.nextFollowUp ?? null,
+          // A cleared reminder leaves no value behind to read afterwards, so
+          // the only record that it was a decision rather than an omission is
+          // this line (S52).
+          ...(clearsCompany || clearsProject ? { clearedFollowUp: true } : {}),
         },
       });
 

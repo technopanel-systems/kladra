@@ -14,6 +14,7 @@
   "passwordReset": "{name} has a new password.",
   "passwordTooShort": "A password is at least eight characters.",
   "cannotDeactivateSelf": "You cannot deactivate your own account.",
+  "lastAdmin": "This is the only active admin account. Give somebody else the admin role first, then change this one.",
   "usersOfficeHint": "Reps, marketing and the coordinator are yours to add and manage. A manager’s account and the admin’s are the admin’s alone.",
   "accountIsAdmins": "Only the admin changes a manager’s account or the admin’s own.",
   "roleIsAdmins": "Only the admin gives somebody the sales manager or admin role.",
